@@ -1,0 +1,2 @@
+# Unified diffs use a single-space context marker for blank lines.
+ddd/patches/*.patch -whitespace

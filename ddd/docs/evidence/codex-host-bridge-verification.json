@@ -1,0 +1,80 @@
+[
+  {
+    "version": "codex-cli 0.153.4",
+    "model": "gpt-6-astra",
+    "mode": "state",
+    "verdict": "VERIFIED",
+    "shell_session_matches": true,
+    "child_token_matches": true,
+    "hook_context_has_token": true,
+    "hook_events": [
+      {
+        "target": "bind-bash-session",
+        "event": "PreToolUse",
+        "tool": "Bash",
+        "exit": 0
+      },
+      {
+        "target": "deliver-stage-rules",
+        "event": "PreToolUse",
+        "tool": "collaborationspawn_agent",
+        "exit": 0
+      },
+      {
+        "target": "finish-stage-rules",
+        "event": "PostToolUse",
+        "tool": "collaborationspawn_agent",
+        "exit": 0
+      },
+      {
+        "target": "start-stage-rules",
+        "event": "SubagentStart",
+        "exit": 0
+      }
+    ],
+    "artifact_sha256": {
+      "events.jsonl": "18bbceb185ff460171035ef0f97ce3bcf0a40d85a107f9c1d33303b887e21db0",
+      "hooks.jsonl": "11a3ad2a622cd1aff5bfc9cb960947734f9959729dc170867ce13987b1c37319",
+      "final.txt": "99a65f9645e853261d7efa1b22bd23ada48e11789116d369c7c8c92fe1b76933"
+    }
+  },
+  {
+    "version": "codex-cli 0.153.4",
+    "model": "gpt-6-astra",
+    "mode": "task-name",
+    "verdict": "VERIFIED",
+    "shell_session_matches": true,
+    "child_token_matches": true,
+    "hook_context_has_token": true,
+    "hook_events": [
+      {
+        "target": "bind-bash-session",
+        "event": "PreToolUse",
+        "tool": "Bash",
+        "exit": 0
+      },
+      {
+        "target": "deliver-stage-rules",
+        "event": "PreToolUse",
+        "tool": "collaborationspawn_agent",
+        "exit": 0
+      },
+      {
+        "target": "finish-stage-rules",
+        "event": "PostToolUse",
+        "tool": "collaborationspawn_agent",
+        "exit": 0
+      },
+      {
+        "target": "start-stage-rules",
+        "event": "SubagentStart",
+        "exit": 0
+      }
+    ],
+    "artifact_sha256": {
+      "events.jsonl": "34c612a6f90884bd321e3a16200f346e09dba2767a8937176ac7c9243d4ce13e",
+      "hooks.jsonl": "1292a332b6f11041112a37bd89bb9015cbb477deca9045b8b53ebd913dbb2a6d",
+      "final.txt": "9cd0cf4ceb6df01de517c56731e79428b2e0385e92fe5882b30a4ecfd000b98f"
+    }
+  }
+]
