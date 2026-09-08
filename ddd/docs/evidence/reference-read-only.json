@@ -1,0 +1,22 @@
+{
+  "worktree": "blocked",
+  "git_metadata": "blocked",
+  "pre-commit": {
+    "exit": 1,
+    "message": "aidlc-workflows is a read-only upstream reference. commit is blocked."
+  },
+  "pre-push": {
+    "exit": 1,
+    "message": "aidlc-workflows is a read-only upstream reference. push is blocked."
+  },
+  "push_dry_run": {
+    "exit": 128,
+    "message": "fatal: '/dev/null/aidlc-workflows-read-only' does not appear to be a git repository\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists."
+  },
+  "status": "",
+  "revision": "a277af218f0df7f325d3b8be7b6d90fce2c5bd40",
+  "writable_worktree_entries": 0,
+  "writable_git_metadata_entries": 0,
+  "existing_file_writes": "blocked",
+  "root_delete_acl": "everyone deny delete"
+}

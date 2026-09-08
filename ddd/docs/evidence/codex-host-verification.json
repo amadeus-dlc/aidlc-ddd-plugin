@@ -1,0 +1,195 @@
+{
+  "date": "2026-09-08",
+  "codex_version": "0.153.4",
+  "model": "gpt-6-astra",
+  "shell_verdict": "VERIFIED",
+  "stage_dispatch_verdict": "NOT VERIFIED",
+  "runs": {
+    "codex-host-baseline": {
+      "shell": [
+        {
+          "exit_code": 0,
+          "session_present": false,
+          "session_matches_thread": false,
+          "source": null
+        }
+      ],
+      "hooks": [
+        {
+          "target": "session-start-probe",
+          "tool_name": null,
+          "input_keys": [],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "bind-bash-session",
+          "tool_name": "Bash",
+          "input_keys": [
+            "command"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        }
+      ],
+      "final": {
+        "source": null
+      },
+      "raw_sha256": {
+        "events.jsonl": "a41267ae4035d86432625f50cb1f5c05739b6d71c177b1fa39475a0d57b40125",
+        "hooks.jsonl": "57beed2742137e15179eb3c31e742d0f536a851ca82619038b3677394e14269d",
+        "final.txt": "ff31835709383d76357c88d3b627a21bd5961094a8b11a9ea6308834b3c5efdd"
+      }
+    },
+    "codex-host-persistent": {
+      "shell": [
+        {
+          "exit_code": 0,
+          "session_present": true,
+          "session_matches_thread": true,
+          "source": "payload"
+        }
+      ],
+      "hooks": [
+        {
+          "target": "session-start-probe",
+          "tool_name": null,
+          "input_keys": [],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "bind-bash-session",
+          "tool_name": "Bash",
+          "input_keys": [
+            "command"
+          ],
+          "permission_decision": "allow",
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        }
+      ],
+      "final": {
+        "source": "payload",
+        "child_token": "TOKEN_MISSING"
+      },
+      "raw_sha256": {
+        "events.jsonl": "eb6c262667c3e28e5cc04772d3f5faa64f6789aaa41484582d2be5a3c942cfec",
+        "hooks.jsonl": "b3f491f3b06c41b19a3f9c0532333325de07eae5b884d2c111f4e5bb3d5ccedb",
+        "final.txt": "9e26e96060a940e622bdf2c1ed4b68460032b65c5e66a425760d27dd201a6a40"
+      }
+    },
+    "codex-host-all-tools": {
+      "shell": [
+        {
+          "exit_code": 0,
+          "session_present": true,
+          "session_matches_thread": true,
+          "source": "payload"
+        }
+      ],
+      "hooks": [
+        {
+          "target": "session-start-probe",
+          "tool_name": null,
+          "input_keys": [],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "bind-bash-session",
+          "tool_name": "Bash",
+          "input_keys": [
+            "command"
+          ],
+          "permission_decision": "allow",
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "deliver-stage-rules",
+          "tool_name": "Bash",
+          "input_keys": [
+            "command"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "bind-bash-session",
+          "tool_name": "collaborationspawn_agent",
+          "input_keys": [
+            "agent_type",
+            "task_name",
+            "message"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": true,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "deliver-stage-rules",
+          "tool_name": "collaborationspawn_agent",
+          "input_keys": [
+            "agent_type",
+            "task_name",
+            "message"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": true,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "bind-bash-session",
+          "tool_name": "collaborationwait_agent",
+          "input_keys": [
+            "timeout_ms"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        },
+        {
+          "target": "deliver-stage-rules",
+          "tool_name": "collaborationwait_agent",
+          "input_keys": [
+            "timeout_ms"
+          ],
+          "permission_decision": null,
+          "exit_code": 0,
+          "message_has_encrypted_prefix": false,
+          "message_has_stage_path": false
+        }
+      ],
+      "final": {
+        "source": "payload",
+        "child_token": "TOKEN_MISSING"
+      },
+      "raw_sha256": {
+        "events.jsonl": "a75872ae5a5609719a29b740a6c40885f10351db785fc0b2ca7acc0f7bb05331",
+        "hooks.jsonl": "e8f32faca9b997238cfc891e42bbb86c0cdcde44a981785b3df8f161a0643f6c",
+        "final.txt": "c6497b198cb2ad97ca1ddc5a10822c5b5d9dd58081063f1fd4277856dcfed3a6"
+      }
+    }
+  },
+  "direct_stage_hook": {
+    "exit": 0,
+    "permissionDecision": "allow",
+    "token_in_rewritten_message": true
+  }
+}

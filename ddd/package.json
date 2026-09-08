@@ -1,0 +1,22 @@
+{
+  "name": "ddd-plugin-dev",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-DLC v2 DDD プラグインの開発用設定。",
+  "scripts": {
+    "validate": "bun ../.codex/tools/aidlc-plugin-validate.ts .",
+    "build:claude": "bun ../.codex/tools/aidlc-plugin-build.ts . claude",
+    "build:codex": "bun ../.codex/tools/aidlc-plugin-build.ts . codex",
+    "check": "bun run check:biome && bun run validate && bun run test",
+    "check:biome": "biome check --error-on-warnings .",
+    "format": "biome format --write .",
+    "test": "bun test tests/",
+    "test:sandbox": "bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness claude && bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness codex",
+    "test:host": "bun scripts/verify-codex-host.ts",
+    "prepare:harnesses": "bun scripts/apply-harness-patches.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12"
+  }
+}
