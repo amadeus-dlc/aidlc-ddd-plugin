@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "distribution": "opencode",
+  "productName": "opencode",
+  "configNextStep": "run `opencode`, then `/aidlc --doctor`",
+  "harnessDir": ".aidlc",
+  "managedDirectories": [
+    ".aidlc",
+    ".opencode",
+    "aidlc"
+  ],
+  "rootIntegrations": [
+    {
+      "path": ".gitignore",
+      "policy": "managed-block",
+      "marker": "gitignore",
+      "legacySignatures": {
+        "wholeFileHashes": [
+          "sha256:d2569b56aef154c3c04766ed3263947a2d8026c99546a3006775526641951db9"
+        ]
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "managed-block",
+      "marker": "agents",
+      "legacySignatures": {
+        "wholeFileHashes": [
+          "sha256:32515e768a4ec0a9a82fbecd9b73cd63475f6df16054619ef6143df3f0619da8"
+        ]
+      }
+    },
+    {
+      "path": "opencode.json",
+      "policy": "whole-file"
+    }
+  ]
+}
