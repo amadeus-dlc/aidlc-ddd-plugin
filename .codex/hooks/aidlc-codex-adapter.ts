@@ -33,8 +33,8 @@
 //     {"additionalContext": "..."}; Codex expects the hookSpecificOutput
 //     wrapper (verified live, findings E1) — the shim re-wraps.
 //   - bind-bash-session: POSIX Bash input is rewritten through
-//     hookSpecificOutput.permissionDecision=allow + updatedInput so every
-//     command inherits the validated payload session without process inspection.
+//     hookSpecificOutput.updatedInput so every command inherits the validated
+//     payload session without process inspection.
 //   - continue-workflow: {"decision":"block","reason"} passes through VERBATIM — the
 //     contract is identical on Codex (stop_hook_active included).
 //   - everything else: advisory; stdout ignored, exit 0.
@@ -45,7 +45,7 @@
 //                  rebuild-stage-graph | validate-state | log-subagent | continue-workflow |
 //                  record-human-turn | state-transition-guard | reviewer-scope |
 //                  review-freeze | deliver-stage-rules | plan-approval-guard |
-//                  bind-bash-session | start-stage-rules | finish-stage-rules
+//                  bind-bash-session
 
 import { createHash } from "node:crypto";
 import {
@@ -66,8 +66,6 @@ import {
   stateFilePath,
   validSessionId,
 } from "../tools/aidlc-lib.ts";
-
-import { abortDispatch } from "./aidlc-codex-dispatch.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -193,16 +191,6 @@ if (!process.stdin.isTTY) {
   }
 }
 
-const bridgeDispatch = codex.tool_name === "collaborationspawn_agent" ||
-  (codex.tool_name === "spawn_agent" && typeof codex.tool_input?.message === "string" &&
-    codex.tool_input.message.startsWith("gAAAAA"));
-// Normalize before adapter-side routing as well as before core guards. The
-// original wire identity above selects the opaque-message transport.
-if (codex.tool_name === "collaborationspawn_agent") {
-  codex = { ...codex, tool_name: "spawn_agent" };
-  rawInput = JSON.stringify(codex);
-}
-
 const projectDirRaw =
   process.env.AIDLC_PROJECT_DIR ?? codex.cwd ?? process.cwd();
 const projectDir = isAbsolute(projectDirRaw)
@@ -281,9 +269,6 @@ function replayResponse(): { stdout: string; code: number; stderr?: string } {
 }
 
 function persistResponse(stdout: string, code: number, stderr?: string): void {
-  if (code === 2 && ["spawn_agent", "collaborationspawn_agent"].includes(codex.tool_name ?? "")) {
-    try { abortDispatch(projectDir, codex); } catch { /* the original rejection still blocks the call */ }
-  }
   if (bypassReplay) return;
   try {
     writeFileSync(responseFile, JSON.stringify({ stdout, code, ...(stderr ? { stderr } : {}) }), "utf-8");
@@ -312,7 +297,7 @@ function runCore(hookFile: string, input: string): { stdout: string; code: numbe
   // PATH containing bun (the hook environment often lacks the bun install dir).
   const executable = process.env.AIDLC_COMPILED_EXECUTABLE;
   const command = executable
-    ? [executable, "hook", hookFile.replace(/^aidlc-|\.ts$/g, "")]
+    ? [executable, "engine", "hook", hookFile.replace(/^aidlc-|\.ts$/g, "")]
     : [process.execPath, join(HOOKS_DIR, hookFile)];
   const r = Bun.spawnSync(command, {
     stdin: Buffer.from(input, "utf-8"),
@@ -332,7 +317,7 @@ function runCoreWithStderr(
 ): { stdout: string; stderr: string; code: number } {
   const executable = process.env.AIDLC_COMPILED_EXECUTABLE;
   const command = executable
-    ? [executable, "hook", hookFile.replace(/^aidlc-|\.ts$/g, "")]
+    ? [executable, "engine", "hook", hookFile.replace(/^aidlc-|\.ts$/g, "")]
     : [process.execPath, join(HOOKS_DIR, hookFile)];
   const r = Bun.spawnSync(command, {
     stdin: Buffer.from(input, "utf-8"),
@@ -373,36 +358,37 @@ function wrapContext(coreStdout: string, eventName: string): string {
   return coreStdout;
 }
 
-function wrapUpdatedInput(updatedInput: Record<string, unknown>): string {
-  return `${JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "allow",
-      updatedInput,
-    },
-  })}\n`;
-}
-
-function normalizePreToolUseUpdatedInput(coreStdout: string): string {
+function allowUpdatedInput(coreStdout: string): string {
   try {
-    const parsed = JSON.parse(coreStdout);
-    const output = parsed?.hookSpecificOutput;
+    const parsed = JSON.parse(coreStdout) as {
+      hookSpecificOutput?: {
+        hookEventName?: unknown;
+        permissionDecision?: unknown;
+        updatedInput?: unknown;
+      };
+    };
+    const output = parsed.hookSpecificOutput;
     if (
       output?.hookEventName === "PreToolUse" &&
-      output.permissionDecision === undefined &&
-      output.updatedInput !== null &&
-      typeof output.updatedInput === "object" &&
-      !Array.isArray(output.updatedInput)
+      output.updatedInput !== undefined &&
+      output.permissionDecision === undefined
     ) {
-      return `${JSON.stringify({
-        ...parsed,
-        hookSpecificOutput: { ...output, permissionDecision: "allow" },
-      })}\n`;
+      output.permissionDecision = "allow";
+      return `${JSON.stringify(parsed)}\n`;
     }
   } catch {
-    // Preserve non-JSON diagnostics from the core hook.
+    // Unparseable core output is not a successful input rewrite.
   }
   return coreStdout;
+}
+
+function wrapUpdatedInput(updatedInput: Record<string, unknown>): string {
+  return allowUpdatedInput(`${JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      updatedInput,
+    },
+  })}\n`);
 }
 
 // --- D-4: SESSION_ENDED reconcile-at-next-start ------------------------------
@@ -561,7 +547,7 @@ switch (target) {
 
   case "log-subagent": {
     // SubagentStop already carries agent_type (real role name since Codex
-    // 0.139.0; the doctor-enforced floor is 0.145.0) + agent_id. Verbatim pipe.
+    // 0.139.0; the doctor-advised floor is 0.145.0) + agent_id. Verbatim pipe.
     runCore("aidlc-log-subagent.ts", rawInput);
     persistResponse("", 0);
     return 0;
@@ -674,43 +660,14 @@ switch (target) {
     return 0;
   }
 
-  case "start-stage-rules":
-  case "finish-stage-rules": {
-    try {
-      const bridge = await import("./aidlc-codex-dispatch.ts");
-      const stdout = target === "start-stage-rules"
-        ? bridge.startDispatch(projectDir, codex)
-        : (bridge.finishDispatch(projectDir, codex), "");
-      persistResponse(stdout, 0);
-      if (stdout) process.stdout.write(stdout);
-      return 0;
-    } catch (error) {
-      const stderr = `[aidlc] ${error instanceof Error ? error.message : String(error)}\n`;
-      persistResponse("", 2, stderr);
-      process.stderr.write(stderr);
-      return 2;
-    }
-  }
-
   case "deliver-stage-rules": {
-    if (bridgeDispatch) {
-      try {
-        const { prepareDispatch } = await import("./aidlc-codex-dispatch.ts");
-        await prepareDispatch(projectDir, codex);
-        persistResponse("", 0);
-        return 0;
-      } catch (error) {
-        const stderr = `[aidlc] ${error instanceof Error ? error.message : String(error)}\n`;
-        persistResponse("", 2, stderr);
-        process.stderr.write(stderr);
-        return 2;
-      }
-    }
-    // Successful input rewrites need an explicit allow in Codex. Preserve
-    // existing decisions, extra context, and blocking responses from core.
+    // Codex 0.145 consumes the same PreToolUse hookSpecificOutput.updatedInput
+    // contract as Claude, plus an explicit allow decision for rewritten input.
+    // The core hook recognizes spawn_agent and appends the exact active-stage
+    // bundle to message/items; the adapter completes the Codex envelope.
     const r = runCoreWithStderr("aidlc-deliver-stage-rules.ts", rawInput);
     const answeredCode = r.code === 2 ? 2 : 0;
-    const stdout = r.code === 0 ? normalizePreToolUseUpdatedInput(r.stdout) : r.stdout;
+    const stdout = r.code === 2 ? r.stdout : allowUpdatedInput(r.stdout);
     persistResponse(stdout, answeredCode, r.stderr);
     if (stdout) process.stdout.write(stdout);
     if (r.code === 2) {
@@ -818,20 +775,26 @@ switch (target) {
     // state existing (same self-gate as the core record-human-turn hook) so a prompt in a
     // project that never ran the framework does not scaffold audit shards.
     // Fail-open: a record-human-turn failure must never block the turn. Advisory, no stdout.
-    const responseText =
-      explicitHumanSelectionText(codex.tool_response) ||
-      codex.prompt ||
-      codex.user_prompt ||
-      codex.message ||
-      "";
-    runCoreWithStderr(
-      "aidlc-record-human-turn.ts",
-      JSON.stringify({
-        hook_event_name: "UserPromptSubmit",
-        ...(codex.session_id ? { session_id: codex.session_id } : {}),
-        prompt: responseText,
-      }),
-    );
+    //
+    // A structured request_user_input selection is forwarded as the tool
+    // response it is, never as typed prompt text: the core hook records the
+    // Plan Approval choice from either channel, but the break-glass override
+    // phrase counts only when the human typed it as a prompt.
+    const selectionText = explicitHumanSelectionText(codex.tool_response);
+    const forwarded =
+      codex.tool_name === "request_user_input"
+        ? {
+            hook_event_name: "PostToolUse",
+            ...(codex.session_id ? { session_id: codex.session_id } : {}),
+            tool_name: "request_user_input",
+            tool_response: { answer: selectionText },
+          }
+        : {
+            hook_event_name: "UserPromptSubmit",
+            ...(codex.session_id ? { session_id: codex.session_id } : {}),
+            prompt: codex.prompt || codex.user_prompt || codex.message || "",
+          };
+    runCoreWithStderr("aidlc-record-human-turn.ts", JSON.stringify(forwarded));
     persistResponse("", 0);
     return 0;
   }

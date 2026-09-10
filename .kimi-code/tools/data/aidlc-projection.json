@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "distribution": "kimi",
+  "productName": "Kimi Code",
+  "configNextStep": "append `.kimi-code/hooks.snippet.toml` to your user-level Kimi config, open Kimi Code in this project, then run `/skill:aidlc --doctor`",
+  "harnessDir": ".kimi-code",
+  "managedDirectories": [
+    ".kimi-code",
+    "aidlc"
+  ],
+  "rootIntegrations": [
+    {
+      "path": ".gitignore",
+      "policy": "managed-block",
+      "marker": "gitignore",
+      "legacySignatures": {
+        "wholeFileHashes": [
+          "sha256:1b3237ae1699644a38364783c7478e652d96e317632b54cd8317eb7a96543407"
+        ]
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "policy": "managed-block",
+      "marker": "agents",
+      "legacySignatures": {
+        "wholeFileHashes": [
+          "sha256:0b55416609ee227391e5a987b9c79675e41dc713edc99c2c4500dad8eaa5b933"
+        ]
+      }
+    }
+  ]
+}
