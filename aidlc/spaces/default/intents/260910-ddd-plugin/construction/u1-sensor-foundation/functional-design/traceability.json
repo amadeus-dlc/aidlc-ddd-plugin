@@ -1,0 +1,43 @@
+{
+  "stage": "functional-design",
+  "unit": "u1-sensor-foundation",
+  "upstream_ids": [
+    "FR2",
+    "FR2.1",
+    "FR2.2",
+    "FR2.3",
+    "FR2.4",
+    "FR2.5",
+    "FR2.6",
+    "FR2.7",
+    "FR8",
+    "FR8.5",
+    "NFR8",
+    "NFR9"
+  ],
+  "coverage": [
+    { "id": "FR2", "status": "OK", "target": "BR3.1" },
+    { "id": "FR2.1", "status": "OK", "target": "BR3.1, BR3.5, BR3.6, BR3.7, BR3.8" },
+    { "id": "FR2.2", "status": "OK", "target": "BR3.4" },
+    { "id": "FR2.3", "status": "OK", "target": "BR1.1, BR1.2, BR1.3, BR1.4, BR1.5" },
+    { "id": "FR2.4", "status": "OK", "target": "BR2.1, BR2.2, BR2.3, BR2.4" },
+    { "id": "FR2.5", "status": "OK", "target": "BR4.1, BR4.2, BR4.3" },
+    { "id": "FR2.6", "status": "OK", "target": "BR5.1, BR5.2" },
+    { "id": "FR2.7", "status": "OK", "target": "BR6.1, BR6.2" },
+    { "id": "FR8", "status": "OK", "target": "BR7.1" },
+    { "id": "FR8.5", "status": "OK", "target": "BR7.1, BR7.2, BR7.3, BR7.4, BR8.1, BR8.2" },
+    { "id": "NFR8", "status": "OK", "target": "BR7.5, BR9.1, BR9.2" },
+    { "id": "NFR9", "status": "OK", "target": "BR7.6, BR8.6" }
+  ],
+  "reverse": [
+    { "id": "BR3.2", "status": "N/A", "target": "FR1.8 (i) の検査材料。要件は U6（FR1.8）と U4（FR6.5）に割り当てられており、U1 は API を提供する" },
+    { "id": "BR3.3", "status": "N/A", "target": "FR1.8 (ii) の検査材料。同上" },
+    { "id": "BR3.9", "status": "N/A", "target": "FR1.9（U6 に割り当て）の所有権境界を機械的に守るための補助規則" },
+    { "id": "BR7.7", "status": "N/A", "target": "NFR1（U5 に割り当て）の確定性を U1 の報告形式で支える補助規則" },
+    { "id": "BR7.8", "status": "N/A", "target": "NFR3（U5 に割り当て）の時間予算を U1 の実行契約で支える補助規則" },
+    { "id": "BR8.3", "status": "N/A", "target": "FR6.4（U4 に割り当て）の状態ファイル読み取り（ADR-004）を U1 が提供する" },
+    { "id": "BR8.4", "status": "N/A", "target": "FR8.3（U7 に割り当て）と ADR-003 の申告ソース解決を U1 が提供する" },
+    { "id": "BR8.5", "status": "N/A", "target": "ADR-003 のセキュリティ条項（範囲外パスは検査しない）" },
+    { "id": "BR9.3", "status": "N/A", "target": "FR8.2 / FR6.6（U4 に割り当て）の advisory 報告を U1 の pass 定義で支える補助規則" }
+  ]
+}

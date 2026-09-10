@@ -1,0 +1,35 @@
+{
+  "stage": "functional-design",
+  "unit": "u6-domain-modeling-stage",
+  "upstream_ids": [
+    "FR1",
+    "FR1.1",
+    "FR1.2",
+    "FR1.3",
+    "FR1.4",
+    "FR1.5",
+    "FR1.6",
+    "FR1.7",
+    "FR1.8",
+    "FR1.9"
+  ],
+  "coverage": [
+    { "id": "FR1", "status": "OK", "target": "BR1.1, BR5.4, BR7.2" },
+    { "id": "FR1.1", "status": "OK", "target": "BR1.1" },
+    { "id": "FR1.2", "status": "OK", "target": "BR1.2" },
+    { "id": "FR1.3", "status": "OK", "target": "BR1.1" },
+    { "id": "FR1.4", "status": "OK", "target": "BR1.3" },
+    { "id": "FR1.5", "status": "OK", "target": "BR1.5, BR2.1, BR2.2" },
+    { "id": "FR1.6", "status": "OK", "target": "BR3.1, BR4.3" },
+    { "id": "FR1.7", "status": "OK", "target": "BR1.4, BR5.1, BR5.2" },
+    { "id": "FR1.8", "status": "OK", "target": "BR3.2, BR3.4, BR6.1, BR6.2, BR6.3" },
+    { "id": "FR1.9", "status": "OK", "target": "BR5.3" }
+  ],
+  "reverse": [
+    { "id": "BR2.3", "status": "N/A", "target": "Q3（brownfield の逆解析成果物を照合材料にする）の手順。ADR-010 #2 の補助規則" },
+    { "id": "BR3.3", "status": "N/A", "target": "FR2.6（U1 に割り当て）の Process Manager を候補として問う手順" },
+    { "id": "BR4.1", "status": "N/A", "target": "FR2.3（U1 に割り当て）の ID 文法をステージ手順で守る規則。Q2 の非 ASCII の確認" },
+    { "id": "BR4.2", "status": "N/A", "target": "FR2.4（U1 に割り当て）の系譜を rerun の手順で記録する規則" },
+    { "id": "BR7.1", "status": "N/A", "target": "FR10.3（U8 に割り当て）のナレッジを手順から参照する規則" }
+  ]
+}

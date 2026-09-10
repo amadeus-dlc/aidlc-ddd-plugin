@@ -1,0 +1,53 @@
+{
+  "stage": "functional-design",
+  "unit": "u5-rust-code-sensors",
+  "upstream_ids": [
+    "FR7",
+    "FR7.1",
+    "FR7.2",
+    "FR7.3",
+    "FR7.4",
+    "FR7.5",
+    "FR7.6",
+    "FR7.7",
+    "FR7.8",
+    "FR7.9",
+    "FR7.10",
+    "FR7.11",
+    "FR7.12",
+    "FR7.13",
+    "FR9.5",
+    "NFR1",
+    "NFR3"
+  ],
+  "coverage": [
+    { "id": "FR7", "status": "OK", "target": "BR1.1, BR1.2, BR2.1, BR9.1" },
+    { "id": "FR7.1", "status": "OK", "target": "BR4.1, BR3.2" },
+    { "id": "FR7.2", "status": "OK", "target": "BR4.2, BR3.3" },
+    { "id": "FR7.3", "status": "OK", "target": "BR4.3, BR3.3, BR10.2" },
+    { "id": "FR7.4", "status": "OK", "target": "BR4.4, BR5.4, BR3.1" },
+    { "id": "FR7.5", "status": "OK", "target": "BR5.1, BR6.1" },
+    { "id": "FR7.6", "status": "OK", "target": "BR5.2" },
+    { "id": "FR7.7", "status": "OK", "target": "BR5.3" },
+    { "id": "FR7.8", "status": "OK", "target": "BR6.2, BR6.1" },
+    { "id": "FR7.9", "status": "OK", "target": "BR6.3" },
+    { "id": "FR7.10", "status": "OK", "target": "BR6.4" },
+    { "id": "FR7.11", "status": "OK", "target": "BR6.5" },
+    { "id": "FR7.12", "status": "OK", "target": "BR7.2, BR7.3" },
+    { "id": "FR7.13", "status": "OK", "target": "BR7.1, BR7.4" },
+    { "id": "FR9.5", "status": "OK", "target": "BR4.5, BR5.1, BR6.1, BR6.2" },
+    { "id": "NFR1", "status": "OK", "target": "BR8.1, BR10.4" },
+    { "id": "NFR3", "status": "OK", "target": "BR8.2, BR8.3, BR10.4" }
+  ],
+  "reverse": [
+    { "id": "BR1.3", "status": "N/A", "target": "FR9.4（U2 に割り当て）の層不明違反を所見として報告する担当を 1 本に固定する補助規則" },
+    { "id": "BR1.4", "status": "N/A", "target": "NFR2 / NFR9（U2 / U1 に割り当て）を Rust センサーにも適用する補助規則" },
+    { "id": "BR2.2", "status": "N/A", "target": "ADR-003 の発火経路で Rust 以外の Unit に発火したときの扱い（技術的な補助規則）" },
+    { "id": "BR2.3", "status": "N/A", "target": "FR9.1（U2 に割り当て）の workspace の根をセンサー側で決める補助規則" },
+    { "id": "BR2.4", "status": "N/A", "target": "U2 Q3 の auxiliary / composition-root の除外をセンサー側で適用する補助規則" },
+    { "id": "BR3.4", "status": "N/A", "target": "Q2（正規モデルが無いワークフロー）の判定。FR6.4 / ADR-004 の準用" },
+    { "id": "BR9.2", "status": "N/A", "target": "Q5 / Q6 の固定リストの置き場所（技術的な補助規則、ADR-009 の意味の共有）" },
+    { "id": "BR10.1", "status": "N/A", "target": "FR8.7（U4 に割り当て）の fixture 規約を Rust 用に拡張する補助規則" },
+    { "id": "BR10.3", "status": "N/A", "target": "Q2 の分岐をゴールデンケースで固定する補助規則" }
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "uuid": "01a08933-ac5e-757c-a588-2358ceeac110",
+    "slug": "ddd-plugin",
+    "dirName": "260910-ddd-plugin",
+    "scope": "plugin-dev",
+    "repos": [
+      "aidlc-workflows",
+      "ddd"
+    ],
+    "status": "in-flight"
+  }
+]
