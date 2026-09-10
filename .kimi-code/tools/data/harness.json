@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "distribution": "kimi",
+  "productName": "Kimi Code",
+  "configNextStep": "append `.kimi-code/hooks.snippet.toml` to your user-level Kimi config, open Kimi Code in this project, then run `/skill:aidlc --doctor`",
+  "name": "kimi",
+  "harnessDir": ".kimi-code",
+  "rulesSubdir": "rules"
+}
