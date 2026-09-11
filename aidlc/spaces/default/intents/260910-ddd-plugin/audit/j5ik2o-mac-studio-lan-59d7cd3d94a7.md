@@ -10631,3 +10631,6517 @@
 **Tool**: Bash
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-09-11T00:48:48Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:48:52Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T00:49:40Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:49:45Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T00:50:10Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:50:18Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:52:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3860b652
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/shared/findings.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:52:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3860b652
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/shared/findings.ts
+**Duration ms**: 271
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:52:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2f62f9cf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/shared/findings.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:52:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2f62f9cf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/shared/findings.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:52:45Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:52:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee32645f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/element-id.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:52:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee32645f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/element-id.ts
+**Duration ms**: 202
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:52:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 53b39ee0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/element-id.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:53:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 53b39ee0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/element-id.ts
+**Duration ms**: 30035
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:53:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:53:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a718d0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:53:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a718d0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/model.ts
+**Duration ms**: 193
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:53:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 13996b94
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:53:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 13996b94
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/model.ts
+**Duration ms**: 30090
+**Note**: script-error: exit-2
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:53:58Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:53:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: e384e100
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:53:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: e384e100
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+**Duration ms**: 201
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:53:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e0a6d9e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:53:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3e0a6d9e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+**Duration ms**: 431
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:54:41Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:54:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3bf63014
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:54:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3bf63014
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 191
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:54:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d4e7fff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:55:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0d4e7fff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 30035
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:55:18Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:55:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: c85bd259
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/completeness.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:55:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: c85bd259
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/completeness.ts
+**Duration ms**: 191
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:55:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 255d5449
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/completeness.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:55:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 255d5449
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/completeness.ts
+**Duration ms**: 30035
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:56:09Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:56:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d3f5fc4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:56:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d3f5fc4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 209
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:56:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 340d9d44
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:56:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 340d9d44
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 30034
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:56:48Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9546b324
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:56:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9546b324
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 193
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:56:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72e1c701
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 72e1c701
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 13615
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:12Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb16da3e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: fb16da3e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 196
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 81b522cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 81b522cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 436
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 24f95e1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 24f95e1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 178
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: f5d52537
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: f5d52537
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 429
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8fc221e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8fc221e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 215
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4561a730
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4561a730
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 503
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:29Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac1f58c9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: ac1f58c9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 216
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d8cfede
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8d8cfede
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 488
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:34Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa7fb574
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa7fb574
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 215
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 730acca7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 730acca7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 498
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:39Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2038de94
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2038de94
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 217
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3578f4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: e3578f4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 511
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:57:45Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 06669a8f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 06669a8f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 210
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:57:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 973971ad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:57:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 973971ad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/context.ts
+**Duration ms**: 443
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:58:03Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 936d7126
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:58:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 936d7126
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 208
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 851f29a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:58:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 851f29a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 433
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:58:07Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: f7e73e00
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:58:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: f7e73e00
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 232
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: c7cff485
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:58:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: c7cff485
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/loader.ts
+**Duration ms**: 1107
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:58:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 40e763c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:58:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 40e763c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+**Duration ms**: 190
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:58:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe50742a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:59:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe50742a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T00:59:15Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:59:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9fb94537
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T00:59:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9fb94537
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+**Duration ms**: 190
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T00:59:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7f103c37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:00:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7f103c37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/schema/index-builder.ts
+**Duration ms**: 56659
+**Note**: script-error: exit-2
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:00:44Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:01:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 400b0a41
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:01:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 400b0a41
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+**Duration ms**: 198
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:01:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: b0f4c366
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:02:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: b0f4c366
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u1-sensor-foundation.test.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:02:09Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T01:47:29Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:47:45Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 972a37c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:49:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 972a37c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 281
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 31b360ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:49:32Z
+**Event**: SENSOR_FAILED
+**Fire id**: 31b360ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-31b360ac.md
+**Findings count**: 5
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:49:44Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb84d970
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:49:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb84d970
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 193
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 83e91597
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:49:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: 83e91597
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-83e91597.md
+**Findings count**: 7
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:49:50Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7d84bee7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:49:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7d84bee7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 179
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89c54414
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:49:51Z
+**Event**: SENSOR_FAILED
+**Fire id**: 89c54414
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-89c54414.md
+**Findings count**: 5
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:49:56Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd37445d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:49:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd37445d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 187
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:49:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15f1e6df
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:49:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 15f1e6df
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-15f1e6df.md
+**Findings count**: 9
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:50:03Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9762eb9b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:50:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9762eb9b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 181
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 760d0160
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:50:04Z
+**Event**: SENSOR_FAILED
+**Fire id**: 760d0160
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-760d0160.md
+**Findings count**: 8
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:50:08Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: af37e8c9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:50:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: af37e8c9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 198
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1991987e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:50:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1991987e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-1991987e.md
+**Findings count**: 7
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:50:32Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1adf50ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:50:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1adf50ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 202
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:50:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: c772fd16
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:50:42Z
+**Event**: SENSOR_FAILED
+**Fire id**: c772fd16
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-c772fd16.md
+**Findings count**: 4
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:50:56Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:51:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: a9b7fedf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/vendor/tree-sitter.d.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:51:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: a9b7fedf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/vendor/tree-sitter.d.ts
+**Duration ms**: 183
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:51:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0796eef1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/vendor/tree-sitter.d.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:51:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0796eef1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/vendor/tree-sitter.d.ts
+**Duration ms**: 586
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:51:42Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:51:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 968c1991
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:51:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 968c1991
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 204
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:51:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68ec8bf5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:51:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68ec8bf5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 631
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:51:49Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9a35dad3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9a35dad3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 241
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 692e4094
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 692e4094
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 1398
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:52:19Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: dbc6b891
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: dbc6b891
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 215
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf5bd322
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf5bd322
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 1127
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:52:31Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f5268dd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f5268dd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 207
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: b674580f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:52:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: b674580f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-b674580f.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:52:54Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 316b7742
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 316b7742
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 188
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:52:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15234c8e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:52:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15234c8e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 3743
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:53:03Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2373998
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:53:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2373998
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 212
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69f6f240
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:53:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69f6f240
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 799
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:53:08Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47da2c2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:53:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47da2c2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 209
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6de7392
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:53:27Z
+**Event**: SENSOR_FAILED
+**Fire id**: e6de7392
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-e6de7392.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:53:31Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff390a18
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:53:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff390a18
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 197
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:53:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27f3be4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:53:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27f3be4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 1224
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:53:37Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T01:57:26Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:57:31Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: c8d496d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: c8d496d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 238
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e2bbc47
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:58:12Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3e2bbc47
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-3e2bbc47.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:58:16Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52a5e991
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52a5e991
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 222
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac1c7dec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T01:58:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: ac1c7dec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-ac1c7dec.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:58:23Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c18b3f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c18b3f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 211
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2be643ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2be643ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/runtime/runtime.ts
+**Duration ms**: 673
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:58:35Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ca72673
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/declaration.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ca72673
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/declaration.ts
+**Duration ms**: 205
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95da0aca
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/declaration.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95da0aca
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/declaration.ts
+**Duration ms**: 680
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:58:46Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 58c80741
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/common.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 58c80741
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/common.ts
+**Duration ms**: 213
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: e06a652b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/common.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: e06a652b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/sensors/common.ts
+**Duration ms**: 677
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:58:57Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: aca7d618
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-completeness.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: aca7d618
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-completeness.ts
+**Duration ms**: 195
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:58:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0582011e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-completeness.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:58:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0582011e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-completeness.ts
+**Duration ms**: 619
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:59:04Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa01ada4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-presence.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:59:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa01ada4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-presence.ts
+**Duration ms**: 178
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c8685c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-presence.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:59:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c8685c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-model-presence.ts
+**Duration ms**: 610
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:59:13Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: dcc5288f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-reference-ids.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:59:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: dcc5288f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-reference-ids.ts
+**Duration ms**: 206
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: a465d7a8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-reference-ids.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:59:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: a465d7a8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-reference-ids.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T01:59:55Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0a4d7eb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T01:59:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0a4d7eb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 189
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T01:59:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5da7c17f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:00:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5da7c17f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:00:30Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:00:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 830cc989
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:00:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 830cc989
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 218
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:00:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0712b2c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:00:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0712b2c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 10890
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:00:47Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:00:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb3f23b5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:00:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb3f23b5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 368
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:00:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: a47d5c1f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T02:00:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: a47d5c1f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-a47d5c1f.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:00:59Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:00:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 408772c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:01:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 408772c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 188
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:01:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: c44c8a46
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:01:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: c44c8a46
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-mapping-declarations.ts
+**Duration ms**: 30037
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:01:42Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:01:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b9d922c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:01:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7b9d922c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+**Duration ms**: 246
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:01:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 98e09b50
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:02:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 98e09b50
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+**Duration ms**: 30040
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:02:19Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:02:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1afadeb3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-design-advisories.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:02:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1afadeb3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-design-advisories.ts
+**Duration ms**: 213
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:02:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 444cd071
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-design-advisories.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:02:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 444cd071
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-design-advisories.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:02:54Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:04:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: b09e832e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:04:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: b09e832e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Duration ms**: 203
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:04:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d510d58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:04:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d510d58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Duration ms**: 30551
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:04:43Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: fdd8cda5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:04:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: fdd8cda5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Duration ms**: 204
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7cbbcd0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:05:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7cbbcd0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Duration ms**: 30035
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:05:18Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:05:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a4abd35
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:05:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8a4abd35
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Duration ms**: 220
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:05:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: f50a9260
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+
+---
+
+## Sensor Budget Override
+**Timestamp**: 2026-09-11T02:06:28Z
+**Event**: SENSOR_BUDGET_OVERRIDE
+**Fire id**: f50a9260
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-design-sensors.test.ts
+**Cap layer**: registry
+**Cap value**: 60
+**Observed value**: 61
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:06:32Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:06:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6a3c81c0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:06:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6a3c81c0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+**Duration ms**: 199
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T02:06:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2eb0a832
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T02:06:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2eb0a832
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-layer-structure.ts
+**Duration ms**: 4267
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T02:06:49Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T03:19:05Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:19:23Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1752dbf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:20:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1752dbf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 278
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3cc7db2a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:20:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3cc7db2a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 30041
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:20:38Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96d60c82
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:20:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96d60c82
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 211
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: c988d720
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T03:20:51Z
+**Event**: SENSOR_FAILED
+**Fire id**: c988d720
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-c988d720.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:20:55Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90cf4d95
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:20:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90cf4d95
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 218
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:20:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 635797c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:20:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 635797c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 655
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:21:25Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 144128c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 144128c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 203
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68f9eef9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68f9eef9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 651
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:21:34Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c014aa4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9c014aa4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 186
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89fb3da6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 89fb3da6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 628
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:21:40Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: db55c262
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: db55c262
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 216
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b34503f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T03:21:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7b34503f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-7b34503f.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:21:55Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6da0334d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6da0334d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 302
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:21:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89af8ed2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:21:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 89af8ed2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 913
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:22:02Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:22:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8eebd207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:22:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8eebd207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 259
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:22:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26d1921d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:22:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26d1921d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 1073
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:22:10Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:22:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff9ac1e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:22:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff9ac1e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 239
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:22:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8cf3f3ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:22:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8cf3f3ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 1330
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:22:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T03:54:08Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:54:14Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:54:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: bdbf1b6c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:54:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: bdbf1b6c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 783
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:54:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26246492
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:54:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26246492
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 726
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:54:40Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:54:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8b113c4c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:54:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8b113c4c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 194
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:54:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 471f8cdd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:54:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 471f8cdd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 1074
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:54:48Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:55:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa0d3fd2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:55:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa0d3fd2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 290
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:55:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: e09dacfa
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:55:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: e09dacfa
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 788
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:55:07Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:55:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7dc58707
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:55:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7dc58707
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 581
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T03:55:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac870012
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T03:55:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: ac870012
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/design/cases.ts
+**Duration ms**: 1150
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T03:55:21Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T04:31:02Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:31:09Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T04:39:09Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:39:13Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:39:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 637d1c52
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/lists.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:39:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 637d1c52
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/lists.ts
+**Duration ms**: 258
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:39:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: d91ea876
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/lists.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:40:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: d91ea876
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/lists.ts
+**Duration ms**: 30033
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:40:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:40:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52bc5f6f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/definitions.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:40:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52bc5f6f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/definitions.ts
+**Duration ms**: 208
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:40:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 100f97ee
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/definitions.ts
+
+---
+
+## Sensor Budget Override
+**Timestamp**: 2026-09-11T04:41:17Z
+**Event**: SENSOR_BUDGET_OVERRIDE
+**Fire id**: 100f97ee
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/definitions.ts
+**Cap layer**: registry
+**Cap value**: 60
+**Observed value**: 61
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:41:24Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:41:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ed3ef7a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/types.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:41:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ed3ef7a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/types.ts
+**Duration ms**: 200
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:41:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: bfa112ee
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/types.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:41:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: bfa112ee
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/types.ts
+**Duration ms**: 30037
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:06Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 504adcc0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 504adcc0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Duration ms**: 207
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 355bb6a3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:42:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: 355bb6a3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-355bb6a3.md
+**Findings count**: 18
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:18Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4391a023
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4391a023
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 209
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47989142
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:42:19Z
+**Event**: SENSOR_FAILED
+**Fire id**: 47989142
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-47989142.md
+**Findings count**: 4
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:24Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48ffec94
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48ffec94
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 189
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: a1e5b37f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:42:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: a1e5b37f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-a1e5b37f.md
+**Findings count**: 6
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:32Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: e81c4334
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: e81c4334
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 232
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88183ddf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:42:34Z
+**Event**: SENSOR_FAILED
+**Fire id**: 88183ddf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-88183ddf.md
+**Findings count**: 2
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:39Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6f95bb5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6f95bb5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 189
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 281a2c2d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 281a2c2d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 1042
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:46Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: bed285ef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: bed285ef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Duration ms**: 198
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ca85065
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ca85065
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Duration ms**: 691
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:42:52Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: d1d275f0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: d1d275f0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 183
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:42:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26307240
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:42:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26307240
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 1449
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:43:08Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3d423ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:43:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3d423ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 242
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 46fbb4cf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:43:10Z
+**Event**: SENSOR_FAILED
+**Fire id**: 46fbb4cf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-46fbb4cf.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:43:27Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: e9fb34b4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:43:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: e9fb34b4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Duration ms**: 287
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: e21b0c63
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:43:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: e21b0c63
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Duration ms**: 1505
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:43:37Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3739e4cb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/evaluate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:43:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3739e4cb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/evaluate.ts
+**Duration ms**: 238
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd467ff3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/evaluate.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:43:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: bd467ff3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/evaluate.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-bd467ff3.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:43:49Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: d42d0a0f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:43:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: d42d0a0f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 198
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2abbfcde
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:43:53Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2abbfcde
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-2abbfcde.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:43:59Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:43:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4fbd920
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4fbd920
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+**Duration ms**: 222
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 51f1416f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:44:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 51f1416f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-51f1416f.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:44:06Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f2049a8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f2049a8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+**Duration ms**: 185
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2948aadf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2948aadf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-domain.ts
+**Duration ms**: 7315
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:44:20Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c558dcd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-use-case.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c558dcd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-use-case.ts
+**Duration ms**: 287
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71290633
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-use-case.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 71290633
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-use-case.ts
+**Duration ms**: 944
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:44:27Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99f18d81
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-interface-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99f18d81
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-interface-adapter.ts
+**Duration ms**: 381
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:44:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: c70cd3cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-interface-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:44:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: c70cd3cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd-sensor-rust-interface-adapter.ts
+**Duration ms**: 1270
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:44:36Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 358f11ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 358f11ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 383
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1647f143
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1647f143
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 1782
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:45:26Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2630d828
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2630d828
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 178
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c43854d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2c43854d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 12640
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:45:49Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 39825ee7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 39825ee7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+**Duration ms**: 291
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:45:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: ffe65430
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:45:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: ffe65430
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+**Duration ms**: 3275
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:45:58Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:46:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5ef12c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:46:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: b5ef12c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 278
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:46:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: a1811d9c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:46:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: a1811d9c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/context.ts
+**Duration ms**: 722
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:46:12Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:47:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 059414a0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:47:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 059414a0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 208
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:47:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6440034
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:47:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6440034
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 12656
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:48:00Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 80c3225f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:48:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 80c3225f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 231
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7deefeff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:48:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7deefeff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 8326
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:48:13Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: e4c3f6fd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:48:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: e4c3f6fd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 247
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 19ce9776
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:48:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 19ce9776
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 30038
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:48:58Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7f32d66c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:48:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7f32d66c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 203
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:48:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: b86562dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:49:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: b86562dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 30037
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:49:33Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:49:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff1943ee
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:49:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff1943ee
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 204
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:49:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b41a1d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:50:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5b41a1d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u2-rust-analysis-foundation.test.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:50:09Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:50:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: bca80bec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:50:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: bca80bec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 464
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:50:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 452f88b4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:50:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 452f88b4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u4-golden.test.ts
+**Duration ms**: 1673
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:50:47Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:50:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27f22dda
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:50:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27f22dda
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Duration ms**: 204
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:50:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0fe6fe7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:51:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: a0fe6fe7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/symbols.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:51:32Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T04:52:26Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:52:34Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:52:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c5b73e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:52:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c5b73e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 212
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:52:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8313f81f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:52:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8313f81f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 956
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:52:52Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:52:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52d33560
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:52:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52d33560
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 183
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:52:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 665a10c1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:52:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 665a10c1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 648
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:52:58Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4f1d3873
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4f1d3873
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 195
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: beb87d77
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:53:08Z
+**Event**: SENSOR_FAILED
+**Fire id**: beb87d77
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-beb87d77.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:53:11Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 36bea420
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 36bea420
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 189
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c9af15d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9c9af15d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rust/analyzer.ts
+**Duration ms**: 704
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:53:21Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1eedc5cb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1eedc5cb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Duration ms**: 485
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e868f63
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:53:38Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8e868f63
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-8e868f63.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:53:42Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe50231e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe50231e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Duration ms**: 202
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:53:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 30c56277
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:53:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 30c56277
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/evaluators.ts
+**Duration ms**: 761
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:53:57Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a0b43ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a0b43ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 199
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5cba9449
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:54:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5cba9449
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-5cba9449.md
+**Findings count**: 2
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:54:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: a96af68f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: a96af68f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 207
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: b289f3f7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:54:18Z
+**Event**: SENSOR_FAILED
+**Fire id**: b289f3f7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-b289f3f7.md
+**Findings count**: 2
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:54:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 958cbb65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 958cbb65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 204
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 53823966
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 53823966
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/rules/rust/edges.ts
+**Duration ms**: 630
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:54:29Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90f1b59f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90f1b59f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 195
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88aba745
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88aba745
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 642
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:54:36Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8ac1c6e9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8ac1c6e9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 188
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 60f864d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 60f864d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 634
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:54:52Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45a050fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 45a050fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+**Duration ms**: 190
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:54:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0446ac4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:54:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0446ac4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+**Duration ms**: 607
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:55:00Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54225f38
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54225f38
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 182
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: a9d083c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: a9d083c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/runner.ts
+**Duration ms**: 642
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:55:06Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Write
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: bdff2019
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: bdff2019
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-golden.test.ts
+**Duration ms**: 222
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 075637b8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-golden.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 075637b8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-golden.test.ts
+**Duration ms**: 641
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:55:16Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3759f80c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3759f80c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Duration ms**: 196
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0fb0318c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-09-11T04:55:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0fb0318c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tools/ddd/lib/workspace/resolver.ts
+**Detail path**: aidlc/spaces/default/intents/260910-ddd-plugin/.aidlc-sensors/code-generation/type-check-0fb0318c.md
+**Findings count**: 1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:55:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: bab5299f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: bab5299f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+**Duration ms**: 208
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:55:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c8b1931
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:55:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c8b1931
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/golden/rust/cases.ts
+**Duration ms**: 705
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:55:57Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:56:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17c915f6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:56:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17c915f6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+**Duration ms**: 205
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T04:56:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac08d1fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T04:57:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: ac08d1fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/tests/u5-rust-code-sensors.test.ts
+**Duration ms**: 30036
+**Note**: tool-unavailable
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:57:34Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T04:59:23Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T04:59:30Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T05:05:23Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:05:29Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T05:11:28Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:11:33Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T05:12:07Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:12:14Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:13:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4695096d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd-sandbox/verify-dist.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:13:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4695096d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd-sandbox/verify-dist.ts
+**Duration ms**: 234
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:13:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: f458c334
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd-sandbox/verify-dist.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:13:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: f458c334
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd-sandbox/verify-dist.ts
+**Duration ms**: 26
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:13:08Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T05:13:58Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T05:14:05Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:14:06Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:15:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb7aff59
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:15:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: fb7aff59
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 203
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:15:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: a1b9cbb6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:15:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: a1b9cbb6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 26
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:15:26Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:16:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2d54845
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:16:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2d54845
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 194
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:16:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a26f98d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:16:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8a26f98d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 26
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:16:06Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:16:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3453efb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:16:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: e3453efb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 182
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T05:16:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f01ecf2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T05:16:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f01ecf2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 25
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T05:16:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T06:04:43Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T06:04:49Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T09:00:06Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:00:17Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:01:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 512ef9f7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/scripts/verify-dist.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T09:01:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 512ef9f7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: ddd/scripts/verify-dist.ts
+**Duration ms**: 690
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:01:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: a2e93957
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/scripts/verify-dist.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T09:01:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: a2e93957
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: ddd/scripts/verify-dist.ts
+**Duration ms**: 719
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:01:15Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Edit
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T09:02:26Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:02:30Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T09:03:07Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:03:23Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:04:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: a2708207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/hooks/aidlc-codex-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T09:04:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: a2708207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .codex/hooks/aidlc-codex-adapter.ts
+**Duration ms**: 14066
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:04:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3d4828b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/hooks/aidlc-codex-adapter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T09:04:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: e3d4828b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .codex/hooks/aidlc-codex-adapter.ts
+**Duration ms**: 27
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:05:00Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:05:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17883879
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Budget Override
+**Timestamp**: 2026-09-11T09:05:47Z
+**Event**: SENSOR_BUDGET_OVERRIDE
+**Fire id**: 17883879
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/tools/data/plugin-hooks-template/compose.ts
+**Cap layer**: registry
+**Cap value**: 30
+**Observed value**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-09-11T09:05:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: c83b03c7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/tools/data/plugin-hooks-template/compose.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-09-11T09:05:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: c83b03c7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/tools/data/plugin-hooks-template/compose.ts
+**Duration ms**: 25
+**Note**: script-error: exit-1
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:05:59Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T09:10:17Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:10:22Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
+
+## Human Turn
+**Timestamp**: 2026-09-11T09:10:55Z
+**Event**: HUMAN_TURN
+**Session**: ses_f73c50c39ffemJabvFb7s6Ogqx
+
+---
+
+## Guard Disabled
+**Timestamp**: 2026-09-11T09:11:01Z
+**Event**: GUARD_DISABLED
+**Guard**: plan-approval-guard
+**Tool**: Bash
+
+---
