@@ -1,0 +1,29 @@
+{
+  "stage": "functional-design",
+  "unit": "u8-knowledge-pack",
+  "upstream_ids": [
+    "FR10",
+    "FR10.1",
+    "FR10.2",
+    "FR10.3",
+    "FR10.4",
+    "FR10.5",
+    "FR10.6"
+  ],
+  "coverage": [
+    { "id": "FR10", "status": "OK", "target": "BR1.1, BR3.2" },
+    { "id": "FR10.1", "status": "OK", "target": "BR2.1, BR2.3" },
+    { "id": "FR10.2", "status": "OK", "target": "BR2.2" },
+    { "id": "FR10.3", "status": "OK", "target": "BR1.1, BR1.4, BR8.1" },
+    { "id": "FR10.4", "status": "OK", "target": "BR1.2, BR5.1, BR8.2" },
+    { "id": "FR10.5", "status": "OK", "target": "BR4.1, BR4.2, BR4.4, BR4.5, BR5.3, BR6.1, BR6.2, BR7.2, BR7.3" },
+    { "id": "FR10.6", "status": "OK", "target": "BR4.3, BR7.1" }
+  ],
+  "reverse": [
+    { "id": "BR1.3", "status": "N/A", "target": "ADR-006（aidlc-shared は最小限）の方針" },
+    { "id": "BR3.1", "status": "N/A", "target": "Q1（英語）で確定した執筆規約" },
+    { "id": "BR3.3", "status": "N/A", "target": "Q2（粒度）に伴う分量の目安" },
+    { "id": "BR5.2", "status": "N/A", "target": "ADR-010（矛盾しない記述はプラグイン側の根拠として引用）" },
+    { "id": "BR6.3", "status": "N/A", "target": "Q3（索引）に伴うスニペットの上限。設計ステージの制約と同じ" }
+  ]
+}
