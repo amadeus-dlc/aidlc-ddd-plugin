@@ -119,8 +119,14 @@ export interface AnalyzerRuntime {
   grammar_path: string;
   runtime_path: string;
   state: "uninitialized" | "ready" | "unavailable";
-  cache: Map<string, SyntaxTree>;
+  cache: Map<string, ParsedTree>;
   parser?: TSParser;
+}
+
+interface ParsedTree {
+  tree: TSTree;
+  has_parse_error: boolean;
+  opaque_regions: OpaqueRegion[];
 }
 
 const GRAMMAR_PATH = resolve(import.meta.dir, "../../wasm/tree-sitter-rust.wasm");
@@ -484,10 +490,21 @@ function opaqueFacts(file: string, tree: TSTree): OpaqueRegion[] {
   return out;
 }
 
+function attach(file: string, contentHash: string, parsed: ParsedTree): SyntaxTree {
+  const syntaxTree: SyntaxTree = {
+    file,
+    content_hash: contentHash,
+    has_parse_error: parsed.has_parse_error,
+    opaque_regions: parsed.opaque_regions,
+  };
+  TREES.set(syntaxTree, parsed.tree);
+  return syntaxTree;
+}
+
 export function parse(runtime: AnalyzerRuntime, file: string, bytes: Uint8Array): SyntaxTree {
   const contentHash = createHash("sha256").update(bytes).digest("hex");
   const cached = runtime.cache.get(contentHash);
-  if (cached) return cached;
+  if (cached) return attach(file, contentHash, cached);
   if (runtime.state !== "ready" || !runtime.parser) {
     throw new Error("analyzer runtime is not ready");
   }
@@ -499,15 +516,9 @@ export function parse(runtime: AnalyzerRuntime, file: string, bytes: Uint8Array)
   if (hasError && !opaque.some((region) => region.reason === "parse-error")) {
     opaque.push({ file, span: spanOf(tree.rootNode), reason: "parse-error" });
   }
-  const syntaxTree: SyntaxTree = {
-    file,
-    content_hash: contentHash,
-    has_parse_error: hasError,
-    opaque_regions: opaque,
-  };
-  TREES.set(syntaxTree, tree);
-  runtime.cache.set(contentHash, syntaxTree);
-  return syntaxTree;
+  const parsed: ParsedTree = { tree, has_parse_error: hasError, opaque_regions: opaque };
+  runtime.cache.set(contentHash, parsed);
+  return attach(file, contentHash, parsed);
 }
 
 function requireTree(tree: SyntaxTree): TSTree {

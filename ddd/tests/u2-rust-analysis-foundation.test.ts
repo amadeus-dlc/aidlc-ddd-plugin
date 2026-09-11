@@ -277,12 +277,13 @@ pub fn make_order() -> Order {
     expect(opaqueRegions(broken).some((r) => r.reason === "macro-expression")).toBe(true);
   });
 
-  test("caches by content hash", async () => {
+  test("shares the parse by content hash but labels each tree with its file", async () => {
     const runtime = await initAnalyzer();
     const bytes = new TextEncoder().encode("fn a() {}\n");
     const first = parse(runtime, "a.rs", bytes);
     const second = parse(runtime, "b.rs", bytes);
-    expect(second).toBe(first);
-    expect(second.file).toBe("a.rs");
+    expect(second).not.toBe(first);
+    expect(second.file).toBe("b.rs");
+    expect(second.content_hash).toBe(first.content_hash);
   });
 });
