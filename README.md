@@ -104,6 +104,8 @@ bun run test:dist      # verify the built dist/<harness>/tools against the golde
 
 ## Documentation
 
+- Usage guide — fresh projects and mid-project adoption: [docs/usage.md](docs/usage.md)
+- Illustrated architecture overview: [docs/architecture.md](docs/architecture.md)
 - Plugin design, sensors, install and constraints: [ddd/README.md](ddd/README.md)
 - Release history: [ddd/CHANGELOG.md](ddd/CHANGELOG.md)
 - Design inputs — domain, use-case and interface-adapter layers: [ddd/docs/domain-layer-design.md](ddd/docs/domain-layer-design.md), [use-case](ddd/docs/use-case-layer-design.md), [interface-adapter](ddd/docs/interface-adapter-layer-design.md)

@@ -104,6 +104,8 @@ bun run test:dist      # ビルド済み dist/<harness>/tools をゴールデン
 
 ## ドキュメント
 
+- 利用ガイド（新規プロジェクト／途中導入）: [docs/usage.ja.md](docs/usage.ja.md)
+- 図解付きアーキテクチャ概要: [docs/architecture.ja.md](docs/architecture.ja.md)
 - プラグインの設計・センサー・導入・制約: [ddd/README.md](ddd/README.md)
 - リリース履歴: [ddd/CHANGELOG.md](ddd/CHANGELOG.md)
 - 設計入力（ドメイン層・ユースケース層・インターフェイスアダプタ層設計）: [ドメイン層](ddd/docs/domain-layer-design.md)、[ユースケース層](ddd/docs/use-case-layer-design.md)、[IA 層](ddd/docs/interface-adapter-layer-design.md)
