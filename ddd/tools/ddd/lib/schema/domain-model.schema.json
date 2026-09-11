@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidlc-ddd-plugin/schema/domain-model.schema.json",
+  "title": "AI-DLC DDD normalised domain model",
+  "description": "Contract document for domain-model.yaml. The authoritative validator is the hand-written loader in loader.ts (Q4 A); this schema exists for editors and human reference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "bounded_contexts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "bounded_contexts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/boundedContext" }
+    },
+    "lineage": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/lineage" }
+    }
+  },
+  "$defs": {
+    "elementId": {
+      "type": "string",
+      "pattern": "^(bc|aggregate|entity|vo|primitive|invariant|command|event|error|transition|factory|pm)(\\.[a-z][a-z0-9-]*)+$"
+    },
+    "boundedContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregates"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/aggregate" }
+        },
+        "process_managers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/processManager" }
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "bounded_context", "root_element", "elements"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "bounded_context": { "$ref": "#/$defs/elementId" },
+        "root_element": { "$ref": "#/$defs/elementId" },
+        "states": { "type": "array", "items": { "type": "string" } },
+        "elements": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/domainElement" }
+        },
+        "invariants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/invariant" }
+        },
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/command" }
+        },
+        "events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainEvent" }
+        },
+        "transitions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stateTransition" }
+        },
+        "factory_rules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/factoryRule" }
+        }
+      }
+    },
+    "domainElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "kind", "name", "aggregate"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "kind": { "enum": ["entity", "value-object", "domain-primitive"] },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregate": { "$ref": "#/$defs/elementId" },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/elementAttribute" }
+        },
+        "invariants": { "type": "array", "items": { "$ref": "#/$defs/elementId" } }
+      }
+    },
+    "elementAttribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean", "default": true },
+        "collection": { "type": "boolean", "default": false }
+      }
+    },
+    "invariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregate", "statement"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregate": { "$ref": "#/$defs/elementId" },
+        "element": { "$ref": "#/$defs/elementId" },
+        "statement": { "type": "string", "minLength": 1 }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregate", "effect", "state_effect", "domain_errors", "idempotency"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregate": { "$ref": "#/$defs/elementId" },
+        "effect": { "enum": ["transition", "accumulation"] },
+        "state_effect": { "enum": ["transitions", "none"] },
+        "transitions": { "type": "array", "items": { "$ref": "#/$defs/elementId" } },
+        "domain_errors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/domainError" }
+        },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/elementId" } },
+        "idempotency": { "$ref": "#/$defs/idempotency" }
+      }
+    },
+    "idempotency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy"],
+      "properties": {
+        "strategy": { "enum": ["none", "command-id-memory"] },
+        "retention": { "enum": ["last-one", "multiple", "time-window"] },
+        "retention_count": { "type": "integer", "minimum": 1 },
+        "retention_window": { "type": "string" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "domainError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "command", "condition"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "command": { "$ref": "#/$defs/elementId" },
+        "condition": { "type": "string", "minLength": 1 }
+      }
+    },
+    "domainEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregate", "produced_by"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregate": { "$ref": "#/$defs/elementId" },
+        "produced_by": { "$ref": "#/$defs/elementId" }
+      }
+    },
+    "stateTransition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregate", "from_state", "to_state", "command"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregate": { "$ref": "#/$defs/elementId" },
+        "from_state": { "type": "string", "minLength": 1 },
+        "to_state": { "type": "string", "minLength": 1 },
+        "command": { "$ref": "#/$defs/elementId" }
+      }
+    },
+    "factoryRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "target_element", "preconditions"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "target_element": { "$ref": "#/$defs/elementId" },
+        "preconditions": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "processManager": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id", "name", "aggregates", "steps"],
+      "properties": {
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "aggregates": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/elementId" } },
+        "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/processStep" } },
+        "compensations": { "type": "array", "items": { "$ref": "#/$defs/processStep" } }
+      }
+    },
+    "processStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "command"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "command": { "$ref": "#/$defs/elementId" },
+        "on_failure": { "type": "string" }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lineage_id", "element_id", "relation"],
+      "properties": {
+        "lineage_id": { "type": "string", "pattern": "^lineage-\\d{4}$" },
+        "element_id": { "$ref": "#/$defs/elementId" },
+        "relation": { "enum": ["renamed", "split", "merged", "deprecated"] },
+        "previous_name": { "type": "string" },
+        "successors": { "type": "array", "items": { "$ref": "#/$defs/elementId" } },
+        "replaced_by": { "$ref": "#/$defs/elementId" },
+        "deprecated_at": { "type": "string" }
+      }
+    }
+  }
+}

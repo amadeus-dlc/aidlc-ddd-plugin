@@ -1,0 +1,70 @@
+schema_version: 1
+bounded_contexts:
+  - element_id: bc.billing
+    name: Billing
+    aggregates:
+      - element_id: aggregate.invoice
+        name: Invoice
+        bounded_context: bc.billing
+        root_element: entity.invoice
+        states:
+          - draft
+          - issued
+          - paid
+        elements:
+          - element_id: entity.invoice
+            kind: entity
+            name: Invoice
+            aggregate: aggregate.invoice
+            attributes:
+              - { name: id, type: string, required: true, collection: false }
+              - { name: amount, type: primitive.money, required: true, collection: false }
+          - element_id: primitive.money
+            kind: domain-primitive
+            name: Money
+            aggregate: aggregate.invoice
+            attributes:
+              - { name: value, type: decimal, required: true, collection: false }
+        invariants:
+          - element_id: invariant.invoice.total-positive
+            name: TotalPositive
+            aggregate: aggregate.invoice
+            element: primitive.money
+            statement: The money amount must be non-negative.
+        commands:
+          - element_id: command.invoice.issue
+            name: Issue
+            aggregate: aggregate.invoice
+            effect: transition
+            state_effect: transitions
+            transitions:
+              - transition.invoice.issue
+            domain_errors:
+              - element_id: error.invoice.issue.already-issued
+                name: AlreadyIssued
+                command: command.invoice.issue
+                condition: The invoice is not in the draft state.
+            events:
+              - event.invoice.issued
+            idempotency:
+              strategy: none
+              rationale: Re-issuing an issued invoice is absorbed by the state guard.
+        events:
+          - element_id: event.invoice.issued
+            name: Issued
+            aggregate: aggregate.invoice
+            produced_by: command.invoice.issue
+        transitions:
+          - element_id: transition.invoice.issue
+            name: Issue
+            aggregate: aggregate.invoice
+            from_state: draft
+            to_state: issued
+            command: command.invoice.issue
+        factory_rules:
+          - element_id: factory.invoice.open
+            name: Open
+            target_element: entity.invoice
+            preconditions:
+              - invariant.invoice.total-positive
+lineage: []

@@ -10,6 +10,7 @@
       "src/**",
       "scripts/**",
       "tests/**",
+      "tools/**",
       "package.json",
       "tsconfig.json",
       "biome.json",
