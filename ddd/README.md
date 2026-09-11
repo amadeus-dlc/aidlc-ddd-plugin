@@ -39,6 +39,28 @@ Domain Model を設計工程として組み込み、生成コードが規約に�
 | `ddd-rust-use-case` | (g) DIP と外部 I/O / (h) execute の集約引数 / (i) ユースケース連鎖 / (d) getter |
 | `ddd-rust-interface-adapter` | (k) コマンド側⇄クエリ側 / (l) クエリ側のドメイン参照 / (m) リポジトリ命名 / (n) 復元経路の迂回 / (g) |
 
+## ユーザのプロジェクトへのインストール
+
+`scripts/install.ts` が、対象プロジェクトに AI-DLC が導入済みであることを前提に、
+ビルド → compose → 検証を 1 コマンドで行います（compose は冪等なので再実行可）。
+
+```sh
+# ローカルの開発チェックアウトから（ネットワーク不要）
+bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin
+
+# リモートの ref / tag / 最新安定タグから
+bun ddd/scripts/install.ts --project /path/to/project --tag v0.1.0
+bun ddd/scripts/install.ts --project /path/to/project --latest   # 既定
+
+# 事前確認（対象を変更しない）／既存ビルドを使う
+bun ddd/scripts/install.ts --project /path/to/project --from .. --dry-run
+bun ddd/scripts/install.ts --project /path/to/project --skip-build
+```
+
+- `--harness <claude|codex|kimi|opencode|...>`（既定 claude）
+- インストール証明を `<harness>/tools/data/ddd-install.json` に記録
+- アップグレード時は旧バージョンのプラグイン所有ファイルを除去してから compose
+
 ## 対応ハーネス
 
 Claude Code（`.claude`）、Codex CLI（`.codex`）、Kimi Code（`.kimi-code`）、
