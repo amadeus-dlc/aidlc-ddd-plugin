@@ -55,12 +55,15 @@ bun run build:claude   # dist/claude を生成
 bun run build:codex    # dist/codex を生成
 bun run build:kimi     # dist/kimi を生成
 bun run build:opencode # dist/opencode を生成
-bun run test:sandbox   # 4 ハーネスに compose して検証
+bun run build:all      # 4 ハーネスを一括ビルド
+bun run test:sandbox   # 4 ハーネスに compose し、dist ツールでゴールデン検証
+bun run test:dist      # ビルド済み dist/<harness>/tools でゴールデン検証
 ```
 
-`test:sandbox` は `aidlc-plugin-test` を claude / codex / kimi / opencode の
-各ハーネスに対して実行し、drops ログが空・グラフに搭載・冪等であることを
-確認します。
+`test:sandbox` は 4 ハーネスを一括ビルドしたうえで `aidlc-plugin-test` を
+claude / codex / kimi / opencode に対して実行し（drops ログが空・グラフに
+搭載・冪等）、続けて `scripts/verify-dist.ts` で設計＋Rust のゴールデン全件を
+投影済み `dist/<harness>/tools` の子プロセス入口から実行します。
 
 ## 命名・配置規約（要約）
 
