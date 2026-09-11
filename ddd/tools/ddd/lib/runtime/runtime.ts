@@ -23,11 +23,16 @@ export interface SensorApi {
   checkBudget(): void;
 }
 
+export interface SensorEvaluation {
+  findings: FindingInput[];
+  note?: string;
+}
+
 export interface SensorDefinition {
   sensor_id: string;
   severity: Severity;
   budget_ms?: number;
-  evaluate(context: SensorRunContext, api: SensorApi): FindingInput[];
+  evaluate(context: SensorRunContext, api: SensorApi): FindingInput[] | SensorEvaluation;
 }
 
 export interface SensorVerdict {
@@ -92,8 +97,15 @@ export function runSensor(
   };
 
   let findings: FindingInput[];
+  let note: string | undefined;
   try {
-    findings = definition.evaluate(context, api);
+    const evaluated = definition.evaluate(context, api);
+    if (Array.isArray(evaluated)) {
+      findings = evaluated;
+    } else {
+      findings = evaluated.findings;
+      note = evaluated.note;
+    }
   } catch (error) {
     if (error instanceof ToolUnavailableError) {
       io.stderr(`${definition.sensor_id}: tool unavailable: ${error.message}\n`);
@@ -137,6 +149,7 @@ export function runSensor(
     findings_count: assembled.length,
     findings: assembled,
     ...(assembled.length === 0 ? {} : { reason: summarize(findings) }),
+    ...(note === undefined ? {} : { note }),
   });
   return 0;
 }
