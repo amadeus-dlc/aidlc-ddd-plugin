@@ -1,6 +1,8 @@
+diff --git a/.claude/hooks/aidlc-deliver-stage-rules.ts b/.claude/hooks/aidlc-deliver-stage-rules.ts
+index 506e26c..5b1623c 100644
 --- a/.claude/hooks/aidlc-deliver-stage-rules.ts
 +++ b/.claude/hooks/aidlc-deliver-stage-rules.ts
-@@ -52,7 +52,7 @@
+@@ -52,7 +52,7 @@ const EXEMPT_AGENTS = new Set(["aidlc-composer-agent"]);
  const DISPATCH_HOOK_OUTPUT_MAX_BYTES = 512 * 1024;
  const PRELOAD_FALLBACK_ENV = "AIDLC_DISPATCH_RULES_PRELOAD_FALLBACK";
  
@@ -9,9 +11,11 @@
    return (
      typeof value === "string" &&
      /^[a-z0-9][a-z0-9-]*-agent$/.test(value) &&
+diff --git a/.claude/tools/data/plugin-hooks-template/compose.ts b/.claude/tools/data/plugin-hooks-template/compose.ts
+index cda7549..19fc02e 100644
 --- a/.claude/tools/data/plugin-hooks-template/compose.ts
 +++ b/.claude/tools/data/plugin-hooks-template/compose.ts
-@@ -70,7 +70,9 @@
+@@ -70,7 +70,9 @@ const IS_OPENCODE = HARNESS_NAME === "opencode";
  const STAGES_DIR = join(HARNESS_DIR, "aidlc-common", "stages");
  const SKILLS_DIR = IS_COPILOT
    ? join(PROJECT_DIR, ".github", "skills")
@@ -21,8 +25,8 @@
 +    : join(HARNESS_DIR, "skills");
  const PHASES = ["initialization", "ideation", "inception", "construction", "operation"];
  const COMPOSE_LOCK_RETRIES = 600;
- const SCOPE_TABLE_BEGIN =
-@@ -2411,7 +2413,7 @@
+ const NATIVE_RUNTIME = Boolean(process.env.AIDLC_COMPILED_EXECUTABLE?.trim());
+@@ -2449,7 +2451,7 @@ try {
    const pluginShipsScopes = existsSync(join(PLUGIN_ROOT, "scopes"));
    if (recompiled || missingPluginStageRunner) {
      if (!skillsDirExists) {
@@ -31,10 +35,12 @@
      } else {
        const runnerEnv = installedToolEnv();
        const runRunnerGen = (args: string[], label: string): boolean => {
+diff --git a/.codex/hooks.json b/.codex/hooks.json
+index 3130ccd..7a53870 100644
 --- a/.codex/hooks.json
 +++ b/.codex/hooks.json
 @@ -37,7 +37,7 @@
-             "command": "bun .codex/hooks/aidlc-codex-adapter.ts deliver-stage-rules"
+             "command": "bun .codex/tools/aidlc.ts engine adapter codex deliver-stage-rules"
            }
          ],
 -        "matcher": "spawn_agent"
@@ -52,7 +58,7 @@
 +        "hooks": [
 +          {
 +            "type": "command",
-+            "command": "bun .codex/hooks/aidlc-codex-adapter.ts finish-stage-rules"
++            "command": "bun .codex/tools/aidlc.ts engine adapter codex finish-stage-rules"
 +          }
 +        ]
        }
@@ -68,7 +74,7 @@
 +        "hooks": [
 +          {
 +            "type": "command",
-+            "command": "bun .codex/hooks/aidlc-codex-adapter.ts start-stage-rules",
++            "command": "bun .codex/tools/aidlc.ts engine adapter codex start-stage-rules",
 +            "additionalContextLimit": 0
 +          }
 +        ]
@@ -76,6 +82,8 @@
      ]
    }
  }
+diff --git a/.codex/hooks/aidlc-codex-adapter.ts b/.codex/hooks/aidlc-codex-adapter.ts
+index 9f5b3bf..3ac69c1 100644
 --- a/.codex/hooks/aidlc-codex-adapter.ts
 +++ b/.codex/hooks/aidlc-codex-adapter.ts
 @@ -33,8 +33,8 @@
@@ -98,7 +106,7 @@
  
  import { createHash } from "node:crypto";
  import {
-@@ -67,6 +67,8 @@
+@@ -67,6 +67,8 @@ import {
    validSessionId,
  } from "../tools/aidlc-lib.ts";
  
@@ -107,7 +115,7 @@
  const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
  
  interface CodexHookInput {
-@@ -191,6 +193,16 @@
+@@ -191,6 +193,16 @@ if (!process.stdin.isTTY) {
    }
  }
  
@@ -124,7 +132,7 @@
  const projectDirRaw =
    process.env.AIDLC_PROJECT_DIR ?? codex.cwd ?? process.cwd();
  const projectDir = isAbsolute(projectDirRaw)
-@@ -269,6 +281,9 @@
+@@ -269,6 +281,9 @@ function replayResponse(): { stdout: string; code: number; stderr?: string } {
  }
  
  function persistResponse(stdout: string, code: number, stderr?: string): void {
@@ -134,40 +142,7 @@
    if (bypassReplay) return;
    try {
      writeFileSync(responseFile, JSON.stringify({ stdout, code, ...(stderr ? { stderr } : {}) }), "utf-8");
-@@ -362,9 +377,32 @@
-   return `${JSON.stringify({
-     hookSpecificOutput: {
-       hookEventName: "PreToolUse",
-+      permissionDecision: "allow",
-       updatedInput,
-     },
-   })}\n`;
-+}
-+
-+function normalizePreToolUseUpdatedInput(coreStdout: string): string {
-+  try {
-+    const parsed = JSON.parse(coreStdout);
-+    const output = parsed?.hookSpecificOutput;
-+    if (
-+      output?.hookEventName === "PreToolUse" &&
-+      output.permissionDecision === undefined &&
-+      output.updatedInput !== null &&
-+      typeof output.updatedInput === "object" &&
-+      !Array.isArray(output.updatedInput)
-+    ) {
-+      return `${JSON.stringify({
-+        ...parsed,
-+        hookSpecificOutput: { ...output, permissionDecision: "allow" },
-+      })}\n`;
-+    }
-+  } catch {
-+    // Preserve non-JSON diagnostics from the core hook.
-+  }
-+  return coreStdout;
- }
- 
- // --- D-4: SESSION_ENDED reconcile-at-next-start ------------------------------
-@@ -636,14 +674,45 @@
+@@ -660,7 +675,39 @@ switch (target) {
      return 0;
    }
  
@@ -175,9 +150,10 @@
 +  case "finish-stage-rules": {
 +    try {
 +      const bridge = await import("./aidlc-codex-dispatch.ts");
-+      const stdout = target === "start-stage-rules"
-+        ? bridge.startDispatch(projectDir, codex)
-+        : (bridge.finishDispatch(projectDir, codex), "");
++      const stdout =
++        target === "start-stage-rules"
++          ? bridge.startDispatch(projectDir, codex)
++          : (bridge.finishDispatch(projectDir, codex), "");
 +      persistResponse(stdout, 0);
 +      if (stdout) process.stdout.write(stdout);
 +      return 0;
@@ -190,9 +166,6 @@
 +  }
 +
    case "deliver-stage-rules": {
--    // Codex 0.145 consumes the same PreToolUse hookSpecificOutput.updatedInput
--    // contract as Claude. The core hook recognizes spawn_agent and appends the
--    // exact active-stage bundle to message/items without adapter re-shaping.
 +    if (bridgeDispatch) {
 +      try {
 +        const { prepareDispatch } = await import("./aidlc-codex-dispatch.ts");
@@ -206,18 +179,12 @@
 +        return 2;
 +      }
 +    }
-+    // Successful input rewrites need an explicit allow in Codex. Preserve
-+    // existing decisions, extra context, and blocking responses from core.
-     const r = runCoreWithStderr("aidlc-deliver-stage-rules.ts", rawInput);
-     const answeredCode = r.code === 2 ? 2 : 0;
--    persistResponse(r.stdout, answeredCode, r.stderr);
--    if (r.stdout) process.stdout.write(r.stdout);
-+    const stdout = r.code === 0 ? normalizePreToolUseUpdatedInput(r.stdout) : r.stdout;
-+    persistResponse(stdout, answeredCode, r.stderr);
-+    if (stdout) process.stdout.write(stdout);
-     if (r.code === 2) {
-       process.stderr.write(r.stderr);
-       return 2;
+     // Codex 0.145 consumes the same PreToolUse hookSpecificOutput.updatedInput
+     // contract as Claude, plus an explicit allow decision for rewritten input.
+     // The core hook recognizes spawn_agent and appends the exact active-stage
+diff --git a/.codex/hooks/aidlc-codex-dispatch.ts b/.codex/hooks/aidlc-codex-dispatch.ts
+new file mode 100644
+index 0000000..865f5d4
 --- /dev/null
 +++ b/.codex/hooks/aidlc-codex-dispatch.ts
 @@ -0,0 +1,169 @@
@@ -390,9 +357,11 @@
 +    abortDispatch(project, input);
 +  }
 +}
+diff --git a/.codex/hooks/aidlc-deliver-stage-rules.ts b/.codex/hooks/aidlc-deliver-stage-rules.ts
+index 506e26c..5b1623c 100644
 --- a/.codex/hooks/aidlc-deliver-stage-rules.ts
 +++ b/.codex/hooks/aidlc-deliver-stage-rules.ts
-@@ -52,7 +52,7 @@
+@@ -52,7 +52,7 @@ const EXEMPT_AGENTS = new Set(["aidlc-composer-agent"]);
  const DISPATCH_HOOK_OUTPUT_MAX_BYTES = 512 * 1024;
  const PRELOAD_FALLBACK_ENV = "AIDLC_DISPATCH_RULES_PRELOAD_FALLBACK";
  
@@ -413,8 +382,8 @@
 +    : join(HARNESS_DIR, "skills");
  const PHASES = ["initialization", "ideation", "inception", "construction", "operation"];
  const COMPOSE_LOCK_RETRIES = 600;
- const SCOPE_TABLE_BEGIN =
-@@ -2411,7 +2413,7 @@
+ const NATIVE_RUNTIME = Boolean(process.env.AIDLC_COMPILED_EXECUTABLE?.trim());
+@@ -2449,7 +2451,7 @@
    const pluginShipsScopes = existsSync(join(PLUGIN_ROOT, "scopes"));
    if (recompiled || missingPluginStageRunner) {
      if (!skillsDirExists) {

@@ -33,8 +33,8 @@
 //     {"additionalContext": "..."}; Codex expects the hookSpecificOutput
 //     wrapper (verified live, findings E1) — the shim re-wraps.
 //   - bind-bash-session: POSIX Bash input is rewritten through
-//     hookSpecificOutput.updatedInput so every command inherits the validated
-//     payload session without process inspection.
+//     hookSpecificOutput.permissionDecision=allow + updatedInput so every
+//     command inherits the validated payload session without process inspection.
 //   - continue-workflow: {"decision":"block","reason"} passes through VERBATIM — the
 //     contract is identical on Codex (stop_hook_active included).
 //   - everything else: advisory; stdout ignored, exit 0.
@@ -45,7 +45,7 @@
 //                  rebuild-stage-graph | validate-state | log-subagent | continue-workflow |
 //                  record-human-turn | state-transition-guard | reviewer-scope |
 //                  review-freeze | deliver-stage-rules | plan-approval-guard |
-//                  bind-bash-session
+//                  bind-bash-session | start-stage-rules | finish-stage-rules
 
 import { createHash } from "node:crypto";
 import {
@@ -66,6 +66,8 @@ import {
   stateFilePath,
   validSessionId,
 } from "../tools/aidlc-lib.ts";
+
+import { abortDispatch } from "./aidlc-codex-dispatch.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -191,6 +193,16 @@ if (!process.stdin.isTTY) {
   }
 }
 
+const bridgeDispatch = codex.tool_name === "collaborationspawn_agent" ||
+  (codex.tool_name === "spawn_agent" && typeof codex.tool_input?.message === "string" &&
+    codex.tool_input.message.startsWith("gAAAAA"));
+// Normalize before adapter-side routing as well as before core guards. The
+// original wire identity above selects the opaque-message transport.
+if (codex.tool_name === "collaborationspawn_agent") {
+  codex = { ...codex, tool_name: "spawn_agent" };
+  rawInput = JSON.stringify(codex);
+}
+
 const projectDirRaw =
   process.env.AIDLC_PROJECT_DIR ?? codex.cwd ?? process.cwd();
 const projectDir = isAbsolute(projectDirRaw)
@@ -269,6 +281,9 @@ function replayResponse(): { stdout: string; code: number; stderr?: string } {
 }
 
 function persistResponse(stdout: string, code: number, stderr?: string): void {
+  if (code === 2 && ["spawn_agent", "collaborationspawn_agent"].includes(codex.tool_name ?? "")) {
+    try { abortDispatch(projectDir, codex); } catch { /* the original rejection still blocks the call */ }
+  }
   if (bypassReplay) return;
   try {
     writeFileSync(responseFile, JSON.stringify({ stdout, code, ...(stderr ? { stderr } : {}) }), "utf-8");
@@ -660,7 +675,39 @@ switch (target) {
     return 0;
   }
 
+  case "start-stage-rules":
+  case "finish-stage-rules": {
+    try {
+      const bridge = await import("./aidlc-codex-dispatch.ts");
+      const stdout =
+        target === "start-stage-rules"
+          ? bridge.startDispatch(projectDir, codex)
+          : (bridge.finishDispatch(projectDir, codex), "");
+      persistResponse(stdout, 0);
+      if (stdout) process.stdout.write(stdout);
+      return 0;
+    } catch (error) {
+      const stderr = `[aidlc] ${error instanceof Error ? error.message : String(error)}\n`;
+      persistResponse("", 2, stderr);
+      process.stderr.write(stderr);
+      return 2;
+    }
+  }
+
   case "deliver-stage-rules": {
+    if (bridgeDispatch) {
+      try {
+        const { prepareDispatch } = await import("./aidlc-codex-dispatch.ts");
+        await prepareDispatch(projectDir, codex);
+        persistResponse("", 0);
+        return 0;
+      } catch (error) {
+        const stderr = `[aidlc] ${error instanceof Error ? error.message : String(error)}\n`;
+        persistResponse("", 2, stderr);
+        process.stderr.write(stderr);
+        return 2;
+      }
+    }
     // Codex 0.145 consumes the same PreToolUse hookSpecificOutput.updatedInput
     // contract as Claude, plus an explicit allow decision for rewritten input.
     // The core hook recognizes spawn_agent and appends the exact active-stage
