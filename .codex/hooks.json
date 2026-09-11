@@ -37,7 +37,7 @@
             "command": "bun .codex/tools/aidlc.ts engine adapter codex deliver-stage-rules"
           }
         ],
-        "matcher": "spawn_agent"
+        "matcher": "spawn_agent|collaborationspawn_agent"
       },
       {
         "hooks": [
@@ -108,6 +108,15 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "matcher": "spawn_agent|collaborationspawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun .codex/tools/aidlc.ts engine adapter codex finish-stage-rules"
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -136,6 +145,17 @@
           {
             "type": "command",
             "command": "bun .codex/tools/aidlc.ts engine adapter codex continue-workflow"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun .codex/tools/aidlc.ts engine adapter codex start-stage-rules",
+            "additionalContextLimit": 0
           }
         ]
       }
