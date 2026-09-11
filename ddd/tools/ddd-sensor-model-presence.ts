@@ -17,11 +17,11 @@ process.exit(
     severity: "blocking",
     budget_ms: 9000,
     evaluate: (context) => {
-      const status = readStageStatus(context, "domain-modeling");
+      const status = readStageStatus(context, "ddd-domain-modeling");
       if (status.execution === "SKIP" || status.execution === "absent") {
         return { findings: [], note: `domain-modeling is ${status.execution}; presence check skipped` };
       }
-      const modelPath = join(context.record_dir, "inception", "domain-modeling", "domain-model.yaml");
+      const modelPath = join(context.record_dir, "inception", "ddd-domain-modeling", "domain-model.yaml");
       const file = relPath(context, modelPath);
       if (!existsSync(modelPath)) {
         return [finding("model-presence.missing", file, "domain-modeling ran but domain-model.yaml is missing")];

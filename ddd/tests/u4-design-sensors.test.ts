@@ -58,7 +58,7 @@ const AGGREGATE_MAPPING = `# Aggregate mapping
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 aggregate_mappings:
   - aggregate_ref: aggregate.invoice
     programming_model: class
@@ -75,7 +75,7 @@ const USE_CASES = `# Use cases
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 use_cases:
   - use_case_id: uc.issue-invoice
     name: Issue invoice
@@ -91,7 +91,7 @@ const LAYER_STRUCTURE = `# Layer structure
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 layer_structures:
   - context_ref: bc.billing
     cqrs: true
@@ -123,7 +123,7 @@ function makeRecord(files: Record<string, string>): string {
   mkdirSync(record, { recursive: true });
   writeFileSync(
     join(record, "aidlc-state.md"),
-    "## Stage Progress\n- [x] domain-modeling — EXECUTE\n- [x] domain-design — EXECUTE\n",
+    "## Stage Progress\n- [x] ddd-domain-modeling — EXECUTE\n- [x] domain-design — EXECUTE\n",
   );
   for (const [rel, content] of Object.entries(files)) {
     const path = join(record, rel);
@@ -162,14 +162,14 @@ function ruleIds(verdict: Verdict): string[] {
 describe("model-completeness", () => {
   test("passes on a complete model and matching md", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
-      "inception/domain-modeling/domain-model.md": MODEL_MD,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.md": MODEL_MD,
     });
     const { verdict } = runSensor(
       "model-completeness",
-      "domain-modeling",
+      "ddd-domain-modeling",
       record,
-      "inception/domain-modeling/domain-model.yaml",
+      "inception/ddd-domain-modeling/domain-model.yaml",
     );
     expect(ruleIds(verdict)).toEqual([]);
     expect(verdict.pass).toBe(true);
@@ -177,39 +177,39 @@ describe("model-completeness", () => {
 
   test("reports an id missing from the md", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
-      "inception/domain-modeling/domain-model.md": MODEL_MD.replaceAll("primitive.money", ""),
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.md": MODEL_MD.replaceAll("primitive.money", ""),
     });
     const { verdict } = runSensor(
       "model-completeness",
-      "domain-modeling",
+      "ddd-domain-modeling",
       record,
-      "inception/domain-modeling/domain-model.yaml",
+      "inception/ddd-domain-modeling/domain-model.yaml",
     );
     expect(ruleIds(verdict)).toContain("model-completeness.f-missing");
   });
 
   test("reports a missing md", () => {
-    const record = makeRecord({ "inception/domain-modeling/domain-model.yaml": MODEL });
+    const record = makeRecord({ "inception/ddd-domain-modeling/domain-model.yaml": MODEL });
     const { verdict } = runSensor(
       "model-completeness",
-      "domain-modeling",
+      "ddd-domain-modeling",
       record,
-      "inception/domain-modeling/domain-model.yaml",
+      "inception/ddd-domain-modeling/domain-model.yaml",
     );
     expect(ruleIds(verdict)).toContain("model-completeness.f-absent");
   });
 
   test("reports an invalid model as schema", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": "schema_version: 2\nbounded_contexts: []\n",
-      "inception/domain-modeling/domain-model.md": "# empty\n",
+      "inception/ddd-domain-modeling/domain-model.yaml": "schema_version: 2\nbounded_contexts: []\n",
+      "inception/ddd-domain-modeling/domain-model.md": "# empty\n",
     });
     const { verdict } = runSensor(
       "model-completeness",
-      "domain-modeling",
+      "ddd-domain-modeling",
       record,
-      "inception/domain-modeling/domain-model.yaml",
+      "inception/ddd-domain-modeling/domain-model.yaml",
     );
     expect(ruleIds(verdict)).toContain("model-completeness.schema");
   });
@@ -218,7 +218,7 @@ describe("model-completeness", () => {
 describe("model-presence", () => {
   test("passes when domain-modeling is SKIP with a note", () => {
     const record = makeRecord({ "inception/domain-design/components.md": "# components\n" });
-    writeFileSync(join(record, "aidlc-state.md"), "## Stage Progress\n- [S] domain-modeling — SKIP\n");
+    writeFileSync(join(record, "aidlc-state.md"), "## Stage Progress\n- [S] ddd-domain-modeling — SKIP\n");
     const { verdict } = runSensor("model-presence", "domain-design", record, "inception/domain-design/components.md");
     expect(verdict.pass).toBe(true);
     expect(verdict.note).toContain("SKIP");
@@ -234,7 +234,7 @@ describe("model-presence", () => {
 describe("reference-ids", () => {
   test("passes on resolvable references", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
     });
     const { verdict } = runSensor(
@@ -248,7 +248,7 @@ describe("reference-ids", () => {
 
   test("reports an undefined reference and an empty reference_ids", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING.replace(
         "reference_ids: [entity.invoice, invariant.invoice.total-positive]",
         "reference_ids: [entity.missing]",
@@ -265,7 +265,7 @@ describe("reference-ids", () => {
 
   test("reports a missing reference_ids list", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING.replace(
         "reference_ids: [entity.invoice, invariant.invoice.total-positive]",
         "reference_ids: []",
@@ -284,7 +284,7 @@ describe("reference-ids", () => {
 describe("mapping-declarations", () => {
   test("passes the aggregate mapping", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
     });
     const { verdict } = runSensor(
@@ -298,7 +298,7 @@ describe("mapping-declarations", () => {
 
   test("reports unmapped aggregate and a missing axis", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING.replace(
         "programming_model: class",
         "programming_model: ",
@@ -315,7 +315,7 @@ describe("mapping-declarations", () => {
 
   test("reports missing use case items on functional-design", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "construction/u1/functional-design/ddd-use-case-declarations.md": USE_CASES.replace(
         "re_execution_basis: idempotency none",
         "re_execution_basis: ",
@@ -334,7 +334,7 @@ describe("mapping-declarations", () => {
 describe("layer-structure", () => {
   test("passes a clean declaration", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
       "construction/u1/infrastructure-design/ddd-layer-structure.md": LAYER_STRUCTURE,
     });
@@ -349,7 +349,7 @@ describe("layer-structure", () => {
 
   test("reports repository name and medium, and a missing restoration path", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
       "construction/u1/infrastructure-design/ddd-layer-structure.md": LAYER_STRUCTURE.replaceAll(
         "InvoiceRepository",
@@ -371,7 +371,7 @@ describe("layer-structure", () => {
 describe("design-advisories", () => {
   test("passes a clean infrastructure declaration", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "construction/u1/infrastructure-design/ddd-layer-structure.md": LAYER_STRUCTURE,
     });
     const { verdict } = runSensor(
@@ -385,7 +385,7 @@ describe("design-advisories", () => {
 
   test("reports a non-upsert store as advisory", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
       "construction/u1/infrastructure-design/ddd-layer-structure.md": LAYER_STRUCTURE.replace(
         "store_semantics: upsert",
         "store_semantics: insert-only",
@@ -406,13 +406,13 @@ describe("design-advisories", () => {
 describe("determinism", () => {
   test("model-completeness is byte-identical across three runs", () => {
     const record = makeRecord({
-      "inception/domain-modeling/domain-model.yaml": MODEL,
-      "inception/domain-modeling/domain-model.md": MODEL_MD.replaceAll("primitive.money", ""),
+      "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
+      "inception/ddd-domain-modeling/domain-model.md": MODEL_MD.replaceAll("primitive.money", ""),
     });
     const script = join(toolsDir, "ddd-sensor-model-completeness.ts");
-    const output = join(record, "inception/domain-modeling/domain-model.yaml");
+    const output = join(record, "inception/ddd-domain-modeling/domain-model.yaml");
     const runs = [0, 1, 2].map(() => {
-      const proc = Bun.spawnSync(["bun", script, "--stage", "domain-modeling", "--output-path", output], {
+      const proc = Bun.spawnSync(["bun", script, "--stage", "ddd-domain-modeling", "--output-path", output], {
         stdout: "pipe",
       });
       return proc.stdout.toString().trim();

@@ -72,12 +72,12 @@ function project(
       version: 1,
       writes: claimed.map((path) => ({ path })),
     }),
-    "inception/domain-modeling/domain-model.yaml": MODEL,
+    "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
   };
   return { workspace, files, ...(state ? { state } : {}) };
 }
 
-const STATE = "## Stage Progress\n- [x] domain-modeling — EXECUTE\n- [x] code-generation — EXECUTE\n";
+const STATE = "## Stage Progress\n- [x] ddd-domain-modeling — EXECUTE\n- [x] code-generation — EXECUTE\n";
 const OUTPUT = "construction/u1/code-generation/code-summary.md";
 
 const DOMAIN_CLEAN = `pub struct Invoice {
@@ -143,7 +143,7 @@ export const RUST_CASES: GoldenCase[] = [
     DOMAIN_CLEAN,
     { pass: true, rules: [], note_contains: "domain-modeling is SKIP" },
     [],
-    "## Stage Progress\n- [S] domain-modeling — SKIP\n- [x] code-generation — EXECUTE\n",
+    "## Stage Progress\n- [S] ddd-domain-modeling — SKIP\n- [x] code-generation — EXECUTE\n",
   ),
 
   {

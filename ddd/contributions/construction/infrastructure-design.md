@@ -2,8 +2,6 @@
 target: infrastructure-design
 plugin: ddd
 adds:
-  produces:
-    - ddd-layer-structure
   sensors:
     - ddd-layer-structure
     - ddd-design-advisories
@@ -42,7 +40,7 @@ per-unit record dir. The first fenced ```yaml block is canonical:
 
 ```yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 layer_structures:
   - context_ref: bc.<slug>
     cqrs: <true | false>

@@ -44,7 +44,7 @@ record dir. The first fenced ```yaml block is canonical:
 
 ```yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 aggregate_mappings:
   - aggregate_ref: aggregate.<slug>
     programming_model: <actor | class>

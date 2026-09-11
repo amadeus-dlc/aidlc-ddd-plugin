@@ -78,9 +78,9 @@ function buildProject(crates: Crate[], options: { model?: string; stageStatus?: 
   write(
     root,
     `${record}/aidlc-state.md`,
-    `## Stage Progress\n${options.stageStatus ?? "- [x] domain-modeling — EXECUTE"}\n`,
+    `## Stage Progress\n${options.stageStatus ?? "- [x] ddd-domain-modeling — EXECUTE"}\n`,
   );
-  write(root, `${record}/inception/domain-modeling/domain-model.yaml`, options.model ?? MODEL);
+  write(root, `${record}/inception/ddd-domain-modeling/domain-model.yaml`, options.model ?? MODEL);
   write(root, `${record}/construction/u1/code-generation/code-summary.md`, "# code summary\n");
   write(
     root,
@@ -169,7 +169,7 @@ describe("ddd-rust-domain", () => {
 
   test("passes with a note when the model is skipped", () => {
     const proj = buildProject([{ path: "packages/domain/billing-domain", name: "billing-domain", lib: DOMAIN_CLEAN }], {
-      stageStatus: "- [S] domain-modeling — SKIP",
+      stageStatus: "- [S] ddd-domain-modeling — SKIP",
     });
     const result = runSensor("domain", proj);
     expect(result.pass).toBe(true);

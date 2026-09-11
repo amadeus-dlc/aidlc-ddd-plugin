@@ -69,7 +69,7 @@ function materialize(testCase: GoldenCase): string {
   writeFileSync(
     join(record, "aidlc-state.md"),
     testCase.state ??
-      "## Stage Progress\n- [x] domain-modeling — EXECUTE\n- [x] domain-design — EXECUTE\n- [x] functional-design — EXECUTE\n- [x] infrastructure-design — EXECUTE\n",
+      "## Stage Progress\n- [x] ddd-domain-modeling — EXECUTE\n- [x] domain-design — EXECUTE\n- [x] functional-design — EXECUTE\n- [x] infrastructure-design — EXECUTE\n",
   );
   for (const [rel, content] of Object.entries(testCase.files)) {
     const path = join(record, rel);

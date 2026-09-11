@@ -95,7 +95,7 @@ const MAP = `# Aggregate mapping
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 aggregate_mappings:
   - aggregate_ref: aggregate.invoice
     programming_model: class
@@ -114,7 +114,7 @@ const MAP_DUP = `# Aggregate mapping
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 aggregate_mappings:
   - { aggregate_ref: aggregate.invoice, programming_model: class, persistence_method: state-sourcing, crate: billing-domain, module: billing, ports: [], repository: InvoiceRepository, reference_ids: [entity.invoice] }
   - { aggregate_ref: aggregate.invoice, programming_model: class, persistence_method: state-sourcing, crate: billing-domain, module: billing, ports: [], repository: InvoiceRepository, reference_ids: [entity.invoice] }
@@ -125,7 +125,7 @@ const UC = `# Use cases
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 use_cases:
   - use_case_id: uc.issue-invoice
     name: Issue invoice
@@ -141,7 +141,7 @@ const LAYER = `# Layer structure
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 layer_structures:
   - context_ref: bc.billing
     cqrs: true
@@ -162,21 +162,21 @@ layer_structures:
 `;
 
 const MODEL_FILES = {
-  "inception/domain-modeling/domain-model.yaml": M,
-  "inception/domain-modeling/domain-model.md": MD,
+  "inception/ddd-domain-modeling/domain-model.yaml": M,
+  "inception/ddd-domain-modeling/domain-model.md": MD,
 };
 const MAP_PATH = "inception/domain-design/ddd-aggregate-mapping.md";
 const UC_PATH = "construction/u1/functional-design/ddd-use-case-declarations.md";
 const LAYER_PATH = "construction/u1/infrastructure-design/ddd-layer-structure.md";
-const MODEL_PATH = "inception/domain-modeling/domain-model.yaml";
-const MD_PATH = "inception/domain-modeling/domain-model.md";
+const MODEL_PATH = "inception/ddd-domain-modeling/domain-model.yaml";
+const MD_PATH = "inception/ddd-domain-modeling/domain-model.md";
 
 export const DESIGN_CASES: GoldenCase[] = [
   // ---- model-completeness ----
   {
     sensor: "ddd-model-completeness",
     name: "clean-complete",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: MODEL_FILES,
     expect: { pass: true, rules: [] },
@@ -184,7 +184,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-schema",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: "schema_version: 2\nbounded_contexts: []\n", [MD_PATH]: MD },
     expect: { pass: false, rules: ["model-completeness.schema"] },
@@ -192,7 +192,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-i",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M_NO_INV, [MD_PATH]: MD_NO_INV },
     expect: { pass: false, rules: ["model-completeness.i"] },
@@ -200,7 +200,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-ii",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M_NO_TRANS, [MD_PATH]: MD_NO_TRANS },
     expect: { pass: false, rules: ["model-completeness.ii"] },
@@ -208,7 +208,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-f-absent",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M },
     expect: { pass: false, rules: ["model-completeness.f-absent"] },
@@ -216,7 +216,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-f-missing",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M, [MD_PATH]: MD.replace("- primitive.money\n", "") },
     expect: { pass: false, rules: ["model-completeness.f-missing"] },
@@ -224,7 +224,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-f-unknown",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M, [MD_PATH]: `${MD}- entity.ghost\n` },
     expect: { pass: false, rules: ["model-completeness.f-unknown"] },
@@ -232,7 +232,7 @@ export const DESIGN_CASES: GoldenCase[] = [
   {
     sensor: "ddd-model-completeness",
     name: "violation-f-invariant",
-    stage: "domain-modeling",
+    stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: {
       [MODEL_PATH]: M,
@@ -248,7 +248,7 @@ export const DESIGN_CASES: GoldenCase[] = [
     stage: "domain-design",
     output: "inception/domain-design/components.md",
     files: { "inception/domain-design/components.md": "# components\n" },
-    state: "## Stage Progress\n- [S] domain-modeling — SKIP\n",
+    state: "## Stage Progress\n- [S] ddd-domain-modeling — SKIP\n",
     expect: { pass: true, rules: [], note_contains: "SKIP" },
   },
   {
@@ -302,7 +302,10 @@ export const DESIGN_CASES: GoldenCase[] = [
     stage: "domain-design",
     output: MAP_PATH,
     files: {
-      [MAP_PATH]: MAP.replace("inception/domain-modeling/domain-model.yaml", "inception/domain-modeling/missing.yaml"),
+      [MAP_PATH]: MAP.replace(
+        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/missing.yaml",
+      ),
     },
     expect: { pass: false, rules: ["reference-ids.model"] },
   },
@@ -425,8 +428,8 @@ export const DESIGN_CASES: GoldenCase[] = [
     files: {
       [MODEL_PATH]: M,
       [MAP_PATH]: MAP_ACTOR.replace(
-        "model_ref: inception/domain-modeling/domain-model.yaml",
-        "model_ref: inception/domain-modeling/domain-model.yaml",
+        "model_ref: inception/ddd-domain-modeling/domain-model.yaml",
+        "model_ref: inception/ddd-domain-modeling/domain-model.yaml",
       ).replace(
         "aggregate_mappings:",
         "aggregate_mappings:\n  - aggregate_ref: aggregate.other\n    programming_model: actor\n    persistence_method: state-sourcing\n    crate: other-domain\n    module: other\n    reference_ids: [entity.invoice]",
