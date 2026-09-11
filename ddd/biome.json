@@ -15,7 +15,8 @@
       "tsconfig.json",
       "biome.json",
       "!!src/entries/data",
-      "!!tests/fixtures"
+      "!!tests/fixtures",
+      "!!tools/ddd/lib/rust/vendor"
     ]
   },
   "formatter": {
