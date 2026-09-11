@@ -48,6 +48,14 @@ export interface StructDecl {
   span: Span;
 }
 
+export interface TraitDecl {
+  file: string;
+  name: string;
+  visibility: Visibility;
+  methods: string[];
+  span: Span;
+}
+
 export interface MethodDecl {
   name: string;
   visibility: Visibility;
@@ -325,6 +333,31 @@ function structFacts(file: string, tree: TSTree): StructDecl[] {
   return out;
 }
 
+function traitFacts(file: string, tree: TSTree): TraitDecl[] {
+  const out: TraitDecl[] = [];
+  walk(tree.rootNode, (node) => {
+    if (node.type !== "trait_item") return;
+    const body = node.childForFieldName("body");
+    const methods: string[] = [];
+    if (body) {
+      for (const child of body.namedChildren) {
+        if (child.type === "function_signature_item" || child.type === "function_item") {
+          const name = child.childForFieldName("name")?.text;
+          if (name) methods.push(name);
+        }
+      }
+    }
+    out.push({
+      file,
+      name: node.childForFieldName("name")?.text ?? "",
+      visibility: visibilityOf(node),
+      methods,
+      span: spanOf(node),
+    });
+  });
+  return out;
+}
+
 function implFacts(file: string, tree: TSTree): ImplBlock[] {
   const out: ImplBlock[] = [];
   walk(tree.rootNode, (node) => {
@@ -528,6 +561,7 @@ function requireTree(tree: SyntaxTree): TSTree {
 }
 
 export const structs = (tree: SyntaxTree): StructDecl[] => structFacts(tree.file, requireTree(tree));
+export const traits = (tree: SyntaxTree): TraitDecl[] => traitFacts(tree.file, requireTree(tree));
 export const impls = (tree: SyntaxTree): ImplBlock[] => implFacts(tree.file, requireTree(tree));
 export const fns = (tree: SyntaxTree): FnDecl[] => fnFacts(tree.file, requireTree(tree));
 export const uses = (tree: SyntaxTree): UsePath[] => useFacts(tree.file, requireTree(tree));

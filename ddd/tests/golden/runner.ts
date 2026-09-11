@@ -22,6 +22,8 @@ export interface GoldenCase {
   output: string;
   /** record-relative file path -> content. */
   files: Record<string, string>;
+  /** project-root-relative file path -> content (the Rust sensors' workspace/). */
+  workspace?: Record<string, string>;
   /** aidlc-state.md content; defaults to a single EXECUTE line. */
   state?: string;
   expect: {
@@ -71,6 +73,11 @@ function materialize(testCase: GoldenCase): string {
   );
   for (const [rel, content] of Object.entries(testCase.files)) {
     const path = join(record, rel);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, content);
+  }
+  for (const [rel, content] of Object.entries(testCase.workspace ?? {})) {
+    const path = join(root, rel);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content);
   }
@@ -158,7 +165,7 @@ export function declaredRules(sensorsDir: string, files: readonly string[]): Map
     const sensor = /^id:\s*(\S+)/m.exec(text)?.[1];
     if (!sensor) continue;
     const rules = new Set<string>();
-    for (const match of text.matchAll(/rule_id:\s*(\S+)/g)) rules.add(match[1]);
+    for (const match of text.matchAll(/rule_id:\s*"?([A-Za-z0-9_.*-]+)"?/g)) rules.add(match[1]);
     out.set(sensor, rules);
   }
   return out;

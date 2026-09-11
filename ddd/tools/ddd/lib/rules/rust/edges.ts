@@ -74,10 +74,26 @@ export function buildEdges(
     const from = byName.get(crateName);
     if (!from) continue;
     const cargoToml = from.path === "." ? "Cargo.toml" : `${from.path}/Cargo.toml`;
-    const deps = cargoInternalDependencies(workspaceRoot, from.path);
+    const deps = cargoDependencies(workspaceRoot, from.path);
     for (const dep of deps) {
       const to = byName.get(dep);
-      if (!to) continue;
+      if (!to) {
+        // External dependency: only the denylist is an edge.
+        const io = matchesIoRule(normalize(dep), denylist);
+        if (!io) continue;
+        const alreadyExternal = edges.some(
+          (edge) => edge.from_crate === from.crate_name && edge.to_crate === dep && edge.evidence === "use-path",
+        );
+        if (alreadyExternal) continue;
+        edges.push({
+          from_crate: from.crate_name,
+          to_crate: dep,
+          evidence: "cargo-dependency",
+          file: cargoToml,
+          verdict: from.layer === "domain" || from.layer === "use-case" ? "external-io" : "ok",
+        });
+        continue;
+      }
       const already = edges.some(
         (edge) =>
           edge.from_crate === from.crate_name && edge.to_crate === to.crate_name && edge.evidence === "use-path",
@@ -103,7 +119,7 @@ export function buildEdges(
   return edges;
 }
 
-function cargoInternalDependencies(workspaceRoot: string, cratePath: string): string[] {
+function cargoDependencies(workspaceRoot: string, cratePath: string): string[] {
   const path = join(workspaceRoot, cratePath === "." ? "Cargo.toml" : `${cratePath}/Cargo.toml`);
   if (!existsSync(path)) return [];
   try {
@@ -112,10 +128,7 @@ function cargoInternalDependencies(workspaceRoot: string, cratePath: string): st
     for (const section of ["dependencies", "dev-dependencies", "build-dependencies"]) {
       const deps = parsed[section];
       if (typeof deps !== "object" || deps === null) continue;
-      for (const [name, value] of Object.entries(deps as Record<string, unknown>)) {
-        const spec = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
-        if (spec?.path !== undefined) names.push(name);
-      }
+      for (const name of Object.keys(deps as Record<string, unknown>)) names.push(name);
     }
     return names;
   } catch {

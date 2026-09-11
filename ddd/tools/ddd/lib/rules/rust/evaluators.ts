@@ -4,7 +4,7 @@
  * (FR7.12).
  */
 
-import { calls, constructions, impls, type Span, structs, uses } from "../../rust/analyzer.ts";
+import { calls, constructions, impls, type Span, structs, traits, uses } from "../../rust/analyzer.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
@@ -292,11 +292,34 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
   if (aggregates.size === 0) {
     for (const name of context.symbols.type_names) aggregates.add(name);
   }
+  const matchesAggregate = (name: string): boolean => {
+    if (!name.endsWith("Repository")) return true;
+    const stem = name.slice(0, -"Repository".length);
+    return [...aggregates].some((aggregate) => stem === aggregate || stem.endsWith(aggregate));
+  };
+  // Ports (traits): <Aggregate>Repository, free of a storage medium.
+  for (const trait of traits(target.tree)) {
+    if (!trait.name.endsWith("Repository")) continue;
+    if (!matchesAggregate(trait.name)) {
+      out.push(
+        finding(
+          "m",
+          target.tree.file,
+          `repository port ${trait.name} is not <Aggregate>Repository`,
+          trait.span.start_line,
+        ),
+      );
+    }
+    if (containsMediaWord(trait.name)) {
+      out.push(
+        finding("m", target.tree.file, `repository port ${trait.name} names a storage medium`, trait.span.start_line),
+      );
+    }
+  }
+  // Implementations (structs): a medium prefix is allowed; the trait carries the
+  // naming contract.
   for (const decl of structs(target.tree)) {
-    if (!decl.name.endsWith("Repository")) continue;
-    const stem = decl.name.slice(0, -"Repository".length);
-    const matchesAggregate = [...aggregates].some((aggregate) => stem === aggregate || stem.endsWith(aggregate));
-    if (!matchesAggregate) {
+    if (decl.name.endsWith("Repository") && !matchesAggregate(decl.name)) {
       out.push(
         finding(
           "m",
@@ -304,11 +327,6 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
           `repository type ${decl.name} is not <Aggregate>Repository`,
           decl.span.start_line,
         ),
-      );
-    }
-    if (containsMediaWord(decl.name)) {
-      out.push(
-        finding("m", target.tree.file, `repository type ${decl.name} names a storage medium`, decl.span.start_line),
       );
     }
   }

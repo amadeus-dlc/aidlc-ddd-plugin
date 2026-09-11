@@ -195,8 +195,8 @@ describe("ddd-rust-use-case", () => {
 });
 
 describe("ddd-rust-interface-adapter", () => {
-  test("reports a repository with a medium word (m)", () => {
-    const lib = "pub struct DynamoDbInvoiceRepository;\n";
+  test("reports a repository trait with a medium word (m)", () => {
+    const lib = "pub trait DynamoDbInvoiceRepository {}\n";
     const proj = buildProject([
       { path: "packages/interface-adapter/billing-interface-adapter", name: "billing-interface-adapter", lib },
     ]);
