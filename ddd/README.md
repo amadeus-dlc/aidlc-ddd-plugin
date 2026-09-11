@@ -39,6 +39,12 @@ Domain Model を設計工程として組み込み、生成コードが規約に�
 | `ddd-rust-use-case` | (g) DIP と外部 I/O / (h) execute の集約引数 / (i) ユースケース連鎖 / (d) getter |
 | `ddd-rust-interface-adapter` | (k) コマンド側⇄クエリ側 / (l) クエリ側のドメイン参照 / (m) リポジトリ命名 / (n) 復元経路の迂回 / (g) |
 
+## 対応ハーネス
+
+Claude Code（`.claude`）、Codex CLI（`.codex`）、Kimi Code（`.kimi-code`）、
+opencode（`.opencode` / `.aidlc`）向けに投影します（`aidlc-plugin-build` の
+plugin-targets に準拠）。
+
 ## 導入手順
 
 ```sh
@@ -47,11 +53,14 @@ bun install
 bun run check          # biome + validate + test
 bun run build:claude   # dist/claude を生成
 bun run build:codex    # dist/codex を生成
-bun run test:sandbox   # 実環境の .claude/.codex に compose して検証
+bun run build:kimi     # dist/kimi を生成
+bun run build:opencode # dist/opencode を生成
+bun run test:sandbox   # 4 ハーネスに compose して検証
 ```
 
-`test:sandbox` は `aidlc-plugin-test` を claude と codex の両ハーネスに対して
-実行し、drops ログが空・グラフに搭載・冪等であることを確認します。
+`test:sandbox` は `aidlc-plugin-test` を claude / codex / kimi / opencode の
+各ハーネスに対して実行し、drops ログが空・グラフに搭載・冪等であることを
+確認します。
 
 ## 命名・配置規約（要約）
 
@@ -77,8 +86,9 @@ bun run test:sandbox   # 実環境の .claude/.codex に compose して検証
 - common-name の (c-model)（FactoryRule の前提条件を検査しない復元経路）と
   interior mutability はナレッジに委ね、初版では機械検査しない。
 - 例の索引（`knowledge/*` の Examples）は U5 の clean fixture を指す予定パスを含む。
-- codex ハーネスの `test:sandbox` は `.codex/skills` が無い環境では
-  advisory の runner 再生成スキップを記録する（プラグイン本体とは無関係）。
+- `prepare:harnesses` の patch baseline は 2.8.1 再投影で stale になり得る。
+  codex の compose skills 配置（`.codex/skills` → `.agents/skills`）は
+  `.codex/tools/data/plugin-hooks-template/compose.ts` に直接反映済み。
 
 ## ライセンス
 
