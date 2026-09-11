@@ -1,5 +1,5 @@
 ---
-slug: domain-modeling
+slug: ddd-domain-modeling
 phase: inception
 plugin: ddd
 execution: CONDITIONAL
@@ -39,7 +39,8 @@ scopes:
   - classic
   - workshop
   - refactor
-inputs: <record>/inception/requirements-analysis/requirements.md and <record>/inception/user-stories/stories.md (both optional); reverse-engineering architecture.md and component-inventory.md when brownfield; an existing <record>/inception/domain-modeling/domain-model.yaml on rerun
+  - plugin-dev
+inputs: <record>/inception/requirements-analysis/requirements.md and <record>/inception/user-stories/stories.md (both optional); reverse-engineering architecture.md and component-inventory.md when brownfield; an existing <record>/inception/ddd-domain-modeling/domain-model.yaml on rerun
 outputs: domain-model.yaml (the canonical, machine-validated model) and the derived domain-model.md, plus domain-modeling-questions.md, all under this stage's record dir, engine-resolved
 ---
 

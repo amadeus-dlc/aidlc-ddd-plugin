@@ -1,54 +1,86 @@
 # DDD プラグイン
 
-AI-DLC v2 の追加合成プラグインです。識別子は `ddd`、初期バージョンは `0.1.0` です。
-現時点では空の拡張領域を持つひな型で、ワークフローの動作は追加しません。
+AI-DLC v2 にドメイン駆動設計（DDD）のワークフローを追加するプラグインです。
+識別子は `ddd`、バージョンは `0.1.0` です。Domain Primitive と Always Valid
+Domain Model を設計工程として組み込み、生成コードが規約に従っているかを
+センサーで機械的に検証します。
 
-## 拡張する場所
+## 何を追加するか
 
-| パス | 内容 |
+| 面 | 実体 | 内容 |
+| --- | --- | --- |
+| ステージ | `stages/inception/ddd-domain-modeling.md` | 正規モデル（集約境界まで）を確定する inception ステージ |
+| contribution | `contributions/`（4本） | domain-design / functional-design / infrastructure-design / code-generation への追加 |
+| センサー | `sensors/`（9本） | 設計成果物と Rust コードを検査 |
+| ナレッジ | `knowledge/`（8本） | DDD/クリーンアーキテクチャと Rust 規約 |
+| ツール | `tools/` | センサー実行スクリプトと共有ライブラリ（`tools/ddd/lib/`） |
+
+## センサー一覧
+
+### 設計センサー（U4）
+
+| id | 重大度 | 検査 |
+| --- | --- | --- |
+| `ddd-model-completeness` | blocking | 正規モデルの読み込み・完了条件 (i)(ii)(iv)・`domain-model.md` との整合 (f) |
+| `ddd-model-presence` | blocking | domain-modeling 実行時にモデルが存在・読み込み・参照解決できること |
+| `ddd-reference-ids` | blocking | 宣言 ID の解決（未定義・廃止・種別・循環） |
+| `ddd-mapping-declarations` | blocking | 集約写像の 2 軸・ユースケース 6 項目・(j) |
+| `ddd-layer-structure` | blocking | 層構造宣言の必須項目と (k)(l)(m)(n)（設計側） |
+| `ddd-design-advisories` | advisory | 複数集約・リポジトリスコープ・upsert store |
+
+### Rust コードセンサー（U5）
+
+すべて blocking、`code-summary.md` を契機に発火します。規則 (a)〜(n) は
+構文と字面だけで判定し、型推論・名前解決・実行は行いません。
+
+| id | 規則 |
 | --- | --- |
-| `.aidlc-plugin/plugin.json` | AI-DLC 用マニフェスト。`core` に依存 |
-| `stages/inception/`, `stages/construction/` | 追加ステージ |
-| `contributions/inception/`, `contributions/construction/` | 既存ステージへの追加定義 |
-| `sensors/` | 成果物を検査するセンサー |
-| `knowledge/` | DDD の参照知識 |
-| `tools/` | ハーネスへ配布するツール |
-| `src/`, `scripts/`, `tests/` | 実装・開発スクリプト・テスト |
-| `docs/` | 設計・利用手順 |
+| `ddd-rust-domain` | (a) 公開フィールド / (b) 未宣言の状態変更 / (c) 不完全な生成経路 / (d) getter 呼び出し / (g) 依存方向と外部 I/O / 層診断 / `model.invalid` |
+| `ddd-rust-use-case` | (g) DIP と外部 I/O / (h) execute の集約引数 / (i) ユースケース連鎖 / (d) getter |
+| `ddd-rust-interface-adapter` | (k) コマンド側⇄クエリ側 / (l) クエリ側のドメイン参照 / (m) リポジトリ命名 / (n) 復元経路の迂回 / (g) |
 
-空ディレクトリは `.gitkeep` で保持しています。
-マニフェスト、Biome 設定、TypeScript 設定、Git 除外設定を参照元からコピーしています。
-TypeScript 設定は将来の実装用です。型検査を導入する際は TypeScript と Bun の型定義を開発依存へ追加してください。
-
-## 検証とビルド
-
-このディレクトリで実行します。
+## 導入手順
 
 ```sh
+cd ddd
 bun install
-bun run prepare:harnesses
-bun run check
-bun run build:claude
-bun run build:codex
+bun run check          # biome + validate + test
+bun run build:claude   # dist/claude を生成
+bun run build:codex    # dist/codex を生成
+bun run test:sandbox   # 実環境の .claude/.codex に compose して検証
 ```
 
-`.codex-plugin/plugin.json` などのホスト固有マニフェストは、AI-DLC のビルダーが `dist/` に生成します。
-ソース側のマニフェストは `.aidlc-plugin/plugin.json` で管理します。
+`test:sandbox` は `aidlc-plugin-test` を claude と codex の両ハーネスに対して
+実行し、drops ログが空・グラフに搭載・冪等であることを確認します。
 
-サンドボックスでの組み込み検証は、リポジトリ直下の `.claude/`・`.codex/`・`.agents/` を元に実行します。
-ツールが環境を一時ディレクトリへコピーし、検証後に削除します。元の環境に変更がないことも検査します。
+## 命名・配置規約（要約）
 
-```sh
-bun run test:sandbox
-```
+- **安定 ID**: `<kind>.<segments>`（`aggregate.invoice`、`command.invoice.issue`）。
+- **層クレート**: 接尾辞 `-domain` / `-use-case` / `-interface-adapter` /
+  `-infrastructure`、または `packages|modules/<layer>/` 配置。
+- **CQRS 側**: `command` / `query` / `rmu` の名前セグメントまたは配置。
+- **composition root**: bin 専用、`-composition-root` 接尾辞、または
+  `packages|modules/composition-root/`。
+- **リポジトリ**: ポートは `<Aggregate>Repository`（媒体語禁止）。実装は
+  媒体プレフィックス可（`InMemoryInvoiceRepository`）。
 
-`bun run check` にはアダプターの回帰テストと両ハーネスのサンドボックス検証を含めています。
-[互換性パッチと検証](docs/framework-compatibility.md) に修正内容と再適用手順を記載しています。
+## 同梱ライセンス
 
-## 検証上の制約
+- `tools/ddd/lib/rust/vendor/` — `web-tree-sitter@0.25.10`（MIT）、
+  `tools/ddd/wasm/tree-sitter-rust.wasm` — `tree-sitter-wasms` の
+  tree-sitter-rust（The Unlicense、ABI 14）。詳細は
+  `tools/ddd/lib/rust/vendor/NOTICE.md`。
 
-AI-DLC 標準の validate と Claude Code・Codex 向け build は成功しています。
-ただし、Codex 用の汎用 `plugin-creator` 検証器では、生成マニフェストに `interface` がないため失敗します。
-これは参照元と同じフレームワークの出力形式によるもので、Codex アプリへの導入互換性は未確認です。
+## 既知の制約
 
-Codex実機ではBashセッション付与と、SubagentStart経由の子エージェントへのルール転送を確認済みです。[実機検証結果](docs/codex-host-verification.md) を参照してください。
+- 対応言語は Rust のみ（第2言語は `tools/ddd/lib/rules/<lang>/` を追加する）。
+- common-name の (c-model)（FactoryRule の前提条件を検査しない復元経路）と
+  interior mutability はナレッジに委ね、初版では機械検査しない。
+- 例の索引（`knowledge/*` の Examples）は U5 の clean fixture を指す予定パスを含む。
+- codex ハーネスの `test:sandbox` は `.codex/skills` が無い環境では
+  advisory の runner 再生成スキップを記録する（プラグイン本体とは無関係）。
+
+## ライセンス
+
+参照元の MIT ライセンスを引き継ぎます。フレームワークにはサブモジュール内の
+ライセンスが適用されます。

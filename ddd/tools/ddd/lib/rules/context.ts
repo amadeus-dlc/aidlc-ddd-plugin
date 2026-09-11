@@ -93,7 +93,7 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
   const assignments = assignLayers(workspace);
 
   // Model availability (BR3.4).
-  const status = readStageStatus(run, "domain-modeling");
+  const status = readStageStatus(run, "ddd-domain-modeling");
   let model: ModelAvailability;
   if (status.execution === "SKIP" || status.execution === "absent") {
     model = {
@@ -101,7 +101,7 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
       note: `domain-modeling is ${status.execution}; model-dependent checks (b, c-model, n-model) skipped`,
     };
   } else {
-    const modelPath = join(run.record_dir, "inception", "domain-modeling", "domain-model.yaml");
+    const modelPath = join(run.record_dir, "inception", "ddd-domain-modeling", "domain-model.yaml");
     const loaded = loadDomainModel(modelPath);
     if (!loaded.ok) {
       model = { status: "invalid" };

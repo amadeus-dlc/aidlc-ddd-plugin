@@ -6,7 +6,7 @@ default_severity: blocking
 fire_on: gate
 description: The domain-modeling gate — validates domain-model.yaml, its completeness conditions (i)-(iv) and its agreement with domain-model.md (rule f).
 category: document-shape
-matches: "**/domain-modeling/domain-model.yaml"
+matches: "**/ddd-domain-modeling/domain-model.yaml"
 timeout_seconds: 10
 checks:
   - rule_id: model-completeness.schema

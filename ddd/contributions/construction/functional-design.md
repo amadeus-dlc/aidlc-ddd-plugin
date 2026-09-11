@@ -2,8 +2,6 @@
 target: functional-design
 plugin: ddd
 adds:
-  produces:
-    - ddd-use-case-declarations
   sensors:
     - ddd-reference-ids
     - ddd-mapping-declarations
@@ -44,7 +42,7 @@ per-unit record dir. The first fenced ```yaml block is canonical:
 
 ```yaml
 schema_version: 1
-model_ref: inception/domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/domain-model.yaml
 use_cases:
   - use_case_id: uc.<slug>
     name: <name>
