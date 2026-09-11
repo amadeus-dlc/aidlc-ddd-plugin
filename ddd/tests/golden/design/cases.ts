@@ -265,7 +265,7 @@ export const DESIGN_CASES: GoldenCase[] = [
     stage: "domain-design",
     output: "inception/domain-design/components.md",
     files: { "inception/domain-design/components.md": "# components\n" },
-    expect: { pass: false, rules: ["model-presence.missing"] },
+    expect: { pass: false, rules: ["model-presence.missing"], files: { "model-presence.missing": MODEL_PATH } },
   },
   {
     sensor: "ddd-model-presence",
@@ -276,7 +276,7 @@ export const DESIGN_CASES: GoldenCase[] = [
       "inception/domain-design/components.md": "# components\n",
       [MODEL_PATH]: "schema_version: 2\nbounded_contexts: []\n",
     },
-    expect: { pass: false, rules: ["model-presence.invalid"] },
+    expect: { pass: false, rules: ["model-presence.invalid"], files: { "model-presence.invalid": MODEL_PATH } },
   },
 
   // ---- reference-ids ----

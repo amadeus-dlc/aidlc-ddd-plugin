@@ -27,6 +27,12 @@ export interface GoldenCase {
   expect: {
     pass: boolean;
     rules: string[];
+    /**
+     * Expected finding file per rule_id, record-relative. Defaults to the
+     * `output` path. A case that reports on a sibling artifact (model-presence
+     * reports on domain-model.yaml, not components.md) overrides it here.
+     */
+    files?: Record<string, string>;
     note_contains?: string;
   };
 }
@@ -87,9 +93,9 @@ export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResul
     if ((proc.exitCode ?? 0) !== 0) {
       return { sensor: testCase.sensor, name: testCase.name, ok: false, problems: [`exit code ${proc.exitCode}`] };
     }
-    let verdict: SensorVerdict;
+    let parsed: unknown;
     try {
-      verdict = JSON.parse(proc.stdout.toString().trim()) as SensorVerdict;
+      parsed = JSON.parse(proc.stdout.toString().trim());
     } catch {
       return {
         sensor: testCase.sensor,
@@ -98,18 +104,38 @@ export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResul
         problems: ["stdout is not a single JSON verdict"],
       };
     }
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as SensorVerdict).pass !== "boolean" ||
+      !Array.isArray((parsed as SensorVerdict).findings)
+    ) {
+      return {
+        sensor: testCase.sensor,
+        name: testCase.name,
+        ok: false,
+        problems: ["verdict has no boolean pass and findings array"],
+      };
+    }
+    const verdict = parsed as SensorVerdict;
     if (verdict.pass !== testCase.expect.pass) {
       problems.push(`pass expected ${testCase.expect.pass}, got ${verdict.pass}`);
     }
-    const actual = new Set(verdict.findings.map((f) => f.rule_id));
-    for (const rule of testCase.expect.rules) {
-      if (!actual.has(rule)) problems.push(`missing expected rule ${rule}`);
-    }
-    if (!isViolation(testCase) && verdict.findings.length > 0) {
-      problems.push(`clean case has findings: ${[...actual].join(", ")}`);
-    }
     if (isViolation(testCase) && testCase.expect.rules.length === 0) {
       problems.push("violation case declares no expected rule");
+    }
+    // Full set comparison on (rule_id, file): a missing finding, an extra
+    // finding, or a wrong file all fail. Lines are optional (BR8.2).
+    const key = (rule: string, file: string) => `${rule} @ ${file}`;
+    const expected = new Set(
+      testCase.expect.rules.map((rule) => key(rule, testCase.expect.files?.[rule] ?? testCase.output)),
+    );
+    const actual = new Set(verdict.findings.map((f) => key(f.rule_id, f.file)));
+    for (const entry of expected) {
+      if (!actual.has(entry)) problems.push(`missing expected finding ${entry}`);
+    }
+    for (const entry of actual) {
+      if (!expected.has(entry)) problems.push(`unexpected finding ${entry}`);
     }
     if (testCase.expect.note_contains && !(verdict.note ?? "").includes(testCase.expect.note_contains)) {
       problems.push(`note does not contain "${testCase.expect.note_contains}"`);
