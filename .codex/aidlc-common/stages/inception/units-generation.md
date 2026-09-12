@@ -38,7 +38,6 @@ scopes:
   - mvp
   - classic
   - workshop
-  - plugin-dev
 inputs: <record>/inception/domain-design/components.md, <record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced)
 outputs: unit-of-work.md, unit-of-work-dependency.md, unit-of-work-story-map.md, traceability.json (under this stage's record dir, engine-resolved)
 ---
@@ -146,7 +145,7 @@ the story's row in `unit-of-work-story-map.md`:
 ### Step 6: Completion Handoff
 
 Hand completion to `stage-protocol.md` via
-`bun .codex/tools/aidlc.ts engine orchestrate report --stage units-generation --result <outcome>`.
+`aidlc engine orchestrate report --stage units-generation --result <outcome>`.
 That `report` call owns every lifecycle transition and advancement; never perform one in prose, and never narrate this bookkeeping to the user.
 
 ### Step 7: Present Completion & Request Approval

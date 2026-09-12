@@ -52,7 +52,7 @@ const EXEMPT_AGENTS = new Set(["aidlc-composer-agent"]);
 const DISPATCH_HOOK_OUTPUT_MAX_BYTES = 512 * 1024;
 const PRELOAD_FALLBACK_ENV = "AIDLC_DISPATCH_RULES_PRELOAD_FALLBACK";
 
-export function isAidlcAgent(value: unknown): value is string {
+function isAidlcAgent(value: unknown): value is string {
   return (
     typeof value === "string" &&
     /^[a-z0-9][a-z0-9-]*-agent$/.test(value) &&

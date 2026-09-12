@@ -1,13 +1,28 @@
-# OS / editor
+# BEGIN AI-DLC:gitignore
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-.idea/
-
-# Dependencies (nested .gitignore files also cover these per-package)
-node_modules/
-
-# Disposable AI-DLC install sandbox — regenerated via
-# `bun run test:sandbox` / `bun run test:host` (see ddd/docs/framework-compatibility.md)
-ddd-sandbox/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # AI-DLC — the committed-vs-ignored split (workspace layout, re-rooted under aidlc/).
 # Rule of thumb (vision §5.1): per-user session CURSORS and machine-local
@@ -54,12 +69,6 @@ aidlc/spaces/*/knowledge/documentkb/.journal/
 aidlc/spaces/*/knowledge/.sources.local.json
 aidlc/spaces/*/intents/*/runtime-graph.json
 aidlc/spaces/*/intents/*/.aidlc-*
-# Audit trail — per-clone append-only shards (audit/<host>-<clone>.md). The
-# engine default commits them, but here they are deliberately machine-local:
-# every turn appends a line, so committing them dirties the tree continuously.
-# Keep them on disk only; the workflow does not read them, so nothing is lost
-# for the run. (Deviates from the engine's committed-audit default.)
-aidlc/spaces/*/intents/*/audit/
 # Redacted diagnostic reports (/aidlc --doctor --export): regenerated, meant to
 # be shared then deleted — machine-local derived output, never shared truth.
 aidlc/diagnostics/
@@ -67,10 +76,17 @@ aidlc/diagnostics/
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
 # for these): aidlc/spaces/*/memory/** · aidlc/spaces/*/codekb/** ·
 # aidlc/spaces/*/intents/intents.json · aidlc/spaces/*/intents/*/aidlc-state.md ·
+# aidlc/spaces/*/intents/*/audit/*.md (the audit trail, committed as PER-CLONE
+# SHARDS: each machine appends to audit/<host>-<clone>.md so git never merges
+# concurrent appends — there is intentionally NO .gitattributes merge=union,
+# which was proven to corrupt the multi-line audit blocks) ·
 # aidlc/spaces/*/intents/*/<phase>/<stage>/*.md (artifacts + diary).
-# EXCEPTION: the audit shards are ignored above (see the audit note) — this
-# project keeps them machine-local despite the engine's committed-audit default.
 .claude/settings.local.json
+# END AI-DLC:gitignore
 
-# bun test --coverage が書き出す LCOV（機械ローカルの生成物）。
+# Disposable AI-DLC install sandbox — regenerated via
+# `bun run test:sandbox` / `bun run test:host` (see ddd/docs/framework-compatibility.md)
+ddd-sandbox/
+
+# LCOV written by `bun test --coverage` (machine-local output)
 coverage/

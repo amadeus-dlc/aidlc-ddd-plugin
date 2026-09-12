@@ -24,7 +24,6 @@ scopes:
   - classic
   - workshop
   - express
-  - plugin-dev
 inputs: workspace classification from workspace-detection, scope from orchestrator
 outputs: <record>/aidlc-state.md (full populated version, engine-resolved)
 ---
@@ -57,8 +56,8 @@ from the compiled stage graph and scope grid:
 - Total Stages: count EXECUTE stages only (not SKIP). Authoritative counts come
   from the compiled scope grid (`.codex/tools/data/scope-grid.json`),
   transposed from each stage's `scopes:` frontmatter. Run
-  `bun .codex/tools/aidlc.ts engine gen scope-table` for the live scope
-  counts and `bun .codex/tools/aidlc.ts engine gen stage-table` for the
+  `aidlc engine gen scope-table` for the live scope
+  counts and `aidlc engine gen stage-table` for the
   live compiled stage list.
 - Completed: set to number of completed INITIALIZATION stages (typically 3)
 - In Progress: set to first post-initialization stage name

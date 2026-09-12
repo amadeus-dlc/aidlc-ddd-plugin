@@ -43,7 +43,6 @@ scopes:
   - mvp
   - classic
   - workshop
-  - plugin-dev
 inputs: <record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced), RE artifacts (if brownfield)
 outputs: components.md (fenced ```yaml component catalogue plus a human-readable mermaid diagram and summary table), decisions.md (Architecture Decision Records), and traceability.json — all under this stage's record dir, engine-resolved
 ---
@@ -179,7 +178,7 @@ Functional Design):
 ### Step 7: Completion Handoff
 
 Hand completion to `stage-protocol.md` via
-`bun .claude/tools/aidlc.ts engine orchestrate report --stage domain-design --result <outcome>`.
+`aidlc engine orchestrate report --stage domain-design --result <outcome>`.
 That `report` call owns every lifecycle transition and advancement; never perform one in prose, and never narrate this bookkeeping to the user.
 
 ### Step 8: Present Completion & Request Approval
@@ -194,7 +193,7 @@ Use stage-protocol.md completion template with completion emoji: :building_const
   - Add Units Generation (if it was skipped in execution plan)
 
 If "Add Units Generation" is selected, run
-`bun .claude/tools/aidlc.ts engine recompose --add units-generation`
+`aidlc engine recompose --add units-generation`
 before re-entering the approval flow.
 
 ## Sensors

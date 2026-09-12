@@ -26,7 +26,7 @@ Everything else in this section is silent. Nothing is said about invoking, handi
 
 1. **Invoke reviewer sub-agent.** Before every dispatch, not only the first,
    record the request:
-   `bun .claude/tools/aidlc.ts engine log review --stage "<directive.stage>" --reviewer "<directive.reviewer>" --iteration <n>`;
+   `aidlc engine log review --stage "<directive.stage>" --reviewer "<directive.reviewer>" --iteration <n>`;
    add `--unit "<directive.unit>"` on a per-unit stage and `--single` on an
    isolated stage run. The request is accepted only after the stage's
    consolidated answers are confirmed and every verifiable required output
@@ -57,7 +57,7 @@ Everything else in this section is silent. Nothing is said about invoking, handi
 
    On a re-dispatch (adversarial iteration greater than 1, a Part 0 revision
    re-review, or stale-receipt recovery), run
-   `bun .claude/tools/aidlc-review-brief.ts context --stage "<directive.stage>"`;
+   `aidlc engine review-brief context --stage "<directive.stage>"`;
    add `--unit "<directive.unit>"` on a per-unit review. Retain the complete
    stdout as `Prior findings (carry IDs forward)` for the dispatch brief. The
    tool renders the previous review record (or a legacy embedded section) with
@@ -201,7 +201,7 @@ Everything else in this section is silent. Nothing is said about invoking, handi
    on under both values.
    **Review brief (required at every reviewer-backed human gate).** Before the
    structured approval question, run
-   `bun .claude/tools/aidlc-review-brief.ts review --stage "<directive.stage>" --why <first|revision|stale>`;
+   `aidlc engine review-brief review --stage "<directive.stage>" --why <first|revision|stale>`;
    on the final `gate: true` re-entry of a per-unit stage, omit `--unit` because
    that one human decision covers every Unit and approval records dispositions
    for every Unit's open findings. Unit-filtered `context` output remains mandatory for
@@ -341,9 +341,3 @@ If `directive.reviewer` is present, invoke the reviewer as a sub-agent (via the 
 ### GitHub Copilot
 
 If `directive.reviewer` is present, invoke the reviewer as a sub-agent (delegate to the reviewer custom agent - the `.github/agents/` roster is exposed as callable agents).
-
----
-
-### Kimi Code
-
-If `directive.reviewer` is present, invoke the reviewer as a sub-agent (via the `Agent` tool with `subagent_type` set to the reviewer agent).

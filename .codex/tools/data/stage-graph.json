@@ -24,8 +24,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "inputs": "none (first stage after session start)",
     "outputs": "the per-intent record tree (one dir per in-scope phase + verification dir) and the space-level knowledge/ dir",
@@ -72,8 +71,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "inputs": "none (scans filesystem)",
     "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
@@ -120,8 +118,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "inputs": "workspace classification from workspace-detection, scope from orchestrator",
     "outputs": "<record>/aidlc-state.md (full populated version, engine-resolved)",
@@ -169,8 +166,7 @@
       "enterprise",
       "feature",
       "mvp",
-      "poc",
-      "plugin-dev"
+      "poc"
     ],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "intent-statement",
@@ -791,8 +787,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "inputs": "<record>/aidlc-state.md",
     "outputs": "aidlc/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)",
@@ -1003,8 +998,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "reviewer": "aidlc-product-lead-agent",
     "review_artifact": "requirements",
@@ -1312,8 +1306,7 @@
       "feature",
       "mvp",
       "classic",
-      "workshop",
-      "plugin-dev"
+      "workshop"
     ],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "components",
@@ -1416,8 +1409,7 @@
       "feature",
       "mvp",
       "classic",
-      "workshop",
-      "plugin-dev"
+      "workshop"
     ],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "unit-of-work",
@@ -1761,8 +1753,7 @@
       "mvp",
       "refactor",
       "classic",
-      "workshop",
-      "plugin-dev"
+      "workshop"
     ],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "functional-spec",
@@ -2393,8 +2384,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "reviewer": "aidlc-architecture-reviewer-agent",
     "review_artifact": "code-generation-plan",
@@ -2508,8 +2498,7 @@
       "security-patch",
       "classic",
       "workshop",
-      "express",
-      "plugin-dev"
+      "express"
     ],
     "inputs": "ALL code generation outputs across all units",
     "outputs": "build-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md, cross-unit-traceability.md (under this stage's record dir, engine-resolved)",

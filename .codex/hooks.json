@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex session-start"
+            "command": "aidlc engine adapter codex session-start"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex record-human-turn"
+            "command": "aidlc engine adapter codex record-human-turn"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex bind-bash-session"
+            "command": "aidlc engine adapter codex bind-bash-session"
           }
         ],
         "matcher": "Bash"
@@ -34,16 +34,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex deliver-stage-rules"
+            "command": "aidlc engine adapter codex deliver-stage-rules"
           }
         ],
-        "matcher": "spawn_agent|collaborationspawn_agent"
+        "matcher": "spawn_agent"
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex state-transition-guard"
+            "command": "aidlc engine adapter codex state-transition-guard"
           }
         ]
       },
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex reviewer-scope"
+            "command": "aidlc engine adapter codex reviewer-scope"
           }
         ]
       },
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex review-freeze"
+            "command": "aidlc engine adapter codex review-freeze"
           }
         ]
       },
@@ -67,7 +67,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex plan-approval-guard"
+            "command": "aidlc engine adapter codex plan-approval-guard"
           }
         ]
       }
@@ -77,7 +77,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex record-human-turn"
+            "command": "aidlc engine adapter codex record-human-turn"
           }
         ],
         "matcher": "request_user_input"
@@ -86,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex audit-and-sensors"
+            "command": "aidlc engine adapter codex audit-and-sensors"
           }
         ],
         "matcher": "apply_patch"
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex sync-workflow-state"
+            "command": "aidlc engine adapter codex sync-workflow-state"
           }
         ],
         "matcher": "update_plan"
@@ -104,19 +104,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex rebuild-stage-graph"
+            "command": "aidlc engine adapter codex rebuild-stage-graph"
           }
         ],
         "matcher": "Bash"
-      },
-      {
-        "matcher": "spawn_agent|collaborationspawn_agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex finish-stage-rules"
-          }
-        ]
       }
     ],
     "PreCompact": [
@@ -124,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex validate-state"
+            "command": "aidlc engine adapter codex validate-state"
           }
         ]
       }
@@ -134,7 +125,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex log-subagent"
+            "command": "aidlc engine adapter codex log-subagent"
           }
         ]
       }
@@ -144,18 +135,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex continue-workflow"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun .codex/tools/aidlc.ts engine adapter codex start-stage-rules",
-            "additionalContextLimit": 0
+            "command": "aidlc engine adapter codex continue-workflow"
           }
         ]
       }

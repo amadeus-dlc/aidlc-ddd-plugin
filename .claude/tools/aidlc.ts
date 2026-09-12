@@ -385,6 +385,7 @@ export const ROUTES: readonly Route[] = [
       "config project [--show [--json]|--check|--reset] [--plugins <names|all>] [--mcp <defaults|none>] [--completions <shell|none>] [--dry-run] [--yes]",
       "config --pin <version> [--from <dir>] [--release-base-url <url>] [--ca-bundle <path>] [--offline]",
       "config --unpin",
+      "config --channel [stable|preview]",
     ],
   },
   {
@@ -405,7 +406,7 @@ export const ROUTES: readonly Route[] = [
       { command: "update [args]", summary: "install and activate a framework release" },
     ],
     all: [
-      "update [--version <version>] [--from <dir>] [--release-base-url <url>] [--ca-bundle <path>] [--offline] [--check|--dry-run] [--json|--quiet]",
+      "update [--version <version>] [--channel <stable|preview>] [--from <dir>] [--release-base-url <url>] [--release-api-url <url>] [--ca-bundle <path>] [--offline] [--check|--dry-run] [--json|--quiet]",
     ],
   },
   {
@@ -1105,7 +1106,7 @@ function toolsDir(): string {
   return dispatcherDir();
 }
 
-type AdapterHarness = "codex" | "copilot" | "cursor" | "kiro" | "kiro-ide" | "kimi";
+type AdapterHarness = "codex" | "copilot" | "cursor" | "kiro" | "kiro-ide";
 
 const ADAPTER_HARNESS_LEAF: Record<AdapterHarness, string> = {
   codex: ".codex",
@@ -1113,7 +1114,6 @@ const ADAPTER_HARNESS_LEAF: Record<AdapterHarness, string> = {
   cursor: ".cursor",
   kiro: ".kiro",
   "kiro-ide": ".kiro",
-  kimi: ".kimi-code",
 };
 
 function isAdapterHarness(value: string): value is AdapterHarness {
@@ -1124,7 +1124,6 @@ function adapterFile(harness: AdapterHarness): string {
   if (harness === "codex") return "aidlc-codex-adapter.ts";
   if (harness === "copilot") return "aidlc-copilot-adapter.ts";
   if (harness === "cursor") return "aidlc-cursor-adapter.ts";
-  if (harness === "kimi") return "aidlc-kimi-adapter.ts";
   return "aidlc-kiro-adapter.ts";
 }
 
@@ -1146,7 +1145,6 @@ function resolveHookPath(
         ".kiro",
         ".codex",
         ".cursor",
-        ".kimi-code",
       ].filter((value, index, values): value is string =>
         typeof value === "string" && value.length > 0 && values.indexOf(value) === index
       );
@@ -1215,6 +1213,7 @@ const COMMAND_HELP_USAGE: Record<PublicCommand, string> = {
 
 const ROOT_CONFIG_HELP_VALUE_FLAGS = new Set([
   "--ca-bundle",
+  "--channel",
   "--from",
   "--harness",
   "--mcp",
@@ -1262,6 +1261,7 @@ export function renderCommandHelp(command: PublicCommand): string {
       "",
       heading("COMMON FLAGS", out),
       "  --pin <version>   Pin this project to an installed release",
+      "  --channel [name]  Show or set the machine release channel (stable, preview)",
       "  --show            Show the selected section without changing it",
       "  --dry-run         Print the transaction plan without writing",
       "  --yes             Confirm explicit choices; it never chooses values",
@@ -1285,7 +1285,11 @@ export function renderCommandHelp(command: PublicCommand): string {
   };
   const examples: Partial<Record<Exclude<PublicCommand, "config">, string[]>> = {
     doctor: [`  ${invoke} doctor`, `  ${invoke} doctor --verbose`],
-    update: [`  ${invoke} update --check`, `  ${invoke} update --dry-run`],
+    update: [
+      `  ${invoke} update --check`,
+      `  ${invoke} update --dry-run`,
+      `  ${invoke} update --channel preview`,
+    ],
     use: [`  ${invoke} use 2.6.2`],
     uninstall: [`  ${invoke} uninstall`, `  ${invoke} uninstall --purge`],
   };
@@ -2171,6 +2175,8 @@ async function runAdapter(action: Extract<Action, { type: "adapter" }>): Promise
     } else if (
       action.target === "audit-and-sensors" ||
       action.target === "log-subagent" ||
+      action.target === "plan-approval-guard" ||
+      action.target === "record-human-turn" ||
       action.target === "rebuild-stage-graph" ||
       action.target === "session-start" ||
       action.target === "continue-workflow" ||

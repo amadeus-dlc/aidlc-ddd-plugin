@@ -1,6 +1,6 @@
 // Status line: Display aidlc workflow position in the terminal status area
 // Registered via statusLine setting in settings.json
-// Invoked via: bun .codex/tools/aidlc.ts engine statusline
+// Invoked via: aidlc engine statusline
 import {
   existsSync,
   readFileSync,

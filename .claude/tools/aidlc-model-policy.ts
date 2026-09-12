@@ -46,8 +46,7 @@ export type ModelHarness =
   | "cursor"
   | "kiro"
   | "kiro-ide"
-  | "opencode"
-  | "kimi";
+  | "opencode";
 export type ModelPolicyLayer =
   | "agent-exception"
   | "group-dial"
@@ -157,13 +156,6 @@ export const HARNESS_HONESTY = Object.freeze({
     groupEffort: false,
     message:
       "GitHub Copilot cannot pin one portable agent model or effort across CLI and IDE; agents inherit the session.",
-  }),
-  kimi: Object.freeze({
-    model: false,
-    effort: false,
-    groupEffort: false,
-    message:
-      "Kimi Code ignores unknown skill and agent frontmatter keys, so a pinned model or effort would be inert; agents inherit the session.",
   }),
 });
 
@@ -353,10 +345,7 @@ export function profileGroups(
 }
 
 function tierHarness(harness: ModelHarness): TierHarness {
-  if (harness === "kiro-ide") return "kiro";
-  // Kimi reuses the claude tier column (harness/kimi/manifest.ts tierFlavor).
-  if (harness === "kimi") return "claude";
-  return harness;
+  return harness === "kiro-ide" ? "kiro" : harness;
 }
 
 function projectedEffort(value: ReturnType<typeof projectTier>): ModelEffort | undefined {
