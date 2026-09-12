@@ -466,7 +466,9 @@ function constructionFacts(file: string, tree: TSTree): ConstructionSite[] {
   const out: ConstructionSite[] = [];
   walk(tree.rootNode, (node) => {
     if (node.type === "struct_expression") {
-      const hasBase = node.namedChildren.some((child) => child.type === "base_field_initializer");
+      // `..base` sits on the field_initializer_list, not on the struct_expression itself.
+      const body = node.childForFieldName("body");
+      const hasBase = body?.namedChildren.some((child) => child.type === "base_field_initializer") ?? false;
       out.push({
         file,
         kind: hasBase ? "update-syntax" : "struct-literal",
@@ -494,6 +496,17 @@ function constructionFacts(file: string, tree: TSTree): ConstructionSite[] {
   return out;
 }
 
+const ITEM_POSITION_PARENTS = new Set(["source_file", "declaration_list", "mod_item"]);
+
+function isItemPosition(node: TSNode): boolean {
+  const parent = node.parent;
+  if (!parent) return false;
+  if (ITEM_POSITION_PARENTS.has(parent.type)) return true;
+  // At the top level tree-sitter wraps `mac!();` in an expression_statement,
+  // which would otherwise hide that the call sits in item position.
+  return parent.type === "expression_statement" && ITEM_POSITION_PARENTS.has(parent.parent?.type ?? "");
+}
+
 function opaqueFacts(file: string, tree: TSTree): OpaqueRegion[] {
   const out: OpaqueRegion[] = [];
   walk(tree.rootNode, (node) => {
@@ -502,8 +515,7 @@ function opaqueFacts(file: string, tree: TSTree): OpaqueRegion[] {
       return;
     }
     if (node.type === "macro_invocation") {
-      const parent = node.parent?.type ?? "";
-      const itemPosition = parent === "source_file" || parent === "declaration_list" || parent === "mod_item";
+      const itemPosition = isItemPosition(node);
       out.push({
         file,
         span: spanOf(node),

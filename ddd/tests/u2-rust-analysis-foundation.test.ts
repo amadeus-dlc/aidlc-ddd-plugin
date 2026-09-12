@@ -286,4 +286,117 @@ pub fn make_order() -> Order {
     expect(second.file).toBe("b.rs");
     expect(second.content_hash).toBe(first.content_hash);
   });
+
+  test("keeps use paths literal and reports their first segment and alias", async () => {
+    const runtime = await initAnalyzer();
+    const source = `use crate::domain::Order;
+use billing_query_dao::OrderDao as Dao;
+use billing_domain::{Order, Line};
+use ::std::collections::HashMap;
+`;
+    const tree = parse(runtime, "uses.rs", new TextEncoder().encode(source));
+    const facts = uses(tree);
+
+    const plain = facts.find((u) => u.path_text === "crate::domain::Order");
+    expect(plain?.first_segment).toBe("crate");
+    expect(plain?.alias).toBeUndefined();
+
+    const aliased = facts.find((u) => u.alias === "Dao");
+    expect(aliased?.path_text).toBe("billing_query_dao::OrderDao as Dao");
+    expect(aliased?.first_segment).toBe("billing_query_dao");
+
+    const braced = facts.find((u) => u.path_text.includes("{"));
+    expect(braced?.path_text).toBe("billing_domain::{Order, Line}");
+    expect(braced?.first_segment).toBe("billing_domain");
+
+    expect(facts.find((u) => u.path_text === "::std::collections::HashMap")?.first_segment).toBe("std");
+  });
+
+  test("keeps builtin attributes transparent and separates item from expression macros", async () => {
+    const runtime = await initAnalyzer();
+    const source = `#[derive(Clone, Debug)]
+#[cfg(test)]
+#[custom_attribute]
+pub struct Widget {
+    pub id: String,
+}
+
+report_metrics!();
+
+pub fn render() {
+    println!("{}", 1);
+}
+`;
+    const tree = parse(runtime, "macros.rs", new TextEncoder().encode(source));
+    expect(tree.has_parse_error).toBe(false);
+
+    const regions = opaqueRegions(tree);
+    expect(regions.filter((r) => r.reason === "attribute-macro").map((r) => r.macro_name)).toEqual([
+      "custom_attribute",
+    ]);
+    expect(regions.find((r) => r.macro_name === "report_metrics")?.reason).toBe("macro-item");
+    expect(regions.find((r) => r.macro_name === "println")?.reason).toBe("macro-expression");
+
+    expect(structs(tree).find((s) => s.name === "Widget")?.derives).toEqual(["Clone", "Debug"]);
+  });
+
+  test("classifies method bodies and construction sites", async () => {
+    const runtime = await initAnalyzer();
+    const source = `pub struct Order {
+    pub id: String,
+    pub total: i64,
+}
+
+impl Order {
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+
+    pub fn total(&self) -> i64 {
+        self.total
+    }
+
+    pub fn rename(&mut self, id: String) {
+        self.id = id;
+    }
+
+    pub fn append(&mut self, suffix: &str) {
+        self.id.push_str(suffix);
+    }
+
+    pub fn hash(&self) -> usize {
+        self.id.len()
+    }
+
+    pub fn describe(&self) -> String {
+        format!("{}:{}", self.id, self.total)
+    }
+}
+
+pub fn build() -> Order {
+    let base = Order { id: "1".to_string(), total: 0 };
+    let copy = Order { total: 1, ..base };
+    let fresh: Order = Default::default();
+    let zero = Order::default();
+    Order::new("2".to_string(), 3)
+}
+`;
+    const tree = parse(runtime, "bodies.rs", new TextEncoder().encode(source));
+    const shapes = Object.fromEntries(
+      (impls(tree).find((i) => i.target_type_text === "Order")?.methods ?? []).map((m) => [m.name, m.body_shape]),
+    );
+    expect(shapes.id).toBe("returns-field-only");
+    expect(shapes.total).toBe("returns-field-only");
+    expect(shapes.rename).toBe("assigns-field");
+    expect(shapes.append).toBe("assigns-field");
+    expect(shapes.hash).toBe("other");
+    expect(shapes.describe).toBe("opaque");
+
+    const kinds = constructions(tree).map((c) => `${c.kind}:${c.type_text}`);
+    expect(kinds).toContain("struct-literal:Order");
+    expect(kinds).toContain("update-syntax:Order");
+    expect(kinds).toContain("default-call:Default");
+    expect(kinds).toContain("default-call:Order");
+    expect(kinds).toContain("associated-call:Order");
+  });
 });
