@@ -43,6 +43,12 @@ interface Crate {
   name: string;
   lib: string;
   deps?: string[];
+  /**
+   * When set, the crate also gets a `src/main.rs`, which Cargo's auto-discovery
+   * turns into a second (bin) target alongside the lib. Only the mixed-targets
+   * case needs this; every other crate stays lib-only.
+   */
+  bin?: string;
 }
 
 function project(
@@ -62,6 +68,7 @@ function project(
     workspace[`${crate.path}/Cargo.toml`] =
       `[package]\nname = "${crate.name}"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n${deps.join("\n")}\n`;
     workspace[`${crate.path}/src/lib.rs`] = crate.lib;
+    if (crate.bin !== undefined) workspace[`${crate.path}/src/main.rs`] = crate.bin;
   }
   const claimed = claims ?? crates.map((crate) => `${crate.path}/src/lib.rs`);
   const files: Record<string, string> = {
@@ -278,5 +285,75 @@ export const RUST_CASES: GoldenCase[] = [
       ["packages/query/use-case/billing-query-use-case/src/lib.rs"],
     ),
     expect: withFiles({ pass: false, rules: ["l"] }, "packages/query/use-case/billing-query-use-case/src/lib.rs"),
+  },
+
+  // ---- U2 layer diagnostics (BR10.2) ------------------------------------
+  // These three are reported by the domain sensor's `report_layer_diagnostics`
+  // and are raised against the crate's Cargo.toml, not its sources, so they
+  // cannot use `withFiles` (which assumes src/lib.rs).
+  {
+    sensor: "ddd-rust-domain",
+    name: "violation-layer-unknown",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: DOMAIN_CLEAN },
+        { path: "packages/misc/billing-thing", name: "billing-thing", lib: "pub struct Thing;\n" },
+      ],
+      STATE,
+      ["packages/domain/billing-domain/src/lib.rs", "packages/misc/billing-thing/src/lib.rs"],
+    ),
+    expect: {
+      pass: false,
+      rules: ["layer.unknown"],
+      files: { "layer.unknown": "packages/misc/billing-thing/Cargo.toml" },
+    },
+  },
+  {
+    sensor: "ddd-rust-domain",
+    name: "violation-layer-conflict",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      // The name suffix says domain, the placement says use-case. A conflicting
+      // crate resolves to layer `unknown`, so the case also carries a well-placed
+      // domain crate: with no domain file to evaluate the context is empty and
+      // `evaluate.ts` returns before it reports layer diagnostics at all.
+      [
+        { path: "packages/domain/billing-core-domain", name: "billing-core-domain", lib: DOMAIN_CLEAN },
+        { path: "packages/use-case/billing-domain", name: "billing-domain", lib: "pub struct Placeholder;\n" },
+      ],
+      STATE,
+      ["packages/domain/billing-core-domain/src/lib.rs", "packages/use-case/billing-domain/src/lib.rs"],
+    ),
+    expect: {
+      pass: false,
+      rules: ["layer.conflict"],
+      files: { "layer.conflict": "packages/use-case/billing-domain/Cargo.toml" },
+    },
+  },
+  {
+    sensor: "ddd-rust-domain",
+    name: "violation-layer-mixed-targets",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        {
+          path: "packages/domain/billing-domain",
+          name: "billing-domain",
+          lib: DOMAIN_CLEAN,
+          bin: "fn main() {}\n",
+        },
+      ],
+      STATE,
+      ["packages/domain/billing-domain/src/lib.rs"],
+    ),
+    expect: {
+      pass: false,
+      rules: ["layer.mixed-targets"],
+      files: { "layer.mixed-targets": "packages/domain/billing-domain/Cargo.toml" },
+    },
   },
 ];

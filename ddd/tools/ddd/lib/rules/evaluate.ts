@@ -35,7 +35,9 @@ export function evaluateSensor(
   if (config.report_layer_diagnostics) {
     for (const diagnostic of context.layerDiagnostics) {
       findings.push({
-        rule_id: `layer.${diagnostic.code}`,
+        // `DiagnosticCode` already carries its namespace (`layer.` / `cqrs.` /
+        // `workspace.`), so prefixing here would emit `layer.layer.unknown`.
+        rule_id: diagnostic.code,
         file: diagnostic.file,
         message: diagnostic.message,
       });
