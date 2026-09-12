@@ -1,45 +1,25 @@
-# インストール済みハーネスの互換性修正
+# AI-DLCとの互換性
 
-`aidlc-workflows/` は本家参照用の読み取り専用サブモジュールです。パッチ適用・依存導入・再生成・commit・pushを行いません。
-変更先は親リポジトリの `.claude/`・`.codex/` に限定します。
+更新: 2026-09-13。確認基準はAI-DLC 2.8.2とBun 1.3.13。完成時の検証対象はClaude CodeとCodexであり、kimi・opencodeは対象外。
 
-## 修正内容
+## 標準の導入済みツールを使う
 
-- 合成処理は、Codexで `.codex/skills` がない場合に `.agents/skills` を参照します。
-- Bash入力の書き換え時に `permissionDecision: "allow"` を付けます。
-- `collaborationspawn_agent` はアダプター内で通常の起動名に正規化し、既存のガードにも渡します。
-- 暗号化本文は変更せず、起動前に保存したルール束を `SubagentStart` の追加コンテキストとして子へ渡します。
+`.claude/tools/`・`.codex/tools/` は第三者のフレームワーク配布物であり、このプラグインの実装変更先にしない。標準側の不足は再現条件と上流への修正提案として扱い、プラグインの実装修正は `ddd/` で行う。
 
-## 再適用と検証
+この作業コピーでは `.claude/` と `.codex/` にAI-DLCが導入されている。DDDの開発用validate/build/testは `.codex/tools/` を使う。利用先のインストーラは、選択した環境に導入済みのツールを使う。
 
-`.claude/`・`.codex/` のコピーを配置した後、`ddd/` で実行します。
+削除済みの参照サブモジュールや、そのdistは前提にしない。旧版向けの `prepare:harnesses`、dispatch bridge、カスタムビルドを現在の導入手順へ戻さない。残る補助コードはT-04で整理する。
 
-```sh
-bun install
-bun run prepare:harnesses
-bun run check
-bun run build:claude
-bun run build:codex
-```
+## 検証済みと未検証を分ける
 
-`prepare:harnesses` は `patches/installed-harnesses.patch` を親リポジトリのコピーにだけ適用します。
-適用済みなら何も変更せず、ローカル変更と一致しなければ上書きせず停止します。
-サブモジュール用のパッチと適用スクリプトは削除しました。
-検証・ビルドは `.codex/tools/` のコピーを使用します。
+Claude/Codexのビルド・compose・既存ゴールデンケースは調査で成功した。T-01で成果物と通常承認のDDD検査を接続した。ただし標準の単独完了は一般成果物・センサーを検証せず、成果物なしでも完了を返す。再現と制約は[成果物契約](artifact-contract.md)を参照。
 
-## 実機検証
+Codexのルール転送は標準AI-DLCと実行ホストの連携に依存する。DDD側で現在の経路を実機確認する作業はT-05であり、旧bridgeの成功記録を代用しない。
 
-```sh
-bun run test:host state
-bun run test:host task-name
-```
+## 互換性を直す順序
 
-これは実際のCodexモデルを呼び出す明示実行用の検証です。通常の `check` には含めません。
-ワークフロー状態、または `task_name` による単独ステージ指定の両経路で検証用トークンの受信を確認しています。
-生ログはGit管理対象外の `ddd-sandbox/` に保存します。
+1. T-01の通常承認は接続済み。残る単独完了の保証は標準AI-DLC側で修正する。
+2. T-04で対象2環境のビルド・検証経路と旧環境依存を整理する。
+3. T-05で新規導入・更新と実際のステージ実行を確認する。
 
-単独ステージ指定では、例えば `task_name: aidlc_stage_user_stories__review` を使います。
-ステージを確定できない起動はエラーにします。同じ親セッション・同じ役割の起動は、先の子がルールを受け取るまで待ってから再試行してください。
-変更済みフックの信頼状態は、通常のCodexセッションの `/hooks` で確認します。
-
-詳しくは [実機検証結果](codex-host-verification.md) と [読み取り専用の運用](reference-read-only.md) を参照してください。
+詳細は[残作業](completion-tasks.md)と[実測](current-state-assessment.md)。旧版の経緯は[過去のCodex検証](codex-host-verification.md)に限定して保持する。

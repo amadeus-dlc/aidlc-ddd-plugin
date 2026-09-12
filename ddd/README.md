@@ -1,125 +1,74 @@
-# DDD プラグイン
+# DDDプラグイン
 
-AI-DLC v2 にドメイン駆動設計（DDD）のワークフローを追加するプラグインです。
-識別子は `ddd`、バージョンは `0.1.0` です。Domain Primitive と Always Valid
-Domain Model を設計工程として組み込み、生成コードが規約に従っているかを
-センサーで機械的に検証します。
+AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコードの検査を追加します。識別子は `ddd`、現在のバージョンは `0.1.0` です。
 
-## 何を追加するか
+**開発中です。** センサーの直接実行と通常承認への接続を検証しました。単独完了の標準側ガードには不足があり、Rustの型推論等は検査範囲外です。[現状評価](docs/current-state-assessment.md)と[完成までのタスク](docs/completion-tasks.md)を参照してください。
 
-| 面 | 実体 | 内容 |
-| --- | --- | --- |
-| ステージ | `stages/inception/ddd-domain-modeling.md` | 正規モデル（集約境界まで）を確定する inception ステージ |
-| contribution | `contributions/`（4本） | domain-design / functional-design / infrastructure-design / code-generation への追加 |
-| センサー | `sensors/`（9本） | 設計成果物と Rust コードを検査 |
-| ナレッジ | `knowledge/`（8本） | DDD/クリーンアーキテクチャと Rust 規約 |
-| ツール | `tools/` | センサー実行スクリプトと共有ライブラリ（`tools/ddd/lib/`） |
+## 構成
 
-## センサー一覧
+| 種類 | 内容 |
+|---|---|
+| ステージ1本 | `ddd-domain-modeling` が集約境界までの正規モデルを所有 |
+| contribution 4本 | domain-design、functional-design、infrastructure-design、code-generationへの追加 |
+| 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
+| Rustセンサー3本 | ドメイン、ユースケース、IAの構文・依存検査 |
+| ナレッジ9本 | 言語横断の設計原則とRust規約 |
 
-### 設計センサー（U4）
+ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
 
-| id | 重大度 | 検査 |
-| --- | --- | --- |
-| `ddd-model-completeness` | blocking | 正規モデルの読み込み・完了条件 (i)(ii)(iv)・`domain-model.md` との整合 (f) |
-| `ddd-model-presence` | blocking | domain-modeling 実行時にモデルが存在・読み込み・参照解決できること |
-| `ddd-reference-ids` | blocking | 宣言 ID の解決（未定義・廃止・種別・循環） |
-| `ddd-mapping-declarations` | blocking | 集約写像の 2 軸・ユースケース 6 項目・(j)。宣言文書が解析できないとき（`.document`）と `model_ref` の正規モデルが読めないとき（`.model`）も所見にする |
-| `ddd-layer-structure` | blocking | 層構造宣言の必須項目と (k)(l)(m)(n)（設計側）。宣言文書が解析できないとき（`.item`）と `model_ref` の正規モデルが読めないとき（`.model`）も所見にする |
-| `ddd-design-advisories` | advisory | 複数集約・リポジトリスコープ・upsert store。宣言文書が解析できないとき（`.document`）も所見にする |
+## 検査範囲
 
-設計センサーは**不正な入力を黙って通しません**。宣言文書そのものが解析できない場合と、
-参照する正規モデルが読めない場合は、検査を省略せず所見として報告します。
-このうち `ddd-design-advisories` を除く 5 本は blocking なので、宣言が壊れているとゲートが閉じます。
+| センサー | 実装している検査 |
+|---|---|
+| ddd-model-completeness | YAMLローダー、集約の不変条件、状態効果、参照、MarkdownのID・不変条件本文。Domain Error必須はローダーで検査 |
+| ddd-model-presence | 実行対象のモデルの存在・読み込み。SKIP/absentでは注記して通過 |
+| ddd-reference-ids | 未定義・廃止・種別・不正IDと置換関係 |
+| ddd-mapping-declarations | 集約の2軸、ユースケース宣言、複数集約戦略、加算型コマンドの冪等性宣言、業務語彙によるパッケージ宣言 |
+| ddd-layer-structure | 層構造の必須項目、依存方向、命名、復元宣言 |
+| ddd-design-advisories | 複数集約、リポジトリ範囲、保存宣言への助言 |
+| ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
+| ddd-rust-use-case | g/h/i/d |
+| ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
 
-### Rust コードセンサー（U5）
+助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/artifact-contract.md)を参照してください。
 
-すべて blocking、`code-summary.md` を契機に発火します。規則 (a)〜(n) は
-構文と字面だけで判定し、型推論・名前解決・実行は行いません。
+Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/rust-sensor-contract.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
 
-| id | 規則 |
-| --- | --- |
-| `ddd-rust-domain` | (a) 公開フィールド / (b) 未宣言の状態変更 / (c) 不完全な生成経路 / (d) getter 呼び出し / (g) 依存方向と外部 I/O / 層診断 / `model.invalid` |
-| `ddd-rust-use-case` | (g) DIP と外部 I/O / (h) execute の集約引数 / (i) ユースケース連鎖 / (d) getter |
-| `ddd-rust-interface-adapter` | (k) コマンド側⇄クエリ側 / (l) クエリ側のドメイン参照 / (m) リポジトリ命名 / (n) 復元経路の迂回 / (g) |
+パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/domain-packaging-design.md)を参照してください。
 
-## ユーザのプロジェクトへのインストール
+## 開発時の検証
 
-`scripts/install.ts` が、対象プロジェクトに AI-DLC が導入済みであることを前提に、
-ビルド → compose → 検証を 1 コマンドで行います（compose は冪等なので再実行可）。
-
-```sh
-# ローカルの開発チェックアウトから（ネットワーク不要）
-bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin
-
-# リモートの ref / tag / 最新安定タグから
-bun ddd/scripts/install.ts --project /path/to/project --tag v0.1.0
-bun ddd/scripts/install.ts --project /path/to/project --latest   # 既定
-
-# 事前確認（対象を変更しない）／既存ビルドを使う
-bun ddd/scripts/install.ts --project /path/to/project --from .. --dry-run
-bun ddd/scripts/install.ts --project /path/to/project --skip-build
-```
-
-- `--harness <claude|codex|kimi|opencode|...>`（既定 claude）
-- インストール証明を `<harness>/tools/data/ddd-install.json` に記録
-- アップグレード時は旧バージョンのプラグイン所有ファイルを除去してから compose
-
-## 対応ハーネス
-
-Claude Code（`.claude`）、Codex CLI（`.codex`）、Kimi Code（`.kimi-code`）、
-opencode（`.opencode` / `.aidlc`）向けに投影します（`aidlc-plugin-build` の
-plugin-targets に準拠）。
-
-## 導入手順
+前提はBunと `../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.8.2。参照サブモジュールは使いません。
 
 ```sh
 cd ddd
 bun install
-bun run check          # biome + validate + test
-bun run build:claude   # dist/claude を生成
-bun run build:codex    # dist/codex を生成
-bun run build:kimi     # dist/kimi を生成
-bun run build:opencode # dist/opencode を生成
-bun run build:all      # 4 ハーネスを一括ビルド
-bun run test:sandbox   # 4 ハーネスに compose し、dist ツールでゴールデン検証
-bun run test:dist      # ビルド済み dist/<harness>/tools でゴールデン検証
+bun run validate
+bun run build:claude
+bun run build:codex
+bun scripts/verify-dist.ts claude codex
 ```
 
-`test:sandbox` は 4 ハーネスを一括ビルドしたうえで `aidlc-plugin-test` を
-claude / codex / kimi / opencode に対して実行し（drops ログが空・グラフに
-搭載・冪等）、続けて `scripts/verify-dist.ts` で設計＋Rust のゴールデン全件を
-投影済み `dist/<harness>/tools` の子プロセス入口から実行します。
+全テストは `bun run check` です。T-07実装後は279成功・1skip・20失敗で、失敗は旧環境依存に集中しています。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` はビルド、一時環境へのcompose、配布物の直接検査、通常承認開始の統合検査をまとめて実行します。
 
-## 命名・配置規約（要約）
+## 導入と対応環境
 
-- **安定 ID**: `<kind>.<segments>`（`aggregate.invoice`、`command.invoice.issue`）。
-- **層クレート**: 接尾辞 `-domain` / `-use-case` / `-interface-adapter` /
-  `-infrastructure`、または `packages|modules/<layer>/` 配置。
-- **CQRS 側**: `command` / `query` / `rmu` の名前セグメントまたは配置。
-- **composition root**: bin 専用、`-composition-root` 接尾辞、または
-  `packages|modules/composition-root/`。
-- **リポジトリ**: ポートは `<Aggregate>Repository`（媒体語禁止）。実装は
-  媒体プレフィックス可（`InMemoryInvoiceRepository`）。
+完成時の対象はClaude Code（`.claude`）とCodex（`.codex`、スキルは `.agents/skills`）。kimi・opencodeは対象外です。インストーラには旧対象表が残りますが、対応を保証する一覧とは扱いません。
 
-## 同梱ライセンス
+利用先はAI-DLC導入済みである必要があります。ローカルソースによる事前確認:
 
-- `tools/ddd/lib/rust/vendor/` — `web-tree-sitter@0.25.10`（MIT）、
-  `tools/ddd/wasm/tree-sitter-rust.wasm` — `tree-sitter-wasms` の
-  tree-sitter-rust（The Unlicense、ABI 14）。詳細は
-  `tools/ddd/lib/rust/vendor/NOTICE.md`。
+```sh
+bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
+```
 
-## 既知の制約
+実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、現在の新規導入・更新・失敗回復はT-05で検証します。最新タグの存在やリリース済みであることは、この文書では前提にしません。
 
-- 対応言語は Rust のみ（第2言語は `tools/ddd/lib/rules/<lang>/` を追加する）。
-- common-name の (c-model)（FactoryRule の前提条件を検査しない復元経路）と
-  interior mutability はナレッジに委ね、初版では機械検査しない。
-- 例の索引（`knowledge/*` の Examples）は U5 の clean fixture を指す予定パスを含む。
-- `prepare:harnesses` の patch baseline は 2.8.1 再投影で stale になり得る。
-  codex の compose skills 配置（`.codex/skills` → `.agents/skills`）は
-  `.codex/tools/data/plugin-hooks-template/compose.ts` に直接反映済み。
+## 設計と残作業
+
+[文書一覧](docs/README.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/domain-layer-design.md)、再実行と保存は[ユースケース層設計](docs/use-case-layer-design.md)、復元とRMUは[IA層設計](docs/interface-adapter-layer-design.md)にあります。
+
+不具合は[GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues)へ、再現条件と対象バージョンを添えて報告してください。
 
 ## ライセンス
 
-参照元の MIT ライセンスを引き継ぎます。フレームワークにはサブモジュール内の
-ライセンスが適用されます。
+[MIT](../LICENSE)。`web-tree-sitter` とRust文法の同梱ライセンスは [vendor](tools/ddd/lib/rust/vendor/) と [wasm/LICENSE](tools/ddd/wasm/LICENSE) にあります。

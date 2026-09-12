@@ -1,68 +1,60 @@
-# ddd — design decision record
+# DDDプラグインの判断記録
 
-English | [日本語](decisions.ja.md)
+更新: 2026-09-13。現行方針と、採用済み・失効した過去の判断を区別する。設計の本文は[文書一覧](README.md)、未実装事項は[残作業](completion-tasks.md)で管理する。
 
-The record of implementation-time decisions and deviations from the intent's functional design (intent `260910-ddd-plugin`, `construction/*/functional-design/`). The functional-design documents remain the "source of truth"; this file records what changed while building, and why.
+## 現行方針
 
-## 2026-09-10 — The canonical model loader is hand-written
-
-The U1 functional design left the schema validator open (Q4): JSON Schema at runtime (ajv) vs a hand-written validator. Decision: hand-write the structural validator in `tools/ddd/lib/schema/loader.ts` and ship `domain-model.schema.json` as a contract document only. Rationale: the plugin runs from bun with no runtime dependencies (NFR2); a vendored validator would be a second mouth for the same contract. `Bun.YAML` provides the parser, so no YAML dependency is needed either.
-
-Consequence: the loader fails closed (no partial index) and rejects unknown keys outright, so the normalised model cannot grow module/crate/deployment concepts by accident.
-
-## 2026-09-11 — A SyntaxTree is labeled per file while the parse is shared by content hash
-
-The U2 analyzer cached by content hash, which returned the first parse's `file` label for any later file with identical bytes. When the domain-layer symbol table parsed a crate file by absolute path and the inspection target parsed the same file by workspace-relative path, the two labels disagreed and rule (b) silently matched nothing. Decision: cache the parse tree by content hash, but build (and label) a fresh `SyntaxTree` for the requested file. Consequence: identical bytes still parse once per run, and file identity is correct at both call sites.
-
-## 2026-09-11 — The cross-side CQRS ban is checked before the same-layer allowance
-
-`isAllowed` originally returned `ok` for any same-layer pair before considering CQRS sides, so a command-side crate and a query-side crate in the same layer avoided rule (k). Decision: evaluate the command/query opposition first; only an RMU may cross. Consequence: rule (k) fires on the wire exercise (`test:sandbox` compose and the Rust golden suite), matching the interface-adapter design §3.
-
-## 2026-09-11 — U5 gaps closed: traits, Cargo external edges, the Rust golden suite
-
-The first U5 increment shipped rules (a)–(n) but left three gaps. Decision: (1) extract `trait_item` in the analyzer so rule (m) can check repository ports (and allow a medium prefix on implementations, where the trait owns the naming contract); (2) build external dependency edges from every `Cargo.toml` dependency name, so domain/use-case → I/O crate is reported even without a `use` path; (3) add `tests/golden/rust/` and extend the shared runner with a `workspace` map that aligns `workspace_root` with the record tree. Consequence: the rust suite covers a/b/c/d/g/h/i/k/l/m/n.
-
-## 2026-09-11 — A plugin-owned stage slug must carry the `ddd-` prefix
-
-The intent's design used `slug: domain-modeling`, but `aidlc-plugin-test` refused to compose it: "plugin-owned stage slugs must carry the plugin prefix". Decision: rename the stage file and slug to `ddd-domain-modeling` (and every stage-status / model-path reference with it), and add `plugin-dev` to the stage's scopes so this repository's own scope can run it. Consequence: the stage composes on all harnesses; the canonical model lives at `inception/ddd-domain-modeling/`.
-
-## 2026-09-11 — Design contributions bind sensors and instructions, not `produces`
-
-The U7 design had the functional-design and infrastructure-design contributions declare `produces` (the use-case and layer-structure artifacts). Composing failed: a contributed artifact is applicable to every unit kind, so a core stage with a kind-pruned `review_artifact` (functional-spec excludes packaging; cicd-pipeline excludes spec) failed its schema check. Decision: drop `produces` from those two contributions; the fragments still instruct the declarations and the sensors still fire on the artifact paths (they match files, not `produces`). `domain-design` keeps its `produces` row because its review artifact is not kind-pruned. Consequence: `aidlc-plugin-test --install` is CLEAN (0 drops, stage on the graph, idempotent).
-
-## 2026-09-11 — Harness support: codex needs the `.agents/skills` surface
-
-Codex discovers skills at `<project>/.agents/skills/` (the kernel sets `skipRunnerGen` and emits there), but the compose hook looked for `<harness>/skills` and recorded an advisory "runner regeneration skipped" drop, which `aidlc-plugin-test` treats as an error. Decision: point `SKILLS_DIR` at `.agents/skills` when the codex harness has no `.codex/skills` tree, and report the relative surface in the advisory. The same fix was already recorded in `ddd/patches/installed-harnesses.patch`; the patch baseline was stale after the 2.8.1 re-projection, so it is applied directly. Consequence: claude, codex, kimi and opencode all compose CLEAN.
-
-## 2026-09-11 — Restore the codex dispatch bridge onto the 2.8.1 baseline
-
-The 2.8.1 re-projection rewrote the `.claude`/`.codex` shells from the vendored engine and dropped the installed-harness adaptations, so `prepare:harnesses` failed both `git apply` directions. Decision: re-apply the adaptations (the `.codex/hooks/aidlc-codex-dispatch.ts` bridge, the `start-stage-rules` / `finish-stage-rules` targets, the `permissionDecision: allow` on rewritten input, the `SubagentStart` / `PostToolUse` hooks, the `isAidlcAgent` exports) and regenerate `installed-harnesses.patch` from the new baseline. Consequence: `prepare:harnesses` reports "already applied"; the codex host-verification path is available again.
-
-## 2026-09-11 — The audit shards are machine-local here (deviation)
-
-The engine's default commits the per-clone audit shards. In this repository they append on every session turn, so committing them dirties the tree continuously (four audit-only PRs). Decision: ignore `aidlc/spaces/*/intents/*/audit/` and untrack the existing shard, documenting the deviation in `.gitignore`. Rationale: the workflow never reads the audit to proceed, so keeping it machine-local loses no run state. Consequence: the working tree stays clean between work.
-
-## 2026-09-11 — A one-command installer for user projects
-
-The plugin needs a user-facing install path. Decision: `ddd/scripts/install.ts`, mirroring the sibling deep-spec-analysis plugin — build the harness projection, compose via `aidlc plugin sync` (or the projection's `hooks/compose.ts`), verify a sentinel sensor, and record provenance at `<harness>/tools/data/ddd-install.json`. It resolves sources from `--from` / `--ref` / `--tag` / the latest stable tag (fetched as a hardened GitHub tarball), refreshes its own previously composed payloads before an upgrade compose, and supports `--dry-run`. Consequence: `bun ddd/scripts/install.ts --project <path> --from <repo>` installs in one command.
-
-## Verification matrix (measured, 2026-09-11)
-
-| Check | Result |
+| 判断 | 状態・理由 |
 |---|---|
-| `bun run validate` | VALID (0 errors) |
-| `bun run check:biome` | clean |
-| Unit + golden suites (U1/U2/U4/U5) | 123 pass / 0 fail |
-| `bun run test:sandbox` (compose) | claude / codex / kimi / opencode all CLEAN (0 drops, stage on graph, idempotent) |
-| `bun run test:dist` (projected tools) | 55 design+rust golden cases × 4 harnesses, 0 failed |
-| `bun run prepare:harnesses` | already applied |
+| Claude CodeとCodexを完成時の検証対象にする | kimi・opencodeはユーザー判断で対象外。利用モデルは必要に応じてOllama CloudのClaude Codeブリッジ経由で使う。両環境向けカスタムビルドを維持しない |
+| auditシャードをコミットする | 現行AGENTS.mdと.gitignoreに従う。過去のmachine-local運用を現在の手順には使わない |
+| 正規モデルは手書きローダーで検証する | 2026-09-10採用。JSON Schemaは契約資料。未知キーや壊れた参照を拒否する |
+| 専用ステージはddd-domain-modeling | 2026-09-11採用。プラグイン接頭辞の制約に合わせる |
+| 構文検査と意味のレビューを分ける | 決定的な出力と意味的な正しさを混同しない。全不変条件・全回復経路の検証済みとは主張しない |
+| 文書の正本を日本語へ一本化する | 旧翻訳ページは案内へ縮小し、設計・実測・タスクの重複を減らす |
 
-The pre-existing `framework-compatibility.test.ts` and `codex-dispatch-bridge.test.ts` require the `aidlc-workflows/dist` fixture, which is not generated in this environment (the submodule is read-only); they exercise the restored codex adapter and pass where the fixture is built.
+## 2026-09-13の仕様整理
 
-## Deviations from the functional design (summary)
+失敗時の保証をドメイン操作、単一集約保存、結果不明、複数集約の途中失敗へ分けた。途中コミットを認めながらユースケース全体の無変更を保証する旧記述は撤回した。
 
-1. **Stage slug** `domain-modeling` → `ddd-domain-modeling` (compose prefix rule).
-2. **Contributions** drop `produces` for functional-design / infrastructure-design (kind-pruned review artifacts).
-3. **Audit shards** are ignored here, not committed (continuous churn).
-4. **(c-model)** and interior-mutability checks are not implemented, per the functional design's own deferral.
-5. **U3 / U9** had no functional-design artifacts; they are realized as the existing scaffold plus the README/CHANGELOG/installer and the golden/install tests.
+upsertだけによる冪等性保証、直列性だけで十分とする直前ID保持、未参照の作成残骸を一律に無害とする説明を訂正した。初回の状態変更成功と新規イベント0件の重複成功を区別し、戻り値の具体型はT-03へ残した。
+
+サーガの実装可能性をアクターモデルに限定する説明、非正規化イベントだけを理由にRDBを除外する説明、DynamoDB Streamsの順序保証を集約全体へ広げる説明を訂正した。根拠と条件は設計3文書に記載している。
+
+これは文書の整合化であり、ステージ・contribution・センサーの全修正が終わったという記録ではない。
+
+## 現在も残す実装判断
+
+| 日付 | 判断 | 現在の意味 |
+|---|---|---|
+| 2026-09-11 | parseを内容ハッシュで共有し、SyntaxTreeのファイル名は要求ごとに付ける | 同じ内容の別ファイルを混同しない |
+| 2026-09-11 | CQRSの相互依存禁止を同一層の許可より先に判定 | 同じ層でもcommand/query間の禁止を検出する |
+| 2026-09-11 | trait抽出、Cargoの外部依存、Rustゴールデンケースを追加 | 規則mと依存方向等の入力を増やす。全Rust構文を保証するものではない |
+| 2026-09-11 | 導入スクリプトとprovenanceを追加 | 新規導入・更新のコードは存在するが、現在の一連の実機検証はT-05で行う |
+
+## 失効した判断と、その後の扱い
+
+| 旧判断 | 現在の扱い |
+|---|---|
+| functional-design / infrastructure-designからproducesを外せば、パス一致で検査できる | 承認処理は登録済み成果物だけを対象とするため不十分。登録済みレビュー成果物の必須セクションへ置き換えた |
+| 2.8.1向けのCodex bridgeとパッチを復元する | 現行2.8.2への適用手順としては廃止。残るコード・テストの整理はT-04 |
+| kimi・opencodeを含む4環境を配布対象とする | 対象外2環境を復旧しない。旧実測を現在の対応保証には使わない |
+| auditを無視すれば実行状態を失わない | 現行のコミット方針と不一致。監査データの不要性も一般化しない |
+| 削除済み参照サブモジュールを読み取り専用で維持する | 対象自体がないため手順と保護確認の記録を削除 |
+| 既存の機能設計記録だけを現在の唯一の正とする | 現在の作業コピーに存在する設計文書・実装・実測へ参照を移す |
+
+旧Codex実機検証は[過去の検証記録](codex-host-verification.md)から参照できる。2026-09-11の4環境成功等の値は当時の記録であり、現在の成功を示さない。現行の測定値は[現状評価](current-state-assessment.md)に一本化する。
+
+## T-01の成果物接続
+
+標準の成果物名に従い、正規YAMLをMarkdownへ包んで配布する。ユースケース・層構造は既存レビュー成果物の必須セクションとし、Unit種別を拡張しない。通常承認の接続を検証したが、標準の単独完了は成果物なしでも完了するため別課題として残す。理由と検証範囲は[成果物契約](artifact-contract.md)に記載した。
+
+## T-02のRust判定
+
+ドメイン層の型名全体を集約扱いせず、正規モデルのroot_elementと明示的なRust型を結び付ける。呼出し先はモジュール・use・単純な型別名・明示された引数やフィールドから照合し、型推論とtraitの実装選択は行わない。曖昧な箇所は注記する。
+
+名前だけのreplay例外を廃止し、集約写像のreplay_methodsへメソッドとイベントIDを記録する。保存方式・配置・所属集約・イベント引数型が一致する場合だけ規則bの例外とする。既存モデルのスキーマは変更せず、メソッド本体の意味的な正しさはレビュー・テストに残す。[判定契約](rust-sensor-contract.md)を参照。
+
+## 2026-09-13: 業務語彙によるパッケージング
+
+T-07では共有ナレッジ、既存ステージへの追加手順、設計・Rustセンサーを一体で実装した。物理配置はdomain-designのdomain_packagesが所有し、正規モデルへ混ぜない。技術分類の予約名と宣言・実配置の照合は機械検査、命名と責務の意味はレビューに分担する。将来のパッケージを先行宣言できるが、実モジュールの未宣言は拒否する。[契約と適用範囲](domain-packaging-design.md)を参照。
