@@ -1,5 +1,9 @@
 /** Read one labelled YAML block, optionally inside one exact H2 section. */
-export function readYamlBlock(markdown: string, heading?: string): { yaml: string; startLine: number } {
+export function readYamlBlock(
+  markdown: string,
+  heading?: string | readonly string[],
+): { yaml: string; startLine: number } {
+  const headings = heading === undefined ? undefined : typeof heading === "string" ? [heading] : heading;
   const lines = markdown.split(/\r?\n/);
   const blocks: { yaml: string; startLine: number }[] = [];
   let selected = heading === undefined;
@@ -29,11 +33,14 @@ export function readYamlBlock(markdown: string, heading?: string): { yaml: strin
       continue;
     }
     if (heading !== undefined && /^#{1,2} /.test(line)) {
-      selected = line.trimEnd() === `## ${heading}`;
+      selected = headings?.some((candidate) => line.trimEnd() === `## ${candidate}`) ?? false;
       if (selected) sections++;
     }
   }
-  if (heading !== undefined && sections !== 1) throw new Error(`exactly one '## ${heading}' section is required`);
+  if (heading !== undefined && sections !== 1)
+    throw new Error(
+      `exactly one section matching ${headings?.map((candidate) => `'## ${candidate}'`).join(" or ")} is required`,
+    );
   if (fence?.yaml && selected) throw new Error("the YAML block is not closed");
   if (blocks.length !== 1) throw new Error("exactly one labelled YAML block is required");
   return blocks[0];

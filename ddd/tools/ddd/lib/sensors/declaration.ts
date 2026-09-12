@@ -147,9 +147,9 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
   const raw = readFileSync(path, "utf-8");
   const heading =
     kind === "use-case-declarations"
-      ? "DDD ユースケース宣言"
+      ? ["DDD Use-case Declarations", "DDD ユースケース宣言"]
       : kind === "layer-structure"
-        ? "DDD 層構造宣言"
+        ? ["DDD Layer Structure", "DDD 層構造宣言"]
         : undefined;
   let fenced: { yaml: string; startLine: number };
   try {

@@ -207,7 +207,7 @@ for (const harness of ["claude", "codex"] as const) {
       test(`${slug}: an absent declaration list is not treated as an empty list`, () => {
         const f = fixture(harness);
         f.state(slug, "construction");
-        const heading = slug === "functional-design" ? "DDD ユースケース宣言" : "DDD 層構造宣言";
+        const heading = slug === "functional-design" ? "DDD Use-case Declarations" : "DDD Layer Structure";
         write(
           join(f.record, `construction/${slug}/${artifact}`),
           `# 設計\n\n## ${heading}\n\n\`\`\`yaml\nschema_version: 1\nmodel_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md\n\`\`\`\n`,
