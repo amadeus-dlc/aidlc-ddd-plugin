@@ -1,0 +1,18 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-rust-analysis-foundation",
+  "version": 1,
+  "writes": [
+    { "repo": "ddd", "path": "tools/ddd/lib/workspace/resolver.ts" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/analyzer.ts" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/LICENSE" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/NOTICE.md" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/tree-sitter.d.ts" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/tree-sitter.js" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/tree-sitter.wasm" },
+    { "repo": "ddd", "path": "tools/ddd/lib/rust/vendor/web-tree-sitter.types.d.ts" },
+    { "repo": "ddd", "path": "tools/ddd/wasm/LICENSE" },
+    { "repo": "ddd", "path": "tools/ddd/wasm/tree-sitter-rust.wasm" },
+    { "repo": "ddd", "path": "tests/u2-rust-analysis-foundation.test.ts" }
+  ]
+}

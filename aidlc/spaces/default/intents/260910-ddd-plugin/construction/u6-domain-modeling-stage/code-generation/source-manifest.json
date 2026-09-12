@@ -1,0 +1,8 @@
+{
+  "stage": "code-generation",
+  "unit": "u6-domain-modeling-stage",
+  "version": 1,
+  "writes": [
+    { "repo": "ddd", "path": "stages/inception/ddd-domain-modeling.md" }
+  ]
+}

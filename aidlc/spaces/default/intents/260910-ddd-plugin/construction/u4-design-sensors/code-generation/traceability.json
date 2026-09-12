@@ -1,0 +1,41 @@
+{
+  "stage": "code-generation",
+  "unit": "u4-design-sensors",
+  "upstream_ids": [
+    "FR4.4",
+    "FR5.4",
+    "FR5.5",
+    "FR6",
+    "FR6.1",
+    "FR6.2",
+    "FR6.3",
+    "FR6.4",
+    "FR6.5",
+    "FR6.6",
+    "FR8.1",
+    "FR8.2",
+    "FR8.7",
+    "NFR4"
+  ],
+  "coverage": [
+    { "id": "FR4.4", "status": "OK", "target": "ddd/tools/ddd-sensor-design-advisories.ts" },
+    {
+      "id": "FR5.4",
+      "status": "Deferred",
+      "target": "ddd/tools/ddd-sensor-layer-structure.ts",
+      "note": "本 Unit は (k)(l)(m)(n) の検査実体を提供する。FR5.4 の検証欄が指す adds.sensors へのバインドは U7 が宣言する（unit-of-work.md U4 境界）。"
+    },
+    { "id": "FR5.5", "status": "OK", "target": "ddd/tools/ddd-sensor-design-advisories.ts" },
+    { "id": "FR6", "status": "OK", "target": "ddd/sensors/aidlc-ddd-model-completeness.md" },
+    { "id": "FR6.1", "status": "OK", "target": "ddd/tools/ddd-sensor-reference-ids.ts" },
+    { "id": "FR6.2", "status": "OK", "target": "ddd/tools/ddd-sensor-model-completeness.ts" },
+    { "id": "FR6.3", "status": "OK", "target": "ddd/tools/ddd-sensor-mapping-declarations.ts" },
+    { "id": "FR6.4", "status": "OK", "target": "ddd/tools/ddd-sensor-model-presence.ts" },
+    { "id": "FR6.5", "status": "OK", "target": "ddd/tools/ddd-sensor-model-completeness.ts" },
+    { "id": "FR6.6", "status": "OK", "target": "ddd/sensors/aidlc-ddd-design-advisories.md" },
+    { "id": "FR8.1", "status": "OK", "target": "ddd/sensors/aidlc-ddd-model-completeness.md" },
+    { "id": "FR8.2", "status": "OK", "target": "ddd/sensors/aidlc-ddd-design-advisories.md" },
+    { "id": "FR8.7", "status": "OK", "target": "ddd/tests/u4-golden.test.ts" },
+    { "id": "NFR4", "status": "OK", "target": "ddd/tests/u4-design-sensors.test.ts" }
+  ]
+}

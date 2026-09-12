@@ -1,0 +1,27 @@
+{
+  "stage": "code-generation",
+  "unit": "u5-rust-code-sensors",
+  "upstream_ids": [
+    "FR7", "FR7.1", "FR7.2", "FR7.3", "FR7.4", "FR7.5", "FR7.6", "FR7.7", "FR7.8", "FR7.9", "FR7.10", "FR7.11", "FR7.12", "FR7.13",
+    "FR9.5", "NFR1", "NFR3"
+  ],
+  "coverage": [
+    { "id": "FR7", "status": "OK", "target": "ddd/sensors/aidlc-ddd-rust-domain.md", "note": "3 マニフェスト（domain / use-case / interface-adapter）と 3 スクリプト。ゲートへのバインド（FR8.3）は U7 が所有する。" },
+    { "id": "FR7.1", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleA。ゴールデンケース violation-a / clean-domain（private フィールド）で verdict を固定。" },
+    { "id": "FR7.2", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/symbols.ts", "note": "classifyMutator が index.resolve / commandsOf で照合し ruleB が報告。violation-b / clean-domain（宣言済み issue）で固定。" },
+    { "id": "FR7.3", "status": "Deferred", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleC の c-literal / c-default / c-post-init。ゴールデンケースは c-literal と c-default のみで、受け入れ基準の「replay 経路を含む fixture が pass する」に対応する同梱 fixture は無い（逸脱 3）。本記録の一時 probe では apply_event を含む fixture が pass、init が c-post-init で検出された。" },
+    { "id": "FR7.4", "status": "Deferred", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleD を domain と use-case の 2 マニフェストが評価。violation-d（domain）で固定。受け入れ基準の「IA 層からの呼び出しを含む fixture が pass する」に対応する同梱 fixture は無い（逸脱 3）。一時 probe では IA 層の getter 呼び出しが pass、use-case 層が d で検出された。" },
+    { "id": "FR7.5", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/edges.ts", "note": "buildEdges + ruleG（use-case マニフェスト）。同梱ゴールデンケースは domain → IA の violation-g のみで、use-case → IA と external-io は tests/u5-rust-code-sensors.test.ts にも無い（逸脱 3）。一時 probe で両方が g として検出された。" },
+    { "id": "FR7.6", "status": "Deferred", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleH。violation-h で固定。impl 内メソッドの execute のみ照合し、自由関数 fn execute は照合しない（逸脱 6、BR5.2 との差）。" },
+    { "id": "FR7.7", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleI。violation-i で固定。" },
+    { "id": "FR7.8", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/edges.ts", "note": "isAllowed の cross-side を ruleK が報告。violation-k で固定。rmu からの両側依存は一時 probe で pass。" },
+    { "id": "FR7.9", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleL（includes_query_side によりクエリ側ユースケース層も対象）。violation-l で固定。引数型の照合は無い（逸脱 7）。" },
+    { "id": "FR7.10", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleM と lists.ts の MEDIA_WORDS。violation-m-media / clean-repository（InMemory 実装名）で固定。" },
+    { "id": "FR7.11", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "ruleN と constructors_by_type。violation-n で固定。" },
+    { "id": "FR7.12", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "判定器の入力は U2 の構文的事実（structs / impls / calls / uses / constructions / traits）と Cargo.toml、正規モデル索引のみ。tree-sitter Node・型推論・実行は無い。" },
+    { "id": "FR7.13", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/evaluators.ts", "note": "全所見が finding(rule_id, file, message, line) の 4 項目で作られ、U1 の verdict 出力に載る。" },
+    { "id": "FR9.5", "status": "OK", "target": "ddd/tools/ddd/lib/rules/rust/edges.ts", "note": "layer-forbidden / external-io を 3 マニフェストすべてが g で報告。violation-g（domain → IA）で固定。" },
+    { "id": "NFR1", "status": "OK", "target": "ddd/tests/u5-golden.test.ts", "note": "violation-d を 3 回実行して verdict 一致。一時 probe の 201 ファイル workspace でも 3 回一致。" },
+    { "id": "NFR3", "status": "OK", "target": "ddd/tools/ddd/lib/rules/evaluate.ts", "note": "checkBudget（budget_ms 9000）をファイル境界で呼ぶ。同梱の性能計測ケース（BR10.4）は無い（逸脱 3）。一時 probe で 201 ファイル申告の domain センサーが 139〜168 ms。" }
+  ]
+}

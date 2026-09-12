@@ -32,7 +32,7 @@
 - **In Progress**: code-generation
 
 ## Runtime State
-- **Revision Count**: 5
+- **Revision Count**: 8
 
 - **Skeleton Stance**: scope-dependent
 ## Phase Progress
@@ -78,7 +78,7 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
+- [R] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
@@ -96,7 +96,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-09-10T16:07:51Z
+- **Last Updated**: 2026-09-12T04:53:51Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design

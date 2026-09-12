@@ -1,0 +1,39 @@
+{
+  "stage": "code-generation",
+  "unit": "u8-knowledge-pack",
+  "version": 1,
+  "writes": [
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-architect-agent/ddd-always-valid-model.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-architect-agent/ddd-aggregate-and-invariants.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-architect-agent/ddd-use-case-conventions.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-architect-agent/ddd-cqrs-and-consistency.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-developer-agent/ddd-rust-domain-conventions.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-developer-agent/ddd-rust-persistence-conventions.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-aws-platform-agent/ddd-interface-adapter-conventions.md"
+    },
+    {
+      "repo": "ddd",
+      "path": "knowledge/aidlc-shared/ddd-layer-boundaries.md"
+    }
+  ]
+}
