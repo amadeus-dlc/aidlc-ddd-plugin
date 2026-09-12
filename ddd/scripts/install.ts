@@ -2,13 +2,8 @@
 
 // install.ts — one-command installer for the ddd plugin.
 //
-// Automates the folder-drop flow documented in aidlc-workflows
-// docs/reference/18-plugin-mechanism.md: build the harness projection with
-// aidlc-plugin-build.ts, copy it into the target project (the drop IS the
-// trust decision — there is no store trust gate on this path), then compose
-// via `aidlc plugin sync` or, when the aidlc CLI is absent, by running the
-// projection's hooks/compose.ts directly. Compose is idempotent, so
-// re-running the installer is safe.
+// Builds the harness projection using the destination's standard AI-DLC tools
+// and applies it through the compose hook shipped with that projection.
 //
 // Usage: bun ddd/scripts/install.ts --project <path>
 //        [--harness claude] [--dry-run] [--skip-build]
@@ -492,7 +487,9 @@ if (import.meta.main) {
           // Compose materializes harness placeholders in Markdown payloads. Hash
           // the bytes that will exist in the destination, not the projection
           // template bytes, so an unchanged source can be recognized pre-write.
-          bytes: Buffer.from(readFileSync(source, "utf-8").replaceAll("{{HARNESS_DIR}}", target.harnessLeaf), "utf-8"),
+          bytes: source.endsWith(".md")
+            ? Buffer.from(readFileSync(source, "utf-8").replaceAll("{{HARNESS_DIR}}", target.harnessLeaf), "utf-8")
+            : readFileSync(source),
         });
       }
     }
@@ -625,18 +622,10 @@ if (import.meta.main) {
     AIDLC_HARNESS_DIR: target.harnessLeaf,
     AIDLC_HARNESS_NAME: target.harnessName,
   };
-  const aidlcBin = Bun.which("aidlc");
-  if (aidlcBin) {
-    run("compose (aidlc plugin sync)", [aidlcBin, "plugin", "sync"], {
-      cwd: projectDir,
-      env: composeEnv,
-    });
-  } else {
-    run("compose (hooks/compose.ts)", ["bun", join(distDir, "hooks", "compose.ts")], {
-      cwd: projectDir,
-      env: composeEnv,
-    });
-  }
+  run("compose (hooks/compose.ts)", ["bun", join(distDir, "hooks", "compose.ts")], {
+    cwd: projectDir,
+    env: composeEnv,
+  });
 
   // ---- verify -----------------------------------------------------------------
 
