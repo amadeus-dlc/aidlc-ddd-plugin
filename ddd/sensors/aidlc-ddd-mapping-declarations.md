@@ -9,6 +9,14 @@ category: document-traceability
 matches: "**/{domain-design/ddd-aggregate-mapping.md,functional-design/ddd-use-case-declarations.md}"
 timeout_seconds: 10
 checks:
+  - rule_id: mapping-declarations.document
+    requirement: ADR-008
+    inputs: [ddd-aggregate-mapping, ddd-use-case-declarations]
+    outcome: finding
+  - rule_id: mapping-declarations.model
+    requirement: FR6.1
+    inputs: [ddd-domain-model-yaml, U1 loadDomainModel]
+    outcome: finding
   - rule_id: mapping-declarations.aggregate-unmapped
     requirement: FR3.3
     inputs: [ddd-aggregate-mapping, ddd-domain-model-yaml]

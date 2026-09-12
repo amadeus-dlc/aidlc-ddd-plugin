@@ -23,7 +23,6 @@ scopes:
   - classic
   - workshop
   - express
-  - plugin-dev
 inputs: none (scans filesystem)
 outputs: workspace classification (greenfield/brownfield), technology stack detection
 ---

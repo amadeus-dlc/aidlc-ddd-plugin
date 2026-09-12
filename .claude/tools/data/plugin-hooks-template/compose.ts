@@ -70,9 +70,7 @@ const IS_OPENCODE = HARNESS_NAME === "opencode";
 const STAGES_DIR = join(HARNESS_DIR, "aidlc-common", "stages");
 const SKILLS_DIR = IS_COPILOT
   ? join(PROJECT_DIR, ".github", "skills")
-  : HARNESS_NAME === "codex" && !existsSync(join(HARNESS_DIR, "skills"))
-    ? join(PROJECT_DIR, ".agents", "skills")
-    : join(HARNESS_DIR, "skills");
+  : join(HARNESS_DIR, "skills");
 const PHASES = ["initialization", "ideation", "inception", "construction", "operation"];
 const COMPOSE_LOCK_RETRIES = 600;
 const NATIVE_RUNTIME = Boolean(process.env.AIDLC_COMPILED_EXECUTABLE?.trim());
@@ -2451,7 +2449,7 @@ try {
   const pluginShipsScopes = existsSync(join(PLUGIN_ROOT, "scopes"));
   if (recompiled || missingPluginStageRunner) {
     if (!skillsDirExists) {
-      recordDrop(`runner regeneration skipped: ${relative(PROJECT_DIR, SKILLS_DIR)} not present in this install`, "advisory");
+      recordDrop(`runner regeneration skipped: ${HARNESS_LEAF}/skills not present in this install`, "advisory");
     } else {
       const runnerEnv = installedToolEnv();
       const runRunnerGen = (args: string[], label: string): boolean => {

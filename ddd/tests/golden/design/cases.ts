@@ -373,6 +373,27 @@ export const DESIGN_CASES: GoldenCase[] = [
   },
   {
     sensor: "ddd-mapping-declarations",
+    name: "violation-document",
+    stage: "domain-design",
+    output: MAP_PATH,
+    files: { [MODEL_PATH]: M, [MAP_PATH]: "# no yaml\n" },
+    expect: { pass: false, rules: ["mapping-declarations.document"] },
+  },
+  {
+    sensor: "ddd-mapping-declarations",
+    name: "violation-model",
+    stage: "domain-design",
+    output: MAP_PATH,
+    files: {
+      [MAP_PATH]: MAP.replace(
+        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/missing.yaml",
+      ),
+    },
+    expect: { pass: false, rules: ["mapping-declarations.model"] },
+  },
+  {
+    sensor: "ddd-mapping-declarations",
     name: "violation-axes",
     stage: "domain-design",
     output: MAP_PATH,
@@ -461,6 +482,19 @@ export const DESIGN_CASES: GoldenCase[] = [
     output: LAYER_PATH,
     files: { [MODEL_PATH]: M, [MAP_PATH]: MAP, [LAYER_PATH]: LAYER },
     expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-layer-structure",
+    name: "violation-model",
+    stage: "infrastructure-design",
+    output: LAYER_PATH,
+    files: {
+      [LAYER_PATH]: LAYER.replace(
+        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/missing.yaml",
+      ),
+    },
+    expect: { pass: false, rules: ["layer-structure.model"] },
   },
   {
     sensor: "ddd-layer-structure",
@@ -562,6 +596,14 @@ export const DESIGN_CASES: GoldenCase[] = [
     output: LAYER_PATH,
     files: { [MODEL_PATH]: M, [LAYER_PATH]: LAYER },
     expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-design-advisories",
+    name: "violation-document",
+    stage: "functional-design",
+    output: UC_PATH,
+    files: { [MODEL_PATH]: M, [UC_PATH]: "# no yaml\n" },
+    expect: { pass: false, rules: ["design-advisories.document"] },
   },
   {
     sensor: "ddd-design-advisories",

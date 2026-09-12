@@ -57,7 +57,6 @@ scopes:
   - classic
   - workshop
   - express
-  - plugin-dev
 inputs: ALL prior design artifacts for this unit
 outputs: application code + code-generation-plan.md, code-generation-questions.md, unit-test-instructions.md, code-summary.md, traceability.json (under this stage's per-unit record dir, engine-resolved)
 ---
@@ -150,7 +149,7 @@ If the plan presented to the user omits test file steps, add them before present
 **Test ordering follows one deterministic Testing Contract.** Run:
 
 ```bash
-bun .codex/tools/aidlc-testing-posture.ts render
+aidlc engine testing-posture render
 ```
 
 Paste the command's complete `## Testing Contract` JSON block into `code-generation-plan.md` unchanged. The resolver reads all `## Testing Posture` sections additively and selects the narrowest explicit methodology/order statement; coverage, tooling, integration, or scope notes remain applicable but cannot erase a broader methodology. A contradictory narrower methodology is an error, not an override: halt and ask for the memory rule to be revised.
@@ -208,14 +207,14 @@ run:
 Run the unit-bound form when `directive.unit` is present:
 
 ```bash
-bun .codex/tools/aidlc-testing-posture.ts fingerprint --unit "<directive.unit>"
+aidlc engine testing-posture fingerprint --unit "<directive.unit>"
 ```
 
 For a zero-Unit directive, use the explicit `--stage-level` target; the tool then resolves the stage-level
 `<record>/construction/code-generation/` evidence:
 
 ```bash
-bun .codex/tools/aidlc-testing-posture.ts fingerprint --stage-level
+aidlc engine testing-posture fingerprint --stage-level
 ```
 
 The command prints two copy-ready tag lines. Write BOTH into the Plan Approval
@@ -270,7 +269,7 @@ back to canonical `Approve Plan` or `Request Changes` for `[Answer]:`,
 Before presenting, record the exact prompt identity:
 
 ```bash
-bun .codex/tools/aidlc-log.ts decision --stage code-generation \
+aidlc engine log decision --stage code-generation \
   --checkpoint plan-approval \
   --session "<Runtime Session from SessionStart context>" \
   --questions-file "<code-generation-record>/code-generation-questions.md" \
@@ -296,7 +295,7 @@ after the human explicitly responds, using the exact unlettered choice
 `Approve Plan` or `Request Changes`, then immediately run the matching receipt:
 
 ```bash
-bun .codex/tools/aidlc-log.ts answer --stage code-generation \
+aidlc engine log answer --stage code-generation \
   --checkpoint plan-approval \
   --session "<same Runtime Session>" \
   --questions-file "<code-generation-record>/code-generation-questions.md" \
@@ -360,7 +359,7 @@ The aidlc-developer-agent persona and its knowledge are loaded automatically by 
 
 Include in the delegation prompt:
 - First, verbatim and unedited, the output of
-  `bun .codex/tools/aidlc-testing-posture.ts brief --unit
+  `aidlc engine testing-posture brief --unit
   <directive.unit>` (or `--stage-level` for a zero-Unit directive). Its first
   line is the exact target marker (`AIDLC-UNIT: <directive.unit>` or
   `AIDLC-STAGE: code-generation`), which identifies the one approval authority
@@ -453,7 +452,7 @@ must be one existing workspace-relative implementation or test file:
 ### Step 6: Completion Handoff
 
 Hand completion to `stage-protocol.md` via
-`bun .codex/tools/aidlc.ts engine orchestrate report --stage code-generation --result <outcome>`.
+`aidlc engine orchestrate report --stage code-generation --result <outcome>`.
 That `report` call owns every lifecycle transition and advancement; never perform one in prose, and never narrate this bookkeeping to the user.
 
 ### Step 7: Completion

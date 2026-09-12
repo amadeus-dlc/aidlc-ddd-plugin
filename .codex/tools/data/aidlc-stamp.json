@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "frameworkVersion": "2.8.1-j5ik2o.1",
+  "frameworkVersion": "2.8.2",
   "distribution": "codex",
   "harnessDir": ".codex"
 }

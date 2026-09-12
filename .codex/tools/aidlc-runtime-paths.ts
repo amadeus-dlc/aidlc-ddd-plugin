@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const MODULE_TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 const MODULE_HARNESS_ROOT = join(MODULE_TOOLS_DIR, "..");
-const PROJECTED_INVOKE = "bun .codex/tools/aidlc.ts";
+const PROJECTED_INVOKE = "aidlc";
+// Release version grammar: stable x.y.z, or a preview id
+// x.y.z-preview.YYYYMMDD.N. Literal of PREVIEW_CHANNEL / VERSION_ID in
+// aidlc-channel.ts, repeated here because hooks ship this module with a closed
+// set of sibling tools and must not grow that closure; t330 keeps them in step.
+const FRAMEWORK_VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-preview\.\d{8}\.[1-9]\d*)?$/;
 
 export interface HarnessLocation {
   harnessDir?: string;
@@ -20,7 +25,7 @@ export interface ProjectHarness {
   frameworkVersion?: string;
 }
 
-const HARNESS_PRECEDENCE = [".claude", ".kiro", ".codex", ".cursor", ".aidlc", ".kimi-code"] as const;
+const HARNESS_PRECEDENCE = [".claude", ".kiro", ".codex", ".cursor", ".aidlc"] as const;
 
 function markerRecord(path: string): Record<string, unknown> {
   let value: unknown;
@@ -75,13 +80,9 @@ function harnessIdentity(root: string, strict = false): ProjectHarness | null {
     const frameworkVersion = marker.frameworkVersion;
     if (
       existsSync(stampPath) &&
-      (
-        typeof frameworkVersion !== "string" ||
-        !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-j5ik2o\.(0|[1-9]\d*))?$/
-          .test(frameworkVersion)
-      )
+      (typeof frameworkVersion !== "string" || !FRAMEWORK_VERSION.test(frameworkVersion))
     ) {
-      throw new Error(`${stampPath}: frameworkVersion must be strict semver`);
+      throw new Error(`${stampPath}: frameworkVersion must be a release version id`);
     }
     return {
       root,
@@ -237,7 +238,6 @@ export function runtimeHarnessName(
   if (harnessDir === ".codex") return "codex";
   if (harnessDir === ".kiro") return "kiro";
   if (harnessDir === ".cursor") return "cursor";
-  if (harnessDir === ".kimi-code") return "kimi";
   return "claude";
 }
 

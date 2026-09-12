@@ -66,5 +66,6 @@
 
 <!-- Project-specific corrections from human feedback. -->
 <!-- Format: NEVER/ALWAYS [behavior] (learned [date]) -->
-- コード読み取りを始める前に、登録リポジトリに開発の主戦場が含まれているかを確認する。リポジトリの自動検出はワークスペース直下の兄弟ディレクトリしか見ないため、主対象が漏れることがある。 (learned 2026-09-10) <!-- cid:260910-ddd-plugin:reverse-engineering:1ddb219ba9c48dabbe36008bed5657e01ab5ee09e56611f5d6f2937d216a27c2 -->
-- レビュー所見が未解決のまま残る承認ゲートでは、Request Changes を先頭、Approve を2番目に提示する。所見が無い、または全件解消済みのゲートは標準どおり Approve を先頭にする。 (learned 2026-09-10) <!-- cid:260910-ddd-plugin:units-generation:b698e87e522a2a161d8794f1b39127e095b3bf4667a96687c5c5d284f4cb44b6 -->
+- 人間への質問は初見でも分かるように説明すること。記号や略語だけで意図を伝えようとしないこと。
+- コード読み取りを始める前に、登録リポジトリに開発の主戦場が含まれているかを確認する。リポジトリの自動検出はワークスペース直下の兄弟ディレクトリしか見ないため、主対象が漏れることがある。 
+- レビュー所見が未解決のまま残る承認ゲートでは、Request Changes を先頭、Approve を2番目に提示する。所見が無い、または全件解消済みのゲートは標準どおり Approve を先頭にする。 

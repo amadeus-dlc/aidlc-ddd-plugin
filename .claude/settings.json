@@ -7,16 +7,16 @@
       "Read",
       "Edit",
       "Write",
-      "Bash(bun .claude/tools/*)",
       "Glob",
       "Grep",
       "Task",
-      "WebSearch"
+      "WebSearch",
+      "Bash(aidlc engine *)"
     ]
   },
   "statusLine": {
     "type": "command",
-    "command": "bun .claude/tools/aidlc.ts engine statusline"
+    "command": "aidlc engine statusline"
   },
   "hooks": {
     "PreToolUse": [
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook fold-usage"
+            "command": "aidlc engine hook fold-usage"
           }
         ]
       },
@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook deliver-stage-rules"
+            "command": "aidlc engine hook deliver-stage-rules"
           }
         ]
       },
@@ -43,15 +43,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook state-transition-guard"
+            "command": "aidlc engine hook state-transition-guard"
           },
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook reviewer-scope"
+            "command": "aidlc engine hook reviewer-scope"
           },
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook review-freeze"
+            "command": "aidlc engine hook review-freeze"
           }
         ]
       },
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook plan-approval-guard"
+            "command": "aidlc engine hook plan-approval-guard"
           }
         ]
       }
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook record-human-turn"
+            "command": "aidlc engine hook record-human-turn"
           }
         ]
       }
@@ -82,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook session-start"
+            "command": "aidlc engine hook session-start"
           }
         ]
       }
@@ -93,7 +93,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook session-end"
+            "command": "aidlc engine hook session-end"
           }
         ]
       }
@@ -104,11 +104,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook write-audit-log"
+            "command": "aidlc engine hook write-audit-log"
           },
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook run-sensors"
+            "command": "aidlc engine hook run-sensors"
           }
         ]
       },
@@ -117,7 +117,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook sync-workflow-state"
+            "command": "aidlc engine hook sync-workflow-state"
           }
         ]
       },
@@ -126,7 +126,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook record-human-turn"
+            "command": "aidlc engine hook record-human-turn"
           }
         ]
       },
@@ -135,7 +135,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook rebuild-stage-graph"
+            "command": "aidlc engine hook rebuild-stage-graph"
           }
         ]
       },
@@ -144,7 +144,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook fold-usage"
+            "command": "aidlc engine hook fold-usage"
           }
         ]
       }
@@ -155,7 +155,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook validate-state"
+            "command": "aidlc engine hook validate-state"
           }
         ]
       }
@@ -166,7 +166,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook log-subagent"
+            "command": "aidlc engine hook log-subagent"
           }
         ]
       }
@@ -177,7 +177,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/tools/aidlc.ts engine hook continue-workflow"
+            "command": "aidlc engine hook continue-workflow"
           }
         ]
       }

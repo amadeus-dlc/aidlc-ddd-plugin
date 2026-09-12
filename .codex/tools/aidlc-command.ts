@@ -271,7 +271,7 @@ export type NamespaceRouteShape = {
 export type NamespaceInvocation = {
   file: string;
   line: number;
-  source: "aidlc" | "bun .codex/tools/aidlc.ts";
+  source: "aidlc" | "aidlc";
   namespace: "engine" | "system";
   noun?: string;
   verb?: string;
@@ -337,7 +337,7 @@ export function scanNamespaceInvocations(
     const invocation =
       /(\baidlc|\{\{INVOKE\}\})\s+(engine|system)(?:\s+([^\s`"'|;&(){}]+))?(?:\s+([^\s`"'|;&(){}]+))?/g;
     for (const match of line.matchAll(invocation)) {
-      const source = match[1] === "aidlc" ? "aidlc" : "bun .codex/tools/aidlc.ts";
+      const source = match[1] === "aidlc" ? "aidlc" : "aidlc";
       const namespace = match[2] as "engine" | "system";
       const noun = cleanInvocationToken(match[3]);
       const verb = cleanInvocationToken(match[4]);

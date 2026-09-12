@@ -9,6 +9,10 @@ category: document-traceability
 matches: "**/{functional-design/ddd-use-case-declarations.md,infrastructure-design/ddd-layer-structure.md}"
 timeout_seconds: 10
 checks:
+  - rule_id: design-advisories.document
+    requirement: ADR-008
+    inputs: [ddd-use-case-declarations, ddd-layer-structure]
+    outcome: finding
   - rule_id: design-advisories.multi-aggregate
     requirement: FR4.4
     inputs: [ddd-use-case-declarations]

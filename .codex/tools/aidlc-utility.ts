@@ -32,6 +32,7 @@ import {
   appendAuditEntryUnlocked,
   type AuditEntryInput,
 } from "./aidlc-audit.ts";
+import { VERSION_ID } from "./aidlc-channel.ts";
 import { main as pluginBuildMain } from "./aidlc-plugin-build.ts";
 import { main as pluginValidateMain } from "./aidlc-plugin-validate.ts";
 import {
@@ -2376,45 +2377,6 @@ function appendPluginDoctorChecks(
   }
 }
 
-// Parse the [[hooks]] tables of a Kimi config/snippet into (event, target)
-// pairs, where target is the aidlc-kimi-adapter subcommand the command names.
-// Strictly line-oriented (the aidlc-lib mini-parser style — core tools carry
-// no TOML dependency because they are byte-copied into user installs):
-// comment lines (leading #) are dropped first so a commented-out registration
-// never counts, a new [[hooks]] header starts a new entry, and any other
-// table header closes the current one.
-function kimiAdapterRegistrations(toml: string): Array<{ event: string; target: string }> {
-  const out: Array<{ event: string; target: string }> = [];
-  let cur: { event?: string; command?: string } | null = null;
-  const flush = () => {
-    if (cur?.event !== undefined && cur.command !== undefined) {
-      // Two spellings reach the user config: the copy channel's
-      // `bun .kimi-code/hooks/aidlc-kimi-adapter.ts <target>` and the native
-      // channel's `aidlc engine adapter kimi <target>`. Both name the same
-      // adapter target, so both count as a registration.
-      const t = cur.command.match(
-        /(?:aidlc-kimi-adapter\.ts|\baidlc\s+engine\s+adapter\s+kimi)\s+([a-z0-9-]+)/,
-      );
-      if (t) out.push({ event: cur.event, target: t[1] });
-    }
-  };
-  for (const rawLine of toml.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#")) continue;
-    if (line.startsWith("[")) {
-      flush();
-      cur = line === "[[hooks]]" ? {} : null;
-      continue;
-    }
-    if (cur === null) continue;
-    const kv = line.match(/^(event|command)\s*=\s*"([^"]*)"\s*$/);
-    if (!kv) continue;
-    cur[kv[1] as "event" | "command"] = kv[2];
-  }
-  flush();
-  return out;
-}
-
 export type DoctorCheck = {
   pass: boolean;
   severity?: "warn";
@@ -2780,14 +2742,11 @@ export async function collectDoctorReport(
   const pinPath = join(projectDir, ".aidlc-version");
   if (existsSync(pinPath)) {
     const pinned = readFileSync(pinPath, "utf-8").trim();
-    if (
-      !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-j5ik2o\.(0|[1-9]\d*))?$/
-        .test(pinned)
-    ) {
+    if (!VERSION_ID.test(pinned)) {
       results.push({
         pass: false,
         label: `Project pin is malformed: ${JSON.stringify(pinned)}`,
-        fix: `run \`${aidlcInvocation()} config --unpin\` or write one strict semver`,
+        fix: `run \`${aidlcInvocation()} config --unpin\` or write one release version id`,
       });
     } else {
       const distribution = (() => {
@@ -3041,7 +3000,6 @@ export async function collectDoctorReport(
       );
     }
     if (harness === ".cursor") tsHooks.push("aidlc-cursor-adapter");
-    if (harness === ".kimi-code") tsHooks.push("aidlc-kimi-adapter");
     for (const h of tsHooks) {
       const hookPath = join(projectDir, harness, "hooks", `${h}.ts`);
       results.push({
@@ -3208,77 +3166,6 @@ export async function collectDoctorReport(
         fix: projectedFileRepair("cursor", `.cursor/${file}`),
       });
     }
-  } else if (harness === ".kimi-code") {
-    // Kimi Code: the adapter ships in the project tree; the hook wiring is a
-    // TOML snippet the user appends to the USER-level Kimi config once per
-    // machine ($KIMI_CODE_HOME/config.toml, default ~/.kimi-code/config.toml).
-    results.push({
-      pass: existsSync(join(projectDir, harness, "hooks", "aidlc-kimi-adapter.ts")),
-      label: "hooks/aidlc-kimi-adapter.ts present (hook adapter)",
-      fix: projectedFileRepair("kimi", ".kimi-code/hooks/aidlc-kimi-adapter.ts"),
-    });
-    results.push({
-      pass: existsSync(join(projectDir, harness, "hooks.snippet.toml")),
-      label: "hooks.snippet.toml present (hook wiring snippet)",
-      fix: projectedFileRepair("kimi", ".kimi-code/hooks.snippet.toml"),
-    });
-    // Absent user config or missing adapter references is ADVISORY (warn, not
-    // fail): the snippet append is a one-time per-machine step the doctor can
-    // only point at, not perform.
-    const kimiConfigPath = join(
-      process.env.KIMI_CODE_HOME ?? join(process.env.HOME ?? "", ".kimi-code"),
-      "config.toml",
-    );
-    if (!existsSync(kimiConfigPath)) {
-      results.push({
-        pass: true,
-        label: `${kimiConfigPath} absent — append .kimi-code/hooks.snippet.toml to the user-level Kimi config to wire the hooks`,
-      });
-    } else {
-      // The REQUIRED roster is derived from the shipped snippet, so a new
-      // registration in hooks.snippet.toml becomes a doctor expectation
-      // automatically. Each entry must appear in the user config as its own
-      // [[hooks]] table (event + a command naming that adapter target);
-      // commented-out lines never count. When the snippet is unreadable the
-      // check degrades to the bare any-registration probe.
-      const snippetPath = join(projectDir, harness, "hooks.snippet.toml");
-      const required = existsSync(snippetPath)
-        ? kimiAdapterRegistrations(readFileSync(snippetPath, "utf-8"))
-        : [];
-      const registered = kimiAdapterRegistrations(readFileSync(kimiConfigPath, "utf-8"));
-      const missing = required.filter(
-        (req) => !registered.some((r) => r.event === req.event && r.target === req.target),
-      );
-      if (missing.length > 0) {
-        results.push({
-          pass: true,
-          label: `${kimiConfigPath} is missing ${missing.length} aidlc-kimi-adapter hook(s): ${missing.map((m) => `${m.event} → ${m.target}`).join(", ")} — append .kimi-code/hooks.snippet.toml to it`,
-        });
-      } else if (required.length === 0 && registered.length === 0) {
-        results.push({
-          pass: true,
-          label: `${kimiConfigPath} wires no aidlc-kimi-adapter hooks — append .kimi-code/hooks.snippet.toml to it`,
-        });
-      } else {
-        results.push({
-          pass: true,
-          label: `${kimiConfigPath} wires aidlc-kimi-adapter (hook wiring)`,
-        });
-      }
-    }
-    // No verified Kimi Code version floor in the repo — presence-check only,
-    // warn-only when missing (mirrors the copilot CLI advisory branch).
-    const kimiBin = Bun.which("kimi");
-    const kimiVer = kimiBin
-      ? Bun.spawnSync([kimiBin, "--version"], { stdout: "pipe", stderr: "ignore" })
-      : null;
-    const kimiVerText = (kimiVer?.stdout?.toString() ?? "").trim().split("\n")[0];
-    results.push({
-      pass: true,
-      label: kimiVerText
-        ? `kimi CLI on PATH (${kimiVerText})`
-        : "kimi CLI not on PATH — install Kimi Code to run this harness",
-    });
   } else if (harness === ".aidlc") {
     // opencode: the wiring config is the project-root opencode.json/jsonc
     // (permissions + the method-include instructions glob) plus the /aidlc
@@ -3307,7 +3194,7 @@ export async function collectDoctorReport(
   // 4b. Dual-harness coexistence (D-11): another harness tree installed AND a
   // workflow active is supported-but-untested — warn (advisory pass with a
   // visible label), never block.
-  const otherTrees = [".claude", ".kiro", ".codex", ".aidlc", ".cursor", ".kimi-code"].filter(
+  const otherTrees = [".claude", ".kiro", ".codex", ".aidlc", ".cursor"].filter(
     (h) => h !== harness && existsSync(join(projectDir, h, "tools", "aidlc-lib.ts")),
   );
   if (
@@ -8453,9 +8340,9 @@ function handleSetStatus(projectDir: string, flags: Record<string, string>): voi
 // helper resolves the scope using word-boundary matching (so "debug"
 // does not match "bug"),
 // alphabetical iteration over scopes (so first-match-wins is
-// deterministic), and a ">5 word" heuristic that falls back to the
-// selection-aware default scope when the input looks like a project description
-// that happens to contain a keyword.
+// deterministic), and a ">5 word" heuristic that requires an affirmative
+// high-specificity keyword. Generic or negated mentions in long descriptions
+// fall back to the selection-aware default scope.
 //
 // Exported for t67 unit tests; not a stable public API.
 
@@ -8465,12 +8352,38 @@ export interface InferResult {
   matches: Array<{ scope: string; keyword: string }>;
 }
 
+// These core-owned keywords can identify a scope in a long description
+// (issue #1072). Generic words still defer to the word-count heuristic.
+// Plugin vocabularies remain owned by their plugins; declaring specificity
+// in scope frontmatter is a separate follow-up.
+const HIGH_SPECIFICITY_KEYWORDS = new Set<string>([
+  "refactor",
+  "mvp",
+  "minimum viable",
+  "poc",
+  "proof of concept",
+  "cve",
+]);
+
+function isNegatedScopeKeyword(text: string, index: number): boolean {
+  // Keep this local to the occurrence: "refactor without changing behavior"
+  // is affirmative, and a new clause can request a different scope. This is
+  // a conservative lexical guard, not a general natural-language parser.
+  const prefix = text
+    .slice(0, index)
+    .split(/[.!?;:\n]|\b(?:but|however|instead)\b/)
+    .pop() ?? "";
+  const normalized = prefix.replace(/\bnot\s+(?:only|just|merely)\b/g, "");
+  return /\b(?:no|not|never|without|avoid(?:ing)?|skip(?:ping)?|exclud(?:e|ing)|[a-z]+n['’]t)\b(?:[\s"'“”‘’()-]+\w+){0,4}[\s"'“”‘’()-]*$/.test(normalized);
+}
+
 export function inferScopeFromText(input: string): InferResult {
   const text = input.toLowerCase();
   const trimmed = input.trim();
   const wordCount = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
   const mapping = loadScopeMapping();
   const allMatches: Array<{ scope: string; keyword: string }> = [];
+  let specificMatch: { scope: string; keyword: string } | undefined;
 
   // Iterate in alphabetical order for determinism (not JSON insertion
   // order). validScopes() already returns a sorted set. Multi-word
@@ -8478,19 +8391,30 @@ export function inferScopeFromText(input: string): InferResult {
   // tokens, so "proof  of  concept" (double-spaced) still matches.
   for (const scope of [...validScopes()]) {
     const keywords = mapping[scope]?.keywords ?? [];
+    let firstMatch: { scope: string; keyword: string } | undefined;
     for (const kw of keywords) {
-      const tokens = kw.toLowerCase().trim().split(/\s+/).map(escapeRegex);
-      const re = new RegExp(`\\b${tokens.join("\\s+")}\\b`, "i");
-      if (re.test(text)) {
-        allMatches.push({ scope, keyword: kw });
-        break; // One keyword per scope is enough to mark it matched.
+      const normalized = kw.toLowerCase().trim().replace(/\s+/g, " ");
+      const tokens = normalized.split(" ").map(escapeRegex);
+      const re = new RegExp(`\\b${tokens.join("\\s+")}\\b`, "gi");
+      for (const match of text.matchAll(re)) {
+        firstMatch ??= { scope, keyword: kw };
+        if (
+          wordCount > 5 &&
+          specificMatch === undefined &&
+          HIGH_SPECIFICITY_KEYWORDS.has(normalized) &&
+          !isNegatedScopeKeyword(text, match.index)
+        ) {
+          specificMatch = { scope, keyword: kw };
+        }
       }
     }
+    // Preserve one diagnostic match per scope and short-input precedence,
+    // while checking every keyword for the long-input exemption.
+    if (firstMatch) allMatches.push(firstMatch);
   }
 
-  // Disambiguation: keyword + >5 words → likely a project description
-  // containing the keyword incidentally. Also: no matches at all → default.
-  if (allMatches.length === 0 || wordCount > 5) {
+  // No matches at all → default (freeform).
+  if (allMatches.length === 0) {
     return {
       scope: selectionAwareDefaultScope().scope,
       source: "freeform",
@@ -8498,9 +8422,22 @@ export function inferScopeFromText(input: string): InferResult {
     };
   }
 
-  // First alphabetical match wins (deterministic across calls).
+  // Long descriptions need an affirmative high-specificity match.
+  if (wordCount > 5 && specificMatch === undefined) {
+    return {
+      scope: selectionAwareDefaultScope().scope,
+      source: "freeform",
+      matches: allMatches,
+    };
+  }
+
+  // First alphabetical match wins (deterministic across calls). In long
+  // prose a high-specificity match takes precedence over an alphabetically
+  // earlier incidental low-specificity one.
+  const winner =
+    wordCount > 5 && specificMatch !== undefined ? specificMatch : allMatches[0];
   return {
-    scope: allMatches[0].scope,
+    scope: winner.scope,
     source: "keyword",
     matches: allMatches,
   };
