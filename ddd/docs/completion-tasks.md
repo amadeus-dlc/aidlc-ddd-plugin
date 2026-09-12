@@ -52,7 +52,7 @@ Explicit replay is implemented through aggregate mapping replay_methods. Body se
 
 Status: not started. Priority: high.
 
-Use the revised [domain](domain-layer-design.md), [use-case](use-case-layer-design.md), and [IA](interface-adapter-layer-design.md) conventions as design inputs.
+Use the revised [domain](domain-layer-design.md), [use-case](use-case-layer-design.md), and [Interface Adapter](interface-adapter-layer-design.md) conventions as design inputs.
 
 Replay declaration format was decided in T-02. Remaining decisions cover return values for first success, duplicate success, and rejection; multiple events; mixed actor/class recovery declarations; and missing-mapping behavior. Decide whether retry windows and RMU ordering belong in structured data or prose review.
 

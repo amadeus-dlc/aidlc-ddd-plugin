@@ -13,7 +13,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.layer-boundaries.1 | Determine layers from crate names and placement. | Layer diagnostics. |
 | K.layer-boundaries.2 | Do not introduce dependencies in prohibited directions. | g. Physical separation alone does not make every prohibited direction a compiler error. |
 | K.layer-boundaries.3 | Centralize wiring in the composition root. | Design convention. |
-| K.layer-boundaries.4 | Allow IA to depend on use-case, domain, and infrastructure. | g dependency checks. |
+| K.layer-boundaries.4 | Allow the Interface Adapter layer to depend on use-case, domain, and infrastructure. | g dependency checks. |
 | K.layer-boundaries.5 | Allow use-case to depend on domain and infrastructure. | g dependency checks. |
 | K.layer-boundaries.6 | Allow domain to depend on infrastructure. | g dependency checks. |
 | K.layer-boundaries.7 | Do not let infrastructure for language extensions depend on other layers. | Design convention. Current Rust sensors do not target the infrastructure layer. |
@@ -24,7 +24,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 
 ## Rationale
 
-This infrastructure layer is for language extensions; DB/RPC clients belong in IA. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace.
+This infrastructure layer is for language extensions; DB/RPC clients belong in the Interface Adapter layer. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace.
 
 ## Examples
 

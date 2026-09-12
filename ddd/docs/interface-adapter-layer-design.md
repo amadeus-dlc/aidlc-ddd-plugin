@@ -1,8 +1,8 @@
-# DDD plugin interface-adapter-layer design
+# DDD plugin the Interface Adapter layer layer design
 
 English | [Japanese](interface-adapter-layer-design.ja.md)
 
-Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O. Interface adapter is abbreviated IA.
+Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
 
 ## 1. Delivery form
 
@@ -10,9 +10,9 @@ Extend infrastructure-design through a contribution with layer declarations, kno
 
 ## 2. CQRS responsibilities
 
-The CQRS command side contains domain, use-case, and IA layers; the query side contains use-case and IA layers. Do not create an update-domain layer on the query side. Retrieve DTOs through DAOs.
+The CQRS command side contains domain, use-case, and Interface Adapter layers; the query side contains use-case and Interface Adapter layers. Do not create an update-domain layer on the query side. Retrieve DTOs through DAOs.
 
-Command IA contains update controllers, repository implementations, and external clients. Query IA contains retrieval controllers and DAO implementations. Without CQRS, preserve the responsibilities of persistence adapters, external clients, and thin I/O conversion.
+The command-side Interface Adapter layer contains update controllers, repository implementations, and external clients. The query-side Interface Adapter layer contains retrieval controllers and DAO implementations. Without CQRS, preserve the responsibilities of persistence adapters, external clients, and thin I/O conversion.
 
 State sourcing persists current state; event sourcing reconstructs it from history. Database products and table normalization are separate choices. State sourcing can also use domain events.
 
@@ -26,15 +26,15 @@ Do not use read models for update decisions: asynchronous propagation may not ye
 
 ## 4. Query-side and RMU boundaries
 
-The query side does not reference update aggregates, domain types, or repository ports. It shapes search and display models without duplicating update invariants. Query IA depends on query use cases.
+The query side does not reference update aggregates, domain types, or repository ports. It shapes search and display models without duplicating update invariants. The query-side Interface Adapter layer depends on query use cases.
 
-Keep the RMU independent of command IA and query IA. Align exposure of intermediate states with the use-case design.
+Keep the RMU independent of the command-side Interface Adapter layer and the query-side Interface Adapter layer. Align exposure of intermediate states with the use-case design.
 
 ## 5. Ports and repositories
 
 Classify ports as `repository`, `external-client`, or `es-infrastructure`. Command-side I/O includes external clients as well as repositories, each handled by its port implementation.
 
-Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Place ports according to their inner-layer consumers; concrete implementations belong in IA.
+Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Place ports according to their inner-layer consumers; concrete implementations belong in the Interface Adapter layer.
 
 Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 
@@ -69,7 +69,7 @@ Declarations are connected to normal approval. T-01 tracks the framework standal
 
 ## 9. Knowledge
 
-Cover CQRS separation, port responsibilities, restoration, RMU, and external-model translation. Put DB/RPC clients in IA; this plugin's infrastructure layer is only for language extensions. State this meaning of the layer name explicitly.
+Cover CQRS separation, port responsibilities, restoration, RMU, and external-model translation. Put DB/RPC clients in the Interface Adapter layer; this plugin's infrastructure layer is only for language extensions. State this meaning of the layer name explicitly.
 
 ## 10. Later detailed design
 

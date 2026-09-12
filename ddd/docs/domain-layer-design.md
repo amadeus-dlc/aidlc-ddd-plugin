@@ -55,7 +55,7 @@ A hand-written loader performs runtime validation. JSON Schema documents the con
 - Prohibit plain setters. Limit mutation to declared business commands or explicit event-application paths.
 - Keep value objects and Domain Primitives immutable. Rust Entities and aggregates may perform exclusive business operations through `&mut self`.
 - Domain Services make domain decisions without owning state or persistence responsibilities.
-- Getter definitions are allowed, but calls from domain and use-case layers are restricted. IA may use them for I/O conversion. Distinguish decision methods from getters.
+- Getter definitions are allowed, but calls from domain and use-case layers are restricted. The Interface Adapter layer may use them for I/O conversion. Distinguish decision methods from getters.
 - Commands returning business errors preserve their pre-call state and leave no partial mutation.
 - Do not hide undeclared business mutations with `RefCell` or similar mechanisms. Review the distinction from caches.
 
@@ -69,7 +69,7 @@ Replay of persisted events performs no new business decisions. This does not req
 
 ### 7-1. Getter use
 
-IA may use getters for database persistence and DTO conversion. Express business decisions as domain operations.
+The Interface Adapter layer may use getters for database persistence and DTO conversion. Express business decisions as domain operations.
 
 ### 7-2. Persistence strategies
 
@@ -127,7 +127,7 @@ Normal approval requires agreement between registered artifacts, actual filename
 
 ## 11. Later extensions
 
-A second language, sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis are later candidates. Use-case and IA conventions already have their own design documents; they are not unstarted designs.
+A second language, sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis are later candidates. Use-case and Interface Adapter conventions already have their own design documents; they are not unstarted designs.
 
 ## 12. Unresolved implementation contracts
 

@@ -14,7 +14,7 @@ Updated: 2026-09-13. Design conventions, implementation measurements, and remain
 | What has been verified | [2026-09-13 assessment](current-state-assessment.md) |
 | Domain conventions and boundaries | [Domain design](domain-layer-design.md) |
 | Re-execution, consistency, and recovery | [Use-case design](use-case-layer-design.md) |
-| CQRS, persistence, and RMU | [IA design](interface-adapter-layer-design.md) |
+| CQRS, persistence, and RMU | [Interface Adapter design](interface-adapter-layer-design.md) |
 | Policy and historical decisions | [Decisions](decisions.md) |
 | AI-DLC compatibility and unverified scope | [Compatibility](framework-compatibility.md) |
 | Provenance of earlier Codex host evidence | [Historical verification](codex-host-verification.md) |

@@ -16,7 +16,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-persistence-conventions.4 | Use port traits and inject concrete implementations through wiring. | Design convention. |
 | K.rust-persistence-conventions.5 | Separate decide and apply; make no new business decisions during replay. | Review and behavior tests. c does not verify this separation. |
 | K.rust-persistence-conventions.6 | Consider apply, apply_event, replay, and on_event as event-application method names. | Declare method and event ID in replay_methods; check persistence mode and type correspondence. |
-| K.rust-persistence-conventions.7 | Place ports according to their inner-layer consumers; IA implementation names may identify the medium. | m covers part of naming. Review overall placement. |
+| K.rust-persistence-conventions.7 | Place ports according to their inner-layer consumers; Interface Adapter implementation names may identify the medium. | m covers part of naming. Review overall placement. |
 | K.rust-persistence-conventions.8 | Safely re-persist state; append to immutable history for event persistence. | Review. Current upsert advisories do not adequately distinguish persistence modes. |
 | K.rust-persistence-conventions.9 | Distinguish first success, duplicate success, and rejection. | Design convention. Concrete return types remain T-03 work. |
 | K.rust-persistence-conventions.10 | Validate invariants when restoring from DTOs and distinguish restoration from replay. | n checks construction-call shapes. Review and test all invariants. |

@@ -13,7 +13,7 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ステージ1本 | `ddd-domain-modeling` が集約境界までの正規モデルを所有 |
 | contribution 4本 | domain-design、functional-design、infrastructure-design、code-generationへの追加 |
 | 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
-| Rustセンサー3本 | ドメイン、ユースケース、IAの構文・依存検査 |
+| Rustセンサー3本 | ドメイン、ユースケース、インターフェイスアダプタの構文・依存検査 |
 | ナレッジ9本 | 言語横断の設計原則とRust規約 |
 
 ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
@@ -67,7 +67,7 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 ## 設計と残作業
 
-[文書一覧](docs/README.ja.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/domain-layer-design.ja.md)、再実行と保存は[ユースケース層設計](docs/use-case-layer-design.ja.md)、復元とRMUは[IA層設計](docs/interface-adapter-layer-design.ja.md)にあります。
+[文書一覧](docs/README.ja.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/domain-layer-design.ja.md)、再実行と保存は[ユースケース層設計](docs/use-case-layer-design.ja.md)、復元とRMUは[インターフェイスアダプタ層設計](docs/interface-adapter-layer-design.ja.md)にあります。
 
 不具合は[GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues)へ、再現条件と対象バージョンを添えて報告してください。
 

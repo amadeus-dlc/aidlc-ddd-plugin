@@ -14,7 +14,7 @@
 | どこまで確認したか | [2026-09-13の現状評価](current-state-assessment.ja.md) |
 | ドメイン層の規約と境界契約 | [ドメイン層設計](domain-layer-design.ja.md) |
 | 再実行・整合性・回復 | [ユースケース層設計](use-case-layer-design.ja.md) |
-| CQRS・永続化・RMU | [IA層設計](interface-adapter-layer-design.ja.md) |
+| CQRS・永続化・RMU | [インターフェイスアダプタ層設計](interface-adapter-layer-design.ja.md) |
 | 方針と過去の判断の扱い | [判断記録](decisions.ja.md) |
 | AI-DLCとの互換性と未検証事項 | [互換性](framework-compatibility.ja.md) |
 | 旧Codex実機検証の来歴 | [過去の検証記録](codex-host-verification.ja.md) |

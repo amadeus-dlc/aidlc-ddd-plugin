@@ -13,7 +13,7 @@ Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plug
 | One stage | ddd-domain-modeling owns the canonical model through aggregate boundaries. |
 | Four contributions | Extend domain-design, functional-design, infrastructure-design, and code-generation. |
 | Six design sensors | Model loading/completeness/references, mappings, layers, and advisories. |
-| Three Rust sensors | Domain, use-case, and IA syntax/dependency checks. |
+| Three Rust sensors | Domain, use-case, and Interface Adapter syntax/dependency checks. |
 | Nine knowledge files | Language-independent design principles and Rust conventions. |
 
 Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Implementation is divided into [schema](tools/ddd/lib/schema/), [Rust analysis](tools/ddd/lib/rust/), and [rules](tools/ddd/lib/rules/).
@@ -67,7 +67,7 @@ Remove dry-run to install. The script implements source retrieval, build, compos
 
 ## Design and remaining work
 
-Start with the [document index](docs/README.md) and distinguish conventions from measurements. [Domain design](docs/domain-layer-design.md) covers layer/CQRS naming; [use-case design](docs/use-case-layer-design.md) covers re-execution and persistence; [IA design](docs/interface-adapter-layer-design.md) covers restoration and RMU.
+Start with the [document index](docs/README.md) and distinguish conventions from measurements. [Domain design](docs/domain-layer-design.md) covers layer/CQRS naming; [use-case design](docs/use-case-layer-design.md) covers re-execution and persistence; [Interface Adapter design](docs/interface-adapter-layer-design.md) covers restoration and RMU.
 
 Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues) with versions and reproduction conditions.
 

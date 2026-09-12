@@ -52,7 +52,7 @@ replayの明示方式は集約写像のreplay_methodsとして実装した。T-0
 
 状態: 未着手。優先度: 高。
 
-[ドメイン](domain-layer-design.ja.md)、[ユースケース](use-case-layer-design.ja.md)、[IA](interface-adapter-layer-design.ja.md)の改訂規約を設計入力とする。
+[ドメイン](domain-layer-design.ja.md)、[ユースケース](use-case-layer-design.ja.md)、[インターフェイスアダプタ](interface-adapter-layer-design.ja.md)の改訂規約を設計入力とする。
 
 replayの明示方法はT-02で決定済み。残る項目は、初回成功・重複成功・拒否の戻り値、複数イベントの扱い、actor/class混在フローの回復宣言、写像欠落時の検査契約。再送期間・RMUの順序条件等を構造化データへ追加するか、本文レビューに置くかも決める。
 

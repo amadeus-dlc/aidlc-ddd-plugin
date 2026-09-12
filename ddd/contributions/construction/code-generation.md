@@ -33,7 +33,7 @@ the plan:
   Match Rust replay to `replay_methods` in the aggregate mapping: event-sourcing mode, aggregate crate and module, target event ID, and a single event parameter type must agree. Names such as `apply` alone do not exempt mutation methods.
 - **Use-case layer.** `execute` takes IDs and value objects, never an aggregate;
   a use case never calls another use case.
-- **Interface-adapter layer.** The command side and query side do not depend on
+- **Interface Adapter layer.** The command side and query side do not depend on
   each other; the query side never references a domain type or repository port;
   repositories are named `<Aggregate>Repository`; adapters restore aggregates
   through the full constructor.

@@ -1,4 +1,4 @@
-# Interface-adapter conventions
+# Interface Adapter conventions
 
 Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
@@ -18,7 +18,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.interface-adapter-conventions.6 | Use find_by_id, store, and delete_by_id as the baseline; allow additional queries for the owned aggregate. | Verb checks cover part of the declaration. Review separation from screen-oriented queries. |
 | K.interface-adapter-conventions.7 | Test port contracts for conflicts and failures even with in-memory implementations. | Tests. |
 | K.interface-adapter-conventions.8 | Use DAOs and DTOs on the query side; do not reuse update-domain types. | l checks some reference shapes. |
-| K.interface-adapter-conventions.9 | Put DB/RPC clients in IA, not in infrastructure intended for language extensions. | Design convention. g alone does not guarantee placement of every client. |
+| K.interface-adapter-conventions.9 | Put DB/RPC clients in the Interface Adapter layer, not in infrastructure intended for language extensions. | Design convention. g alone does not guarantee placement of every client. |
 | K.interface-adapter-conventions.10 | State whether an external model is adopted directly or translated at the boundary. | Review. |
 | K.interface-adapter-conventions.11 | Declare context, CQRS, crates, dependencies, ports, restoration, and storage in the layer declaration. | layer-structure.item and related checks. Normal approval is connected; standalone completion has limits. |
 
