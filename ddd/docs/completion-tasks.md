@@ -2,7 +2,7 @@
 
 English | [Japanese](completion-tasks.ja.md)
 
-Updated: 2026-09-13. Replaces Fable5.1's old task list using the [implementation assessment](current-state-assessment.md) and the user's supported-environment policy. The old A/B/C numbering is retired; use the T identifiers below.
+Updated: 2026-09-13. Track remaining work by T identifier, based on the [implementation assessment](current-state-assessment.md) and supported-environment policy.
 
 Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation and T-07 packaging are also implemented. The framework standalone completion gap and T-03–T-06 remain.
 
@@ -107,12 +107,6 @@ Added domain_packages to the registered aggregate mapping with required terms, m
 Completion: valid vocabulary-based examples pass; technical classifications, missing declarations, broken references, and layout mismatches are detected. Distinguish inline modules from externally owned references, and leave semantic naming judgments to review. Include normal-approval and distribution tests.
 
 Dependency: reuse T-02's module index; no third-party framework modification is assumed.
-
-## Work removed from the old list
-
-A new Domain Error requirement check is unnecessary: it exists in the loader and dedicated tests. The claim that copilot/cursor/kiro were missing from the installer table was also incorrect.
-
-Commit audit shards according to current AGENTS.md and .gitignore; do not ask to revert that policy. Protection procedures for the deleted submodule and restoration of old patches are not completion criteria.
 
 ## Extensions after completion
 

@@ -11,7 +11,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | Rule ID | Convention | Current coverage |
 |---|---|---|
 | K.rust-persistence-conventions.1 | Prefer static dispatch; choose dynamic dispatch where needed. | Design convention. |
-| K.rust-persistence-conventions.2 | Separate business decisions from event application in event sourcing. | Review. The earlier claim that c enforces this was corrected. |
+| K.rust-persistence-conventions.2 | Separate business decisions from event application in event sourcing. | Review. |
 | K.rust-persistence-conventions.3 | Design repeated store or append operations so the same request is not applied twice. | Review and tests. Storage declaration advisories cover only part of this. |
 | K.rust-persistence-conventions.4 | Use port traits and inject concrete implementations through wiring. | Design convention. |
 | K.rust-persistence-conventions.5 | Separate decide and apply; make no new business decisions during replay. | Review and behavior tests. c does not verify this separation. |
@@ -30,10 +30,6 @@ State-storage upsert does not mean unconditional overwrite. Never rewrite existi
 The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../tests/golden/rust/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
 
 The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
-
-## Retired rules
-
-No rule IDs have been retired. Overstated coverage and incorrect technical assumptions were corrected on 2026-09-13. Conventions without automated checks may remain review obligations.
 
 ## Sources
 

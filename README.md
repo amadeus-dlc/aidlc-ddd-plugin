@@ -14,7 +14,7 @@ Completion targets are Claude Code and Codex. Kimi/opencode are excluded, and cu
 
 ## Start development
 
-Use Bun and this working copy with AI-DLC development tools installed. The removed reference submodule is not required.
+Use Bun and this working copy with AI-DLC development tools installed.
 
 ```sh
 cd ddd
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-The sandbox builds and composes both harnesses, runs 154 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/sandbox-verification.json) passes. T-04 tracks the 20 old-dependency failures remaining in `bun run check`.
+The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/sensor-contract-verification.json) passes. T-04 tracks the 20 old-dependency failures remaining in `bun run check`.
 
 ## Install into a destination project
 

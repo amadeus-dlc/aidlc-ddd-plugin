@@ -153,3 +153,15 @@ Runtime knowledge, sensors, stages, and contributions are English-only. All 18 r
 - The sandbox completes with exit code 0: both harnesses build and compose, each distribution passes 154 cases, and approval integration has 40 passes, one skip, and zero failures. The main fixtures now exercise English section markers.
 
 The skipped standalone reproduction and the unverified installation/model-execution scope remain as described above.
+
+## 12. Sensor contract coverage
+
+The [contract matrix](sensor-coverage.md) tracks nine sensors and 70 rule entries. It directly checks findings for 68 entries and earlier loader rejection for two. Each entry has positive, negative, and boundary evidence; another sensor's identical rule ID cannot substitute for it.
+
+- Claude/Codex distributions each pass 277 cases.
+- Admission adds 138 inputs per harness. With the existing 40 combined checks: 316 passed, one skipped, zero failed.
+- All 135 contract/heading checks pass, including missing evidence and generated-report drift guards.
+- Foundation/installer checks pass 45 cases; existing sensor and related regressions pass 88 cases.
+- Temporary projects are removed after each test. The complete sandbox script exits 0.
+
+[Execution evidence](evidence/sensor-contract-verification.json) is retained. The investigation also fixed malformed reference IDs being classified as undefined. This does not claim coverage of every implementation branch, all Rust syntax, or business semantics. The optional standalone-guard reproduction and 20 known old-dependency failures remain separate work.

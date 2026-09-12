@@ -14,7 +14,7 @@ The installer uses AI-DLC tools in the destination. Preview installation from lo
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-Remove `--dry-run` to install. End-to-end fresh-install, update, and failure-recovery verification belongs to [T-05](../ddd/docs/completion-tasks.md). Neither old patches nor the removed reference submodule are required.
+Remove `--dry-run` to install. End-to-end fresh-install, update, and failure-recovery verification belongs to [T-05](../ddd/docs/completion-tasks.md).
 
 ## Workflow responsibilities
 

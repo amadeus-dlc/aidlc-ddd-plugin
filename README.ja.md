@@ -14,7 +14,7 @@ AI-DLCに、集約・不変条件・Domain Primitiveの設計手順と、設計�
 
 ## 開発を始める
 
-Bunと、AI-DLCの開発ツールが導入されたこの作業コピーを使います。参照サブモジュールの取得は不要です。
+Bunと、AI-DLCの開発ツールが導入されたこの作業コピーを使います。
 
 ```sh
 cd ddd
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-サンドボックスはClaude/Codexのビルド、compose、配布物の各154ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/sandbox-verification.json)は成功です。`bun run check` に残る旧環境依存20件の失敗はT-04で管理しています。
+サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/sensor-contract-verification.json)は成功です。`bun run check` に残る旧環境依存20件の失敗はT-04で管理しています。
 
 ## 利用先への導入
 

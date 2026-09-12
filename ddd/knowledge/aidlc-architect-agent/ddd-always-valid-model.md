@@ -16,7 +16,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.always-valid-model.4 | Use ubiquitous language and explain the meaning of aggregate IDs. | Design convention. The loader checks only ID grammar. |
 | K.always-valid-model.5 | Validate invariants in a full constructor. | Review and behavior tests. Complete semantic checking of preconditions is not implemented. |
 | K.always-valid-model.6 | Wrap primitives that have business meaning in dedicated types. | Design convention. |
-| K.always-valid-model.7 | Reference other aggregates by ID instead of embedding their objects. | Review. The earlier claim that rule b enforces this was corrected. |
+| K.always-valid-model.7 | Reference other aggregates by ID instead of embedding their objects. | Review. |
 | K.always-valid-model.8 | Consider a Domain Service when a business operation cannot belong to an aggregate. | Design convention. |
 | K.always-valid-model.9 | Use the `<kind>.<segments>` grammar for stable IDs. | Loader ID grammar checks. |
 
@@ -30,10 +30,6 @@ The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../te
 
 The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 
-## Retired rules
-
-No rule IDs have been retired. Overstated coverage and incorrect technical assumptions were corrected on 2026-09-13. Conventions without automated checks may remain review obligations.
-
 ## Sources
 
 - [Current design](../../docs/domain-layer-design.md)
@@ -42,11 +38,4 @@ No rule IDs have been retired. Overstated coverage and incorrect technical assum
 
 ## Resolving policy conflicts
 
-Do not automatically override explicit project policy with plugin conventions. Record the conflict, its scope, and the reason for the resolution. Retain historical C-1 through C-4 as comparison criteria, not a blanket precedence order.
-
-| Historical ID | Comparison | Current treatment |
-|---|---|---|
-| C-1 | Repository verbs and queries | Explain differences from conventions such as save. Do not present a naming example as a technical impossibility. |
-| C-2 | Start with a large aggregate or derive it from events | This plugin derives candidates from events. Review the justification when changing an existing model. |
-| C-3 | Entity mutability | Allow exclusive business mutations in Rust. Mutability alone does not invalidate Always Valid design. |
-| C-4 | Persistence and events | Choose persistence per aggregate. State-sourced aggregates may also use events. |
+Do not automatically override explicit project policy with plugin conventions. Record the conflict, its scope, and the reason for the resolution.

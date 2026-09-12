@@ -31,10 +31,6 @@ The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../te
 
 The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 
-## Retired rules
-
-No rule IDs have been retired. Overstated coverage and incorrect technical assumptions were corrected on 2026-09-13. Conventions without automated checks may remain review obligations.
-
 ## Sources
 
 - [Current design](../../docs/use-case-layer-design.md)

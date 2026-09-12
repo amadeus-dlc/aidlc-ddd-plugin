@@ -8,6 +8,7 @@ Updated: 2026-09-13. Design conventions, implementation measurements, and remain
 |---|---|
 | What the plugin provides and how to verify it | [Plugin README](../README.md) |
 | Domain packaging by business vocabulary | [Packaging contract](domain-packaging-design.md) |
+| Positive, negative, and boundary cases per sensor | [Sensor coverage matrix](sensor-coverage.md) |
 | Rust type matching, replay, and coverage gaps | [Rust sensor contract](rust-sensor-contract.md) |
 | Artifact names, declaration format, standalone limits | [Artifact contract](artifact-contract.md) |
 | Work remaining before completion | [Tasks and criteria](completion-tasks.md) |
@@ -25,4 +26,4 @@ The three layer designs define conventions for generated applications and the pl
 
 The assessment retains evidence from each checkpoint rather than rewriting failures as later successes. The task list tracks current progress. Record new measurements with dates and scope.
 
-Knowledge, sensors, stages, and contributions are English-only. Other plugin docs and guides have full English `.md` and Japanese `.ja.md` editions with matching content; records under `aidlc/` remain Japanese. Procedures for the removed reference submodule are retired, and old Codex evidence is historical only.
+Knowledge, sensors, stages, and contributions are English-only. Other plugin docs and guides have full English `.md` and Japanese `.ja.md` editions with matching content; records under `aidlc/` remain Japanese.

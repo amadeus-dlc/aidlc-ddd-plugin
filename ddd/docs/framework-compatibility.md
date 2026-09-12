@@ -10,7 +10,7 @@ Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Complet
 
 This working copy has AI-DLC installed in `.claude/` and `.codex/`. DDD development validate/build/test commands use `.codex/tools/`. The installer uses the tools already installed for the selected destination harness.
 
-Do not depend on the removed reference submodule or its dist. Do not restore old `prepare:harnesses`, dispatch-bridge, or custom-build paths as current installation instructions. T-04 tracks remaining helper-code cleanup.
+T-04 tracks remaining helper-code cleanup.
 
 ## Separate verified and unverified behavior
 

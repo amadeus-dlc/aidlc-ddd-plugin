@@ -8,6 +8,7 @@
 |---|---|
 | 何を提供し、どう検証するか | [プラグインREADME](../README.ja.md) |
 | 業務語彙によるドメインのパッケージング | [パッケージング契約](domain-packaging-design.ja.md) |
+| センサーごとの正常・異常・境界ケース | [検査契約の対応表](sensor-coverage.ja.md) |
 | Rustの型照合・replay・未検査範囲 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
 | 成果物名・宣言形式・単独完了の制約 | [成果物契約](artifact-contract.ja.md) |
 | 完成までに何を直すか | [残作業と完了条件](completion-tasks.ja.md) |
@@ -25,4 +26,4 @@
 
 現状評価は調査時点の証拠を保持し、修正後に過去の失敗を成功へ書き換えない。残作業表は現在の進行を管理する。新たな検証結果は日時と対象を添えて更新する。
 
-knowledge、sensors、stages、contributionsは英語のみとする。それ以外のプラグイン文書・利用ガイドは英語の `.md` と日本語の `.ja.md` に同じ内容の本文を用意する。`aidlc/` の記録は日本語を維持する。削除済み参照サブモジュールの保護手順は廃止し、旧Codexの証跡は履歴としてのみ残す。
+knowledge、sensors、stages、contributionsは英語のみとする。それ以外のプラグイン文書・利用ガイドは英語の `.md` と日本語の `.ja.md` に同じ内容の本文を用意する。`aidlc/` の記録は日本語を維持する。
