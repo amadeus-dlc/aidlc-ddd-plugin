@@ -4,17 +4,24 @@
 // source tools (tests/u4-*.test.ts and tests/u5-*.test.ts already cover those).
 //
 // Usage: bun scripts/verify-dist.ts [harness ...]
-//        (default: claude codex kimi opencode)
+//        (default: claude codex)
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DESIGN_CASES } from "../tests/golden/design/cases.ts";
+import { PACKAGING_CASES } from "../tests/golden/packaging/cases.ts";
 import { type GoldenCase, runGoldenCase } from "../tests/golden/runner.ts";
 import { RUST_CASES } from "../tests/golden/rust/cases.ts";
 
 const dddRoot = resolve(import.meta.dir, "..");
 const harnesses = process.argv.slice(2);
-const targets = harnesses.length > 0 ? harnesses : ["claude", "codex", "kimi", "opencode"];
-const cases: GoldenCase[] = [...DESIGN_CASES, ...RUST_CASES];
+const supported = ["claude", "codex"];
+const targets = harnesses.length > 0 ? harnesses : supported;
+const unsupported = targets.filter((target) => !supported.includes(target));
+if (unsupported.length > 0) {
+  console.error(`Unsupported harness: ${unsupported.join(", ")}. Supported: ${supported.join(", ")}.`);
+  process.exit(1);
+}
+const cases: GoldenCase[] = [...DESIGN_CASES, ...RUST_CASES, ...PACKAGING_CASES];
 
 interface HarnessResult {
   harness: string;
