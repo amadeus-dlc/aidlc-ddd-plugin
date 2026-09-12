@@ -9,6 +9,10 @@ category: document-traceability
 matches: "**/infrastructure-design/ddd-layer-structure.md"
 timeout_seconds: 10
 checks:
+  - rule_id: layer-structure.model
+    requirement: FR6.1
+    inputs: [ddd-domain-model-yaml, U1 loadDomainModel]
+    outcome: finding
   - rule_id: layer-structure.item
     requirement: ADR-009
     inputs: [ddd-layer-structure]
