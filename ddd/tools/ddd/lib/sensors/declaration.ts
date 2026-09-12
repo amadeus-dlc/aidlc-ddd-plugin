@@ -1,14 +1,26 @@
 /**
- * Declaration documents — the shared reader for the three `ddd-` design
- * artifacts U7 writes and U4 inspects (ADR-008). The first fenced ```yaml
- * block is authoritative; the surrounding Markdown is human-facing prose.
+ * Declaration documents — read the aggregate mapping or the dedicated DDD
+ * section of a registered core review artifact. Exactly one labelled YAML
+ * block in that scope is authoritative; other sections are not declarations.
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import type { SensorRunContext } from "../runtime/context.ts";
 import { type LoadResult, loadDomainModel } from "../schema/loader.ts";
+import { readYamlBlock } from "../shared/markdown-yaml.ts";
 
 export type DeclarationKind = "aggregate-mapping" | "use-case-declarations" | "layer-structure";
+
+export function declarationPath(context: SensorRunContext, kind: DeclarationKind): string {
+  const filename =
+    kind === "aggregate-mapping"
+      ? "ddd-aggregate-mapping.md"
+      : kind === "use-case-declarations"
+        ? "functional-spec.md"
+        : "cicd-pipeline.md";
+  return join(dirname(context.output_path), filename);
+}
 
 export interface AggregateMapping {
   aggregate_ref: string;
@@ -19,6 +31,16 @@ export interface AggregateMapping {
   ports: string[];
   repository: string;
   reference_ids: string[];
+  replay_methods: { method: string; event_ref: string }[];
+  line: number;
+}
+
+export interface DomainPackage {
+  crate: string;
+  module: string;
+  term: string;
+  model_refs: string[];
+  rationale: string;
   line: number;
 }
 
@@ -85,6 +107,7 @@ export interface DeclarationDocument {
   schema_version: number;
   model_ref: string;
   aggregate_mappings: AggregateMapping[];
+  domain_packages?: DomainPackage[];
   use_cases: UseCaseDeclaration[];
   layer_structures: LayerStructureDeclaration[];
 }
@@ -92,22 +115,6 @@ export interface DeclarationDocument {
 export type DeclarationResult =
   | { ok: true; document: DeclarationDocument; raw: string; yaml: string; yamlStartLine: number }
   | { ok: false; reason: "yaml-absent" | "yaml-invalid" | "schema-invalid"; message: string };
-
-const FENCE = /^[ \t]*```(?:yaml|yml)?[ \t]*$/;
-
-export function extractFencedYaml(markdown: string): { yaml: string; startLine: number } | undefined {
-  const lines = markdown.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    if (!FENCE.test(lines[i])) continue;
-    const body: string[] = [];
-    for (let j = i + 1; j < lines.length; j++) {
-      if (/^[ \t]*```[ \t]*$/.test(lines[j])) return { yaml: body.join("\n"), startLine: j - body.length + 1 };
-      body.push(lines[j]);
-    }
-    return undefined;
-  }
-  return undefined;
-}
 
 export function lineOf(yaml: string, needle: string, startLine: number): number {
   const lines = yaml.split("\n");
@@ -138,8 +145,22 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
     return { ok: false, reason: "yaml-absent", message: `declaration ${path} does not exist` };
   }
   const raw = readFileSync(path, "utf-8");
-  const fenced = extractFencedYaml(raw);
-  if (!fenced) return { ok: false, reason: "yaml-absent", message: `${path} has no fenced yaml block` };
+  const heading =
+    kind === "use-case-declarations"
+      ? "DDD ユースケース宣言"
+      : kind === "layer-structure"
+        ? "DDD 層構造宣言"
+        : undefined;
+  let fenced: { yaml: string; startLine: number };
+  try {
+    fenced = readYamlBlock(raw, heading);
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "yaml-absent",
+      message: `${path}: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
   let parsed: unknown;
   try {
     parsed = Bun.YAML.parse(fenced.yaml);
@@ -158,7 +179,63 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
   if (schemaVersion !== 1 || modelRef.length === 0) {
     return { ok: false, reason: "schema-invalid", message: `${path}: schema_version 1 and model_ref are required` };
   }
+  const key =
+    kind === "aggregate-mapping"
+      ? "aggregate_mappings"
+      : kind === "use-case-declarations"
+        ? "use_cases"
+        : "layer_structures";
+  if (!Array.isArray(parsed[key]) || !(parsed[key] as unknown[]).every(isRecord)) {
+    return { ok: false, reason: "schema-invalid", message: `${path}: ${key} must be an explicit list of mappings` };
+  }
+  for (const mapping of recordArray(parsed.aggregate_mappings)) {
+    if (mapping.replay_methods === undefined) continue;
+    if (
+      !Array.isArray(mapping.replay_methods) ||
+      !mapping.replay_methods.every(
+        (entry) =>
+          isRecord(entry) &&
+          typeof entry.method === "string" &&
+          /^[a-zA-Z_]\w*$/.test(entry.method) &&
+          typeof entry.event_ref === "string" &&
+          entry.event_ref.length > 0,
+      )
+    ) {
+      return {
+        ok: false,
+        reason: "schema-invalid",
+        message: `${path}: replay_methods requires method and event_ref entries`,
+      };
+    }
+  }
   const at = (needle: string) => lineOf(fenced.yaml, needle, fenced.startLine);
+  if (
+    parsed.domain_packages !== undefined &&
+    (!Array.isArray(parsed.domain_packages) ||
+      !parsed.domain_packages.every(
+        (entry) =>
+          isRecord(entry) &&
+          (entry.model_refs === undefined ||
+            (Array.isArray(entry.model_refs) && entry.model_refs.every((ref) => typeof ref === "string"))),
+      ))
+  ) {
+    return {
+      ok: false,
+      reason: "schema-invalid",
+      message: `${path}: domain_packages must contain package mappings and string model_refs`,
+    };
+  }
+  const domainPackages =
+    parsed.domain_packages === undefined
+      ? undefined
+      : recordArray(parsed.domain_packages).map((entry) => ({
+          crate: str(entry.crate),
+          module: str(entry.module),
+          term: str(entry.term),
+          model_refs: strArray(entry.model_refs),
+          rationale: str(entry.rationale),
+          line: at(`module: ${str(entry.module)}`),
+        }));
 
   const aggregate_mappings: AggregateMapping[] = recordArray(parsed.aggregate_mappings).map((entry) => ({
     aggregate_ref: str(entry.aggregate_ref),
@@ -169,6 +246,10 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
     ports: strArray(entry.ports),
     repository: str(entry.repository),
     reference_ids: strArray(entry.reference_ids),
+    replay_methods: recordArray(entry.replay_methods).map((replay) => ({
+      method: str(replay.method),
+      event_ref: str(replay.event_ref),
+    })),
     line: at(`aggregate_ref: ${str(entry.aggregate_ref)}`) || at(str(entry.aggregate_ref)),
   }));
 
@@ -239,6 +320,7 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
       schema_version: 1,
       model_ref: modelRef,
       aggregate_mappings,
+      domain_packages: domainPackages,
       use_cases,
       layer_structures,
     },

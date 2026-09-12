@@ -18,6 +18,16 @@ export interface RuleDefinition {
 
 export const RULES: readonly RuleDefinition[] = [
   {
+    rule_id: "domain-packaging",
+    name: "domain-package-vocabulary",
+    statement: "affected domain crates use declared business packages rather than technical classifications",
+    target_layers: ["domain"],
+    requires_model: false,
+    facts: ["modules", "domain_packages", "cargo-targets"],
+    source: "T-07",
+    per_file: false,
+  },
+  {
     rule_id: "a",
     name: "public-field",
     statement: "domain type exposes a non-private field",
@@ -72,7 +82,7 @@ export const RULES: readonly RuleDefinition[] = [
     name: "execute-aggregate-arg",
     statement: "execute receives an aggregate directly",
     target_layers: ["use-case"],
-    requires_model: false,
+    requires_model: true,
     facts: ["impls", "fns", "domain-symbols"],
     source: "FR7.6",
     per_file: true,

@@ -1,74 +1,43 @@
-# Aggregates, invariants and commands
+# 集約・不変条件・コマンド
+
+更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
 
 ## Purpose
 
-How to derive aggregates from events and how to specify their invariants,
-commands, events, errors and transitions. Read during domain-modeling and
-domain-design.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.aggregate-and-invariants.1 | ALWAYS model an aggregate as a finite state machine whose commands move it between named states and never leave it invalid. | aggregate | sensor:model-completeness.ii blocking | Explicit states are what make the transition table checkable. | DL §9 |
-| K.aggregate-and-invariants.2 | ALWAYS give every aggregate at least one invariant; a candidate that cannot own one is not an aggregate. | aggregate | sensor:model-completeness.i blocking | The invariant is what makes the boundary a boundary. | FR1.8 (i) |
-| K.aggregate-and-invariants.3 | ALWAYS have every command declare its state effect and its failure conditions. | command | schema:Command.effect | Transitions become typed data rather than prose. | Q3 |
+DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.aggregate-and-invariants.4 | ALWAYS give an aggregate named states and named transitions. | aggregate | sensor:model-completeness.ii blocking | State is explicit, not implied by a field. | DL §9 |
-| K.aggregate-and-invariants.5 | ALWAYS give every aggregate at least one invariant. | aggregate | sensor:model-completeness.i blocking | The boundary is the invariant. | FR1.8 (i) |
-| K.aggregate-and-invariants.6 | ALWAYS declare `effect` and `state_effect` on every command. | command | schema:Command.effect | Transitions are typed. | Q3 |
-| K.aggregate-and-invariants.7 | ALWAYS give every command at least one Domain Error. | command | schema:command-no-error | Failures are part of the contract. | FR2.2 |
-| K.aggregate-and-invariants.8 | NEVER reference another aggregate by object; reference it by ID only. | aggregate | sensor:b blocking | No cross-aggregate object graph. | DL §3 |
-| K.aggregate-and-invariants.9 | PREFER a domain service only when no aggregate owns the behaviour. | domain service | guidance-only | Prefer the model; the placement is a design judgement. | DL §6 |
-| K.aggregate-and-invariants.10 | PREFER deriving aggregates bottom-up from past-tense domain events and their invariants. | model | guidance-only | Derivation is a workshop procedure and has no mechanical check. The *result* of the derivation is enforced — sensor `model-completeness.i` requires every aggregate to carry an invariant and `.ii` requires named states — but the *order* in which the candidate is found is not. This is the rule that overrides the core's "start with larger aggregates" heuristic (see C-2 in `ddd-always-valid-model.md`). | DL §2 |
-| K.aggregate-and-invariants.11 | ALWAYS record ID lineage for rename, split, merge and removal. | model | schema:lineage | IDs are permanent references across model evolution. | FR2.4 |
+| Rule ID | 規約 | 現在の検証範囲 |
+|---|---|---|
+| K.aggregate-and-invariants.1 | 集約の状態とコマンドの状態効果を明示する。 | iiはstate_effectと遷移参照の対応のみ |
+| K.aggregate-and-invariants.2 | 各集約に不変条件を持たせる。 | model-completeness.i |
+| K.aggregate-and-invariants.3 | 各コマンドに状態効果と失敗条件を宣言する。 | ローダーと完全性検査 |
+| K.aggregate-and-invariants.4 | 遷移する操作には名前付き状態と遷移を、遷移しない操作にはnoneを宣言する。 | ローダーとmodel-completeness.ii |
+| K.aggregate-and-invariants.5 | 不変条件を所有できない集約候補は境界を見直す。 | 不変条件の存在はi、境界の意味はレビュー |
+| K.aggregate-and-invariants.6 | 各コマンドにeffectとstate_effectを記載する。 | ローダー |
+| K.aggregate-and-invariants.7 | 現行スキーマでは各コマンドにDomain Errorを1件以上記載する。 | schema.command-no-error |
+| K.aggregate-and-invariants.8 | 集約間の参照はIDで行う。 | レビュー。規則bは埋め込みを検査しない |
+| K.aggregate-and-invariants.9 | Domain Serviceは集約が担えない判断に限定する。 | 設計規約 |
+| K.aggregate-and-invariants.10 | ストーリーから業務イベントを発見し、集約候補と不変条件を導く。 | 設計手順。導出順序はセンサーで強制しない |
+| K.aggregate-and-invariants.11 | 名称変更はIDを維持し、分割・統合・削除はlineageへ記録する。 | ローダーによる系譜・参照検査 |
 
 ## Rationale
 
-The workflow discovers events, groups the events that change the same state into
-candidates, and confirms each candidate's invariant and bounded context. The ID
-lineage keeps downstream references stable across model evolution.
+状態遷移なしの明示は有効なモデルである。完全性検査は業務上の遷移の正しさや、コードが全遷移を実装したことまでは保証しない。
 
-The core agrees with the invariant-carrying aggregate and with ID-only
-references between aggregates, and is cited here as support: "Reference other
-aggregates by ID, not by object reference", "Keep aggregates small", and
-"Transactions should not span multiple aggregates"
-(`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Aggregates). The one
-place where the core disagrees — the "start with larger aggregates" heuristic —
-is recorded as C-2 in `ddd-always-valid-model.md`, which owns the conflict list.
+## Examples
 
-## Examples (index)
+開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
 
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.aggregate-and-invariants.1 | tests/golden/design/cases.ts#clean-complete | a canonical model whose aggregate declares states and transitions | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.aggregate-and-invariants.2 | tests/golden/design/cases.ts#clean-complete | the same case: sensor `model-completeness.i` reports no aggregate without an invariant | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.aggregate-and-invariants.4 | tests/golden/design/cases.ts#clean-complete | a canonical model whose aggregate carries named states and named transitions | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.aggregate-and-invariants.5 | tests/golden/design/cases.ts#clean-complete | the same case: sensor `model-completeness.i` reports no aggregate without an invariant | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.aggregate-and-invariants.8 | tests/golden/rust/cases.ts#clean-domain | a domain type that holds no aggregate-valued field and no undeclared mutation | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-
-Sensor `model-completeness.i` reads the canonical model, so the index points at
-the design suite; sensor (b) reads Rust source, so the index for
-`K.aggregate-and-invariants.8` points at the rust suite. The rows name the clean
-case of the suite that runs each sensor, not a case built to exercise the rule's
-subject matter; the limitations are listed in this unit's `code-summary.md`.
+配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
 
 ## Retired rules
 
-None.
+規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
 
 ## Sources
 
-- `ddd/docs/domain-layer-design.md` §2–§5
-- `construction/u1-sensor-foundation/functional-design/` — the canonical model
-  schema and the mechanical completeness conditions (i) and (ii), the ID
-  lineage record, and the `<kind>.<segments>` grammar (`functional-spec.md`,
-  `entities.md`, `rules.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Aggregates,
-  Design Heuristics (the core statements cited as support, and the heuristic
-  recorded as conflict C-2 in `ddd-always-valid-model.md`)
+- [現行設計](../../docs/domain-layer-design.md)
+- [実測と既知の不具合](../../docs/current-state-assessment.md)
+- [残作業](../../docs/completion-tasks.md)

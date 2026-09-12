@@ -1,6 +1,6 @@
 /**
  * loadDomainModel — the hand-written structural validator (Q4 A) and index
- * builder for `domain-model.yaml` (BR1–BR6, the load-time half).
+ * builder for `ddd-domain-model-yaml.md` (BR1–BR6, the load-time half).
  *
  * The reader fails closed (BR6.2): any load-time violation returns
  * `{ ok: false, findings }` and no partial index. Rules that the design marks
@@ -12,7 +12,9 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { extname } from "node:path";
 import { assertFindingInput, type FindingInput } from "../shared/findings.ts";
+import { modelYaml } from "./artifacts.ts";
 import { type ElementId, parseElementId } from "./element-id.ts";
 import { createElementIndex, type ElementIndex, type ResolveReason } from "./index-builder.ts";
 import type {
@@ -967,7 +969,8 @@ export function loadDomainModel(path: string): LoadResult {
   }
   let raw: unknown;
   try {
-    raw = Bun.YAML.parse(readFileSync(path, "utf-8"));
+    const text = readFileSync(path, "utf-8");
+    raw = Bun.YAML.parse(extname(path) === ".md" ? modelYaml(text) : text);
   } catch (error) {
     report.add("schema.yaml-parse", `failed to parse ${path}: ${errorMessage(error)}`);
     return { ok: false, findings: report.findings };

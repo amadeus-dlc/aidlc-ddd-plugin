@@ -9,7 +9,7 @@
 import type { FindingInput } from "../shared/findings.ts";
 import type { DomainModel } from "./model.ts";
 
-export function checkCompleteness(model: DomainModel, file = "domain-model.yaml"): FindingInput[] {
+export function checkCompleteness(model: DomainModel, file = "ddd-domain-model-yaml.md"): FindingInput[] {
   const findings: FindingInput[] = [];
   for (const bc of model.bounded_contexts) {
     for (const aggregate of bc.aggregates) {

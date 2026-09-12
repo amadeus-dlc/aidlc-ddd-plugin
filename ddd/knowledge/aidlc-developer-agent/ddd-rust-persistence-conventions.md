@@ -1,86 +1,48 @@
-# Rust persistence conventions
+# Rust永続化の規約
+
+更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
 
 ## Purpose
 
-The Rust-specific persistence rules: static binding by default, an
-event-store-adapter-style event-sourcing implementation, decide/apply
-separation, the replay path, port trait placement and implementation naming,
-and `store` as upsert. Read during code-generation.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.rust-persistence-conventions.1 | PREFER static binding, and reach for dynamic dispatch only where the design needs a seam. | adapter | guidance-only | Performance and clarity; whether a seam is needed is a design judgement. | UC §5 |
-| K.rust-persistence-conventions.2 | ALWAYS separate `decide` (the business decision) from `apply` (the state change) in an event-sourced aggregate. | aggregate | sensor:c blocking | The history is replayable only if the state change has no side conditions. | DL §6 |
-| K.rust-persistence-conventions.3 | ALWAYS treat a repository `store` as an upsert. | repository | sensor:design-advisories.store-upsert advisory | Idempotent writes; the check is advisory, so it reports without closing the gate. | UC §5 |
+DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.rust-persistence-conventions.4 | PREFER static binding as the default. | adapter | guidance-only | Performance and clarity. | UC §5 |
-| K.rust-persistence-conventions.5 | ALWAYS separate `decide` from `apply` in an event-sourced aggregate. | aggregate | sensor:c blocking | Replayable history. The exemption is not a hole in the sensor: sensor (c) ignores the replay path because a method that only applies an already-decided event is not a second construction path. | DL §6 |
-| K.rust-persistence-conventions.6 | ALWAYS name the replay path `apply`, `apply_event`, `replay` or `on_event`. | method | sensor:b blocking | Replay is not a command. Sensor (b) treats these four names as replay-exempt and reports no undeclared mutation for them, so the exemption is the reason the name list is fixed rather than free. | Q5 |
-| K.rust-persistence-conventions.7 | ALWAYS place a port trait next to its domain and name the implementation by the medium. | adapter | sensor:m blocking | The trait names the contract and the implementation names the technology. | IA §5 |
-| K.rust-persistence-conventions.8 | ALWAYS declare a repository `store` as an upsert. | repository | sensor:design-advisories.store-upsert advisory | Idempotent writes. | UC §5 |
-| K.rust-persistence-conventions.9 | PREFER commands that return events under event sourcing and `Result<(), E>` otherwise. | command | guidance-only | The return value is bound to the persistence style, which is declared per aggregate; no sensor reads the signature. | DL §6 |
-| K.rust-persistence-conventions.10 | ALWAYS restore an aggregate only through its full constructor. | adapter | sensor:n blocking | No bypass of invariants on the way back in. Sensor (n) exempts calls to the replay path (`apply` / `apply_event` / `replay` / `on_event`), because those are not construction. | DL §6 |
+| Rule ID | 規約 | 現在の検証範囲 |
+|---|---|---|
+| K.rust-persistence-conventions.1 | 静的ディスパッチを基本に、必要な箇所で動的ディスパッチを選ぶ。 | 設計規約 |
+| K.rust-persistence-conventions.2 | イベントソーシングで業務判断とイベント適用を分離する。 | レビュー。規則cによる強制という旧表記は訂正 |
+| K.rust-persistence-conventions.3 | storeの再保存・追記が同じ要求を二重適用しないよう設計する。 | レビュー・テスト。保存宣言の助言は一部のみ |
+| K.rust-persistence-conventions.4 | ポートのtraitを使い、具体実装を結線で差し込む。 | 設計規約 |
+| K.rust-persistence-conventions.5 | decide/applyの役割を分離し、replayで新しい業務判断をしない。 | レビュー・動作テスト。cはこの分離を検証しない |
+| K.rust-persistence-conventions.6 | apply、apply_event、replay、on_eventはイベント適用経路の命名候補とする。 | replay_methodsでメソッドとイベントIDを明示し、保存方式・型を照合 |
+| K.rust-persistence-conventions.7 | ポートを内側の利用者に合わせて配置し、IA実装名に媒体名を使える。 | 命名検査mは一部。配置全体はレビュー |
+| K.rust-persistence-conventions.8 | 状態保存は安全な再保存、イベント保存は不変な履歴への追記を行う。 | レビュー。現行upsert助言は保存方式を十分に区別しない |
+| K.rust-persistence-conventions.9 | 初回成功、重複成功、拒否の結果を区別する。 | 設計規約。具体的な戻り値はT-03 |
+| K.rust-persistence-conventions.10 | DTOからの復元で不変条件を検証し、replayとは区別する。 | nは生成呼出しの形状。全不変条件はレビュー・テスト |
 
 ## Rationale
 
-The reference implementation is `event-store-adapter-rs`. The rules (g)–(i) and
-(k)–(n) map the same ideas onto code the sensors can inspect: forbidden
-dependencies, aggregate arguments, cross-side references, repository naming and
-restoration bypass.
+状態保存のupsertは無条件の上書きを意味しない。イベント保存で既存の履歴を書き換えない。重複成功では新規イベント0件、初回の状態変更成功は1件を基本とする。保存結果が不明なら要求ID等で照合し、保存前の作業状態を外部へ確定公開しない。
 
-The core agrees with the port side of this file: "One repository per aggregate
-root (not per entity or table)"
-(`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-Pattern). The place where the core disagrees — event sourcing as merely one
-option, with a free command/event correspondence — is recorded as C-4 in
-`ddd-always-valid-model.md`, which owns the conflict list.
+## Examples
 
-## Examples (index)
+開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
 
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.rust-persistence-conventions.2 | tests/golden/rust/cases.ts#clean-domain | a domain type that sensor (c) accepts as a single construction path | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.rust-persistence-conventions.3 | tests/golden/design/cases.ts#clean | a declared layer structure whose repository declares `store_semantics: upsert`, so sensor `design-advisories.store-upsert` reports nothing | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.rust-persistence-conventions.5 | tests/golden/rust/cases.ts#clean-domain | a domain type with no construction path other than its own `impl`, so sensor (c) reports nothing | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.rust-persistence-conventions.6 | tests/golden/rust/cases.ts#clean-domain | the same case: no mutation is reported by sensor (b) | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.rust-persistence-conventions.7 | tests/golden/rust/cases.ts#clean-repository | a `InvoiceRepository` trait beside an `InMemoryInvoiceRepository` implementation | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.rust-persistence-conventions.8 | tests/golden/design/cases.ts#clean | a declared layer structure whose repository declares `store_semantics: upsert` | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.rust-persistence-conventions.10 | tests/golden/rust/cases.ts#clean-repository | the same case: no domain type is built by a struct literal or an update expression in the adapter crate | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-
-Each row names the clean case of the suite that runs the rule's sensor, not a
-case built to exercise the rule's subject matter. Two caveats belong with this
-table:
-
-- `clean-domain` declares no event-sourced aggregate, so it contains no
-  `decide` / `apply` pair and no replay method. Rules `.5` and `.6` are
-  therefore satisfied vacuously there rather than demonstrated.
-- `clean-repository` contains no restoration code at all, so rule `.10` is
-  likewise satisfied vacuously.
-
-Both caveats are listed in this unit's `code-summary.md`.
+配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
 
 ## Retired rules
 
-None.
+規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
 
 ## Sources
 
-- `ddd/docs/domain-layer-design.md` §6–§7
-- `ddd/docs/use-case-layer-design.md` §5
-- `ddd/docs/interface-adapter-layer-design.md` §5, §9
-- `construction/u2-rust-analysis-foundation/functional-design/` — the layer
-  assigned from the crate graph and the placement conventions the port rules
-  build on (`functional-spec.md`, `rules.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `construction/u5-rust-code-sensors/functional-design/` — the rule semantics
-  for (c), (m) and (n) and the replay-exemption list that rules `.5`, `.6` and
-  `.10` describe (`functional-spec.md`, `rules.md`)
-- `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-  Pattern, Domain Events (the core statements cited as support, and the one
-  recorded as conflict C-4 in `ddd-always-valid-model.md`)
+- [現行設計](../../docs/use-case-layer-design.md)
+- [実測と既知の不具合](../../docs/current-state-assessment.md)
+- [残作業](../../docs/completion-tasks.md)
+
+## T-02の判定契約
+
+規則b/d/h/iは、クレート・モジュールと明示的な型宣言を照合する。VO・ポートを集約や別ユースケースと混同しない。replayは集約写像のreplay_methods、event-sourcing、所属集約、単一イベント引数型が一致する場合だけ許す。
+
+型推論・関連型・traitの実装選択等は対象外で、直接実行のJSONに未検査のnoteを残す。成功時のnoteを標準ディスパッチャが転送するとは限らないため、code-summaryへ記録してレビューする。[詳細](../../docs/rust-sensor-contract.md)。

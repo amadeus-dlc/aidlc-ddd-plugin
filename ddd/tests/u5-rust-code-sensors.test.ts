@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { modelDocument } from "./golden/model-document.ts";
+import { fixtureMapping } from "./golden/package-fixture.ts";
 
 const toolsDir = join(import.meta.dir, "..", "tools");
 
@@ -80,7 +82,12 @@ function buildProject(crates: Crate[], options: { model?: string; stageStatus?: 
     `${record}/aidlc-state.md`,
     `## Stage Progress\n${options.stageStatus ?? "- [x] ddd-domain-modeling — EXECUTE"}\n`,
   );
-  write(root, `${record}/inception/ddd-domain-modeling/domain-model.yaml`, options.model ?? MODEL);
+  write(
+    root,
+    `${record}/inception/ddd-domain-modeling/ddd-domain-model-yaml.md`,
+    modelDocument(options.model ?? MODEL),
+  );
+  write(root, `${record}/inception/domain-design/ddd-aggregate-mapping.md`, fixtureMapping());
   write(root, `${record}/construction/u1/code-generation/code-summary.md`, "# code summary\n");
   write(
     root,
@@ -188,7 +195,7 @@ describe("ddd-rust-use-case", () => {
   });
 
   test("reports use-case chaining (i)", () => {
-    const lib = `pub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &IssueInvoice) { other.execute(); }\n}\n`;
+    const lib = `pub struct FinishInvoice;\nimpl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &FinishInvoice) { other.execute(); }\n}\n`;
     const proj = buildProject([{ path: "packages/use-case/billing-use-case", name: "billing-use-case", lib }]);
     expect(runSensor("use-case", proj).rules).toContain("i");
   });

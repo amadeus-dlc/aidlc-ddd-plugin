@@ -1,10 +1,13 @@
+import { fixtureMapping, withFixturePackages } from "../package-fixture.ts";
 /**
  * Rust golden cases (U5 BR10). Each case carries a `workspace/` (project-root
  * relative) plus the record files; the runner aligns workspace_root by writing
  * the workspace at the temp project root and the record under its aidlc/ tree.
  */
 
+import { modelDocument } from "../model-document.ts";
 import type { GoldenCase } from "../runner.ts";
+import { t2Cases } from "./t2-cases.ts";
 
 const MODEL = `schema_version: 1
 bounded_contexts:
@@ -79,7 +82,7 @@ function project(
       version: 1,
       writes: claimed.map((path) => ({ path })),
     }),
-    "inception/ddd-domain-modeling/domain-model.yaml": MODEL,
+    "inception/ddd-domain-modeling/ddd-domain-model-yaml.md": modelDocument(MODEL),
   };
   return { workspace, files, ...(state ? { state } : {}) };
 }
@@ -121,7 +124,7 @@ function withFiles(expect: GoldenCase["expect"], path: string): GoldenCase["expe
   return { ...expect, files };
 }
 
-export const RUST_CASES: GoldenCase[] = [
+const BASE_RUST_CASES: GoldenCase[] = [
   domainCase("clean-domain", DOMAIN_CLEAN, { pass: true, rules: [] }),
   domainCase("violation-a", DOMAIN_CLEAN.replace("id: String,", "pub id: String,"), { pass: false, rules: ["a"] }),
   domainCase("violation-b", DOMAIN_CLEAN.replace("pub fn issue(&mut self) {}", "pub fn rename(&mut self) {}"), {
@@ -183,7 +186,7 @@ export const RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &IssueInvoice) { other.execute(); }\n}\n",
+          lib: "pub struct FinishInvoice;\nimpl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &FinishInvoice) { other.execute(); }\n}\n",
         },
       ],
       STATE,
@@ -357,3 +360,11 @@ export const RUST_CASES: GoldenCase[] = [
     },
   },
 ];
+
+export const RUST_CASES: GoldenCase[] = [...BASE_RUST_CASES, ...t2Cases(BASE_RUST_CASES)].map((entry) => {
+  const path = "inception/domain-design/ddd-aggregate-mapping.md";
+  return {
+    ...entry,
+    files: { ...entry.files, [path]: entry.files[path] ? withFixturePackages(entry.files[path]) : fixtureMapping() },
+  };
+});

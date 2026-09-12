@@ -22,7 +22,7 @@ process.exit(
           includes_query_side: false,
           report_layer_diagnostics: true,
         },
-        ["a", "b", "c", "d", "g"],
+        ["a", "b", "c", "d", "g", "domain-packaging"],
         api,
       );
     },

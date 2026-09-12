@@ -63,6 +63,7 @@ export function evaluateSensor(
   }
 
   const noteParts: string[] = [];
+  noteParts.push(...[...context.program.notes].sort());
   if (assembled.note) noteParts.push(assembled.note);
   if (context.skipped.length > 0) noteParts.push(`${context.skipped.length} non-target files skipped`);
   const deduped = dedupe(findings);

@@ -33,6 +33,6 @@ output_schema:
 
 Blocking gate for `domain-design`. The trigger file is `components.md`, which
 the sensor does not read; it only resolves the record directory. When
-`domain-modeling` is EXECUTE, `inception/ddd-domain-modeling/domain-model.yaml`
+`domain-modeling` is EXECUTE, `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`
 must exist, load and fully resolve. SKIP or absent passes with a note
 (ADR-004).

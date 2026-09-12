@@ -1,6 +1,6 @@
 /**
  * The normalised model (DomainModel) — the TypeScript shape of
- * `domain-model.yaml`. The loader is the only producer; consumers (U4/U5/U6/U7/U8)
+ * `ddd-domain-model-yaml.md`. The loader is the only producer; consumers (U4/U5/U6/U7/U8)
  * read this shape and the ElementIndex, never the raw YAML.
  */
 

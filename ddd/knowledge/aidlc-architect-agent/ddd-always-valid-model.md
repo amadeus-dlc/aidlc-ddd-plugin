@@ -1,100 +1,52 @@
 # Always Valid Domain Model
 
+更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
+
 ## Purpose
 
-The foundation of the DDD plugin: an Always Valid Domain Model built from
-Domain Primitives and value objects. Read at the start of domain-modeling,
-domain-design and functional-design.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.always-valid-model.1 | ALWAYS keep a domain object out of invalid states: every invariant is validated at construction. | domain type | sensor:c blocking | An object that cannot be invalid needs no defensive checks downstream. | DL §6 |
-| K.always-valid-model.2 | PREFER modelling operations over representation: a value's meaning is what it can do, not how it is stored (the ADT principle). | domain type | guidance-only | The choice of representation is a design stance; no sensor reads it. | DL §3 |
-| K.always-valid-model.3 | PREFER modelling the four kinds explicitly: entity (global / local), value object, first-class collection, domain event. | model element | guidance-only | The canonical model records the kind of every element, but nothing rejects a model that leaves a kind unnamed. | U1 BR1.1 |
-| K.always-valid-model.4 | PREFER naming with the ubiquitous language, and deriving an aggregate ID as the aggregate name plus `Id`. | model element | guidance-only | The `<kind>.<segments>` grammar is machine-checked; the words chosen inside a segment are not. | U1 BR1.1 |
+DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.always-valid-model.5 | ALWAYS validate every invariant in the full constructor of the domain type. | domain type | sensor:c blocking | Invalid states are unrepresentable. | DL §6 |
-| K.always-valid-model.6 | PREFER wrapping a primitive in a domain primitive with a meaningful name. | primitives | guidance-only | Closes primitive obsession; no sensor reads the choice of wrapper type. | DL §3 |
-| K.always-valid-model.7 | NEVER embed another aggregate; reference it by ID only. | aggregate | sensor:b blocking | Keeps aggregate boundaries and transaction scopes aligned. | DL §3 |
-| K.always-valid-model.8 | PREFER a domain service only as a last resort, when no aggregate owns the behaviour. | domain service | guidance-only | Behaviour belongs on the model; placement is a design judgement. | DL §6 |
-| K.always-valid-model.9 | ALWAYS follow the `<kind>.<segments>` grammar for stable element IDs. | model element | schema:id-grammar | IDs are permanent references and must stay resolvable. | U1 BR1.1 |
+| Rule ID | 規約 | 現在の検証範囲 |
+|---|---|---|
+| K.always-valid-model.1 | 生成時に不変条件を満たし、無効な状態を外部へ渡さない。 | レビュー・動作テスト。c/nは生成形状の一部のみ |
+| K.always-valid-model.2 | 表現より業務上の操作を先に定義する。 | 設計規約 |
+| K.always-valid-model.3 | Entity、VO、コレクション、イベントの役割を区別する。 | 設計規約 |
+| K.always-valid-model.4 | 業務語彙で命名し、集約IDの意味を明示する。 | 設計規約。ID文法だけはローダーで検査 |
+| K.always-valid-model.5 | 完全コンストラクタで不変条件を検証する。 | レビュー・動作テスト。全前提条件の意味検査は未実装 |
+| K.always-valid-model.6 | 業務上の意味を持つプリミティブを専用型へ包む。 | 設計規約 |
+| K.always-valid-model.7 | 他集約をオブジェクトとして埋め込まず、IDで参照する。 | レビュー。規則bによる強制という旧表記は訂正 |
+| K.always-valid-model.8 | 業務操作を集約へ置けない場合にDomain Serviceを検討する。 | 設計規約 |
+| K.always-valid-model.9 | 安定IDは `<kind>.<segments>` の文法に従う。 | ローダーのID文法検査 |
 
 ## Rationale
 
-Always Valid is not only about Domain Primitives: value objects, entities,
-aggregates, their transitions and their operations all refuse to hold invalid
-state. A separate `domain-modeling` stage exists because the standard workflow
-would otherwise never produce these.
+不変条件の記述、生成形状の検査、動作上の保証を区別する。現在のセンサーは全不変条件の実装を証明しない。モデルとコードの対応が不明なら、検査済みと表示せずレビューへ回す。
 
-The core agrees with the rest of this file and is cited as support, not as a
-conflict: aggregates are referenced by ID, transactions do not span aggregates,
-a repository exists per aggregate root, queries use a separate read model, and
-value objects are preferred over primitives. The four places where the core
-disagrees are listed below.
+## Examples
 
-## Conflicts with core knowledge
+開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
 
-`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` is read by the same
-architect agent in the same stages as this file, so the disagreements are
-written out rather than left to whoever reads both. The core file cannot be
-edited, so the list below is the only arbitration there is.
-
-| # | Core statement | Core location | Plugin rule | Scope | Precedence | Rationale |
-|---|---|---|---|---|---|---|
-| C-1 | The Repository Pattern interface shows `save(order: Order): void` and `findByCustomer(customerId: CustomerId): Order[]` | `ddd-patterns.md` → Repository Pattern | K.interface-adapter-conventions.6 | Port design in the interface-adapter layer (FR5.2, sensor (m)); conditional search lives on the query side as a DAO plus a DTO | plugin | Allowing conditional finders on a repository makes the query side depend on domain types, which breaks the mechanical check (l) and the CQRS separation. |
-| C-2 | "Start with larger aggregates and split when you encounter contention or performance issues" | `ddd-patterns.md` → Design Heuristics | K.aggregate-and-invariants.10 | The aggregate derivation procedure in domain-modeling (FR1.6, FR2.4) | plugin | Starting from a large aggregate leaves the home of the invariants undecided, which makes the mechanical completeness condition (i) — every aggregate carries an invariant — a formality. The core heuristic stays useful when refactoring an existing model. |
-| C-3 | Entity: "Mutable — their state changes over time" | `ddd-patterns.md` → Entities | K.rust-domain-conventions.2, K.rust-domain-conventions.7 | Domain-layer code conventions (FR7.1–FR7.3) | plugin | Making mutability the default removes the grounds for banning setters and forcing a complete constructor, and Always Valid does not hold without them. |
-| C-4 | Domain Events: "Build audit trails and event sourcing" | `ddd-patterns.md` → Domain Events | K.cqrs-and-consistency.5, K.rust-persistence-conventions.5 | The command return-value contract and the restoration path (sensors (c) and (n)); the core's integration patterns (notification, state transfer) still apply between Bounded Contexts | plugin | Without a per-aggregate persistence declaration the sensors cannot tell the restoration path from the construction path. |
-
-Source of the plugin-side wording: `inception/domain-design/decisions.md` ADR-010.
-
-## Examples (index)
-
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.always-valid-model.1 | tests/golden/rust/cases.ts#clean-domain | a domain type whose fields are private and which is never constructed outside its own `impl` | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.always-valid-model.5 | tests/golden/rust/cases.ts#clean-domain | the same case: sensor (c) reports no construction outside the full constructor | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.always-valid-model.7 | tests/golden/rust/cases.ts#clean-domain | the same case: sensor (b) reports no undeclared mutation, and the type holds no aggregate-valued field | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-
-The three rows above name the clean case of the sensor suite that runs each
-rule, not a case that exercises the rule's subject matter. Where the clean case
-does not contain the construct a rule is about, the index records "the sensor
-reported nothing", and the gap is listed in this unit's `code-summary.md`.
+配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
 
 ## Retired rules
 
-None.
-
-## Meta-discipline
-
-- Precedence: plugin knowledge overrides core when they conflict; record the
-  exception and the reason.
-- Exceptions are always recorded with a reason; never silent. In this file an
-  exception is written into the Rationale cell as `<exception> — <reason>`,
-  because the Rules and Principles tables fix six columns and carry no separate
-  column for exceptions.
-- Index good examples by file, not by snippet.
-- Retire rules with a strikethrough and a note; never delete.
-- Anchor rules to measured code, not aspiration.
-- Claim only as much as can be enforced.
+規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
 
 ## Sources
 
-- `ddd/docs/domain-layer-design.md` §3–§6, §9
-- `construction/u1-sensor-foundation/functional-design/` — the `<kind>.<segments>`
-  ID grammar, the element kinds and the canonical model schema
-  (`functional-spec.md`, `entities.md`, `rules.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `inception/domain-design/decisions.md` ADR-010 — the four conflicts
-- Core knowledge cited as non-conflicting: `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md`
-  → Aggregates ("Reference other aggregates by ID, not by object reference",
-  "Transactions should not span multiple aggregates", "Keep aggregates small"),
-  → Repository Pattern ("One repository per aggregate root (not per entity or
-  table)", "Do not put query logic in repositories — use separate read models"),
-  → Value Objects ("Prefer value objects over primitives")
+- [現行設計](../../docs/domain-layer-design.md)
+- [実測と既知の不具合](../../docs/current-state-assessment.md)
+- [残作業](../../docs/completion-tasks.md)
+
+## 方針が衝突した場合
+
+プロジェクトの明示方針をプラグインの規約で自動上書きしない。衝突箇所、適用範囲、採用理由を記録して解決する。旧記録のC-1〜C-4は比較観点として保持し、一律の優先順位には使わない。
+
+| 旧ID | 比較する内容 | 現在の扱い |
+|---|---|---|
+| C-1 | リポジトリの動詞・検索 | save等の別規約との差を明示する。命名例を技術上の不可能と扱わない |
+| C-2 | 大きな集約から始めるか、イベントから導くか | このプラグインはイベントから候補を導く。既存モデルの変更では根拠をレビューする |
+| C-3 | Entityの可変性 | Rustの排他的な業務変更は許す。可変性だけでAlways Validを否定しない |
+| C-4 | 保存方式とイベント | 方式は集約ごとに選ぶ。状態保存でもイベント利用を許す |

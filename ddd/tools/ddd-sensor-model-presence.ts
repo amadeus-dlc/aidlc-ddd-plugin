@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readStageStatus } from "./ddd/lib/runtime/context.ts";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
+import { MODEL_DATA_PATH } from "./ddd/lib/schema/artifacts.ts";
 import { loadDomainModel } from "./ddd/lib/schema/loader.ts";
 import { collectUnresolved, finding, relPath } from "./ddd/lib/sensors/common.ts";
 
@@ -21,10 +22,10 @@ process.exit(
       if (status.execution === "SKIP" || status.execution === "absent") {
         return { findings: [], note: `domain-modeling is ${status.execution}; presence check skipped` };
       }
-      const modelPath = join(context.record_dir, "inception", "ddd-domain-modeling", "domain-model.yaml");
+      const modelPath = join(context.record_dir, MODEL_DATA_PATH);
       const file = relPath(context, modelPath);
       if (!existsSync(modelPath)) {
-        return [finding("model-presence.missing", file, "domain-modeling ran but domain-model.yaml is missing")];
+        return [finding("model-presence.missing", file, "domain-modeling ran but ddd-domain-model-yaml.md is missing")];
       }
       const loaded = loadDomainModel(modelPath);
       if (!loaded.ok) {

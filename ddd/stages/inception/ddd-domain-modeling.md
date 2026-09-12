@@ -40,8 +40,8 @@ scopes:
   - workshop
   - refactor
   - plugin-dev
-inputs: <record>/inception/requirements-analysis/requirements.md and <record>/inception/user-stories/stories.md (both optional); reverse-engineering architecture.md and component-inventory.md when brownfield; an existing <record>/inception/ddd-domain-modeling/domain-model.yaml on rerun
-outputs: domain-model.yaml (the canonical, machine-validated model) and the derived domain-model.md, plus domain-modeling-questions.md, all under this stage's record dir, engine-resolved
+inputs: <record>/inception/requirements-analysis/requirements.md and <record>/inception/user-stories/stories.md (both optional); reverse-engineering architecture.md and component-inventory.md when brownfield; an existing <record>/inception/ddd-domain-modeling/ddd-domain-model-yaml.md on rerun
+outputs: ddd-domain-model-yaml.md (the canonical, machine-validated model) and the derived ddd-domain-model.md, plus domain-modeling-questions.md, all under this stage's record dir, engine-resolved
 ---
 
 # Domain Modeling
@@ -56,7 +56,7 @@ modules, crates, deployment units, ports, repositories or use-case procedures �
 those belong to Domain Design, Functional Design and Infrastructure Design. It
 does not write code.
 
-`domain-model.yaml` is canonical. `domain-model.md` is derived from it and exists
+`ddd-domain-model-yaml.md` is canonical. `ddd-domain-model.md` is derived from it and exists
 for human review; the gate checks that the two agree.
 
 ## Constraints
@@ -75,7 +75,7 @@ for human review; the gate checks that the two agree.
 
 Read `requirements.md` and `stories.md` when produced, and the reverse-engineering
 `architecture.md` / `component-inventory.md` when brownfield. On rerun, read the
-existing `domain-model.yaml` and keep its element IDs as the starting candidates.
+existing `ddd-domain-model-yaml.md` and keep its element IDs as the starting candidates.
 Read the knowledge `ddd-always-valid-model.md`, `ddd-aggregate-and-invariants.md`
 and `ddd-layer-boundaries.md` before writing the model.
 
@@ -95,6 +95,10 @@ candidates with the existing code and record the differences as open questions.
 
 ### Step 4: Questions and Confirmation
 
+下流のパッケージ名の根拠となる業務語彙と、コードで使う名称の対応も確認する。
+集約・Entity・VOという型分類をパッケージ名にせず、業務概念でまとめられる語彙を説明へ残す。
+物理パッケージやファイル配置はここで決めず、正規YAMLへ追加しない。配置はdomain-designが所有する。
+
 Create `domain-modeling-questions.md`. Cover bounded contexts, aggregate
 candidates (merge / demote confirmation), invariants, commands and errors
 (effect, state_effect, Domain Error, idempotency), states and transitions, ID
@@ -104,12 +108,13 @@ Confirmation before writing the model.
 
 ### Step 5: Write the Canonical Model
 
-Write `domain-model.yaml` in the U1 shape: `schema_version: 1`, the bounded
-contexts with their aggregates, elements, invariants, commands, errors, events,
-transitions and factory rules, and the lineage section. Then derive
-`domain-model.md` with the sections Sources, Overview, Bounded Context,
-Aggregate, Process Manager, Lineage, Derivation, Self-check and Open questions.
-On rerun, update `lineage:` for merges, splits and removals.
+正規データは `ddd-domain-model-yaml.md` のラベル付きYAMLコードブロック1つに記載する。
+YAMLの外側には説明を置けるが、第2のYAMLブロックを追加しない。U1の形式で
+`schema_version: 1`、Bounded Context、集約、要素、不変条件、コマンド、エラー、
+イベント、遷移、生成規則、系譜を記載する。
+人間向けの `ddd-domain-model.md` はこのデータから作り、Sources、Overview、
+Bounded Context、Aggregate、Process Manager、Lineage、Derivation、Self-check、
+Open questionsの各節を持たせる。再実行時は分割・統合・削除の系譜を更新する。
 
 ### Step 6: Self-check
 
@@ -124,6 +129,10 @@ Fill the completion table and keep it in the md under `## Self-check`:
 | (v) md and yaml agree | md headings, tables and statements |
 
 ### Step 7: Completion
+
+単独実行では、完了報告前に `aidlc engine sensor fire ddd-model-completeness --stage ddd-domain-modeling --output-path <この試行のddd-domain-model-yaml.mdの実パス>` を実行する。
+終了コードだけでなく最終JSONの `result: passed` を確認し、それ以外なら修正して再検査する。
+標準AI-DLC 2.8.2の単独完了コマンド自体には一般成果物の検査がないため、この手順を省略しない。
 
 Run the core completion flow: the advisory architecture review, the learnings
 ritual, then the gate. Before the gate, `ddd-model-completeness` fires. On a
@@ -143,7 +152,7 @@ self-check.
   or the `lineage`.
 - `model-completeness.f-missing` / `.f-unknown` / `.f-invariant` — the md
   disagrees with the yaml; fix the md headings, tables and statements.
-- `model-completeness.f-absent` — write `domain-model.md`.
+- `model-completeness.f-absent` — write `ddd-domain-model.md`.
 
 ## Learn
 

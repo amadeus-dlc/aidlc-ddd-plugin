@@ -9,6 +9,12 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: domain-packaging.declaration, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.technical-name, requirement: T-07, inputs: [modules, cargo-targets], outcome: finding }
+  - { rule_id: domain-packaging.duplicate, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.coverage, requirement: T-07, inputs: [modules, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.reference, requirement: T-07, inputs: [ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.unresolved, requirement: T-07, inputs: [modules, cargo-targets], outcome: finding }
   - { rule_id: a, requirement: FR7.1, inputs: [uses, structs], outcome: finding }
   - { rule_id: b, requirement: FR7.2, inputs: [impls, domain-symbols, command-index], outcome: finding }
   - { rule_id: c, requirement: FR7.3, inputs: [impls, constructions, domain-symbols], outcome: finding }

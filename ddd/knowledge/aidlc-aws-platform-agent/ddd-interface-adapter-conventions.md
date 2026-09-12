@@ -1,83 +1,43 @@
-# Interface-adapter conventions
+# インターフェイスアダプタの規約
+
+更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
 
 ## Purpose
 
-Port responsibility classification, repository naming and scope, verbs, the
-medium-name ban, starting in memory, the query side as DAO + DTO, persistence
-backend selection, RMU design, upstream contracts, and the
-`ddd-layer-structure` declaration. Read during infrastructure-design.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.interface-adapter-conventions.1 | NEVER name a port after a technology; a port describes a responsibility. | port | sensor:layer-structure.m-media blocking | A port whose name carries a medium cannot be implemented in memory, and cannot be swapped. | IA §5 |
-| K.interface-adapter-conventions.2 | ALWAYS name a repository after its aggregate, never after its storage. | repository | sensor:layer-structure.m-name blocking | The aggregate names the boundary the repository serves. | IA §5 |
-| K.interface-adapter-conventions.3 | PREFER starting in memory and adding a backend only when the design needs it. | adapter | guidance-only | Tests run without infrastructure; whether a given port needs a real backend is a design judgement. | IA §5 |
+DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.interface-adapter-conventions.4 | ALWAYS classify every port as repository, external-client or es-infrastructure. | port | sensor:layer-structure.item blocking | The responsibility of a port is explicit, not inferred from its name. | FR5.2 |
-| K.interface-adapter-conventions.5 | ALWAYS name a repository `<Aggregate>Repository` and keep every storage medium out of the port name. | repository | sensor:layer-structure.m-name / .m-media blocking | Technology-agnostic naming. | IA §5 |
-| K.interface-adapter-conventions.6 | PREFER the repository verbs `find_by_id`, `store` and `delete_by_id`, and put conditional search on the query side. | repository | guidance-only | A small stable surface; no sensor reads the verb list. This is the rule that overrides the core's `save` / `findByCustomer` example (see C-1 in `ddd-always-valid-model.md`). | FR5.2 |
-| K.interface-adapter-conventions.7 | PREFER starting with an in-memory implementation. | adapter | guidance-only | Tests run without infrastructure. | IA §5 |
-| K.interface-adapter-conventions.8 | NEVER let the query side be a domain object; it is a DAO plus a DTO. | query adapter | sensor:l blocking | Separate read model. | IA §4 |
-| K.interface-adapter-conventions.9 | NEVER place RPC or database clients in the infrastructure layer; it holds language extensions only. | infrastructure crate | sensor:g blocking | Keeps the dependency direction inward. | IA §3 |
-| K.interface-adapter-conventions.10 | PREFER a conformist or an anti-corruption layer for an external system. | adapter | guidance-only | Bounds the foreign model; which of the two fits is a design judgement. | IA §8 |
-| K.interface-adapter-conventions.11 | ALWAYS declare the layer structure with the ADR-009 mandatory items. | layer structure | sensor:layer-structure.item blocking | A machine-checkable design. | U4 |
+| Rule ID | 規約 | 現在の検証範囲 |
+|---|---|---|
+| K.interface-adapter-conventions.1 | ポートは技術名より責務で命名する。 | 一般の命名はレビュー。リポジトリ名はm系検査 |
+| K.interface-adapter-conventions.2 | リポジトリポートを集約名で命名する。 | 宣言側m-name |
+| K.interface-adapter-conventions.3 | 初期実装はin-memoryから始める。 | 設計規約 |
+| K.interface-adapter-conventions.4 | ポートをrepository、external-client、es-infrastructureに分類する。 | layer-structure.item |
+| K.interface-adapter-conventions.5 | リポジトリポート名は<Aggregate>Repositoryとし、媒体名を入れない。 | m系検査。実装structの媒体接頭辞は許す |
+| K.interface-adapter-conventions.6 | find_by_id、store、delete_by_idを基本に、担当集約の追加検索を許す。 | 宣言の動詞検査は一部。画面検索との分離はレビュー |
+| K.interface-adapter-conventions.7 | in-memory実装でも競合・失敗時のポート契約をテストする。 | テスト |
+| K.interface-adapter-conventions.8 | query側はDAOとDTOを使い、更新用ドメイン型を再利用しない。 | lは一部の参照形状を検査 |
+| K.interface-adapter-conventions.9 | DB/RPCクライアントはIAへ置き、言語拡張用infrastructureへ置かない。 | 設計規約。gだけで全クライアント配置を保証しない |
+| K.interface-adapter-conventions.10 | 外部モデルをそのまま採用するか、境界で変換するかを明示する。 | レビュー |
+| K.interface-adapter-conventions.11 | 層構造宣言にcontext、CQRS、クレート、依存、ポート、復元、保存先を記載する。 | layer-structure.item等。通常承認へ接続済み。単独完了の制約あり |
 
 ## Rationale
 
-Ports are where the design meets the outside world. Keeping them named by
-responsibility — and free of medium words — keeps the design technology-neutral;
-the implementation is where `InMemoryInvoiceRepository` and friends appear.
+コマンド側I/Oにはリポジトリ以外の外部クライアントも含む。storeは状態保存の安全な再保存、またはイベントの安全な追記として設計する。RDBをイベントの形式だけで除外しない。RMUは集約内の順序、配送順序、欠番、重複、更新と処理済み記録の確定を分けて設計する。DynamoDB Streamsの順序保証を別アイテム間へ拡張しない。
 
-The core agrees with the repository-scope part of this file: "One repository per
-aggregate root (not per entity or table)" and "Do not put query logic in
-repositories — use separate read models for complex queries"
-(`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-Pattern). The place where the core disagrees — its `save` /
-`findByCustomer(customerId)` example — is recorded as C-1 in
-`ddd-always-valid-model.md`, which owns the conflict list.
+## Examples
 
-## Examples (index)
+開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
 
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.interface-adapter-conventions.1 | tests/golden/design/cases.ts#clean | a declared layer structure whose port names carry no storage medium | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.interface-adapter-conventions.2 | tests/golden/design/cases.ts#clean | the same case: a repository named `InvoiceRepository` after its aggregate | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.interface-adapter-conventions.4 | tests/golden/design/cases.ts#clean | the same case: every port declares a kind | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.interface-adapter-conventions.5 | tests/golden/design/cases.ts#clean | the same case: sensors `.m-name` and `.m-media` report no repository name | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.interface-adapter-conventions.8 | tests/golden/design/cases.ts#clean | the same case: the query-side crate declares no dependency on a domain-layer crate | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.interface-adapter-conventions.9 | tests/golden/rust/cases.ts#clean-domain | a domain crate whose only external edge is nowhere, so sensor (g) reports no forbidden direction | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.interface-adapter-conventions.11 | tests/golden/design/cases.ts#clean | the same case: a `ddd-layer-structure` declaration carrying all ADR-009 mandatory items | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-
-The design rows all name the single clean case of the `ddd-layer-structure`
-suite, because that declaration is the only artifact the `.item` / `.m-name` /
-`.m-media` and (l) checks run against. Sensor (g) reads Rust source, so rule `.9`
-points at the rust suite instead. The rows name the case the sensor accepted,
-not a case built to exercise the rule's subject matter; the limitations are
-listed in this unit's `code-summary.md`.
+配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
 
 ## Retired rules
 
-None.
+規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
 
 ## Sources
 
-- `ddd/docs/interface-adapter-layer-design.md` §5–§9
-- `construction/u4-design-sensors/functional-design/` — the
-  `ddd-layer-structure` declaration schema, its ADR-009 mandatory items, and
-  the sensor rule ids `.item` / `.m-name` / `.m-media` / `.n`
-  (`functional-spec.md` §WF6, `entities.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `construction/u2-rust-analysis-foundation/functional-design/` — the layer
-  assigned from the crate graph and the allowed-dependency table that sensor (g)
-  and sensor (l) consult (`functional-spec.md` §WF2, §WF5)
-- `inception/domain-design/decisions.md` ADR-009 — the split between the
-  declaration-side and code-side checks of (k)(l)(m)(n)
-- `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-  Pattern (the core statements cited as support, and the example recorded as
-  conflict C-1 in `ddd-always-valid-model.md`)
+- [現行設計](../../docs/interface-adapter-layer-design.md)
+- [実測と既知の不具合](../../docs/current-state-assessment.md)
+- [残作業](../../docs/completion-tasks.md)

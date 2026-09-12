@@ -1,66 +1,48 @@
-# Use-case conventions
+# ユースケースの規約
+
+更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
 
 ## Purpose
 
-The five-point convention set and the orchestrator principle for use cases.
-Read during functional-design.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.use-case-conventions.1 | PREFER letting the use case orchestrate and hand every business judgement to the domain. | use case | guidance-only | The placement of a decision is a design judgement; the code-level half of it is enforced by sensor (d), which is rule `.5` below. | DL §6 |
-| K.use-case-conventions.2 | ALWAYS make a use case re-execution-safe by construction: every step declares its idempotency. | use case | sensor:mapping-declarations.j blocking | Retries are the norm, so safety cannot depend on the caller's discipline. | UC §5 |
-| K.use-case-conventions.3 | ALWAYS declare the transactional consistency boundary of the use case. | use case | stage-contract:after-step:2 | An implicit boundary is a boundary nobody agreed to. | UC §3 |
+DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.use-case-conventions.4 | ALWAYS write the five-point set explicitly: consistency, idempotency, ordering, failure/compensation, observability. | use case | stage-contract:after-step:2 | Completeness of the declaration. | UC §2 |
-| K.use-case-conventions.5 | NEVER let the use case make a business judgement; it orchestrates and delegates to the domain. | use case | sensor:d blocking | Tell, Don't Ask. | DL §6 |
-| K.use-case-conventions.6 | ALWAYS state the transactional consistency boundary. | use case | stage-contract:after-step:2 | Avoids implicit transactions. | UC §3 |
-| K.use-case-conventions.7 | ALWAYS make the flow re-execution-safe and declare each step's idempotency. | use case | sensor:mapping-declarations.j blocking | Retries are the norm. | UC §5 |
-| K.use-case-conventions.8 | ALWAYS model a cross-aggregate flow as a Process Manager, especially under actor models. | process manager | sensor:mapping-declarations.process-manager-required blocking | Long-running coordination must not collapse aggregate boundaries. | UC §6 |
-| K.use-case-conventions.9 | ALWAYS declare the six mandatory items per use case. | use case | sensor:mapping-declarations.use-case-item blocking | A reviewable contract. | FR4.1 |
-| K.use-case-conventions.10 | PREFER applying CQS to state-changing operations only, not to immutable re-derivation. | use case | guidance-only | Query versus command is a judgement at the edge; no sensor reads it. | DL §6 |
+| Rule ID | 規約 | 現在の検証範囲 |
+|---|---|---|
+| K.use-case-conventions.1 | 業務判断をドメインへ委ね、取得・保存・回復の進行を管理する。 | レビュー |
+| K.use-case-conventions.2 | 各ステップの再実行が安全である根拠を記載する。 | 宣言の存在は検査。安全性の意味はレビュー・テスト |
+| K.use-case-conventions.3 | 集約単位の保存と、複数集約フローの途中失敗を区別する。 | 設計規約 |
+| K.use-case-conventions.4 | 整合性、冪等性、順序、失敗と補償、観測方法を明示する。 | 設計手順・レビュー |
+| K.use-case-conventions.5 | getterで値を取り出して業務判断しない。 | dはgetter名の検査。判断の配置全体はレビュー |
+| K.use-case-conventions.6 | フロー全体の自動ロールバックを暗黙に約束しない。 | 設計規約 |
+| K.use-case-conventions.7 | 再送の識別、保持期間、保存結果不明時の回復を定める。 | jは加算型コマンドのstrategyのみ。安全性はレビュー |
+| K.use-case-conventions.8 | 複数集約の回復をProcess Managerまたは明示した再実行戦略で表す。 | 全対象がactorで写像が読める場合はprocess-manager-required |
+| K.use-case-conventions.9 | ユースケースの6項目と識別子・名前を記載する。 | mapping-declarations.use-case-item等。通常承認へ接続済み。単独完了の制約あり |
+| K.use-case-conventions.10 | CQSと、更新結果・新状態・イベントを返す契約を区別する。 | 設計規約 |
 
 ## Rationale
 
-A use case is the consistency boundary. Naming the idempotency strategy of each
-step makes retries safe; a Process Manager carries multi-aggregate flows without
-collapsing aggregate boundaries.
+単一集約を強整合の基本境界とする。A保存後にBが失敗した場合はAのコミットが残り得る。補償は新しい処理であり、DBロールバックではない。upsertだけでは再実行安全性を保証しない。C1→C2→C1再送を許すなら、直前ID1件では足りない。サーガはclassでも実装可能で、混在フローの宣言方式はT-03で確定する。
 
-The core agrees on this layer's shape and is cited as support: a repository
-exists per aggregate root and query logic belongs in a separate read model
-(`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-Pattern), which is what keeps the use case orchestrating rather than querying.
+## Examples
 
-## Examples (index)
+開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
 
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.use-case-conventions.2 | tests/golden/design/cases.ts#clean-mapping | a use-case declaration whose steps each carry an idempotency strategy | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.5 | tests/golden/rust/cases.ts#clean-domain | a domain type whose getters are not called from outside the domain | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.use-case-conventions.7 | tests/golden/design/cases.ts#clean-mapping | a mapping document whose use-case declaration sensor `mapping-declarations.j` accepts | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.8 | tests/golden/design/cases.ts#clean-mapping | the same case: no cross-aggregate flow is left without a Process Manager | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.9 | tests/golden/design/cases.ts#clean-mapping | the same case: a use-case declaration that carries all six mandatory items | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-
-The rows name the clean case of the sensor suite that runs each rule, not a case
-built to exercise the rule's subject matter; the limitations are listed in this
-unit's `code-summary.md`.
+配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
 
 ## Retired rules
 
-None.
+規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
 
 ## Sources
 
-- `ddd/docs/use-case-layer-design.md` §2–§8
-- `construction/u1-sensor-foundation/functional-design/` — the
-  `<kind>.<segments>` ID grammar and the completeness check that the
-  declaration sensors build on (`functional-spec.md`, `entities.md`,
-  `rules.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-  Pattern (the core statements cited as support)
+- [現行設計](../../docs/use-case-layer-design.md)
+- [実測と既知の不具合](../../docs/current-state-assessment.md)
+- [残作業](../../docs/completion-tasks.md)
+
+## T-02の判定契約
+
+規則b/d/h/iは、クレート・モジュールと明示的な型宣言を照合する。VO・ポートを集約や別ユースケースと混同しない。replayは集約写像のreplay_methods、event-sourcing、所属集約、単一イベント引数型が一致する場合だけ許す。
+
+型推論・関連型・traitの実装選択等は対象外で、直接実行のJSONに未検査のnoteを残す。成功時のnoteを標準ディスパッチャが転送するとは限らないため、code-summaryへ記録してレビューする。[詳細](../../docs/rust-sensor-contract.md)。

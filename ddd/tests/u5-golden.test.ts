@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
 import { declaredRules, type GoldenCase, runGoldenCase } from "./golden/runner.ts";
 import { RUST_CASES } from "./golden/rust/cases.ts";
 
@@ -26,7 +27,7 @@ describe("rust golden cases", () => {
     );
     const declared = declaredRules(sensorsDir, manifests);
     const covered = new Set<string>();
-    for (const testCase of RUST_CASES) {
+    for (const testCase of [...RUST_CASES, ...PACKAGING_CASES]) {
       if (!testCase.name.startsWith("violation-")) continue;
       for (const rule of testCase.expect.rules) covered.add(rule);
     }

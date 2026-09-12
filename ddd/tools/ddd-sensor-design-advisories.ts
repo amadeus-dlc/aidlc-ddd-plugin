@@ -2,7 +2,7 @@
 // ddd-sensor-design-advisories — functional-design / infrastructure-design gate (U4 BR7).
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { finding, relPath } from "./ddd/lib/sensors/common.ts";
-import { parseDeclaration } from "./ddd/lib/sensors/declaration.ts";
+import { declarationPath, parseDeclaration } from "./ddd/lib/sensors/declaration.ts";
 import type { FindingInput } from "./ddd/lib/shared/findings.ts";
 
 process.exit(
@@ -11,12 +11,16 @@ process.exit(
     severity: "advisory",
     budget_ms: 9000,
     evaluate: (context) => {
-      const file = relPath(context, context.output_path);
-      const isUseCase = context.output_path.endsWith("ddd-use-case-declarations.md");
-      const declaration = parseDeclaration(
-        context.output_path,
-        isUseCase ? "use-case-declarations" : "layer-structure",
-      );
+      const kind =
+        context.stage === "domain-design"
+          ? "aggregate-mapping"
+          : context.stage === "functional-design"
+            ? "use-case-declarations"
+            : "layer-structure";
+      const path = declarationPath(context, kind);
+      const file = relPath(context, path);
+      const isUseCase = kind === "use-case-declarations";
+      const declaration = parseDeclaration(path, isUseCase ? "use-case-declarations" : "layer-structure");
       if (!declaration.ok) {
         return [finding("design-advisories.document", file, declaration.message)];
       }

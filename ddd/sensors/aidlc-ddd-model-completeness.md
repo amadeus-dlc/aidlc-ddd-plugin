@@ -4,9 +4,9 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-model-completeness.ts
 default_severity: blocking
 fire_on: gate
-description: The domain-modeling gate — validates domain-model.yaml, its completeness conditions (i)-(iv) and its agreement with domain-model.md (rule f).
+description: The domain-modeling gate — validates ddd-domain-model-yaml.md, its completeness conditions (i)-(iv) and its agreement with ddd-domain-model.md (rule f).
 category: document-shape
-matches: "**/ddd-domain-modeling/domain-model.yaml"
+matches: "**/ddd-domain-modeling/{ddd-domain-model,ddd-domain-model-yaml}.md"
 timeout_seconds: 10
 checks:
   - rule_id: model-completeness.schema
@@ -27,19 +27,19 @@ checks:
     outcome: finding
   - rule_id: model-completeness.f-missing
     requirement: FR6.2
-    inputs: [ddd-domain-model-md]
+    inputs: [ddd-domain-model]
     outcome: finding
   - rule_id: model-completeness.f-unknown
     requirement: FR6.2
-    inputs: [ddd-domain-model-md]
+    inputs: [ddd-domain-model]
     outcome: finding
   - rule_id: model-completeness.f-invariant
     requirement: FR6.2
-    inputs: [ddd-domain-model-md]
+    inputs: [ddd-domain-model]
     outcome: finding
   - rule_id: model-completeness.f-absent
     requirement: FR6.2
-    inputs: [ddd-domain-model-md]
+    inputs: [ddd-domain-model]
     outcome: finding
 input_schema:
   output_path: string
@@ -51,7 +51,7 @@ output_schema:
 
 # model-completeness sensor (ddd)
 
-Blocking gate for the `domain-modeling` stage. Loads `domain-model.yaml` through
+Blocking gate for the `domain-modeling` stage. Loads `ddd-domain-model-yaml.md` through
 the U1 schema library, transcribes load-time and completeness findings, resolves
-every reference, and checks that `domain-model.md` mentions every element ID,
+every reference, and checks that `ddd-domain-model.md` mentions every element ID,
 introduces no unknown IDs, and repeats every invariant statement.

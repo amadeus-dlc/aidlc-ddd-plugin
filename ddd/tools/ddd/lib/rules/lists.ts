@@ -4,8 +4,6 @@
  * BR6.4), so the design and code checks agree (ADR-009).
  */
 
-export const REPLAY_EXEMPT = new Set(["apply", "apply_event", "replay", "on_event"]);
-
 export const POST_INIT = new Set(["init", "setup", "initialize", "reset", "configure"]);
 
 export const MEDIA_WORDS = [

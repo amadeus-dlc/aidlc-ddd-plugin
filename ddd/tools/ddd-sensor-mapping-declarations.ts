@@ -1,19 +1,16 @@
 #!/usr/bin/env bun
 // ddd-sensor-mapping-declarations — domain-design / functional-design gate (U4 BR5).
 import { join } from "node:path";
+import { checkPackageDeclarations } from "./ddd/lib/packaging/declarations.ts";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { checkCompleteness } from "./ddd/lib/schema/completeness.ts";
 import { finding, relPath } from "./ddd/lib/sensors/common.ts";
-import { type DeclarationKind, parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
+import { declarationPath, parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
 import type { FindingInput } from "./ddd/lib/shared/findings.ts";
 
 const PROGRAMMING_MODELS = new Set(["actor", "class"]);
 const PERSISTENCE_METHODS = new Set(["state-sourcing", "event-sourcing"]);
 const RECOVERY_POLICIES = new Set(["caller-retry", "step-backoff", "both"]);
-
-function declarationKind(outputPath: string): DeclarationKind {
-  return outputPath.endsWith("ddd-aggregate-mapping.md") ? "aggregate-mapping" : "use-case-declarations";
-}
 
 process.exit(
   runSensor({
@@ -21,8 +18,15 @@ process.exit(
     severity: "blocking",
     budget_ms: 9000,
     evaluate: (context) => {
-      const file = relPath(context, context.output_path);
-      const declaration = parseDeclaration(context.output_path, declarationKind(context.output_path));
+      const kind =
+        context.stage === "domain-design"
+          ? "aggregate-mapping"
+          : context.stage === "functional-design"
+            ? "use-case-declarations"
+            : "layer-structure";
+      const path = declarationPath(context, kind);
+      const file = relPath(context, path);
+      const declaration = parseDeclaration(path, kind);
       if (!declaration.ok) {
         return [finding("mapping-declarations.document", file, declaration.message)];
       }
@@ -34,6 +38,7 @@ process.exit(
       const document = declaration.document;
 
       if (document.kind === "aggregate-mapping") {
+        findings.push(...checkPackageDeclarations(document, file));
         const mapped = new Set<string>();
         for (const mapping of document.aggregate_mappings) {
           if (mapped.has(mapping.aggregate_ref)) {
