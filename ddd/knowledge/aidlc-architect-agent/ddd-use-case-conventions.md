@@ -1,48 +1,48 @@
-# ユースケースの規約
+# Use-case conventions
 
-更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
+Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
-DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
+Conventions for DDD design and code generation. A check name does not imply that the entire convention is enforced automatically. DDD checks are connected to normal approval admission; the framework still has a gap in standalone completion guards.
 
 ## Rules
 
-| Rule ID | 規約 | 現在の検証範囲 |
+| Rule ID | Convention | Current coverage |
 |---|---|---|
-| K.use-case-conventions.1 | 業務判断をドメインへ委ね、取得・保存・回復の進行を管理する。 | レビュー |
-| K.use-case-conventions.2 | 各ステップの再実行が安全である根拠を記載する。 | 宣言の存在は検査。安全性の意味はレビュー・テスト |
-| K.use-case-conventions.3 | 集約単位の保存と、複数集約フローの途中失敗を区別する。 | 設計規約 |
-| K.use-case-conventions.4 | 整合性、冪等性、順序、失敗と補償、観測方法を明示する。 | 設計手順・レビュー |
-| K.use-case-conventions.5 | getterで値を取り出して業務判断しない。 | dはgetter名の検査。判断の配置全体はレビュー |
-| K.use-case-conventions.6 | フロー全体の自動ロールバックを暗黙に約束しない。 | 設計規約 |
-| K.use-case-conventions.7 | 再送の識別、保持期間、保存結果不明時の回復を定める。 | jは加算型コマンドのstrategyのみ。安全性はレビュー |
-| K.use-case-conventions.8 | 複数集約の回復をProcess Managerまたは明示した再実行戦略で表す。 | 全対象がactorで写像が読める場合はprocess-manager-required |
-| K.use-case-conventions.9 | ユースケースの6項目と識別子・名前を記載する。 | mapping-declarations.use-case-item等。通常承認へ接続済み。単独完了の制約あり |
-| K.use-case-conventions.10 | CQSと、更新結果・新状態・イベントを返す契約を区別する。 | 設計規約 |
+| K.use-case-conventions.1 | Delegate business decisions to the domain and coordinate retrieval, persistence, and recovery. | Review. |
+| K.use-case-conventions.2 | Explain why each step is safe to re-execute. | Declaration presence is checked; safety requires review and tests. |
+| K.use-case-conventions.3 | Distinguish per-aggregate persistence from partial failure of a multi-aggregate flow. | Design convention. |
+| K.use-case-conventions.4 | Declare consistency, idempotency, ordering, failure and compensation, and observability. | Design procedure and review. |
+| K.use-case-conventions.5 | Do not extract values through getters to make business decisions. | d checks getter calls. Review assesses the placement of business decisions. |
+| K.use-case-conventions.6 | Do not implicitly promise automatic rollback of an entire flow. | Design convention. |
+| K.use-case-conventions.7 | Define retry identification, retention periods, and recovery from unknown persistence outcomes. | j checks only the strategy of additive commands. Safety requires review. |
+| K.use-case-conventions.8 | Represent multi-aggregate recovery with a Process Manager or an explicit re-execution strategy. | process-manager-required applies when every target is actor-based and its mapping is readable. |
+| K.use-case-conventions.9 | Declare the six use-case items, identifier, and name. | mapping-declarations.use-case-item and related checks. Connected to normal approval; standalone completion has limits. |
+| K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. | Design convention. |
 
 ## Rationale
 
-単一集約を強整合の基本境界とする。A保存後にBが失敗した場合はAのコミットが残り得る。補償は新しい処理であり、DBロールバックではない。upsertだけでは再実行安全性を保証しない。C1→C2→C1再送を許すなら、直前ID1件では足りない。サーガはclassでも実装可能で、混在フローの宣言方式はT-03で確定する。
+A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Retaining only the most recent ID is insufficient if C1 → C2 → retry C1 is allowed. Sagas can also use classes; declarations for mixed flows remain T-03 work.
 
 ## Examples
 
-開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
+The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../tests/golden/rust/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
 
-配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
+The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 
 ## Retired rules
 
-規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
+No rule IDs have been retired. Overstated coverage and incorrect technical assumptions were corrected on 2026-09-13. Conventions without automated checks may remain review obligations.
 
 ## Sources
 
-- [現行設計](../../docs/use-case-layer-design.md)
-- [実測と既知の不具合](../../docs/current-state-assessment.md)
-- [残作業](../../docs/completion-tasks.md)
+- [Current design](../../docs/use-case-layer-design.md)
+- [Measurements and known issues](../../docs/current-state-assessment.md)
+- [Remaining work](../../docs/completion-tasks.md)
 
-## T-02の判定契約
+## T-02 evaluation contract
 
-規則b/d/h/iは、クレート・モジュールと明示的な型宣言を照合する。VO・ポートを集約や別ユースケースと混同しない。replayは集約写像のreplay_methods、event-sourcing、所属集約、単一イベント引数型が一致する場合だけ許す。
+Rules b/d/h/i match crates, modules, and explicit type declarations. Do not confuse value objects or ports with aggregates or concrete use cases. Replay is allowed only when the aggregate mapping's replay_methods, event-sourcing mode, owning aggregate, and single event parameter type agree.
 
-型推論・関連型・traitの実装選択等は対象外で、直接実行のJSONに未検査のnoteを残す。成功時のnoteを標準ディスパッチャが転送するとは限らないため、code-summaryへ記録してレビューする。[詳細](../../docs/rust-sensor-contract.md)。
+Type inference, associated types, and trait implementation selection are outside coverage. Direct sensor JSON includes notes for unexamined code. The standard dispatcher may omit notes on success; record them in code-summary for review. See the [detailed contract](../../docs/rust-sensor-contract.md).

@@ -35,10 +35,7 @@ Add these question topics, and follow the conventions while designing:
 
 ### Step 5x (ddd): Write the layer structure
 
-既存の必須レビュー成果物 `cicd-pipeline.md` に `## DDD 層構造宣言` を1つ追加する。
-パイプラインが検証・配布するコンポーネントの境界を、この節のラベル付きYAMLブロック1つに記載する。
-独立した宣言ファイルは生成しない。既存成果物のUnit種別（service / ui / packaging / library）を引き継ぎ、specには要求しない。
-このUnitがドメインの層構造を持たない場合は `layer_structures: []` と理由を明記する。
+Add exactly one `## DDD Layer Structure` section to the existing required review artifact `cicd-pipeline.md`. In one labelled YAML block, declare the boundaries of components that the pipeline verifies and distributes. Do not generate a separate declaration file. Inherit the artifact's Unit kinds (service / ui / packaging / library); spec does not require it. If this Unit has no domain layer structure, declare `layer_structures: []` and explain why. Artifact prose follows the project's output-language policy; the section heading is a parser marker.
 
 ```yaml
 schema_version: 1
@@ -63,6 +60,4 @@ layer_structures:
 Every crate that appears in the side lists needs a `crate_dependencies` row, and
 every Aggregate in the context needs a `full-constructor` restoration path.
 
-単独実行では、完了報告前に、この試行のcicd-pipelineを対象として `ddd-layer-structure` と
-`ddd-design-advisories` を `aidlc engine sensor fire` で明示実行する。
-blockingの層構造検査が最終JSONで `result: passed` になるまで完了を報告しない。標準2.8.2の単独完了はこの検査を代行しない。
+For standalone execution, explicitly run `ddd-layer-structure` and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's cicd-pipeline before reporting completion. The blocking layer-structure check must return `result: passed` in its final JSON. Standard 2.8.2 standalone completion does not perform these checks for you.

@@ -1,44 +1,46 @@
-# DDDプラグイン
+# DDD plugin
 
-AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコードの検査を追加します。識別子は `ddd`、現在のバージョンは `0.1.0` です。
+English | [Japanese](README.ja.md)
 
-**開発中です。** センサーの直接実行と通常承認への接続を検証しました。単独完了の標準側ガードには不足があり、Rustの型推論等は検査範囲外です。[現状評価](docs/current-state-assessment.md)と[完成までのタスク](docs/completion-tasks.md)を参照してください。
+Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plugin ID: `ddd`; current version: `0.1.0`.
 
-## 構成
+**Under development.** Direct sensor execution and normal approval integration are verified. The framework standalone completion guard remains incomplete, and Rust type inference is outside inspection coverage. See the [assessment](docs/current-state-assessment.md) and [completion tasks](docs/completion-tasks.md).
 
-| 種類 | 内容 |
+## Structure
+
+| Kind | Content |
 |---|---|
-| ステージ1本 | `ddd-domain-modeling` が集約境界までの正規モデルを所有 |
-| contribution 4本 | domain-design、functional-design、infrastructure-design、code-generationへの追加 |
-| 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
-| Rustセンサー3本 | ドメイン、ユースケース、IAの構文・依存検査 |
-| ナレッジ9本 | 言語横断の設計原則とRust規約 |
+| One stage | ddd-domain-modeling owns the canonical model through aggregate boundaries. |
+| Four contributions | Extend domain-design, functional-design, infrastructure-design, and code-generation. |
+| Six design sensors | Model loading/completeness/references, mappings, layers, and advisories. |
+| Three Rust sensors | Domain, use-case, and IA syntax/dependency checks. |
+| Nine knowledge files | Language-independent design principles and Rust conventions. |
 
-ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
+Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Implementation is divided into [schema](tools/ddd/lib/schema/), [Rust analysis](tools/ddd/lib/rust/), and [rules](tools/ddd/lib/rules/).
 
-## 検査範囲
+## Inspection coverage
 
-| センサー | 実装している検査 |
+| Sensor | Implemented checks |
 |---|---|
-| ddd-model-completeness | YAMLローダー、集約の不変条件、状態効果、参照、MarkdownのID・不変条件本文。Domain Error必須はローダーで検査 |
-| ddd-model-presence | 実行対象のモデルの存在・読み込み。SKIP/absentでは注記して通過 |
-| ddd-reference-ids | 未定義・廃止・種別・不正IDと置換関係 |
-| ddd-mapping-declarations | 集約の2軸、ユースケース宣言、複数集約戦略、加算型コマンドの冪等性宣言、業務語彙によるパッケージ宣言 |
-| ddd-layer-structure | 層構造の必須項目、依存方向、命名、復元宣言 |
-| ddd-design-advisories | 複数集約、リポジトリ範囲、保存宣言への助言 |
-| ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
-| ddd-rust-use-case | g/h/i/d |
-| ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
+| ddd-model-completeness | YAML loading, aggregate invariants, state effects, references, Markdown IDs/invariant statements. The loader enforces required Domain Errors. |
+| ddd-model-presence | Existence/loading of a model scheduled to execute. SKIP/absent passes with a note. |
+| ddd-reference-ids | Undefined, retired, wrong-kind, malformed IDs, and replacement relationships. |
+| ddd-mapping-declarations | Aggregate axes, use-case declarations, multi-aggregate strategy, additive-command idempotency, and vocabulary-based packages. |
+| ddd-layer-structure | Required layer fields, dependency direction, naming, and restoration declarations. |
+| ddd-design-advisories | Multi-aggregate, repository-scope, and storage-declaration guidance. |
+| ddd-rust-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching. |
+| ddd-rust-use-case | g/h/i/d. |
+| ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
 
-助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/artifact-contract.md)を参照してください。
+All manifests except the advisory sensor are blocking. Canonical models use registered names, and added declarations are required sections of existing review artifacts connected to normal approval. See the [artifact contract](docs/artifact-contract.md) for standalone limits.
 
-Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/rust-sensor-contract.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
+Rust checks use syntax and names without type inference or execution. T-02 corrected value-object, port, cross-file, and replay evaluation. The [Rust contract](docs/rust-sensor-contract.md) describes explicit-type matching and coverage notes. It does not exhaustively verify invariant semantics, recovery flows, or interior mutability.
 
-パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/domain-packaging-design.md)を参照してください。
+Package names must connect to ubiquitous language. Prohibit technical classifications such as aggregate/, impl/, vo/, and entities/. Sensors inspect declarations and actual modules; review assesses term meaning. See the [packaging contract](docs/domain-packaging-design.md).
 
-## 開発時の検証
+## Development verification
 
-前提はBunと `../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.8.2。参照サブモジュールは使いません。
+Requires Bun and AI-DLC development tools under `../.codex/tools/`. Assessment baseline: Bun 1.3.13 and AI-DLC 2.8.2. No reference submodule is used.
 
 ```sh
 cd ddd
@@ -49,26 +51,26 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-全テストは `bun run check` です。T-07実装後は279成功・1skip・20失敗で、失敗は旧環境依存に集中しています。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` はビルド、一時環境へのcompose、配布物の直接検査、通常承認開始の統合検査をまとめて実行します。
+Run all tests with `bun run check`. After language alignment, 285 passed, one skipped, and 20 failed due to old dependencies. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines builds, disposable compose, direct distribution checks, and normal approval integration tests.
 
-## 導入と対応環境
+## Installation and supported environments
 
-完成時の対象はClaude Code（`.claude`）とCodex（`.codex`、スキルは `.agents/skills`）。kimi・opencodeは対象外です。インストーラには旧対象表が残りますが、対応を保証する一覧とは扱いません。
+Completion targets are Claude Code (`.claude`) and Codex (`.codex`, with skills in `.agents/skills`). Kimi/opencode are excluded. Old installer target tables remain but are not support guarantees.
 
-利用先はAI-DLC導入済みである必要があります。ローカルソースによる事前確認:
+The destination must already have AI-DLC. Preview local-source installation:
 
 ```sh
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、現在の新規導入・更新・失敗回復はT-05で検証します。最新タグの存在やリリース済みであることは、この文書では前提にしません。
+Remove dry-run to install. The script implements source retrieval, build, compose, provenance, and updates, but T-05 will verify current fresh-install/update/failure recovery. This document does not assume a latest tag exists or a release has been published.
 
-## 設計と残作業
+## Design and remaining work
 
-[文書一覧](docs/README.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/domain-layer-design.md)、再実行と保存は[ユースケース層設計](docs/use-case-layer-design.md)、復元とRMUは[IA層設計](docs/interface-adapter-layer-design.md)にあります。
+Start with the [document index](docs/README.md) and distinguish conventions from measurements. [Domain design](docs/domain-layer-design.md) covers layer/CQRS naming; [use-case design](docs/use-case-layer-design.md) covers re-execution and persistence; [IA design](docs/interface-adapter-layer-design.md) covers restoration and RMU.
 
-不具合は[GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues)へ、再現条件と対象バージョンを添えて報告してください。
+Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues) with versions and reproduction conditions.
 
-## ライセンス
+## License
 
-[MIT](../LICENSE)。`web-tree-sitter` とRust文法の同梱ライセンスは [vendor](tools/ddd/lib/rust/vendor/) と [wasm/LICENSE](tools/ddd/wasm/LICENSE) にあります。
+[MIT](../LICENSE). Bundled web-tree-sitter and Rust grammar licenses are in [vendor](tools/ddd/lib/rust/vendor/) and [wasm/LICENSE](tools/ddd/wasm/LICENSE).

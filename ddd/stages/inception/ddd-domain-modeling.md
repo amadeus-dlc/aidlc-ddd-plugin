@@ -95,9 +95,7 @@ candidates with the existing code and record the differences as open questions.
 
 ### Step 4: Questions and Confirmation
 
-下流のパッケージ名の根拠となる業務語彙と、コードで使う名称の対応も確認する。
-集約・Entity・VOという型分類をパッケージ名にせず、業務概念でまとめられる語彙を説明へ残す。
-物理パッケージやファイル配置はここで決めず、正規YAMLへ追加しない。配置はdomain-designが所有する。
+Also establish the correspondence between business terms and code identifiers that will justify downstream package names. Record vocabulary for grouping by business concept, not by Aggregate, Entity, or value-object categories. Do not decide physical package or file placement here or add it to the canonical YAML; domain-design owns placement.
 
 Create `domain-modeling-questions.md`. Cover bounded contexts, aggregate
 candidates (merge / demote confirmation), invariants, commands and errors
@@ -108,13 +106,8 @@ Confirmation before writing the model.
 
 ### Step 5: Write the Canonical Model
 
-正規データは `ddd-domain-model-yaml.md` のラベル付きYAMLコードブロック1つに記載する。
-YAMLの外側には説明を置けるが、第2のYAMLブロックを追加しない。U1の形式で
-`schema_version: 1`、Bounded Context、集約、要素、不変条件、コマンド、エラー、
-イベント、遷移、生成規則、系譜を記載する。
-人間向けの `ddd-domain-model.md` はこのデータから作り、Sources、Overview、
-Bounded Context、Aggregate、Process Manager、Lineage、Derivation、Self-check、
-Open questionsの各節を持たせる。再実行時は分割・統合・削除の系譜を更新する。
+Write canonical data in exactly one labelled YAML code block in `ddd-domain-model-yaml.md`. Explanatory text may surround it, but do not add a second YAML block. Use the U1 format with `schema_version: 1`, Bounded Contexts, aggregates, elements, invariants, commands, errors, events, transitions, construction rules, and lineage.
+Derive the human-facing `ddd-domain-model.md` from these data, with Sources, Overview, Bounded Context, Aggregate, Process Manager, Lineage, Derivation, Self-check, and Open questions sections. Update split, merge, and deletion lineage on reruns.
 
 ### Step 6: Self-check
 
@@ -130,9 +123,7 @@ Fill the completion table and keep it in the md under `## Self-check`:
 
 ### Step 7: Completion
 
-単独実行では、完了報告前に `aidlc engine sensor fire ddd-model-completeness --stage ddd-domain-modeling --output-path <この試行のddd-domain-model-yaml.mdの実パス>` を実行する。
-終了コードだけでなく最終JSONの `result: passed` を確認し、それ以外なら修正して再検査する。
-標準AI-DLC 2.8.2の単独完了コマンド自体には一般成果物の検査がないため、この手順を省略しない。
+For standalone execution, before reporting completion, run `aidlc engine sensor fire ddd-model-completeness --stage ddd-domain-modeling --output-path <actual-path-to-this-attempts-ddd-domain-model-yaml.md>`. Require `result: passed` in the final JSON, not merely a successful exit code; otherwise fix and rerun. Do not skip this step: the standard AI-DLC 2.8.2 standalone completion command does not check general artifacts.
 
 Run the core completion flow: the advisory architecture review, the learnings
 ritual, then the gate. Before the gate, `ddd-model-completeness` fires. On a

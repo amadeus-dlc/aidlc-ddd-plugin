@@ -1,28 +1,30 @@
-# DDDプラグインの構成
+# DDD plugin architecture
 
-更新: 2026-09-13。実装の全体像を示します。通常承認のDDD検査を接続済みです。単独完了の標準側ガードには不足があります。
+English | [Japanese](architecture.ja.md)
 
-## 正規モデルを共有する
+Updated: 2026-09-13. This guide describes responsibilities and data flow. See the [assessment](../ddd/docs/current-state-assessment.md) for implementation evidence.
+
+## Connect the model to implementation
 
 ```text
-要求・ストーリー
-  → ddd-domain-modeling: 正規モデルと人間向け説明
-  → domain-design: 集約の型・モジュール・ポートへの写像
-  → functional-design: ユースケースと回復宣言
-  → infrastructure-design: 層構造と保存・復元
-  → code-generation: Rustコードとsource-manifest
+Requirements and stories
+  → ddd-domain-modeling: canonical model and human explanation
+  → domain-design: mapping aggregates to types, modules, and ports
+  → functional-design: use cases and recovery declarations
+  → infrastructure-design: layers, persistence, and restoration
+  → code-generation: Rust code and source-manifest
 ```
 
-正式な業務要素は正規モデルだけが所有し、後続は安定IDで参照します。詳細は[設計文書](../ddd/docs/README.md)に集約しています。
+Only the canonical model owns formal business elements. Downstream stages reference stable IDs. The [design documents](../ddd/docs/README.md) hold details.
 
-## 検査を接続する
+## Connect checks to approval
 
-設計センサー6本はモデルと宣言を読み、Rustセンサー3本はCargo構成・構文・モデルを使います。通常承認では、登録された成果物の実パスがセンサーの一致条件に合う必要があります。
+Six design sensors read models and declarations. Three Rust sensors use Cargo structure, syntax, and model data. During normal approval, registered artifacts' actual paths must match sensor patterns.
 
-正規モデルは標準のファイル名に揃え、ユースケース宣言はfunctional-spec、層構造宣言はcicd-pipelineの必須セクションにしました。欠落・不正・正常を承認開始処理で検証しています。[成果物契約](../ddd/docs/artifact-contract.md)を参照してください。
+Canonical models use standard filenames; use-case declarations are required sections in functional-spec and layer declarations in cicd-pipeline. Missing, invalid, and valid cases are exercised through approval admission. See the [artifact contract](../ddd/docs/artifact-contract.md).
 
-## 配布と責務を分ける
+## Separate distribution and destination responsibilities
 
-`ddd/` のソースをClaude/Codex向けに `dist/<harness>/` へビルドし、composeが利用先のステージ・センサー・ツール・ナレッジへ反映します。配布フォルダと、利用先へ反映されたファイルは別です。
+Build `ddd/` sources into `dist/<harness>/` for Claude/Codex. Compose installs stages, sensors, tools, and knowledge into the destination. Distribution folders and composed destination files are distinct.
 
-旧カスタムビルドとkimi・opencode対応は維持しません。標準AI-DLCとの接続、新規導入・更新、実際のルール転送の確認は[互換性](../ddd/docs/framework-compatibility.md)にまとめています。
+Old custom builds and Kimi/opencode support are not maintained. [Compatibility](../ddd/docs/framework-compatibility.md) describes standard AI-DLC integration, installation/update work, and actual rule-delivery verification.

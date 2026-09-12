@@ -1,117 +1,119 @@
-# DDDプラグインの残作業と完了条件
+# Remaining DDD plugin work and completion criteria
 
-更新: 2026-09-13。Fable5.1による旧タスク表を、[実装調査](current-state-assessment.md)とユーザーの対応環境方針に基づいて再構成した。旧表のA/B/C番号は廃止し、以下のT番号で管理する。
+English | [Japanese](completion-tasks.ja.md)
 
-文書整理とT-01の通常承認への接続を実装した。T-02のRust判定とT-07のパッケージング規約も実装した。単独完了の標準側の不足と、T-03〜T-06は残る。
+Updated: 2026-09-13. Replaces Fable5.1's old task list using the [implementation assessment](current-state-assessment.md) and the user's supported-environment policy. The old A/B/C numbering is retired; use the T identifiers below.
 
-## 完成対象
+Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation and T-07 packaging are also implemented. The framework standalone completion gap and T-03–T-06 remain.
 
-Claude CodeとCodex上で、Rust向けDDDワークフローの生成物と検査を接続する。kimi・opencodeは対応対象から外し、両環境のためのカスタムビルドも維持しない。そこで使いたかったモデルは、ユーザー方針としてOllama CloudのClaude Codeブリッジ経由で利用する。ブリッジ自体の導入は本プラグインの作業に含めない。他環境への拡大も今回の完成条件に含めない。
+## Completion scope
 
-完成には、静的検査・既存テストの成功に加え、以下を要求する。
+Connect Rust-oriented DDD workflow outputs and checks on Claude Code and Codex. Kimi and opencode are excluded, and custom builds for them are no longer maintained. The user intends to access desired models through the Ollama Cloud Claude Code bridge; installing that bridge is outside this plugin's scope. Other harnesses are not completion targets.
 
-- 必須成果物が欠落または不正なら、通常承認と単独ステージ完了が通らない。
-- 正常なVO引数・ポート利用が通り、別ファイルの未宣言変更を見逃さない。
-- Claude/Codexのビルド・compose・配布物検査・新規導入・更新を確認する。
-- ナレッジ、設計、生成手順、実測が、検査の保証範囲について一致する。
+In addition to static checks and existing tests, completion requires:
 
-## T-01: 成果物を通常承認・単独完了に接続する
+- Missing or invalid required artifacts must block normal approval and standalone-stage completion.
+- Valid value-object arguments and port calls must pass; undeclared cross-file mutations must be detected.
+- Verify builds, compose, distribution checks, fresh installation, and updates for Claude/Codex.
+- Align knowledge, design, generation instructions, and measurements about what checks guarantee.
 
-状態: プラグイン側の通常承認への接続は実装済み。標準AI-DLCの単独完了ガードが不足するため、T-01全体は未完了。優先度: 最優先。根拠: F-01/F-02。
+## T-01: Connect artifacts to normal approval and standalone completion
 
-正規モデルは標準のMarkdownファイル名へ統一した。ユースケース宣言と層構造宣言は既存レビュー成果物の必須セクションにし、既存のUnit種別を引き継いだ。形式・移行・検証範囲は[成果物契約](artifact-contract.md)を参照。
+Status: plugin-side normal approval integration is implemented. T-01 remains incomplete because the standard AI-DLC standalone completion guard is insufficient. Priority: highest. Evidence: F-01/F-02.
 
-対象: `stages/`、`contributions/`、`sensors/`、モデルパス解決、統合テスト。標準AI-DLCの拡張契約で表せる方式を先に調べる。コアへの場当たり的な名前変換パッチを前提にしない。
+Canonical model filenames now match standard Markdown artifact names. Use-case and layer declarations are required sections of existing review artifacts and inherit their Unit kinds. See the [artifact contract](artifact-contract.md) for format, migration, and verification scope.
 
-完了条件: compose後のグラフ、実ファイル、`matches` が一致する。欠落・不正・正常の各ケースを承認処理経由で確認し、単独実行も同じ成果物を検証する。Unit種別ごとの対象外ケースも確認する。センサーの直接実行だけで完了にしない。
+Targets: stages, contributions, sensors, model-path resolution, and integration tests. Prefer mechanisms supported by standard AI-DLC extension contracts; do not assume ad hoc core filename patches.
 
-残る作業: 標準の `report --single` が一般成果物とセンサーを検証するよう共通処理を修正・再検証する。プラグインだけで検査省略を防げるとは扱わない。
+Completion: composed graph, actual files, and matches agree. Verify missing, invalid, and valid cases through approval processing and apply equivalent checks to standalone execution. Verify Unit-kind exclusions. Direct sensor execution alone is insufficient.
 
-依存: 単独完了の保証は標準AI-DLC側の修正。
+Remaining: the standard `report --single` shared path must verify general artifacts and sensors, then be retested. The plugin alone cannot guarantee checks are never skipped.
 
-## T-02: Rustセンサーの誤検知・見逃しを修正する
+Dependency: a standard AI-DLC fix for standalone completion.
 
-状態: 実装済み。F-03〜F-06を修正し、getter・別名・trait等の回帰ケースも追加した。[判定契約と限界](rust-sensor-contract.md)を参照。
+## T-02: Correct Rust sensor false positives and misses
 
-| 修正 | 必須の回帰ケース |
+Status: implemented. F-03–F-06 and getter/alias/trait regressions are addressed. See the [evaluation contract and limits](rust-sensor-contract.md).
+
+| Fix | Required regression |
 |---|---|
-| h: 集約とVOの区別 | VO引数は成功、集約引数は失敗 |
-| i: 別ユースケースとポートの区別 | ポートのexecuteは成功、別ユースケース呼出しは失敗 |
-| b: ファイルを跨ぐ型とimplの収集 | 別ファイルでも未宣言変更を検出 |
-| replay例外の限定 | 正当なreplayは成功、名前をapplyにした任意代入は失敗 |
+| h: Distinguish aggregates and value objects | Value-object arguments pass; aggregate arguments fail. |
+| i: Distinguish use cases and ports | Port execute passes; calls to another use case fail. |
+| b: Collect types and impls across files | Detect undeclared mutations across files. |
+| Limit replay exceptions | Valid replay passes; arbitrary assignment renamed apply fails. |
 
-getter名の衝突、型の別名・修飾名、trait経由の変更、VOの可変性も調べ、追加検査または明示的制約へ分類する。推測だけでblockingを出さない。
+Investigate getter-name collisions, aliases and qualified types, trait mutations, and value-object mutability; classify each as a check or an explicit limitation. Do not issue blocking findings from guesses.
 
-完了条件: 再現ケースと正常ケースがソース・配布物の両方で通り、どの構文を確定的に判定できるか文書化される。一般的な意味証明は要求しない。
+Completion: reproductions and valid cases pass against source and distributions, and deterministic syntax coverage is documented. Universal semantic proof is not required.
 
-replayの明示方式は集約写像のreplay_methodsとして実装した。T-03にはメソッド本体の意味と戻り値・回復契約を残す。
+Explicit replay is implemented through aggregate mapping replay_methods. Body semantics, return types, and recovery contracts remain T-03 work.
 
-## T-03: 未確定の実装契約を決め、生成手順へ反映する
+## T-03: Resolve remaining implementation contracts and align generation
 
-状態: 未着手。優先度: 高。
+Status: not started. Priority: high.
 
-[ドメイン](domain-layer-design.md)、[ユースケース](use-case-layer-design.md)、[IA](interface-adapter-layer-design.md)の改訂規約を設計入力とする。
+Use the revised [domain](domain-layer-design.md), [use-case](use-case-layer-design.md), and [IA](interface-adapter-layer-design.md) conventions as design inputs.
 
-replayの明示方法はT-02で決定済み。残る項目は、初回成功・重複成功・拒否の戻り値、複数イベントの扱い、actor/class混在フローの回復宣言、写像欠落時の検査契約。再送期間・RMUの順序条件等を構造化データへ追加するか、本文レビューに置くかも決める。
+Replay declaration format was decided in T-02. Remaining decisions cover return values for first success, duplicate success, and rejection; multiple events; mixed actor/class recovery declarations; and missing-mapping behavior. Decide whether retry windows and RMU ordering belong in structured data or prose review.
 
-既存contributionのclass＝再実行限定、全保存方式＝upsertという指示を見直す。ローダー、JSON Schema、生成手順、センサーの追加・変更が必要なら一体で実装する。FactoryRuleの意味検証や内部可変性の全検出は後続候補とし、初版ではレビューと生成コードの動作テストで補う。
+Revisit contribution instructions equating class with re-execution only and all storage with upsert. Coordinate any loader, JSON Schema, generation, and sensor changes. FactoryRule semantics and exhaustive interior-mutability detection are later candidates; use review and generated-code behavior tests for the first edition.
 
-完了条件: 未確定項目ごとに判断と適用範囲があり、実装・宣言・手順の差分が解消する。失敗・再送・重複時の期待結果を具体例とテストで説明できる。
+Completion: every unresolved item has a decision and scope, implementation/declaration/instruction differences are resolved, and concrete examples/tests explain failure, retry, and duplicate outcomes.
 
-依存: T-01の成果物契約と調整する。
+Dependency: coordinate with T-01 artifact contracts.
 
-## T-04: 旧環境依存と対象外の配布経路を整理する
+## T-04: Remove old dependencies and excluded distribution routes
 
-状態: ビルド・サンドボックス・配布物検査の対象をClaude/Codexへ整理済み。インストーラの対象表、旧テスト・補助スクリプトの整理は残る。優先度: 高。
+Status: build, sandbox, and distribution-check targets now align with Claude/Codex. Installer target tables, old tests, and helper scripts remain. Priority: high.
 
-`package.json` と `scripts/verify-dist.ts` の既定対象をClaude/Codexへ揃え、kimi・opencodeのビルド・検証を外した。`install.ts` の受理対象も同じ方針に揃える。AI-DLCのターゲット一覧をそのまま全対応の約束には使わない。
+`package.json` and `scripts/verify-dist.ts` now default to Claude/Codex, excluding Kimi/opencode builds and checks. Align accepted `install.ts` targets too. The framework's target list is not a promise of plugin support for every harness.
 
-旧dispatch bridge、削除済みサブモジュールのfixture、旧パッチ適用に依存するテスト・補助スクリプトを削除または置換する。ただし `framework-compatibility.test.ts` 内の現行Claude/Codexのcompose・冪等性テストは維持する。古い検証を消すだけでルール転送確認が完了したとは扱わない。
+Remove or replace tests/helpers depending on the old dispatch bridge, deleted-submodule fixtures, and patch application. Preserve the current Claude/Codex compose and idempotency tests in `framework-compatibility.test.ts`. Deleting obsolete checks does not establish rule-delivery verification.
 
-完了条件: `bun run check` と `bun run test:sandbox` が対象2環境で成功。インストーラは対象外指定を明確に拒否。旧参照元の再導入やカスタムビルドが不要になる。
+Completion: `bun run check` and `bun run test:sandbox` pass for both targets; the installer explicitly rejects excluded targets; neither the old reference source nor custom builds are needed.
 
-依存: 配布物の最終検査はT-01〜T-03の変更後に行う。
+Dependency: final distribution verification follows T-01–T-03 changes.
 
-## T-05: 新規導入・更新と実際の利用経路を検証する
+## T-05: Verify installation, updates, and actual usage
 
-状態: 未着手。優先度: 高。
+Status: not started. Priority: high.
 
-一時プロジェクトで新規導入、再導入の冪等性、旧版からの更新、失敗時の状態、`--dry-run` を確認する。既存ファイルを巻き込まないことと、失敗後に復旧できることを確認する。
+In disposable projects, verify fresh installation, repeat-install idempotency, upgrades, failure states, and dry-run. Confirm unrelated files are preserved and recovery after failure is possible.
 
-Claude/Codexそれぞれで、現行AI-DLCから担当エージェントへDDDのルールが届くこと、設計成果物が後続で読まれること、承認時検査が発火することを確認する。旧Codexの実機記録を代用しない。
+For Claude/Codex, verify current AI-DLC delivers DDD rules to the responsible agent, downstream stages read design artifacts, and approval checks fire. Do not substitute old Codex host records.
 
-完了条件: 対象バージョン・環境・実行コマンド・結果・未検証範囲を記録し、READMEの導入案内を実測に合わせる。センサー単体、compose、実際のモデル実行を別の検証として示す。
+Completion: record versions, environment, commands, results, and unverified scope; align installation guidance with observations. Distinguish sensor-only tests, compose, and actual model execution.
 
-依存: T-01〜T-04。
+Dependency: T-01–T-04.
 
-## T-06: 文書・ナレッジと完成時の実測を最終照合する
+## T-06: Reconcile final documentation and knowledge with measurements
 
-状態: 文書の旧前提・誤認・重複は整理済み。実装修正後の照合は未完了。
+Status: old assumptions, misconceptions, and duplication have been addressed; final reconciliation after implementation remains incomplete.
 
-設計規約と現行実装の区別、検査範囲、例の根拠、対応環境を再確認する。既存の正常ケースが対象構造を持たない場合は、その構造の正しさを示す例として扱わない。README、ナレッジ、必要な生成手順、プラグイン説明を揃える。
+Recheck design versus implementation, coverage, example evidence, and supported environments. A passing case that lacks the target structure does not demonstrate its validity. Align READMEs, knowledge, generation instructions, and plugin descriptions. Runtime instructions are English-only; reader docs have full English .md and Japanese .ja.md editions. aidlc/ records remain Japanese.
 
-完了条件: T-01〜T-05の実測と文書が一致し、リンク切れや現在は使えない手順がない。過去の失敗は履歴として残し、成功の捏造や書換えをしない。
+Completion: documents agree with T-01–T-05 measurements, with valid links and usable procedures. Preserve historical failures; never rewrite them as successes.
 
-依存: T-01〜T-05。
+Dependency: T-01–T-05.
 
-## T-07: 業務語彙によるドメイン層のパッケージング
+## T-07: Package the domain by business vocabulary
 
-状態: 実装済み。[パッケージング契約](domain-packaging-design.md)に宣言・検査範囲・意味レビューの分担を記載した。
+Status: implemented. The [packaging contract](domain-packaging-design.md) describes declarations, scope, and semantic review.
 
-aggregate/、impl/、vo/、entities/等の技術分類を避け、パッケージ名をユビキタス言語へ結び付ける。ナレッジで原則を共有し、domain-designで語彙と配置を宣言、code-generationで実体を検査する。物理配置を正規モデルへ混ぜない。
+Avoid technical classifications such as aggregate/, impl/, vo/, and entities/ and connect package names to ubiquitous language. Share principles through knowledge, declare vocabulary/layout in domain-design, and inspect the implementation in code-generation. Keep physical placement outside the canonical model.
 
-登録済み集約写像へdomain_packagesを追加し、用語・モデル参照・配置理由を必須にした。予約名、root・親階層、実モジュールの宣言漏れ、解析不能を検査する。未実装の将来パッケージは宣言だけ先行できる。直接回帰55件とClaude/Codexの通常承認8件が成功した。
+Added domain_packages to the registered aggregate mapping with required terms, model references, and rationale. Check reserved names, root/ancestor coverage, undeclared actual modules, and unresolved analysis. Future packages may be declared before implementation. All 55 direct regressions and eight Claude/Codex normal-approval cases passed.
 
-完了条件: 業務語彙の正常例が通り、技術分類・未宣言・参照切れ・配置不一致を検出する。インラインmodと外部所有の参照を区別し、意味的な命名判断を機械で断定しない。通常承認と配布物のテストを追加する。
+Completion: valid vocabulary-based examples pass; technical classifications, missing declarations, broken references, and layout mismatches are detected. Distinguish inline modules from externally owned references, and leave semantic naming judgments to review. Include normal-approval and distribution tests.
 
-依存: T-02のモジュール索引を利用できる。第三者フレームワークの変更は前提にしない。
+Dependency: reuse T-02's module index; no third-party framework modification is assumed.
 
-## 旧タスク表から除いた作業
+## Work removed from the old list
 
-Domain Error必須チェックの新設は不要。ローダーと専用テストに存在する。copilot/cursor/kiroがインストーラ表にないという記述も誤りだった。
+A new Domain Error requirement check is unnecessary: it exists in the loader and dedicated tests. The claim that copilot/cursor/kiro were missing from the installer table was also incorrect.
 
-auditシャードは現行AGENTS.mdと.gitignoreに従ってコミットする。無視へ戻す判断は要求しない。削除済みサブモジュールの保護手順と旧パッチの復元も完成条件から外した。
+Commit audit shards according to current AGENTS.md and .gitignore; do not ask to revert that policy. Protection procedures for the deleted submodule and restoration of old patches are not completion criteria.
 
-## 完成後に選ぶ拡張
+## Extensions after completion
 
-第2言語、検査器生成のひな型、より高度なRust解析、保存基盤別の追加センサー、他環境対応は別計画とする。T-07の実装は完了した。T-04の残る旧環境依存の整理は独立して進められる。T-01の残件は第三者コードへの直接修正ではなく上流向けの再現報告として扱い、T-03の残る仕様判断は独立して進められる。
+Plan a second language, sensor-generation templates, advanced Rust analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Remaining T-04 cleanup can proceed independently. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.

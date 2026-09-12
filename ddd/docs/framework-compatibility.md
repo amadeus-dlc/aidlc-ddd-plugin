@@ -1,25 +1,27 @@
-# AI-DLCとの互換性
+# AI-DLC compatibility
 
-更新: 2026-09-13。確認基準はAI-DLC 2.8.2とBun 1.3.13。完成時の検証対象はClaude CodeとCodexであり、kimi・opencodeは対象外。
+English | [Japanese](framework-compatibility.ja.md)
 
-## 標準の導入済みツールを使う
+Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Completion targets are Claude Code and Codex; Kimi and opencode are out of scope.
 
-`.claude/tools/`・`.codex/tools/` は第三者のフレームワーク配布物であり、このプラグインの実装変更先にしない。標準側の不足は再現条件と上流への修正提案として扱い、プラグインの実装修正は `ddd/` で行う。
+## Use standard installed tools
 
-この作業コピーでは `.claude/` と `.codex/` にAI-DLCが導入されている。DDDの開発用validate/build/testは `.codex/tools/` を使う。利用先のインストーラは、選択した環境に導入済みのツールを使う。
+`.claude/tools/` and `.codex/tools/` are third-party framework distributions, not implementation targets for this plugin. Record framework gaps as reproductions and upstream proposals. Make plugin implementation changes under `ddd/`.
 
-削除済みの参照サブモジュールや、そのdistは前提にしない。旧版向けの `prepare:harnesses`、dispatch bridge、カスタムビルドを現在の導入手順へ戻さない。残る補助コードはT-04で整理する。
+This working copy has AI-DLC installed in `.claude/` and `.codex/`. DDD development validate/build/test commands use `.codex/tools/`. The installer uses the tools already installed for the selected destination harness.
 
-## 検証済みと未検証を分ける
+Do not depend on the removed reference submodule or its dist. Do not restore old `prepare:harnesses`, dispatch-bridge, or custom-build paths as current installation instructions. T-04 tracks remaining helper-code cleanup.
 
-Claude/Codexのビルド・compose・既存ゴールデンケースは調査で成功した。T-01で成果物と通常承認のDDD検査を接続した。ただし標準の単独完了は一般成果物・センサーを検証せず、成果物なしでも完了を返す。再現と制約は[成果物契約](artifact-contract.md)を参照。
+## Separate verified and unverified behavior
 
-Codexのルール転送は標準AI-DLCと実行ホストの連携に依存する。DDD側で現在の経路を実機確認する作業はT-05であり、旧bridgeの成功記録を代用しない。
+The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. Standard standalone completion still skips general artifacts and sensors and can finish without artifacts. See the [artifact contract](artifact-contract.md) for reproduction and limits.
 
-## 互換性を直す順序
+Codex rule delivery depends on integration between standard AI-DLC and the execution host. T-05 verifies the current route from the DDD side. Old bridge success records are not a substitute.
 
-1. T-01の通常承認は接続済み。残る単独完了の保証は標準AI-DLC側で修正する。
-2. T-04で対象2環境のビルド・検証経路と旧環境依存を整理する。
-3. T-05で新規導入・更新と実際のステージ実行を確認する。
+## Compatibility work order
 
-詳細は[残作業](completion-tasks.md)と[実測](current-state-assessment.md)。旧版の経緯は[過去のCodex検証](codex-host-verification.md)に限定して保持する。
+1. Normal approval is connected under T-01. The remaining standalone completion guarantee needs a standard AI-DLC fix.
+2. T-04 aligns build/verification paths and removes old dependencies for the two supported harnesses.
+3. T-05 verifies fresh installation, updates, and actual stage execution.
+
+See [remaining work](completion-tasks.md) and [measurements](current-state-assessment.md). Keep old-version details in the [historical Codex record](codex-host-verification.md).

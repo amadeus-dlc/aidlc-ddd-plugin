@@ -1,104 +1,106 @@
-# DDDプラグインのユースケース層設計
+# DDD plugin use-case-layer design
 
-更新: 2026-09-13。[ドメイン層設計 §7](domain-layer-design.md)と共通の失敗・保存契約を使う。以下は設計規約であり、センサーによる完全な保証を意味しない。
+English | [Japanese](use-case-layer-design.ja.md)
 
-## 1. 提供形態
+Updated: 2026-09-13. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
 
-functional-designをcontributionで拡張し、宣言・ナレッジ・センサーを追加する。宣言は登録済みレビュー成果物functional-specの必須セクションへ組み込む。[成果物契約](artifact-contract.md)を参照。
+## 1. Delivery form
 
-## 2. 責務
+Extend functional-design through a contribution with declarations, knowledge, and sensors. Embed declarations in a required section of the registered functional-spec review artifact. See the [artifact contract](artifact-contract.md).
 
-ユースケースは取得・業務操作・保存・回復の進行を管理する。業務判断はドメインに委ねる。整合性、冪等性、順序、失敗と補償、観測方法を明示する。
+## 2. Responsibilities
 
-## 3. 規約
+A use case coordinates retrieval, business operations, persistence, and recovery. Delegate business decisions to the domain. State consistency, idempotency, ordering, failure and compensation, and observability explicitly.
 
-1. 外部I/Oはポートを通し、具象アダプタとの結線はcomposition rootで行う。ドメイン型への依存は許す。
-2. コマンド側の `execute` には集約IDとVOを渡す。集約はポート経由で取得する。
-3. 別ユースケースを直接呼ばない。共通の業務判断はドメインへ、複数処理の調整は明示したフローへ置く。外部ポートの `execute` 呼出しは禁止対象ではない。
-4. getterで値を取り出して業務判断しない。判断を返すドメインメソッドを呼ぶ。
-5. DBや外部システムのクライアントを直接使用しない。
+## 3. Conventions
 
-クエリ側はDAOでDTOを取得する構成とし、コマンド側の集約取得・保存規約をそのまま適用しない。
+1. Perform external I/O through ports; wire concrete adapters in the composition root. Dependencies on domain types are allowed.
+2. Pass aggregate IDs and value objects to command-side `execute`. Retrieve aggregates through ports.
+3. Do not call another use case directly. Put shared business decisions in the domain and coordination in an explicit flow. Calling an external port's `execute` is not prohibited.
+4. Do not extract values through getters to make business decisions. Call domain methods that return decisions.
+5. Do not use database or external-system clients directly.
 
-## 4. 整合性と途中失敗
+The query side retrieves DTOs through DAOs; do not impose command-side aggregate retrieval and persistence conventions on it unchanged.
 
-集約を強整合の基本境界とする。複数集約を一つのトランザクションに恒常的に束ねる前に、不変条件と集約境界を見直す。再配置できない処理では、中間状態と回復フローを明示する。[設計の背景](https://zenn.dev/j5ik2o/articles/59de072b6728ff)
+## 4. Consistency and partial failure
 
-単一集約の更新を一つのDBトランザクションで保存することは許す。ユースケースというコード上の単位だけで複数集約の原子性を約束しない。
+Use an aggregate as the basic strong-consistency boundary. Before routinely combining several aggregates in one transaction, reconsider invariants and aggregate boundaries. For operations that cannot be relocated, make intermediate states and recovery flows explicit. See the [design background](https://zenn.dev/j5ik2o/articles/59de072b6728ff).
 
-A保存成功後にBが失敗するフローでは、Aのコミットが残る。再試行・補償・手動回復を設計する。Sagaの補償は新たな処理であり、DBロールバックと同じ原子性・分離性を持つとは扱わない。補償の失敗も回復対象になる。
+Persisting one aggregate update in one database transaction is allowed. A code unit called a use case does not by itself promise multi-aggregate atomicity.
 
-読み取りモデルには処理中・確定・補償中の公開範囲を定める。アクターによる直列処理も、外部I/Oの完了や複数集約の原子性を自動では保証しない。
+If B fails after A is successfully persisted, A's commit remains. Design retries, compensation, or manual recovery. Saga compensation is a new operation and does not have database rollback's atomicity and isolation guarantees. Failed compensation also needs recovery.
 
-## 5. 再実行と冪等性
+Specify which processing, committed, and compensating states read models expose. Actor serialization does not automatically guarantee completion of external I/O or atomicity across aggregates.
 
-呼出し側の再実行と、失敗ステップのバックオフ付き再試行を区別する。回数・期間・終了条件を定め、同じ要求の二重効果を防ぐ。保存結果が不明な場合は結果を照合する。
+## 5. Re-execution and idempotency
 
-### 5-1. storeの契約
+Distinguish caller re-execution from retrying a failed step with backoff. Define counts, time windows, and stopping conditions to prevent duplicate effects. Reconcile unknown persistence outcomes.
 
-ポートの書込み名は `store` を基本とし、同一要求の再保存を安全に扱う。ステートソーシングではupsertを基本にするが、無条件の上書きでよいという意味ではない。期待バージョンや一意制約で競合を検出する。
+### 5-1. The store contract
 
-イベントソーシングでは新規イベントの追記が基本であり、過去のイベントを更新しない。重複要求・追記競合・結果照合を含めて設計する。SQLのinsert使用自体を禁止しない。upsertという名前だけでフロー全体の冪等性が成立するとは扱わない。
+Use `store` as the baseline port write verb and safely handle repeated persistence of the same request. Upsert is the state-sourcing baseline, not permission for unconditional overwrites. Detect conflicts using expected versions, uniqueness constraints, or equivalent mechanisms.
 
-### 5-2. 新規作成
+Event sourcing appends new events and never updates past events. Design duplicate handling, append conflicts, and outcome reconciliation together. SQL insert is not itself prohibited. A method named upsert does not establish idempotency for an entire flow.
 
-同じ作成要求を識別できるIDと結果の対応を設計する。再実行ごとに別集約IDを生成する場合は、未参照データが残る条件、回収方法、イベントや外部I/Oへの影響を説明する。未参照であることだけを理由に無害とは判定しない。
+### 5-2. Creation
 
-### 5-3. 状態設定型の操作
+Define the association between an identifiable creation request, its aggregate ID, and result. If each re-execution creates another ID, explain when unreferenced data remains, how it is reclaimed, and its effects on events or external I/O. Being unreferenced alone does not make data harmless.
 
-同じ要求で既に目的状態に達していれば、変更なしの成功として吸収できる。ただし別要求で状態が変わった後に古い要求が再送される場合は、要求IDや期待バージョンによる判定も必要になる。
+### 5-3. State-setting operations
 
-### 5-4. 加算・追加型の操作
+If the same request has already reached the desired state, it may succeed without changes. If another request changes the state before an old request is retried, request IDs, expected versions, or equivalent checks are also needed.
 
-加算等は同じ値の再設定では吸収できない。適用済みコマンドIDと効果を対応付け、再送を二重適用しない。重複判定と保存が分離して失敗する場合も考慮する。
+### 5-4. Additive operations
 
-直前1件のID保持は、別コマンドを挟んだ古い再送が来ない場合に限る。`C1 → C2 → C1の再送` は直列でも発生する。保持件数・期間は再送条件から決め、期間外の要求をどう扱うかも定める。
+Additions cannot be absorbed by setting the same value again. Associate applied command IDs with their effects and prevent repeated application. Account for failures between duplicate detection and persistence.
 
-### 5-5. 現行モデルの表現
+Retaining only the most recent ID is valid only when an old retry cannot arrive after another command. `C1 → C2 → retry C1` can occur even with serialization. Choose retention counts and windows from retry conditions and define treatment of requests outside the window.
 
-Commandは `effect: transition | accumulation` と `idempotency` を持つ。現在の検査は `accumulation` に `strategy: none` を認めず、`command-id-memory` を要求する。処理全体の冪等性を証明する検査ではない。
+### 5-5. Current model representation
 
-状態設定型の `none` は、ID記憶以外の方法で安全性を説明する選択であり、無対策でよいという意味ではない。再実行の根拠はユースケース宣言にも記載する。
+Commands have `effect: transition | accumulation` and `idempotency`. Current checks reject `strategy: none` for `accumulation` and require `command-id-memory`. They do not prove whole-flow idempotency.
 
-### 5-6. イベントソーシングの重複成功
+For state-setting operations, `none` means safety is justified by a method other than ID memory, not that no precautions are needed. Record re-execution rationale in the use-case declaration too.
 
-適用済みと確認できるコマンドは新規イベント0件で成功できる。初回の状態変更成功は1イベントを基本とし、拒否はDomain Errorとして区別する。戻り値の具体型はT-03で決定する。
+### 5-6. Duplicate success in event sourcing
 
-状態機械だけで重複判定できるケースと、要求IDの記憶が必要なケースを分ける。FSMを使うことを理由に、イベントストアの競合制御や重複保存対策を省略しない。
+A command known to be already applied can succeed with zero new events. One event is the baseline for initial state-changing success; rejection is a Domain Error. Concrete return types remain T-03 work.
 
-## 6. 二つの宣言軸とProcess Manager
+Distinguish cases where a state machine can recognize duplicates from those requiring request-ID memory. Using an FSM does not remove the need for event-store conflict control or duplicate-write protection.
 
-`programming_model: actor | class` と `persistence_method: state-sourcing | event-sourcing` は独立した選択とする。サーガはアクターモデル固有ではない。通常のクラスでも実装でき、採用基盤の対応範囲と技術上の可否を区別する。[Temporal公式Java実装例](https://github.com/temporalio/samples-java/blob/main/core/src/main/java/io/temporal/samples/hello/HelloSaga.java)
+## 6. Two declaration axes and Process Managers
 
-現行宣言は複数集約に `process-manager` または `re-execution` を要求する。写像が読め、全対象集約がactorの場合、センサーは `process-manager` を必須にする。classでもProcess Managerを表現できる。既存contributionがclassを再実行に限定する指示は、この設計と揃える必要がある。
+`programming_model: actor | class` and `persistence_method: state-sourcing | event-sourcing` are independent choices. Sagas are not actor-specific and can use ordinary classes. Distinguish platform support from technical possibility. See the [official Temporal Java example](https://github.com/temporalio/samples-java/blob/main/core/src/main/java/io/temporal/samples/hello/HelloSaga.java).
 
-actor/class混在時の要件と写像欠落時の扱いはT-03で確定する。現在のセンサーは写像欠落時にProcess Manager必須チェックを省略するため、その動作を安全性の保証として採用しない。
+Current multi-aggregate declarations require `process-manager` or `re-execution`. When mappings are readable and every target aggregate is actor-based, the sensor requires `process-manager`. Classes can also use Process Managers. The existing contribution's instruction limiting classes to re-execution must be aligned with this design.
 
-## 7. 検査とレビュー
+Requirements for mixed actor/class flows and missing mappings remain T-03 decisions. The current sensor skips the Process Manager requirement when mappings are missing; do not treat that behavior as a safety guarantee.
 
-gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖、dはgetter、jはモデルの冪等性宣言を検査する。h/iは明示型を照合し、集約とVO、具象ユースケースとポートを区別する。[判定範囲](rust-sensor-contract.md)外の構文は注記する。
+## 7. Checks and review
 
-途中失敗の回復可能性、保持期間、集約境界、公開範囲はレビューと動作テストで確認する。宣言の存在と動作の安全性を区別する。
+g checks dependencies and external I/O, h aggregate arguments, i use-case chaining, d getters, and j model idempotency declarations. h/i use explicit types to distinguish aggregates from value objects and concrete use cases from ports. Syntax outside the [evaluation contract](rust-sensor-contract.md) is noted.
 
-## 8. ユースケース宣言
+Review and behavior tests assess recovery from partial failure, retention, aggregate boundaries, and exposure. Declaration presence and behavioral safety are distinct.
 
-各定義に識別子・名前を付け、次を記載する。
+## 8. Use-case declarations
 
-| 項目 | 内容 |
+Give each definition an identifier and name and declare the following:
+
+| Field | Content |
 |---|---|
-| `target_aggregates` | 対象集約の参照ID |
-| `commands` | 使用するコマンドの参照ID |
-| `re_execution_basis` | 各ステップの再実行が安全である根拠 |
+| `target_aggregates` | Target aggregate reference IDs |
+| `commands` | Command reference IDs |
+| `re_execution_basis` | Why each step is safe to re-execute |
 | `recovery_policy` | `caller-retry` / `step-backoff` / `both` |
-| `multi_aggregate_strategy` | 複数集約時のProcess Manager参照、または再実行戦略 |
-| `read_model_exposure` | 中間状態をどのビューへ公開するか |
+| `multi_aggregate_strategy` | Process Manager reference or re-execution strategy for multiple aggregates |
+| `read_model_exposure` | Views that expose intermediate states |
 
-現行の格納先は `functional-spec.md` 内の `## DDD ユースケース宣言`。独立した宣言ファイルは生成しない。通常承認では文書・セクションの欠落も検出する。
+Store these in `functional-spec.md` under `## DDD Use-case Declarations`. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Do not generate a separate declaration file. Normal approval detects missing documents and sections.
 
-## 9. ナレッジ
+## 9. Knowledge
 
-責務分離、集約の整合性、要求単位の冪等性、回復・補償、公開範囲を扱う。Rustではポートのtraitと静的ディスパッチを基本とする。特定のサーガ基盤やイベントストアを全プロジェクトへ強制しない。
+Cover responsibility separation, aggregate consistency, request-level idempotency, recovery, compensation, and exposure. Prefer port traits and static dispatch in Rust. Do not impose one saga platform or event store on every project.
 
-## 10. 残る設計判断
+## 10. Remaining design decisions
 
-混在モデルの回復宣言、no-opを表す戻り値、保持期間等をモデルへ追加するかはT-03で判断する。新属性を追加する場合はローダー・契約資料・生成手順・センサー・テストを同時に更新する。
+T-03 decides mixed-model recovery declarations, no-op return types, and whether retention periods belong in the model. Adding attributes requires coordinated loader, contract, generation, sensor, and test changes.

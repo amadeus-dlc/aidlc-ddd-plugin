@@ -1,60 +1,63 @@
-# DDDプラグインの判断記録
+# DDD plugin decisions
 
-更新: 2026-09-13。現行方針と、採用済み・失効した過去の判断を区別する。設計の本文は[文書一覧](README.md)、未実装事項は[残作業](completion-tasks.md)で管理する。
+English | [Japanese](decisions.ja.md)
 
-## 現行方針
+Updated: 2026-09-13. Distinguish current policy from adopted and superseded historical decisions. The [document index](README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
 
-| 判断 | 状態・理由 |
+## Current policy
+
+| Decision | Status and rationale |
 |---|---|
-| Claude CodeとCodexを完成時の検証対象にする | kimi・opencodeはユーザー判断で対象外。利用モデルは必要に応じてOllama CloudのClaude Codeブリッジ経由で使う。両環境向けカスタムビルドを維持しない |
-| auditシャードをコミットする | 現行AGENTS.mdと.gitignoreに従う。過去のmachine-local運用を現在の手順には使わない |
-| 正規モデルは手書きローダーで検証する | 2026-09-10採用。JSON Schemaは契約資料。未知キーや壊れた参照を拒否する |
-| 専用ステージはddd-domain-modeling | 2026-09-11採用。プラグイン接頭辞の制約に合わせる |
-| 構文検査と意味のレビューを分ける | 決定的な出力と意味的な正しさを混同しない。全不変条件・全回復経路の検証済みとは主張しない |
-| 文書の正本を日本語へ一本化する | 旧翻訳ページは案内へ縮小し、設計・実測・タスクの重複を減らす |
+| Target Claude Code and Codex for completion verification. | Kimi and opencode were excluded by user decision. Desired models may be used through the Ollama Cloud Claude Code bridge. Do not maintain custom builds for the excluded harnesses. |
+| Commit audit shards. | Follow current AGENTS.md and .gitignore; historical machine-local operation is not the current procedure. |
+| Validate canonical models with a hand-written loader. | Adopted 2026-09-10. JSON Schema documents the contract; reject unknown keys and broken references. |
+| Use ddd-domain-modeling as the dedicated stage. | Adopted 2026-09-11 to satisfy plugin-prefix constraints. |
+| Separate syntax checks from semantic review. | Deterministic output does not prove meaning; do not claim all invariants or recovery paths are verified. |
+| Use English for runtime instructions and maintain paired reader documentation. | knowledge/sensors/stages/contributions are English-only. Other plugin docs and guides have English .md and Japanese .ja.md bodies. aidlc/ records remain Japanese. |
 
-## 2026-09-13の仕様整理
+## Specification cleanup on 2026-09-13
 
-失敗時の保証をドメイン操作、単一集約保存、結果不明、複数集約の途中失敗へ分けた。途中コミットを認めながらユースケース全体の無変更を保証する旧記述は撤回した。
+Separated failure guarantees into domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Withdrew the earlier claim of no whole-use-case changes while allowing partial commits.
 
-upsertだけによる冪等性保証、直列性だけで十分とする直前ID保持、未参照の作成残骸を一律に無害とする説明を訂正した。初回の状態変更成功と新規イベント0件の重複成功を区別し、戻り値の具体型はT-03へ残した。
+Corrected claims that upsert alone guarantees idempotency, serialization makes one retained ID sufficient, or unreferenced creation remnants are always harmless. Distinguished initial state-changing success from duplicate success with no new events. Concrete return types remain T-03 work.
 
-サーガの実装可能性をアクターモデルに限定する説明、非正規化イベントだけを理由にRDBを除外する説明、DynamoDB Streamsの順序保証を集約全体へ広げる説明を訂正した。根拠と条件は設計3文書に記載している。
+Corrected actor-only saga claims, exclusion of relational databases solely for denormalized events, and extension of DynamoDB Streams ordering to an entire aggregate. The three layer designs provide conditions and sources.
 
-これは文書の整合化であり、ステージ・contribution・センサーの全修正が終わったという記録ではない。
+This records document alignment, not completion of every stage, contribution, and sensor change.
 
-## 現在も残す実装判断
+## Retained implementation decisions
 
-| 日付 | 判断 | 現在の意味 |
+| Date | Decision | Current meaning |
 |---|---|---|
-| 2026-09-11 | parseを内容ハッシュで共有し、SyntaxTreeのファイル名は要求ごとに付ける | 同じ内容の別ファイルを混同しない |
-| 2026-09-11 | CQRSの相互依存禁止を同一層の許可より先に判定 | 同じ層でもcommand/query間の禁止を検出する |
-| 2026-09-11 | trait抽出、Cargoの外部依存、Rustゴールデンケースを追加 | 規則mと依存方向等の入力を増やす。全Rust構文を保証するものではない |
-| 2026-09-11 | 導入スクリプトとprovenanceを追加 | 新規導入・更新のコードは存在するが、現在の一連の実機検証はT-05で行う |
+| 2026-09-11 | Cache parsing by content hash and attach a filename to SyntaxTree per request. | Do not confuse separate files with identical content. |
+| 2026-09-11 | Apply CQRS cross-side prohibition before same-layer permission. | Detect forbidden command/query edges even within the same layer. |
+| 2026-09-11 | Add trait extraction, Cargo external dependencies, and Rust golden cases. | Expand inputs for m and dependency checks without claiming full Rust coverage. |
+| 2026-09-11 | Add installation scripts and provenance. | Fresh-install/update code exists; current end-to-end host verification belongs to T-05. |
 
-## 失効した判断と、その後の扱い
+## Superseded decisions
 
-| 旧判断 | 現在の扱い |
+| Earlier decision | Current treatment |
 |---|---|
-| functional-design / infrastructure-designからproducesを外せば、パス一致で検査できる | 承認処理は登録済み成果物だけを対象とするため不十分。登録済みレビュー成果物の必須セクションへ置き換えた |
-| 2.8.1向けのCodex bridgeとパッチを復元する | 現行2.8.2への適用手順としては廃止。残るコード・テストの整理はT-04 |
-| kimi・opencodeを含む4環境を配布対象とする | 対象外2環境を復旧しない。旧実測を現在の対応保証には使わない |
-| auditを無視すれば実行状態を失わない | 現行のコミット方針と不一致。監査データの不要性も一般化しない |
-| 削除済み参照サブモジュールを読み取り専用で維持する | 対象自体がないため手順と保護確認の記録を削除 |
-| 既存の機能設計記録だけを現在の唯一の正とする | 現在の作業コピーに存在する設計文書・実装・実測へ参照を移す |
+| Removing produces from functional-design/infrastructure-design is safe because paths still match sensors. | Insufficient: approval enumerates only registered artifacts. Replaced with required sections in registered review artifacts. |
+| Restore the 2.8.1 Codex bridge and patches. | Retired as a current 2.8.2 procedure. T-04 tracks remaining code/tests. |
+| Distribute to four harnesses including Kimi and opencode. | Do not restore excluded routes or use historical measurements as current support guarantees. |
+| Ignoring audit data preserves execution state. | Conflicts with current commit policy; do not generalize that audit data is unnecessary. |
+| Maintain the deleted reference submodule read-only. | Removed the procedure and protection evidence because the target no longer exists. |
+| Treat old functional-design records as the sole current authority. | Refer to current design documents, implementation, and measurements in this working copy. |
+| Consolidate all reader documentation into Japanese and replace translations with redirects. | Superseded by the user's paired English/Japanese documentation policy; each edition has a full body. |
 
-旧Codex実機検証は[過去の検証記録](codex-host-verification.md)から参照できる。2026-09-11の4環境成功等の値は当時の記録であり、現在の成功を示さない。現行の測定値は[現状評価](current-state-assessment.md)に一本化する。
+The [historical Codex page](codex-host-verification.md) links old host evidence. Values such as four-harness success on 2026-09-11 describe that time only. Current measurements belong in the [assessment](current-state-assessment.md).
 
-## T-01の成果物接続
+## T-01 artifact integration
 
-標準の成果物名に従い、正規YAMLをMarkdownへ包んで配布する。ユースケース・層構造は既存レビュー成果物の必須セクションとし、Unit種別を拡張しない。通常承認の接続を検証したが、標準の単独完了は成果物なしでも完了するため別課題として残す。理由と検証範囲は[成果物契約](artifact-contract.md)に記載した。
+Wrap canonical YAML in Markdown using standard artifact names. Embed use-case and layer declarations in required sections of existing review artifacts without broadening their Unit kinds. Normal approval integration is verified; standard standalone completion can still finish without artifacts. See the [artifact contract](artifact-contract.md).
 
-## T-02のRust判定
+## T-02 Rust evaluation
 
-ドメイン層の型名全体を集約扱いせず、正規モデルのroot_elementと明示的なRust型を結び付ける。呼出し先はモジュール・use・単純な型別名・明示された引数やフィールドから照合し、型推論とtraitの実装選択は行わない。曖昧な箇所は注記する。
+Associate canonical root_element with explicit Rust types instead of treating every domain type as an aggregate. Resolve callees through modules, use statements, simple aliases, explicit parameters, and fields. Do not perform type inference or trait implementation selection; note ambiguity.
 
-名前だけのreplay例外を廃止し、集約写像のreplay_methodsへメソッドとイベントIDを記録する。保存方式・配置・所属集約・イベント引数型が一致する場合だけ規則bの例外とする。既存モデルのスキーマは変更せず、メソッド本体の意味的な正しさはレビュー・テストに残す。[判定契約](rust-sensor-contract.md)を参照。
+Replace name-only replay exemptions with method/event IDs in aggregate mapping replay_methods. Rule b permits the exception only when persistence mode, placement, owning aggregate, and event parameter type agree. Keep the model schema unchanged; review and test body semantics. See the [evaluation contract](rust-sensor-contract.md).
 
-## 2026-09-13: 業務語彙によるパッケージング
+## 2026-09-13: Packaging by business vocabulary
 
-T-07では共有ナレッジ、既存ステージへの追加手順、設計・Rustセンサーを一体で実装した。物理配置はdomain-designのdomain_packagesが所有し、正規モデルへ混ぜない。技術分類の予約名と宣言・実配置の照合は機械検査、命名と責務の意味はレビューに分担する。将来のパッケージを先行宣言できるが、実モジュールの未宣言は拒否する。[契約と適用範囲](domain-packaging-design.md)を参照。
+T-07 implements shared knowledge, existing-stage instructions, and design/Rust checks together. domain-design owns physical placement in domain_packages; it does not enter the canonical model. Automated checks cover reserved technical names and declaration/layout correspondence; review assesses naming and responsibilities. Future packages may be declared early, but actual undeclared modules are rejected. See the [contract and scope](domain-packaging-design.md).

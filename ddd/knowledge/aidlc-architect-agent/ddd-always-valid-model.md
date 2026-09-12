@@ -1,52 +1,52 @@
 # Always Valid Domain Model
 
-更新: 2026-09-13。設計規約と機械検査の範囲を分けて記す。規則IDは継続使用する。
+Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
-DDD設計とコード生成で用いる規約。検査名の記載は、その規約全体の機械的保証を意味しない。通常承認のDDD検査は接続済み。単独完了の標準側ガードには不足がある。
+Conventions for DDD design and code generation. A check name does not imply that the entire convention is enforced automatically. DDD checks are connected to normal approval admission; the framework still has a gap in standalone completion guards.
 
 ## Rules
 
-| Rule ID | 規約 | 現在の検証範囲 |
+| Rule ID | Convention | Current coverage |
 |---|---|---|
-| K.always-valid-model.1 | 生成時に不変条件を満たし、無効な状態を外部へ渡さない。 | レビュー・動作テスト。c/nは生成形状の一部のみ |
-| K.always-valid-model.2 | 表現より業務上の操作を先に定義する。 | 設計規約 |
-| K.always-valid-model.3 | Entity、VO、コレクション、イベントの役割を区別する。 | 設計規約 |
-| K.always-valid-model.4 | 業務語彙で命名し、集約IDの意味を明示する。 | 設計規約。ID文法だけはローダーで検査 |
-| K.always-valid-model.5 | 完全コンストラクタで不変条件を検証する。 | レビュー・動作テスト。全前提条件の意味検査は未実装 |
-| K.always-valid-model.6 | 業務上の意味を持つプリミティブを専用型へ包む。 | 設計規約 |
-| K.always-valid-model.7 | 他集約をオブジェクトとして埋め込まず、IDで参照する。 | レビュー。規則bによる強制という旧表記は訂正 |
-| K.always-valid-model.8 | 業務操作を集約へ置けない場合にDomain Serviceを検討する。 | 設計規約 |
-| K.always-valid-model.9 | 安定IDは `<kind>.<segments>` の文法に従う。 | ローダーのID文法検査 |
+| K.always-valid-model.1 | Satisfy invariants at construction and never expose invalid state. | Review and behavior tests. c/n cover only some construction shapes. |
+| K.always-valid-model.2 | Define business operations before choosing representations. | Design convention. |
+| K.always-valid-model.3 | Distinguish the roles of Entities, value objects, collections, and events. | Design convention. |
+| K.always-valid-model.4 | Use ubiquitous language and explain the meaning of aggregate IDs. | Design convention. The loader checks only ID grammar. |
+| K.always-valid-model.5 | Validate invariants in a full constructor. | Review and behavior tests. Complete semantic checking of preconditions is not implemented. |
+| K.always-valid-model.6 | Wrap primitives that have business meaning in dedicated types. | Design convention. |
+| K.always-valid-model.7 | Reference other aggregates by ID instead of embedding their objects. | Review. The earlier claim that rule b enforces this was corrected. |
+| K.always-valid-model.8 | Consider a Domain Service when a business operation cannot belong to an aggregate. | Design convention. |
+| K.always-valid-model.9 | Use the `<kind>.<segments>` grammar for stable IDs. | Loader ID grammar checks. |
 
 ## Rationale
 
-不変条件の記述、生成形状の検査、動作上の保証を区別する。現在のセンサーは全不変条件の実装を証明しない。モデルとコードの対応が不明なら、検査済みと表示せずレビューへ回す。
+Distinguish invariant declarations, construction-shape checks, and behavioral guarantees. Current sensors do not prove that every invariant is implemented. If model-to-code correspondence is unclear, send it to review rather than marking it checked.
 
 ## Examples
 
-開発リポジトリの実在する検査入力は、[設計ケース](../../tests/golden/design/cases.ts)と[Rustケース](../../tests/golden/rust/cases.ts)にある。ケース名で探す。これらは検査入力であり、完成した業務アプリケーションの実装例ではない。対象構造が存在しない正常ケースは、その構造の正しさを証明しない。
+The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../tests/golden/rust/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
 
-配布先にはtestsやdocsが同梱されないため、リンクは開発リポジトリでの参照用。必要な規約は本ファイル本文に保持する。
+The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 
 ## Retired rules
 
-規則IDの廃止なし。2026-09-13に検査範囲の過大表記と誤った技術前提を訂正した。機械検査がない規約もレビュー上の義務として残せる。
+No rule IDs have been retired. Overstated coverage and incorrect technical assumptions were corrected on 2026-09-13. Conventions without automated checks may remain review obligations.
 
 ## Sources
 
-- [現行設計](../../docs/domain-layer-design.md)
-- [実測と既知の不具合](../../docs/current-state-assessment.md)
-- [残作業](../../docs/completion-tasks.md)
+- [Current design](../../docs/domain-layer-design.md)
+- [Measurements and known issues](../../docs/current-state-assessment.md)
+- [Remaining work](../../docs/completion-tasks.md)
 
-## 方針が衝突した場合
+## Resolving policy conflicts
 
-プロジェクトの明示方針をプラグインの規約で自動上書きしない。衝突箇所、適用範囲、採用理由を記録して解決する。旧記録のC-1〜C-4は比較観点として保持し、一律の優先順位には使わない。
+Do not automatically override explicit project policy with plugin conventions. Record the conflict, its scope, and the reason for the resolution. Retain historical C-1 through C-4 as comparison criteria, not a blanket precedence order.
 
-| 旧ID | 比較する内容 | 現在の扱い |
+| Historical ID | Comparison | Current treatment |
 |---|---|---|
-| C-1 | リポジトリの動詞・検索 | save等の別規約との差を明示する。命名例を技術上の不可能と扱わない |
-| C-2 | 大きな集約から始めるか、イベントから導くか | このプラグインはイベントから候補を導く。既存モデルの変更では根拠をレビューする |
-| C-3 | Entityの可変性 | Rustの排他的な業務変更は許す。可変性だけでAlways Validを否定しない |
-| C-4 | 保存方式とイベント | 方式は集約ごとに選ぶ。状態保存でもイベント利用を許す |
+| C-1 | Repository verbs and queries | Explain differences from conventions such as save. Do not present a naming example as a technical impossibility. |
+| C-2 | Start with a large aggregate or derive it from events | This plugin derives candidates from events. Review the justification when changing an existing model. |
+| C-3 | Entity mutability | Allow exclusive business mutations in Rust. Mutability alone does not invalidate Always Valid design. |
+| C-4 | Persistence and events | Choose persistence per aggregate. State-sourced aggregates may also use events. |

@@ -1,141 +1,155 @@
-# DDDプラグインの現状評価
+# DDD plugin implementation assessment
 
-調査日: 2026-09-13。対象は `ddd/` と、この作業コピーのAI-DLC 2.8.2。測定時のHEADは `97a6244`、Bunは `1.3.13`。
+English | [Japanese](current-state-assessment.ja.md)
 
-**中核は実装されているが、承認時検査の接続とRustの判定精度に不具合が残る。** 本書は実測と根拠を保持する。現行の設計規約は[文書一覧](README.md)、実装の進行は[残作業](completion-tasks.md)を参照する。
+Assessment date: 2026-09-13. Scope: `ddd/` and AI-DLC 2.8.2 in this working copy. Measured HEAD: `97a6244`; Bun: `1.3.13`.
 
-調査後に設計・案内・ナレッジを整理したが、この初回調査時点ではセンサーや生成手順のコードは修正していなかった。T-01・T-02・T-07の後続修正は末尾へ追記する。以下の実測値は文書整理前の値であり、修正後の再測定と混同しない。
+**At the initial assessment, the core existed but approval integration and Rust evaluation had defects.** This document preserves measurements and evidence. See the [document index](README.md) for current conventions and [remaining work](completion-tasks.md) for progress.
 
-## 1. モデルからコード検査までの骨格は存在する
+Design, guidance, and knowledge were cleaned up after the assessment. Sensor and generation code had not yet changed at that initial point. Later T-01, T-02, and T-07 results are appended below. Do not confuse baseline measurements with post-fix results.
 
-専用ステージ1本、contribution 4本、設計センサー6本、Rustセンサー3本、ナレッジ8本を持つ。手書きの正規モデルローダー、ID・系譜・参照解決、Cargoの層判定、tree-sitterのRust解析、配布・導入スクリプトも存在する。
+## 1. The model-to-code inspection structure exists
 
-実体は[ステージ](../stages/inception/ddd-domain-modeling.md)、[追加手順](../contributions/)、[スキーマ](../tools/ddd/lib/schema/)、[解析](../tools/ddd/lib/rust/analyzer.ts)、[規則](../tools/ddd/lib/rules/rust/evaluators.ts)、[インストーラ](../scripts/install.ts)にある。
+At the baseline, there were one dedicated stage, four contributions, six design sensors, three Rust sensors, and eight knowledge files. A hand-written model loader, ID/lineage/reference resolution, Cargo layer classification, tree-sitter Rust analysis, and distribution/installation scripts existed.
 
-## 2. 承認時検査には接続不良がある
+See the [stage](../stages/inception/ddd-domain-modeling.md), [contributions](../contributions/), [schema](../tools/ddd/lib/schema/), [analyzer](../tools/ddd/lib/rust/analyzer.ts), [rules](../tools/ddd/lib/rules/rust/evaluators.ts), and [installer](../scripts/install.ts).
 
-### F-01: 正規モデルの論理名と実ファイル名が不一致
+## 2. Approval integration defects
 
-一時コピーへCodex用プラグインをcomposeし、生成後のグラフと[artifactFilename](../../.codex/tools/aidlc-artifact-vocabulary.ts)の解決結果を確認した。
+### F-01: Canonical model logical and physical names disagree
 
-| 論理名・指定元 | 実際の解決名・要求名 |
+Composed the Codex plugin into a disposable copy and compared the generated graph with [artifactFilename](../../.codex/tools/aidlc-artifact-vocabulary.ts).
+
+| Logical name or caller | Resolved or requested filename |
 |---|---|
 | `ddd-domain-model` | `ddd-domain-model.md` |
 | `ddd-domain-model-yaml` | `ddd-domain-model-yaml.md` |
-| ステージ本文と下流読込み | `domain-model.md`、`domain-model.yaml` |
-| モデル完全性センサー | `**/ddd-domain-modeling/domain-model.yaml` |
+| Stage instructions and downstream readers | `domain-model.md`, `domain-model.yaml` |
+| Model completeness sensor | `**/ddd-domain-modeling/domain-model.yaml` |
 
-本文どおりに生成すると完了時の存在確認と食い違い、解決名どおりに生成するとセンサーの一致条件に合わない。生成・参照・レビュー・検査を一体で修正する必要がある。
+Following the prose failed the completion existence check; following resolved names missed the sensor pattern. Generation, references, review, and checks needed a coordinated fix.
 
-### F-02: ユースケース宣言と層構造宣言が未登録
+### F-02: Use-case and layer declarations are unregistered
 
-両contributionは文書生成を指示するが `produces` に登録しない。[existingDeclaredArtifactPaths / fireGateSensors](../../.codex/tools/aidlc-state.ts) は登録済みの既存ファイルだけを承認時検査へ渡す。未登録ファイルは単に置いても検査されず、`--artifacts` でも補えない。
+Both contributions instructed generation without registering produces. [existingDeclaredArtifactPaths / fireGateSensors](../../.codex/tools/aidlc-state.ts) passes only existing registered artifacts into approval checks. Merely placing unregistered files does not inspect them, and `--artifacts` does not compensate.
 
-| compose後のステージ | DDDセンサーに一致する登録済み成果物 |
+| Composed stage | Registered artifacts matching DDD sensors |
 |---|---|
-| ddd-domain-modeling | 0件 |
-| domain-design | components.md、ddd-aggregate-mapping.md |
-| functional-design | 0件 |
-| infrastructure-design | 0件 |
+| ddd-domain-modeling | None |
+| domain-design | components.md, ddd-aggregate-mapping.md |
+| functional-design | None |
+| infrastructure-design | None |
 
-これはcompose後のデータと承認コードの照合であり、実際に承認を最後まで実行した検証ではない。T-01で欠落・不正・正常の統合検証を追加する。
+This compared composed data and approval code, not a complete approval run. T-01 was assigned missing/invalid/valid integration tests.
 
-## 3. Rustの追加ケースで誤検知と見逃しを再現した
+## 3. Additional Rust inputs reproduced false positives and misses
 
-既存の[ケース表](../tests/golden/rust/cases.ts)を複製し、[ランナー](../tests/golden/runner.ts)で一時ディレクトリから実センサースクリプトを呼んだ。
+Duplicated existing [case inputs](../tests/golden/rust/cases.ts) and used the [runner](../tests/golden/runner.ts) to execute real sensor scripts in temporary directories.
 
-| ID | 入力 | 実測 | 原因 |
+| ID | Input | Observation | Cause |
 |---|---|---|---|
-| F-03 | 値型Amountをexecuteの引数にする | hでblocking | ドメイン層の型名を集約と区別していない |
-| F-04 | PaymentPortのport.execute()を呼ぶ | iでblocking | executeという名前だけで別ユースケースと判定 |
-| F-05 | Invoiceのstructと未宣言set_amountのimplを別ファイルに分け、両方を申告 | 所見なし | 同一ファイル内のstructとimplしか結び付けない |
-| F-06 | 未宣言の任意代入をapplyと命名する | 所見なし | 名前だけでreplay例外と判定 |
+| F-03 | Value type Amount passed to execute | Blocking h | Domain type names were not distinguished from aggregates. |
+| F-04 | PaymentPort port.execute() | Blocking i | The name execute alone was treated as another use case. |
+| F-05 | Invoice struct and undeclared set_amount impl in separate claimed files | No finding | Only structs and impls in the same file were joined. |
+| F-06 | Arbitrary undeclared assignment named apply | No finding | Replay exemption depended only on the method name. |
 
-F-03/F-04は[evaluators.ts](../tools/ddd/lib/rules/rust/evaluators.ts)のruleH/ruleI、F-05/F-06は[symbols.ts](../tools/ddd/lib/rules/rust/symbols.ts)の収集処理とclassifyMutatorが根拠。T-02で回帰テストにする。
+F-03/F-04 came from ruleH/ruleI in [evaluators.ts](../tools/ddd/lib/rules/rust/evaluators.ts); F-05/F-06 from collection and classifyMutator in [symbols.ts](../tools/ddd/lib/rules/rust/symbols.ts). T-02 was assigned their regressions.
 
-再現時は、F-03にviolation-hを使い、ドメイン型を `pub struct Amount { value: i64 }`、引数をAmountに変更した。F-04はviolation-iにPaymentPort traitとexecuteを置いた。F-05はclean-domainへ `mod operations;` と別ファイルの代入メソッドを追加し、source-manifestにも追記した。F-06はclean-domainに任意代入のapplyを定義した。
+For F-03, violation-h was changed to `pub struct Amount { value: i64 }` and an Amount argument. F-04 added PaymentPort and execute to violation-i. F-05 added `mod operations;`, a separate assignment method, and its source-manifest claim to clean-domain. F-06 added an apply method with arbitrary assignment to clean-domain.
 
-## 4. 文書上の過大な保証は訂正した
+## 4. Overstated documentation guarantees were corrected
 
-### F-07: ナレッジの強制範囲
+### F-07: Knowledge enforcement claims
 
-調査時のナレッジは、全不変条件の検証を規則c、他集約の埋め込み禁止をb、decide/apply分離をcが強制すると記載していた。現在の検査処理はそれぞれの意味を保証しない。
+Baseline knowledge claimed c verified every invariant, b prohibited embedding other aggregates, and c enforced decide/apply separation. The actual checks did not guarantee those semantics.
 
-文書整理で、規則IDを維持しながら「設計規約」「機械検査の範囲」「レビュー・動作テスト」を区別した。これはナレッジの訂正であり、センサーの検出範囲が増えたという意味ではない。
+Documentation cleanup preserved rule IDs while separating conventions, automated coverage, and review/behavior tests. Correcting knowledge did not itself expand sensor coverage.
 
-旧設計の失敗範囲、upsertと冪等性、直前ID保持、初回成功と重複成功、サーガとアクターモデル、RDB選定、Streamsの順序保証も設計3文書で訂正した。具体的な戻り値やreplay宣言はT-03に残す。
+The three layer designs also corrected failure scope, upsert/idempotency, last-ID retention, first versus duplicate success, sagas and actors, relational database selection, and Streams ordering. At that point concrete return values and replay declarations remained T-03 work.
 
-## 5. 旧タスク表の誤認を訂正した
+## 5. Errors in the old task list were corrected
 
-Fable5.1の旧completion-tasks.mdには、次の問題があった。現在の[タスク表](completion-tasks.md)はこれらを訂正済み。
+Fable5.1's old completion-tasks.md had the following issues; the [current list](completion-tasks.md) corrects them.
 
-| 旧記述・提案 | 確認結果 |
+| Earlier claim or proposal | Finding |
 |---|---|
-| Domain Error必須が未実装 | [loader.ts](../tools/ddd/lib/schema/loader.ts)が空配列をschema.command-no-errorで拒否。[専用テスト](../tests/u1-sensor-foundation.test.ts)も成功 |
-| インストーラ表にcopilot/cursor/kiroがない | 実装済み。対象表の重複と廃止対象の残存は別の問題 |
-| 互換性テストをファイルごと削除 | 同じファイルの現行Claude/Codex composeテストは維持する必要がある |
-| audit方針を改めて選ぶ | 現行AGENTS.mdと.gitignoreはコミット方針 |
-| 既存テストを通せば完成に近い | F-01〜F-06の接続と判定の問題が未掲載だった |
+| Domain Error requirement is unimplemented. | [loader.ts](../tools/ddd/lib/schema/loader.ts) rejects an empty list with schema.command-no-error; [dedicated tests](../tests/u1-sensor-foundation.test.ts) pass. |
+| Installer lacks copilot/cursor/kiro. | Already implemented. Duplicate tables and obsolete targets are separate problems. |
+| Delete the entire compatibility test file. | Its current Claude/Codex compose tests must remain. |
+| Ask again whether audit data should be committed. | Current AGENTS.md and .gitignore already require commits. |
+| Passing existing tests nearly establishes completion. | F-01–F-06 integration and evaluation problems were missing from the list. |
 
-## 6. 検証結果と限界
+## 6. Baseline verification and limits
 
-| 検証 | 調査時の結果 | 範囲 |
+| Check | Baseline result | Scope |
 |---|---|---|
-| bun run check | Biome成功、validateはVALID、141成功・20失敗 | 失敗は旧bridgeや削除済み参照先等の前提に依存 |
-| validate警告 | compose hook未同梱1件 | ビルド時に標準hookを注入するため、それ自体は異常ではない |
-| Claude/Codex composeテスト | 両方成功 | 一時コピーへの合成、グラフ搭載、再合成の冪等性 |
-| bun run test:sandbox | kimiビルドで停止 | Claude/Codexビルド後。後続の一括compose・配布物検査には未到達 |
-| bun scripts/verify-dist.ts claude codex | 各62ケース成功 | 再ビルドした配布物内のセンサーを直接実行 |
-| 追加Rust入力 | 誤検知2件・見逃し2件 | F-03〜F-06 |
-| 一時コピーのcompose後グラフ | F-01/F-02確認 | 解決名・センサー一致条件の照合 |
+| bun run check | Biome passed, validate VALID, 141 passed / 20 failed | Failures depend on old bridge/deleted reference assumptions. |
+| validate warning | One absent compose-hook warning | Build injects the standard hook; absence alone is not an error. |
+| Claude/Codex compose tests | Both passed | Disposable composition, graph inclusion, repeat-compose idempotency. |
+| bun run test:sandbox | Stopped at Kimi build | Claude/Codex built; subsequent aggregate compose/distribution checks were not reached. |
+| bun scripts/verify-dist.ts claude codex | 62 cases passed per harness | Direct sensor execution from rebuilt distributions. |
+| Additional Rust inputs | Two false positives and two misses | F-03–F-06. |
+| Graph after disposable compose | Confirmed F-01/F-02 | Filename resolution and sensor-pattern comparison. |
 
-通常ライフサイクルの承認、現在のCodexモデルへのルール転送、インストーラの新規導入・更新・失敗回復は、この調査では検証していない。Rust入力を業務アプリケーションとしてコンパイル・実行する検証もしていない。
+The assessment did not verify normal lifecycle approval, rule delivery to current Codex models, installer fresh/update/failure recovery, or compilation/execution of Rust inputs as business applications.
 
-kimi・opencodeは調査後のユーザー判断で対応対象から外れた。失敗するkimi経路を復旧するのではなく、不要なビルド・検証・導入経路を整理する。完成までの順序と完了条件はT-01〜T-06へ集約した。
+Kimi/opencode were excluded by the user's subsequent decision. Remove unnecessary build, verification, and installation paths rather than repairing Kimi. T-01–T-06 capture the completion sequence and criteria.
 
-## 7. T-01修正後の追記
+## 7. Results after T-01
 
-正規モデルの登録名へファイル名を揃え、追加宣言を既存レビュー成果物の必須セクションに移した。F-01/F-02の通常承認への接続は修正済み。詳細は[成果物契約](artifact-contract.md)に記載した。
+Aligned canonical model filenames with registered names and moved added declarations into required sections of existing review artifacts. F-01/F-02 normal approval integration is fixed; see the [artifact contract](artifact-contract.md).
 
-- Claude/Codexの承認開始処理とUnit適用範囲: 新規統合テスト32件成功。
-- 新しいモデル形式の直接検査: 6件成功。
-- 全体: 179成功・1skip・既存の旧環境依存20件失敗。Biomeとプラグイン検証は成功。
-- 任意実行の単独完了再現テスト: 標準2.8.2が成果物なしでdoneを返すため失敗。通常実行ではこの1件だけskip。
+- Claude/Codex approval admission and Unit applicability: 32 new integration cases passed.
+- New model format: six direct checks passed.
+- Overall: 179 passed, one skipped, 20 existing old-dependency failures. Biome and plugin validation passed.
+- Optional standalone reproduction: failed because standard 2.8.2 returns done without artifacts; normal runs skip this one case.
 
-この追記は通常承認の検査接続の実測であり、実際のモデル実行・人間の承認までの一連の確認ではない。T-01の単独完了保証とT-02以降は未完了である。
+These measurements establish normal approval integration, not complete model execution and human approval. At this checkpoint standalone T-01 and T-02 onward remained incomplete.
 
-## 8. T-02修正後の追記
+## 8. Results after T-02
 
-F-03〜F-06を修正し、型別名、修飾型、フィールド経由の呼出し、trait実装、getter名衝突、シャドーイング、replay宣言の不正ケースも追加した。判定条件と未検査範囲は[Rustセンサー契約](rust-sensor-contract.md)に記載した。
+Fixed F-03–F-06 and added aliases, qualified types, field receivers, trait impls, getter collisions, shadowing, and invalid replay declarations. See the [Rust contract](rust-sensor-contract.md).
 
-- 新規回帰ケース37件成功（Rust34件、設計宣言3件）。
-- 全体は216成功・1skip・既存の旧環境依存20件失敗。Biome・プラグイン構造検証は成功。
-- Claude/Codexの配布物は設計・Rustの各99ケースが成功。
-- `.claude/tools/`・`.codex/tools/` の差分がないことを確認した。
+- 37 new regressions passed: 34 Rust and three design-declaration cases.
+- Overall: 216 passed, one skipped, 20 existing old-dependency failures. Biome and plugin validation passed.
+- Claude/Codex distributions each passed 99 design/Rust cases.
+- No changes under `.claude/tools/` or `.codex/tools/`.
 
-型推論やtraitの実装選択等は保証範囲に含めず、未検査のnoteを直接実行のJSONに残す。T-02の予定した修正は完了し、T-01の標準側制約とT-03以降の残作業は継続する。
+Type inference and trait selection remain outside guarantees; direct JSON records coverage notes. T-02's planned fixes are complete. T-01's framework limitation and subsequent tasks remain.
 
-## 9. T-07修正後の追記
+## 9. Results after T-07
 
-パッケージ名とユビキタス言語の対応をdomain_packagesへ宣言し、ナレッジ・ステージ手順・既存センサーで扱う。技術分類の予約名、宣言の欠落・重複・参照切れ、実モジュールの宣言漏れ、解析不能を検査する。詳細は [パッケージング契約](domain-packaging-design.md)を参照。
+Declared package-to-vocabulary correspondence in domain_packages and integrated it with knowledge, stage instructions, and existing sensors. Checks cover reserved technical names, missing/duplicate declarations, broken references, undeclared actual modules, and unresolved analysis. See the [packaging contract](domain-packaging-design.md).
 
-- 新規直接回帰55件と、Claude/Codexの通常承認開始8件が成功。
-- `bun run check`: 279成功・1skip・20失敗。失敗は既知の旧bridge・削除済みfixture依存の20件で、新規失敗なし。Biome・プラグイン構造検証は成功。
-- Claude/Codexを再ビルドし、配布物の設計・Rust検査が各154ケース成功。
-- 通常の外部mod、mod.rs、path属性、インライン内path、インラインのディレクトリ指定、raw文字列path、path指定先の子modの7構成をrustc 1.95.0でコンパイルして確認した。
-- ナレッジは9本になった。専用ステージ1本、contribution4本、センサー9本は増やしていない。
-- `.claude/tools/`・`.codex/tools/` の差分なし。第三者配布コードを変更していない。
+- 55 new direct regressions and eight Claude/Codex approval cases passed.
+- `bun run check`: 279 passed, one skipped, 20 known old-bridge/deleted-fixture failures; no new failures. Biome and plugin validation passed.
+- Rebuilt Claude/Codex distributions each passed 154 design/Rust cases.
+- rustc 1.95.0 compiled seven representative layouts: external mod, mod.rs, path attribute, path inside inline mod, inline directory override, raw-string path, and child mod inside a path-loaded file.
+- Knowledge increased to nine files; one dedicated stage, four contributions, and nine sensors remained unchanged in count.
+- No third-party changes under `.claude/tools/` or `.codex/tools/`.
 
-rustcで確認したのは代表的な配置の構文・解決であり、全回帰入力を業務アプリケーションとして実行した検証ではない。単独完了の標準側制約、実際のモデル実行と新規導入・更新の確認は残る。T-07は完了し、T-03〜T-06を継続する。
+rustc verified representative layout syntax/resolution, not every regression input as an executable business application. Framework standalone limitations, actual model execution, and installation/update verification remain. T-07 is complete; T-03–T-06 continue.
 
-## 10. サンドボックス一括検証
+## 10. Combined sandbox verification
 
-`build:all`、`test:sandbox`、`test:dist`をClaude/Codexへ限定し、サンドボックスの末尾に通常承認開始の統合テストを追加した。`cd ddd && bun run test:sandbox` が終了コード0で完走した。[実測結果](evidence/sandbox-verification.json)を保存している。
+Limited build:all, test:sandbox, and test:dist to Claude/Codex and appended normal approval integration tests. `cd ddd && bun run test:sandbox` completed with exit code 0. [Evidence](evidence/sandbox-verification.json) is retained.
 
-- 両環境のビルド成功。
-- 一時コピーへのcomposeは両方CLEAN。drops 0、グラフ生成成功、再composeの冪等性を確認。
-- 配布物の検査はClaude/Codexそれぞれ154件成功。
-- 通常承認開始の統合テストは40成功・1skip・0失敗。skipは既知の標準側単独完了ガードの任意再現ケース。
-- Biomeとプラグイン構造検証も成功。第三者のフレームワーク配布コードに差分なし。
+- Both harness builds passed.
+- Both disposable compositions were CLEAN: zero drops, compiled graphs, and idempotent repeat compose.
+- Distribution checks passed all 154 cases per harness.
+- Normal approval tests: 40 passed, one skipped, zero failed. The skip is the known optional standalone-guard reproduction.
+- Biome and plugin validation passed. Third-party framework distributions were unchanged.
 
-これはプラグインのビルド・合成・センサーと承認接続のサンドボックス検証である。実際のモデル実行やインストーラの新規導入・更新の実証とは区別する。全体テストに残る旧依存20件はこの検証では変更していない。
+This verifies plugin build, composition, sensors, and approval integration in a sandbox. It does not establish actual model execution or installer fresh/update behavior. The 20 old-dependency failures in the full suite were not changed by this verification.
+
+## 11. Results after documentation language alignment
+
+Runtime knowledge, sensors, stages, and contributions are English-only. All 18 reader documents have full English and Japanese editions, with language navigation and links to the matching edition. Japanese records under aidlc/ and third-party framework files are unchanged.
+
+- No Japanese text remains in the four runtime directories; all local document links resolve.
+- Knowledge rule IDs and runtime frontmatter are unchanged.
+- Six declaration-language tests pass: English and existing Japanese markers are accepted; cross-language duplicates are rejected.
+- The full check has 285 passes, one skip, and the same 20 old-dependency failures. Biome and plugin validation pass.
+- The sandbox completes with exit code 0: both harnesses build and compose, each distribution passes 154 cases, and approval integration has 40 passes, one skip, and zero failures. The main fixtures now exercise English section markers.
+
+The skipped standalone reproduction and the unverified installation/model-execution scope remain as described above.

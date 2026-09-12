@@ -1,35 +1,42 @@
 # Changelog
 
-All notable changes to the `ddd` plugin are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+English | [Japanese](CHANGELOG.ja.md)
 
-## 未リリース — T-07のパッケージング（2026-09-13）
+All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-- ユビキタス言語に基づく命名と技術分類の禁止を共有ナレッジ・設計・生成手順へ追加。
-- 集約写像のdomain_packagesを必須化し、用語・モデル参照・配置理由を検査。
-- 影響するドメインクレートのモジュールをたどり、空・インライン・path属性を含む宣言と実配置を照合。
-- Claude/Codexの通常承認テストを追加。移行方法と限界は [契約](docs/domain-packaging-design.md)へ記載。
+## Unreleased — Documentation languages (2026-09-13)
 
-## 未リリース — T-02のRust判定（2026-09-13）
+- Standardize knowledge, sensors, stages, and contributions on English.
+- Provide full English .md and Japanese .ja.md reader documentation. Keep aidlc/ records Japanese.
+- Use English declaration section markers while preserving compatibility with existing Japanese markers; reject duplicate sections across languages.
 
-- 集約とVO、具象ユースケースとポートを明示型で区別し、getter名の衝突も解消。
-- 別ファイル・traitのimplを収集し、変更メソッドの所在を報告。
-- replay_methodsによるreplay契約を追加し、名前だけの例外を廃止。
-- 型照合の限界をnoteと[判定契約](docs/rust-sensor-contract.md)へ明記。フレームワーク配布コードの変更なし。
+## Unreleased — T-07 packaging (2026-09-13)
 
-## 未リリース — T-01の通常承認接続（2026-09-13）
+- Add ubiquitous-language naming and technical-classification prohibitions to shared knowledge and design/generation instructions.
+- Require domain_packages in aggregate mappings and check terms, model references, and placement rationale.
+- Follow affected domain crates' modules, including empty/inline modules and path attributes, to match declarations and actual layout.
+- Add Claude/Codex normal approval tests. Document migration and limits in the [contract](docs/domain-packaging-design.md).
 
-- 正規モデルを標準の登録ファイル名へ統一し、ラベル付きYAMLを読み込む。
-- 追加宣言を既存レビュー成果物の必須セクションへ移し、欠落も承認開始時に拒否する。
-- Claude/Codexの統合テストを追加。単独完了の標準側の不足は別途再現・記録。
+## Unreleased — T-02 Rust evaluation (2026-09-13)
 
-## 未リリース — 文書整理（2026-09-13）
+- Distinguish aggregates from value objects and concrete use cases from ports using explicit types; resolve getter-name collisions.
+- Collect cross-file and trait impls and report mutation-method locations.
+- Add replay_methods contracts and remove name-only exemptions.
+- Document type-matching limits in notes and the [evaluation contract](docs/rust-sensor-contract.md), without modifying framework distributions.
 
-- 設計規約・実測・残作業を分離し、[文書一覧](docs/README.md)を追加。
-- kimi・opencodeを対応対象から除外する方針を反映。コードの配布経路整理はT-04に残る。
-- 失敗・再実行・イベント・RMUの説明と、ナレッジの検査範囲を訂正。
-- 重複翻訳を案内へ統合し、削除済み参照元の保護手順を廃止。
-- 以下の0.1.0欄は当時の実装履歴。特に成果物登録を外した判断は、現在の承認接続を保証しない。[現状評価](docs/current-state-assessment.md)を参照。
+## Unreleased — T-01 normal approval integration (2026-09-13)
+
+- Align canonical models with standard artifact names and read labelled YAML blocks.
+- Move added declarations into required sections of existing review artifacts; reject missing declarations at approval admission.
+- Add Claude/Codex integration tests; reproduce and document the standalone framework gap separately.
+
+## Unreleased — Documentation cleanup (2026-09-13)
+
+- Separate conventions, measurements, and remaining work; add the [document index](docs/README.md).
+- Record the policy excluding Kimi/opencode. Remaining distribution-route cleanup belongs to T-04.
+- Correct failure/re-execution/event/RMU explanations and knowledge coverage claims.
+- Initially consolidated duplicate translations into redirect pages and retired protection procedures for the deleted reference source. The language policy above supersedes the redirect decision.
+- The 0.1.0 section below preserves implementation history. In particular, removing artifact registration did not establish current approval integration; see the [assessment](docs/current-state-assessment.md).
 
 ## [0.1.0] - 2026-09-11
 

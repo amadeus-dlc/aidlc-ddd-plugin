@@ -1,64 +1,68 @@
-# DDD成果物と承認時検査の契約
+# DDD artifact and approval-check contract
 
-更新: 2026-09-13、T-01のプラグイン側修正。標準AI-DLC 2.8.2の成果物名解決と既存のUnit種別を使う。フレームワーク本体へのパッチは追加していない。
+English | [Japanese](artifact-contract.ja.md)
 
-## 正規データと説明を登録済みファイルへ揃える
+Updated: 2026-09-13. T-01 uses standard AI-DLC 2.8.2 artifact naming and existing Unit kinds. No framework patch was added.
 
-| ステージ | 論理成果物 | ファイルと内容 |
+## Align canonical data and explanations with registered files
+
+| Stage | Logical artifact | File and content |
 |---|---|---|
-| ddd-domain-modeling | ddd-domain-model-yaml | `ddd-domain-model-yaml.md` のラベル付きYAMLブロック1つが正規データ |
-| ddd-domain-modeling | ddd-domain-model | `ddd-domain-model.md` が人間向けの説明 |
-| domain-design | ddd-aggregate-mapping | `ddd-aggregate-mapping.md` のYAMLブロック1つが集約写像 |
-| functional-design | functional-spec（既存） | `functional-spec.md` 内の `## DDD ユースケース宣言` にYAMLブロック1つ |
-| infrastructure-design | cicd-pipeline（既存） | `cicd-pipeline.md` 内の `## DDD 層構造宣言` にYAMLブロック1つ |
+| ddd-domain-modeling | ddd-domain-model-yaml | One labelled YAML block in `ddd-domain-model-yaml.md` holds canonical data. |
+| ddd-domain-modeling | ddd-domain-model | `ddd-domain-model.md` is the human-facing explanation. |
+| domain-design | ddd-aggregate-mapping | One YAML block in `ddd-aggregate-mapping.md` holds aggregate mappings. |
+| functional-design | functional-spec (existing) | One YAML block under `## DDD Use-case Declarations` in `functional-spec.md`. |
+| infrastructure-design | cicd-pipeline (existing) | One YAML block under `## DDD Layer Structure` in `cicd-pipeline.md`. |
 
-`model_ref` はレコード相対の `inception/ddd-domain-modeling/ddd-domain-model-yaml.md` を使う。YAMLのデータスキーマはversion 1のままで、Markdownは運搬形式である。説明文書とのID・不変条件本文の対応は引き続き検査する。
+Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. The YAML data schema remains version 1; Markdown is its envelope. IDs and invariant statements are still checked against the explanation.
 
-旧 `domain-model.yaml` と `domain-model.md` は自動探索しない。既存成果物を移す場合は、YAMLを新しいデータファイルのコードブロックへ包み、説明を新名へ移し、すべての `model_ref` を更新して再検査する。下位のローダーAPIは生YAMLも読めるが、通常ステージの生成先に旧名を使う根拠にはしない。
+The old `domain-model.yaml` and `domain-model.md` are not searched automatically. To migrate, wrap YAML in the new data file's code block, rename the explanation, update all model_ref values, and revalidate. The lower-level loader also accepts raw YAML, but that does not make the old name a valid generation target.
 
-## 追加宣言を既存成果物の必須セクションにする
+## Embed declarations in required sections of existing artifacts
 
-標準のcontributionは `produces_kinds` を合成できないため、新しい成果物を全Unitへ追加すると既存のレビュー対象の適用範囲と衝突する。独立した宣言ファイルを廃し、登録済みレビュー成果物の内容として組み込んだ。
+Standard contributions cannot compose `produces_kinds`. Adding new artifacts to all Units therefore conflicts with the applicability of existing review outputs. Declarations are embedded in registered review artifacts instead of separate files.
 
-| 必須セクションの所有者 | 適用するUnit種別 | 対象外 |
+| Required section owner | Applicable Unit kinds | Excluded |
 |---|---|---|
 | functional-spec | service / spec / ui / library | packaging |
 | cicd-pipeline | service / ui / packaging / library | spec |
 
-層構造をcicd-pipelineへ置くのは、パイプラインが検証・配布するコンポーネントの境界をレビュー対象に含め、libraryにも同じ契約を適用するためである。インフラ構成全体は従来のinfrastructure-specificationが所有する。
+Layer structure belongs in cicd-pipeline so review includes the boundaries of components verified and distributed by the pipeline, including libraries. The existing infrastructure-specification still owns the overall infrastructure configuration.
 
-対象Unitにユースケースや層構造がなければ、該当リストを明示的に空配列とし、理由を説明する。キー欠落や配列以外の値を空配列へ読み替えない。必須セクションの欠落・重複、YAMLの欠落・未閉鎖・複数ブロックも拒否する。他セクションのYAML例を誤って正規宣言に使わない。
+If an applicable Unit has no use cases or layer structure, explicitly declare an empty list and explain why. Do not interpret a missing key or non-array value as an empty list. Reject missing or duplicate required sections and missing, unclosed, or multiple YAML blocks. Do not mistake examples in other sections for canonical declarations.
 
-## 集約写像にパッケージ宣言を含める
+English section markers are used in the English generation instructions. For compatibility, the parser also accepts the existing Japanese markers for use-case declarations and layer structure. Exactly one matching section is required across both languages; English and Japanese copies in one artifact are duplicates. Artifact prose follows project policy, and existing Japanese records under `aidlc/` do not need rewriting.
 
-T-07で `ddd-aggregate-mapping.md` のYAMLに `domain_packages` を必須項目として追加した。各パッケージのcrate、module、term、model_refs、rationaleを記録し、root・親階層・集約配置も宣言する。既存成果物も追記して再検査する。モデル設計をSKIPしたことだけを理由に、コード側のパッケージ宣言を免除しない。形式と検査範囲は [パッケージング契約](domain-packaging-design.md)を参照。
+## Include package declarations in aggregate mappings
 
-## 通常の承認開始で欠落を検出する
+T-07 makes `domain_packages` required in the YAML of `ddd-aggregate-mapping.md`. Record crate, module, term, model_refs, and rationale for each package, including roots, ancestors, and aggregate placements. Update existing artifacts and revalidate them. Skipping domain modeling alone does not exempt code from package declarations. See the [packaging contract](domain-packaging-design.md).
 
-モデル完全性は、説明・データの両ファイルを発火対象にする。片方が残れば他方の欠落を検出し、両方なければ標準の成果物存在ガードが拒否する。
+## Detect missing artifacts at normal approval admission
 
-写像・ユースケース・層構造のセンサーは、そのステージの登録済み成果物から発火し、宣言を所有するファイルへ解決して検査する。例えばfunctional-specがなくtraceabilityだけが存在する場合も、宣言の欠落を検出する。`matches` は標準ディスパッチャの制限に合わせ、複数の波括弧展開を重ねない。
+Model completeness fires for both explanation and data files. If either survives, it detects the other's absence; if both are missing, the framework artifact-existence guard rejects admission.
 
-センサーの起点になるのは標準処理が列挙する登録済み成果物である。任意のファイルを置くだけでは発火しない。
+Mapping, use-case, and layer sensors fire from registered artifacts of their stage, resolve the declaration-owning file, and inspect it. For example, a surviving traceability file still exposes a missing functional-spec declaration. The `matches` patterns avoid multiple nested brace expansions because of standard dispatcher limitations.
 
-## 単独完了には標準側の不足が残る
+The entry points are registered artifacts enumerated by the standard process. An arbitrary file does not trigger these checks merely by existing.
 
-AI-DLC 2.8.2の `report --single --result completed` は、CodeKB以外の一般成果物の存在やゲートセンサーを確認しない。DDD成果物がゼロでも `kind: done` を返すことを、一時プロジェクトの再現テストで確認した。
+## Standalone completion still has a framework gap
 
-そのため単独実行では、ステージ本文の完了前検査を明示的に実行する必要がある。検査を省略した `report --single` 自体をDDDプラグインだけで拒否できるとは主張しない。この機械的保証は標準側の別課題であり、T-01全体は未完了とする。
+AI-DLC 2.8.2 `report --single --result completed` does not check general artifacts or gate sensors other than CodeKB. A disposable-project regression confirmed that it returns `kind: done` with no DDD artifacts.
 
-再現コマンド（現行2.8.2では失敗が期待される）:
+Standalone runs must explicitly execute the pre-completion sensor checks in stage instructions. The DDD plugin alone cannot claim to reject a `report --single` that skips them. This automated guarantee remains a separate framework issue, so T-01 as a whole is incomplete.
+
+Reproduce it with the following command (expected to fail on current 2.8.2):
 
 ```sh
 DDD_VERIFY_FRAMEWORK_SINGLE=1 bun test ddd/tests/t1-gate-integration.test.ts -t 'standard isolated completion'
 ```
 
-通常のテスト実行ではこの上流再現ケース1件をskipし、プラグインの回帰と区別する。標準側が修正されたら同じコマンドの成功を確認して必須検証へ移す。
+Normal test runs skip this one upstream reproduction, separating it from plugin regressions. Once the framework is fixed, verify the same command passes and make it required.
 
-## 検証範囲
+## Verification scope
 
-[t1-gate-integration.test.ts](../tests/t1-gate-integration.test.ts) はClaude/Codexへ一時的にcomposeし、実際の `orchestrate report --result awaiting-approval` から検査する。正常・不正・ファイル欠落・セクション欠落・リスト欠落と、Unit種別の適用範囲を確認する。
+[t1-gate-integration.test.ts](../tests/t1-gate-integration.test.ts) composes into disposable Claude/Codex projects and invokes the real `orchestrate report --result awaiting-approval` path. It checks valid, invalid, missing-file, missing-section, missing-list, and Unit-kind cases.
 
-このテストでは無関係なコア文書センサーを除外し、Q&A・レビュー証跡はテスト用設定で省略する。DDDセンサーと成果物ガードは有効なままにする。実際の人間の承認、モデルによる生成、レビューまでの一連の実機検証を代替するものではない。
+These tests exclude unrelated core document sensors and disable Q&A/reviewer evidence through test settings. DDD sensors and artifact guards remain active. This does not replace end-to-end host verification of model generation, review, and human approval.
 
-[t1-model-artifacts.test.ts](../tests/t1-model-artifacts.test.ts) と既存ゴールデンケースは、同じファイル形式でセンサーを直接実行する。配布物も `bun scripts/verify-dist.ts claude codex` で確認する。
+[t1-model-artifacts.test.ts](../tests/t1-model-artifacts.test.ts) and golden cases execute sensors directly with the same file format. Verify distributions with `bun scripts/verify-dist.ts claude codex`.

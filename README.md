@@ -1,18 +1,20 @@
 # aidlc-ddd-plugin
 
-AI-DLCに、集約・不変条件・Domain Primitiveの設計手順と、設計成果物・Rustコードの検査を追加するプラグインです。本体は [ddd/](ddd/README.md) にあります。
+English | [Japanese](README.ja.md)
 
-現在は完成に向けた修正中です。Claude/Codexのサンドボックス検証が成功し、通常承認のDDD検査、Rust判定の修正、業務語彙によるパッケージング検査を実装しました。単独完了の標準側ガードと新規導入・更新の確認には残件があります。[現状評価](ddd/docs/current-state-assessment.md)と[残作業](ddd/docs/completion-tasks.md)を参照してください。
+An AI-DLC plugin that adds design procedures for aggregates, invariants, and Domain Primitives, plus checks for design artifacts and Rust code. The implementation lives in [ddd/](ddd/README.md).
 
-## 提供するもの
+Work toward completion is ongoing. Claude/Codex sandbox verification passes, with normal approval checks, corrected Rust evaluation, and vocabulary-based domain packaging implemented. Framework standalone completion guards and fresh-install/update verification still have outstanding work. See the [assessment](ddd/docs/current-state-assessment.md) and [task list](ddd/docs/completion-tasks.md).
 
-専用ステージ1本、既存ステージへの追加4本、設計センサー6本、Rustセンサー3本、ナレッジ9本を持ちます。設計は同じ正規モデルのIDを参照します。Rust解析には同梱のtree-sitterを使い、解析自体にCargoは不要です。生成したRustアプリケーションのビルド・テストには別途Rust環境が必要です。
+## What it provides
 
-完成時の検証対象はClaude CodeとCodexです。kimi・opencodeは対象外とし、両環境向けカスタムビルドは維持しません。
+One dedicated stage, four contributions to existing stages, six design sensors, three Rust sensors, and nine knowledge files. Designs reference IDs in one canonical model. Bundled tree-sitter handles Rust analysis without Cargo; building and testing generated Rust applications still requires a Rust toolchain.
 
-## 開発を始める
+Completion targets are Claude Code and Codex. Kimi/opencode are excluded, and custom builds for them are not maintained.
 
-Bunと、AI-DLCの開発ツールが導入されたこの作業コピーを使います。参照サブモジュールの取得は不要です。
+## Start development
+
+Use Bun and this working copy with AI-DLC development tools installed. The removed reference submodule is not required.
 
 ```sh
 cd ddd
@@ -21,30 +23,32 @@ bun run validate
 bun run test:sandbox
 ```
 
-サンドボックスはClaude/Codexのビルド、compose、配布物の各154ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/sandbox-verification.json)は成功です。`bun run check` に残る旧環境依存20件の失敗はT-04で管理しています。
+The sandbox builds and composes both harnesses, runs 154 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/sandbox-verification.json) passes. T-04 tracks the 20 old-dependency failures remaining in `bun run check`.
 
-## 利用先への導入
+## Install into a destination project
 
-AI-DLC導入済みの検証用プロジェクトで、まず導入スクリプトの事前確認を行います。
+Start with a dry-run against an AI-DLC-enabled test project:
 
 ```sh
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-Claude Codeでは `--harness claude` を指定します。実際の新規導入・更新・ステージ完了の一連の検証は未完了です。[利用ガイド](docs/usage.md)を確認してください。
+Use `--harness claude` for Claude Code. Full fresh-install, update, and stage-completion verification remains unfinished. See the [usage guide](docs/usage.md).
 
-## 文書と開発
+## Documentation and development
 
-- [文書一覧](ddd/docs/README.md): 設計、判断記録、互換性
-- [プラグイン構成と検証](ddd/README.md)
-- [構成概要](docs/architecture.md)
-- [テストの実行方法](ddd/tests/README.md)
-- [変更履歴](ddd/CHANGELOG.md)
+- [Document index](ddd/docs/README.md): design, decisions, compatibility.
+- [Plugin structure and verification](ddd/README.md).
+- [Architecture overview](docs/architecture.md).
+- [Tests](ddd/tests/README.md).
+- [Changelog](ddd/CHANGELOG.md).
 
-## 問い合わせ
+Runtime knowledge, sensors, stages, and contributions are English-only. Reader documentation has full English `.md` and Japanese `.ja.md` editions. Records under `aidlc/` remain Japanese.
 
-不具合の報告先は[GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues)です。実行したコマンド、AI-DLC/Bunのバージョン、対象環境、再現条件を添えてください。
+## Help
 
-## ライセンス
+Report issues through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues), including commands, AI-DLC/Bun versions, harness, and reproduction conditions.
 
-[MIT](LICENSE)。同梱ライブラリのライセンスは [tree-sitter](ddd/tools/ddd/lib/rust/vendor/) と [Rust文法](ddd/tools/ddd/wasm/LICENSE) を参照してください。
+## License
+
+[MIT](LICENSE). Bundled libraries have licenses under [tree-sitter](ddd/tools/ddd/lib/rust/vendor/) and [Rust grammar](ddd/tools/ddd/wasm/LICENSE).

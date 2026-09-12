@@ -1,12 +1,14 @@
-# 過去のCodex実機検証
+# Historical Codex host verification
 
-このページと下記JSONは、2026年9月の旧Codex連携を調べた履歴である。**現在のAI-DLC 2.8.2でルール転送が動くという証明には使わない。** 現在の対応方針は[互換性](framework-compatibility.md)、再検証は[T-05](completion-tasks.md)を参照する。
+English | [Japanese](codex-host-verification.ja.md)
 
-初期調査では、ホストから届くツール名・暗号化された入力と、当時の転送処理の想定が合わず、子へのルール転送を確認できなかった。その後、旧構成へ独自bridgeを追加した条件で、ワークフロー状態と単独ステージ指定の経路を検証した。
+This page and its JSON evidence record the earlier Codex integration investigated in September 2026. **They do not prove rule delivery works on current AI-DLC 2.8.2.** See [compatibility](framework-compatibility.md) for current policy and [T-05](completion-tasks.md) for re-verification.
 
-| 証跡 | 適用範囲 |
+The initial investigation could not confirm child rule delivery because host tool names and encrypted input did not match the old delivery code's assumptions. Later, a custom bridge added to the old setup allowed verification of workflow-state and standalone-stage-hint routes.
+
+| Evidence | Scope |
 |---|---|
-| [初期調査](evidence/codex-host-verification.json) | 旧構成の入力形式、セッション付与、ルール転送失敗等 |
-| [旧bridge適用後](evidence/codex-host-bridge-verification.json) | 独自bridgeを導入した旧構成での成功記録 |
+| [Initial investigation](evidence/codex-host-verification.json) | Old input formats, session binding, rule-delivery failures, and related observations. |
+| [After the old bridge](evidence/codex-host-bridge-verification.json) | Success with a custom bridge in the old setup. |
 
-JSON内の環境・日時・ハッシュは当時の値のまま保存する。生ログのローカルパスは履歴の所在であり、新しい作業コピーに存在するとは限らない。旧パッチの再適用や認証・信頼設定の変更を、現在の推奨手順として掲載しない。
+Preserve the original environments, dates, and hashes in JSON. Local raw-log paths identify historical locations and may not exist in a new working copy. Do not present reapplying old patches or changing authentication/trust settings as current recommended procedures.

@@ -1,74 +1,76 @@
-# DDDプラグインのインターフェイスアダプタ層設計
+# DDD plugin interface-adapter-layer design
 
-更新: 2026-09-13。[ドメイン層の境界契約](domain-layer-design.md)と[ユースケースの回復契約](use-case-layer-design.md)を外部I/Oへ実装する規約。インターフェイスアダプタをIAと略す。
+English | [Japanese](interface-adapter-layer-design.ja.md)
 
-## 1. 提供形態
+Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O. Interface adapter is abbreviated IA.
 
-infrastructure-designをcontributionで拡張し、層構造宣言、ナレッジ、センサーを提供する。宣言は登録済みレビュー成果物cicd-pipelineの必須セクションへ組み込む。[成果物契約](artifact-contract.md)を参照。
+## 1. Delivery form
 
-## 2. CQRSと責務分担
+Extend infrastructure-design through a contribution with layer declarations, knowledge, and sensors. Embed declarations in a required section of the registered cicd-pipeline review artifact. See the [artifact contract](artifact-contract.md).
 
-CQRSのコマンド側はドメイン・ユースケース・IA、クエリ側はユースケース・IAで構成する。クエリ側に更新用ドメイン層を設けず、DAOを通してDTOを取得する。
+## 2. CQRS responsibilities
 
-コマンドIAは更新コントローラ、リポジトリ実装、外部クライアントを持つ。クエリIAは取得コントローラとDAO実装を持つ。非CQRSでも、永続化アダプタ・外部クライアント・薄い入出力変換という責務は維持する。
+The CQRS command side contains domain, use-case, and IA layers; the query side contains use-case and IA layers. Do not create an update-domain layer on the query side. Retrieve DTOs through DAOs.
 
-ステートソーシングは現在状態を保存し、イベントソーシングは履歴から状態を復元する。DB製品とテーブルの正規化は別の選択である。ステートソーシングでもドメインイベントを利用できる。
+Command IA contains update controllers, repository implementations, and external clients. Query IA contains retrieval controllers and DAO implementations. Without CQRS, preserve the responsibilities of persistence adapters, external clients, and thin I/O conversion.
 
-イベントから読み取りモデルを更新するコンポーネントをRMU（Read Model Updater）と呼ぶ。
+State sourcing persists current state; event sourcing reconstructs it from history. Database products and table normalization are separate choices. State sourcing can also use domain events.
 
-## 3. コマンド側とクエリ側の依存
+The component that updates read models from events is the RMU (Read Model Updater).
 
-CQRS構成ではコマンド側とクエリ側の相互依存を禁止する。RMUはイベントを読み、読み取り先へ反映する独立した橋渡しとして両側への依存を許す。
+## 3. Command/query dependencies
 
-更新判断に読み取りモデルを使わない。非同期反映では最新変更がまだ届いていない可能性があるためであり、「常に古い」とは限らない。集約取得と期待バージョン等の競合制御を組み合わせて判断を守る。
+Prohibit mutual dependencies between command and query sides in CQRS. The RMU is an independent bridge that reads events and updates read storage, so it may depend on both sides.
 
-## 4. クエリ側とRMUの境界
+Do not use read models for update decisions: asynchronous propagation may not yet reflect the latest change. They are not necessarily always stale. Protect decisions through aggregate retrieval combined with expected versions or other conflict controls.
 
-クエリ側は更新用集約・ドメイン型・リポジトリポートを参照しない。更新の不変条件を複製せず、検索・表示モデルの整形を担う。クエリIAからクエリユースケースへ依存する。
+## 4. Query-side and RMU boundaries
 
-RMUはコマンドIAやクエリIAに兼務させず独立させる。中間状態の表示範囲はユースケース設計に合わせる。
+The query side does not reference update aggregates, domain types, or repository ports. It shapes search and display models without duplicating update invariants. Query IA depends on query use cases.
 
-## 5. ポートとリポジトリ
+Keep the RMU independent of command IA and query IA. Align exposure of intermediate states with the use-case design.
 
-ポートを `repository`、`external-client`、`es-infrastructure` に分類する。コマンド側I/Oにはリポジトリ以外の外部クライアントも含まれ、それぞれのポート実装が担う。
+## 5. Ports and repositories
 
-リポジトリポート名は `<Aggregate>Repository` とし、媒体名を入れない。実装名には `InMemoryInvoiceRepository` のような媒体名を使える。ポートは内側の利用者に合わせて配置し、具象実装はIAに置く。
+Classify ports as `repository`, `external-client`, or `es-infrastructure`. Command-side I/O includes external clients as well as repositories, each handled by its port implementation.
 
-担当集約単体またはその集合を扱い、集約の一部や担当外の集約を保存しない。基本動詞は `find_by_id`、`store`、`delete_by_id`。担当集約の追加検索は許すが、画面検索はDAOへ分ける。`store` の再保存・競合・追記はユースケース層設計 §5-1に従う。
+Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Place ports according to their inner-layer consumers; concrete implementations belong in IA.
 
-初期実装はin-memoryとし、競合や障害を含むポート契約をテストする。DTOからの復元は完全コンストラクタを通す。replayはドメイン層設計 §6に従い、任意の復元バイパスを許さない。
+Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 
-## 6. 永続化基盤の選定
+Start with in-memory implementations and test port contracts including conflicts and failures. Restore DTOs through full constructors. Follow domain-layer design §6 for replay; arbitrary restoration bypasses are not allowed.
 
-イベントの形式だけでRDBを除外しない。例えばPostgreSQLはJSON/JSONBを扱えるため、非正規化データだけを不適合の根拠にはできない。これは保存機能からの判断であり、特定負荷の性能保証ではない。[PostgreSQL公式仕様](https://www.postgresql.org/docs/current/datatype-json.html)
+## 6. Choosing persistence infrastructure
 
-集約ごとの順序・期待バージョンによる追記、重複検出、履歴保持、配送、運用コストを比較する。CDCは配送手段の一つであり、CDCがない基盤を一律に除外しない。方式別の追加検査は後続の詳細設計で扱う。
+Do not exclude relational databases solely because of event format. PostgreSQL, for example, supports JSON/JSONB, so denormalized data alone does not establish unsuitability. This is an inference from storage capabilities, not a performance guarantee for a particular workload. See the [PostgreSQL specification](https://www.postgresql.org/docs/current/datatype-json.html).
 
-## 7. RMUの順序と冪等性
+Compare per-aggregate ordering, expected-version appends, duplicate detection, history retention, delivery, and operational cost. CDC is one delivery mechanism; lack of CDC is not a blanket exclusion criterion. Strategy-specific checks belong to later detailed design.
 
-DynamoDB Streamsの順序保証は同一アイテム単位。同じ集約のイベントでも別アイテムに保存するなら、集約全体の順序がそのまま保証されるとは扱わない。Lambdaでは重複処理も起こり得る。[DynamoDB Streams公式仕様](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html)、[Lambda公式仕様](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html)
+## 7. RMU ordering and idempotency
 
-各RMUについて次を宣言・レビューする。
+DynamoDB Streams guarantees order per item. If one aggregate's events are stored as separate items, that does not automatically establish aggregate-wide ordering. Lambda may also process duplicates. See the [DynamoDB Streams documentation](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html) and [Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html).
 
-- イベントID、集約ID、集約内の番号と配送基盤のシーケンス番号との区別。
-- 順序保証の単位と、遅延・欠番・順序逆転・重複の扱い。
-- 更新と処理済み記録を一体で確定する方法。条件付き書込みを使う場合はその条件。
-- 再構築、再試行上限、回復不能イベントの隔離方法。
+Declare and review the following for each RMU:
 
-番号の大きいイベントだけを反映する方式は、状態全体の置換と差分の積み上げで意味が異なる。差分を飛ばすと結果が壊れるため、番号比較だけで欠番を無視しない。複数集約をまとめるビューでは、単一の番号で全履歴の進行を表せるとも限らない。
+- Event IDs, aggregate IDs, per-aggregate sequence numbers, and their distinction from transport sequence numbers.
+- The ordering scope and treatment of delays, gaps, reordering, and duplicates.
+- How updates and processed records commit together, including any conditional-write predicates.
+- Rebuilds, retry limits, and isolation of unrecoverable events.
 
-## 8. 宣言とセンサー
+Applying only higher-numbered events has different meanings for full-state replacement and incremental updates. Skipping deltas corrupts results; number comparison alone must not justify ignoring gaps. A view combining several aggregates may not have one sequence number that represents progress through every history.
 
-`cicd-pipeline.md` 内の `## DDD 層構造宣言` にモデルとcontextの参照、CQRS有無、各側のクレート一覧、依存、ポート、リポジトリ、復元経路、保存先を記載する。スキーマにないRMUの詳細はまず本文で説明する。
+## 8. Declarations and sensors
 
-kは両側の参照、lはクエリ側のドメイン参照、mは命名、nは復元を検査する。設計側は宣言、Rust側は構文を対象とし、意味的な安全性の証明には使わない。担当集約の範囲や再実行安全性はレビューとテストで確認する。
+Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Explain RMU details outside the schema in prose first.
 
-宣言は通常承認へ接続した。単独完了の標準側の不足はT-01、Rustの名前・配置依存の制約はT-02、方式別の詳細化はT-03で管理する。
+k checks cross-side references, l query-side domain references, m naming, and n restoration. Design sensors inspect declarations; Rust sensors inspect syntax. Neither proves semantic safety. Review and test aggregate ownership scope and re-execution safety.
 
-## 9. ナレッジ
+Declarations are connected to normal approval. T-01 tracks the framework standalone completion gap, T-02 Rust naming/placement limits, and T-03 strategy-specific detail.
 
-CQRS分離、ポートの責務、復元、RMU、外部モデルとの境界変換を扱う。DB/RPCクライアントはIAに置き、本プラグインのinfrastructure層には言語拡張だけを置く。この層名の定義を明示して使う。
+## 9. Knowledge
 
-## 10. 後続の詳細設計
+Cover CQRS separation, port responsibilities, restoration, RMU, and external-model translation. Put DB/RPC clients in IA; this plugin's infrastructure layer is only for language extensions. State this meaning of the layer name explicitly.
 
-RMUの詳細スキーマ、方式別必須項目、replayの意味的な正しさの検証方法は未確定。宣言と明示されたRust型の照合は[T-02](rust-sensor-contract.md)で実装した。[T-03](completion-tasks.md)で必要な項目を決め、未検証の方式を実装済みと表示しない。
+## 10. Later detailed design
+
+The detailed RMU schema, strategy-specific required fields, and semantic replay verification remain unresolved. Matching declarations to explicit Rust types is implemented in [T-02](rust-sensor-contract.md). Determine needed fields in [T-03](completion-tasks.md); do not present unverified strategies as implemented.

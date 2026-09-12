@@ -1,33 +1,35 @@
-# DDDプラグインの利用ガイド
+# DDD plugin usage guide
 
-更新: 2026-09-13。現在は完成に向けた修正中です。[既知の問題](../ddd/docs/current-state-assessment.md)を確認し、検証用プロジェクトで利用してください。
+English | [Japanese](usage.ja.md)
 
-## 導入前の条件
+Updated: 2026-09-13. The plugin is still being completed. Check [known issues](../ddd/docs/current-state-assessment.md) and use a test project.
 
-BunとAI-DLC導入済みのClaude CodeまたはCodex環境を使います。kimi・opencodeは対象外。Rustセンサーの解析自体にはCargoを使いませんが、生成アプリケーションのビルド・テストにはRust環境が必要です。
+## Prerequisites
 
-導入スクリプトは利用先のAI-DLCツールを参照します。ローカルソースの事前確認:
+Use Bun and an AI-DLC-enabled Claude Code or Codex environment. Kimi/opencode are excluded. Sensor analysis does not need Cargo, but generated applications need a Rust toolchain for build and tests.
+
+The installer uses AI-DLC tools in the destination. Preview installation from local source:
 
 ```sh
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。現行の新規導入・更新・失敗回復の一連の検証は[T-05](../ddd/docs/completion-tasks.md)で行います。旧パッチの復元や参照サブモジュールの取得は不要です。
+Remove `--dry-run` to install. End-to-end fresh-install, update, and failure-recovery verification belongs to [T-05](../ddd/docs/completion-tasks.md). Neither old patches nor the removed reference submodule are required.
 
-## ワークフローでの役割
+## Workflow responsibilities
 
-プラグインをcomposeすると、専用ステージ、既存ステージへの手順追加、センサー、ナレッジが登録されます。実行対象は、導入先で合成された計画と専用ステージの条件で決まります。
+Compose registers the dedicated stage, contributions, sensors, and knowledge. The destination's composed plan and stage conditions determine execution.
 
-設計上は、要求から正規モデルを作り、集約写像、ユースケース宣言、層構造、コードへ進みます。通常承認のDDD検査は接続済みですが、実際の生成から人間の承認までの実機検証は別途必要です。センサーは `fire_on: gate` であり、ファイルを書くだけで検査されたとは扱わないでください。
+The design flow moves from requirements to canonical modeling, aggregate mappings, use-case declarations, layers, and code. Normal approval checks are connected; actual generation through human approval still needs separate host verification. Sensors use `fire_on: gate`; writing a file alone is not evidence it was inspected.
 
-単独実行の入口は `$aidlc --stage ddd-domain-modeling --single` です。主ワークフローの進行とは独立する設計ですが、標準AI-DLC 2.8.2は単独完了で一般成果物を検証しないため、ステージ本文に従ってセンサーを明示実行してください。途中導入、SKIP、単独生成したモデルの再利用は、修正後に確認します。モデル存在センサーがSKIP時に通ることだけでは、下流全体の成功を保証しません。
+The standalone entry point is `$aidlc --stage ddd-domain-modeling --single`. It is designed to leave the main workflow pointer unchanged. Standard AI-DLC 2.8.2 does not verify general artifacts at standalone completion, so explicitly execute sensors as instructed by the stage. Late adoption, SKIP behavior, and reuse of standalone models still need verification after changes. A model-presence sensor passing on SKIP does not guarantee the whole downstream workflow passes.
 
-## 成果物を読む
+## Read the artifacts
 
-正規モデルの形式と移行方法は[ドメイン層設計 §5](../ddd/docs/domain-layer-design.md)を参照してください。後続の写像は `ddd-aggregate-mapping.md`、ユースケース宣言はfunctional-spec、層構造宣言はcicd-pipelineの必須セクションです。[成果物契約](../ddd/docs/artifact-contract.md)を参照してください。
+See [domain-layer design §5](../ddd/docs/domain-layer-design.md) for model format and migration. Aggregate mappings live in `ddd-aggregate-mapping.md`; use-case and layer declarations occupy required sections in functional-spec and cicd-pipeline. See the [artifact contract](../ddd/docs/artifact-contract.md).
 
-コード検査は `source-manifest.json` で申告されたRustファイルを入口にします。所見なしの場合も、申告・層判定・モデルの有無・注記を確認します。所見なしを業務上の正しさの証明としては使いません。
+Code checks start from Rust files claimed in source-manifest.json. Even with no findings, inspect claims, layer classification, model availability, and notes. No findings is not proof of business correctness.
 
-## 問題が出た場合
+## Troubleshooting
 
-[互換性](../ddd/docs/framework-compatibility.md)と[残作業](../ddd/docs/completion-tasks.md)を照合し、対象バージョンと実行結果を記録してください。繰り返し再インストールする前に、単独完了の標準側の不足か、旧環境依存か、個別モデルの違反かを切り分けます。
+Compare [compatibility](../ddd/docs/framework-compatibility.md) and [remaining work](../ddd/docs/completion-tasks.md), recording versions and results. Before repeatedly reinstalling, distinguish the framework standalone gap, old dependencies, and actual model violations.

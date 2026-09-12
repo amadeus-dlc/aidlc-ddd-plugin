@@ -1,31 +1,33 @@
-# Rustセンサーの判定契約
+# Rust sensor evaluation contract
 
-更新: 2026-09-13、T-02。変更先は `ddd/` の解析器、規則、テスト、生成手順、文書に限定した。第三者のフレームワーク配布物は変更していない。
+English | [Japanese](rust-sensor-contract.ja.md)
 
-## 名前の一致と、型の対応を区別する
+Updated: 2026-09-13, T-02. Changes are limited to the analyzer, rules, tests, generation instructions, and documentation in `ddd/`. Third-party framework distributions were not modified.
 
-| 規則 | 修正後の判定 |
+## Distinguish name equality from type identity
+
+| Rule | Updated evaluation |
 |---|---|
-| h: executeへの集約引数 | 正規モデルのAggregate.root_elementと対応するドメイン型だけを集約として検出。VO・Domain Primitive・同名の別型は区別する |
-| i: 別ユースケース呼出し | 受信側を特定し、use-case層の具象型が持つinherent executeへの呼出しを検出。ポートtrait、他層の型、自分自身の同じ型への呼出しは区別する |
-| b: 未宣言の変更 | クレート・モジュールを含む型の識別子でstruct/enumとimplを結び付ける。別ファイル・trait実装の変更も、実際のファイルと行で報告する |
-| d: getter呼出し | 特定した受信側のドメイン型が持つgetterを調べる。同じ名前の別型のメソッドは違反扱いしない。既存どおりself自身への呼出しは対象外 |
+| h: Aggregate arguments to execute | Only domain types corresponding to canonical Aggregate.root_element are aggregates. Distinguish value objects, Domain Primitives, and unrelated same-named types. |
+| i: Calls to other use cases | Resolve the receiver and detect calls to inherent execute methods on concrete use-case-layer types. Distinguish port traits, other layers, and calls to the same type as the caller. |
+| b: Undeclared mutation | Join structs/enums with impls using crate- and module-qualified type identity. Report cross-file and trait-implementation mutations at their actual file and line. |
+| d: Getter calls | Inspect getters on the identified domain receiver type. Same-named methods on unrelated types are not violations. Calls on self remain excluded. |
 
-集約のRust型は、モデルのルート要素の名前または安定IDからのPascalCaseで対応付ける。同名候補が複数ある場合は集約写像のcrate/moduleで特定し、それでも決まらなければ `model.unresolved` を残す。VOに集約と同名のコマンドメソッドを付けても、可変操作を許可する根拠にはならない。
+Match aggregate Rust types by the root element's name or PascalCase derived from its stable ID. When several candidates share a name, use crate/module from the aggregate mapping; if still ambiguous, emit `model.unresolved`. Giving a value object a command method named after an aggregate command does not authorize mutation.
 
-## 照合する構文
+## Supported syntax
 
-通常のクレート・モジュール配置、インラインモジュール、module単位のuseと別名、グループ化use、単純なtypeエイリアス、crate/self/superを含むパスを扱う。集約引数は参照やBox/Arc/Rc/Option/Vec等の標準ラッパーの内側も調べる。
+Handle conventional crate/module layouts, inline modules, module-level use statements and aliases, grouped imports, simple type aliases, and paths using crate/self/super. Inspect aggregate arguments through references and standard wrappers such as Box/Arc/Rc/Option/Vec.
 
-メソッドの受信側には、引数とletに明示された型、selfや明示型を持つ変数のフィールドを使う。型注釈のない初期化式からは推論しない。変数のシャドーイングやパターンによる再束縛がある場合は、外側の変数の型を誤って流用しない。
+Identify receivers through explicit parameter and let types, self, and fields of explicitly typed variables. Do not infer types from unannotated initializers. Do not reuse outer bindings incorrectly after shadowing or pattern rebinding.
 
-これはRustコンパイラの名前解決ではない。ジェネリックなtypeエイリアス、関連型、traitの実装選択、マクロ展開、型推論が必要な式は対象外。関数ローカルのuseがあるファイルでは型照合を抑制する。Cargoの依存別名やlib名変更など、通常の名前から対応しない構成は完全には扱わない。T-07でドメインクレートの明示的なpath属性をたどり、論理モジュールを型照合にも使うよう変更した。cfg_attrによるpath切替やマクロ生成等は解析不能として扱う。[パッケージング契約](domain-packaging-design.md)を参照。生成コードのコンパイルとテストは別途必要である。
+This is not Rust compiler name resolution. Generic aliases, associated types, trait implementation selection, macro expansion, and expressions requiring inference are outside coverage. Suppress type matching in files containing function-local use statements. Cargo dependency aliases and renamed libraries are not fully handled. T-07 follows explicit path attributes in domain crates and uses their logical modules for type matching. cfg_attr path switching and macro-generated modules are unresolved; see the [packaging contract](domain-packaging-design.md). Generated code still needs compilation and tests.
 
-`&self` による内部可変性の全検出や、所有権を消費する操作全般の正当性判定も、この修正で保証する範囲に含めない。
+This change does not guarantee exhaustive detection of interior mutability through `&self` or the validity of all ownership-consuming operations.
 
-## replayは明示した契約で許可する
+## Permit replay through explicit declarations
 
-集約写像の各行に、任意の `replay_methods` を追加した。既存の行で省略した場合は空配列として扱う。正規モデルのスキーマ自体は変更していない。
+Each aggregate mapping may contain `replay_methods`; omission in an existing row means an empty list. The canonical model schema itself is unchanged.
 
 ```yaml
 aggregate_ref: aggregate.invoice
@@ -38,22 +40,22 @@ replay_methods:
     event_ref: event.invoice.issued
 ```
 
-規則bがreplayとして許すには、対象集約の写像が一意で、保存方式がevent-sourcingであり、crate/moduleが型の配置と一致する必要がある。該当メソッドの宣言も一意でなければならない。
+For rule b to permit replay, the aggregate mapping must be unique, its persistence mode must be event-sourcing, and crate/module must match the type's location. The method declaration must also be unique.
 
-さらに、引数が単一のドメインイベント型であり、event_refがその集約に所属するイベントへ解決されることを確認する。イベントのコード型は同じクレート内で一意に識別できる名前にする。数値引数、未知イベント、別クレート・別モジュール、重複した宣言では例外にしない。
+Require one domain-event parameter and an event_ref resolving to an event owned by that aggregate. Event code types must be uniquely identifiable by name within the crate. Numeric parameters, unknown events, other crates/modules, and duplicate declarations do not qualify.
 
-名前をapplyやreplayへ変えるだけでは許可されない。逆に、以上の条件を満たせば別ファイルのimplでも許可する。メソッド本体が正しくイベントを適用するかは、レビューと動作テストで確認する。
+Renaming a method to apply or replay is insufficient. A cross-file impl is allowed when all conditions match. Review and behavior tests verify whether the body applies the event correctly.
 
-設計センサーもreplay_methodsの形式とevent_refの参照を検査する。書式が壊れたリストを黙って省略しない。
+Design sensors also check replay_methods shape and event_ref resolution. Malformed lists are not silently discarded.
 
-## 未検査の箇所を残す
+## Record unexamined locations
 
-各センサースクリプトを直接実行したJSONには、`syntax.unresolved`、`model.unresolved`、必要に応じて `replay.disabled` のnoteを付ける。モデルがSKIP/absentなら、モデルに依存するb/h等の検査を行わない旨も記録する。
+Direct sensor JSON includes `syntax.unresolved`, `model.unresolved`, and, when applicable, `replay.disabled` notes. If the model is SKIP/absent, it also records that model-dependent rules such as b/h were not run.
 
-標準AI-DLC 2.8.2のディスパッチャは、成功したセンサーの任意のnoteをそのまま転送しない。このため、生成手順には直接実行のnoteを読み、未検査箇所をcode-summaryへ記載する指示を加えた。標準側を直接変更してはいない。`pass: true` は「確定した違反がない」という結果であり、全Rust構文や不変条件の検証済みという意味ではない。
+The standard AI-DLC 2.8.2 dispatcher does not preserve arbitrary notes from successful sensors. Generation instructions therefore require reading direct results and recording gaps in code-summary. The framework was not patched. `pass: true` means no confirmed violation was found, not that all Rust syntax or invariants were verified.
 
-## 回帰テスト
+## Regression tests
 
-[追加Rustケース](../tests/golden/rust/t2-cases.ts)は、VO・Domain Primitive、ポート、別ユースケース、別ファイルのimpl、traitの変更、別名・修飾型、getter名衝突、シャドーイング、明示replayと不正な例外を、実際のセンサースクリプトから検査する。
+[Additional Rust cases](../tests/golden/rust/t2-cases.ts) execute the real sensor scripts against value objects, Domain Primitives, ports, other use cases, cross-file impls, trait mutations, aliases and qualified types, getter-name collisions, shadowing, explicit replay, and invalid exceptions.
 
-[設計ケース](../tests/golden/design/cases.ts)には、replay参照の正常・未知ID・壊れた書式を追加した。同じケースをソースとClaude/Codexの配布物の両方で実行する。
+[Design cases](../tests/golden/design/cases.ts) include valid replay references, unknown IDs, and malformed declarations. Run the same cases against source tools and both Claude/Codex distributions.
