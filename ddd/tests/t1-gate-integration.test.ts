@@ -1,10 +1,22 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import {
+  appendFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { artifactFilename } from "../../.codex/tools/aidlc-artifact-vocabulary.ts";
 import type { GraphStage } from "../../.codex/tools/aidlc-graph.ts";
 import { filterProducesByKind } from "../../.codex/tools/aidlc-lib.ts";
 import { runPluginCompose } from "../../.codex/tools/aidlc-plugin-test.ts";
+import { gateCases } from "./golden/contract/coverage.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
 
@@ -15,7 +27,7 @@ const write = (path: string, content: string) => {
   writeFileSync(path, content);
 };
 
-function fixture(harness: "claude" | "codex" = "codex") {
+function fixture(harness: "claude" | "codex" = "codex", onlySensor?: string) {
   const leaf = `.${harness}`;
   const root = mkdtempSync(join(tmpdir(), "ddd-gate-"));
   roots.push(root);
@@ -35,7 +47,9 @@ function fixture(harness: "claude" | "codex" = "codex") {
   // Exercise the real artifact and gate-sensor machinery. Unrelated core
   // document/reviewer/Q&A policies belong to the framework's own tests.
   for (const stage of graph) {
-    stage.sensors_applicable = (stage.sensors_applicable ?? []).filter((sensor) => sensor.id.startsWith("ddd-"));
+    stage.sensors_applicable = (stage.sensors_applicable ?? []).filter((sensor) =>
+      onlySensor ? sensor.id === onlySensor : sensor.id.startsWith("ddd-"),
+    );
   }
   writeFileSync(graphPath, JSON.stringify(graph));
   const record = join(root, "aidlc/spaces/default/intents/gate-test");
@@ -78,8 +92,8 @@ beforeAll(() => {
     expect(built.exitCode, built.stderr.toString()).toBe(0);
   }
 });
-afterAll(() => {
-  for (const root of roots) rmSync(root, { recursive: true, force: true });
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("DDD gate integration", () => {
@@ -274,6 +288,71 @@ for (const harness of ["claude", "codex"] as const) {
         const result = openGate(f, stage);
         if (allowed) expect(result.output).toContain("Recorded awaiting-approval");
         else expectRejected(result, sensor);
+      });
+    }
+  });
+}
+
+// Per-sensor admission proves wiring/severity for every matrix row. Existing tests above
+// retain combined DDD sensors and missing-artifact scenarios. This is not a reviewer/model E2E.
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: sensor contract admission`, () => {
+    for (const entry of gateCases()) {
+      test(`${entry.sensor}/${entry.name}`, () => {
+        const f = fixture(harness, entry.sensor);
+        const stage = f.graph.find((candidate) => candidate.slug === entry.stage);
+        expect(stage?.sensors_applicable.some((sensor) => sensor.id === entry.sensor)).toBe(true);
+        const phase =
+          entry.stage === "code-generation" ||
+          entry.stage === "functional-design" ||
+          entry.stage === "infrastructure-design"
+            ? "construction"
+            : "inception";
+        const unit = entry.stage === "code-generation" ? "u1/" : "";
+        f.state(entry.stage, phase, unit ? "feature" : "refactor");
+        if (entry.stage !== "ddd-domain-modeling") {
+          const modelStatus =
+            entry.state === undefined
+              ? "- [x] ddd-domain-modeling — EXECUTE"
+              : entry.state.split("\n").find((line) => line.includes("ddd-domain-modeling"));
+          if (modelStatus) appendFileSync(join(f.record, "aidlc-state.md"), `${modelStatus}\n`);
+        }
+        // Fill unrelated stage outputs only, keeping canonical model absence intentional.
+        for (const artifact of stage?.produces ?? []) {
+          if (["ddd-domain-model", "ddd-domain-model-yaml"].includes(artifact)) continue;
+          write(
+            join(f.record, `${phase}/${unit}${entry.stage}/${artifactFilename(artifact)}`),
+            "# Supporting artifact\n",
+          );
+        }
+        for (const [path, content] of Object.entries(entry.files)) {
+          write(join(f.record, unit ? path : path.replace("construction/u1/", "construction/")), content);
+        }
+        for (const [path, content] of Object.entries(entry.workspace ?? {})) write(join(f.root, path), content);
+        const result = openGate(f, entry.stage);
+        const advisory = entry.sensor === "ddd-design-advisories";
+        if (entry.expect.pass || advisory) {
+          expect(result.output).toContain("Recorded awaiting-approval");
+        } else {
+          expectRejected(result, entry.sensor);
+        }
+        const auditRoot = join(f.record, "audit");
+        const auditText = readdirSync(auditRoot, { recursive: true })
+          .filter((path) => String(path).endsWith(".md"))
+          .map((path) => readFileSync(join(auditRoot, String(path)), "utf8"))
+          .join("\n");
+        expect(auditText).toContain(entry.sensor);
+        expect(auditText).toContain("SENSOR_FIRED");
+        expect(auditText).toContain(entry.expect.pass ? "SENSOR_PASSED" : "SENSOR_FAILED");
+        expect(auditText).not.toMatch(/script-error|tool-unavailable|SENSOR_BUDGET_OVERRIDE/);
+        if (!entry.expect.pass) {
+          const detailRoot = join(f.record, ".aidlc-sensors", entry.stage);
+          const details = readdirSync(detailRoot)
+            .filter((path) => path.startsWith(`${entry.sensor}-`) && path.endsWith(".md"))
+            .map((path) => readFileSync(join(detailRoot, path), "utf8"))
+            .join("\n");
+          for (const rule of entry.expect.rules) expect(details).toContain(`"rule_id": "${rule}"`);
+        }
       });
     }
   });

@@ -7,10 +7,8 @@
 //        (default: claude codex)
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { DESIGN_CASES } from "../tests/golden/design/cases.ts";
-import { PACKAGING_CASES } from "../tests/golden/packaging/cases.ts";
-import { type GoldenCase, runGoldenCase } from "../tests/golden/runner.ts";
-import { RUST_CASES } from "../tests/golden/rust/cases.ts";
+import { ALL_CASES } from "../tests/golden/catalog.ts";
+import { runGoldenCase } from "../tests/golden/runner.ts";
 
 const dddRoot = resolve(import.meta.dir, "..");
 const harnesses = process.argv.slice(2);
@@ -21,7 +19,7 @@ if (unsupported.length > 0) {
   console.error(`Unsupported harness: ${unsupported.join(", ")}. Supported: ${supported.join(", ")}.`);
   process.exit(1);
 }
-const cases: GoldenCase[] = [...DESIGN_CASES, ...RUST_CASES, ...PACKAGING_CASES];
+const cases = ALL_CASES;
 
 interface HarnessResult {
   harness: string;

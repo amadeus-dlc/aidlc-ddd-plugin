@@ -13,10 +13,11 @@
     "check:biome": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "test": "bun test tests/",
-    "test:sandbox": "bun run build:all && for h in claude codex; do bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness $h || exit 1; done && bun scripts/verify-dist.ts && bun test tests/t1-gate-integration.test.ts",
+    "test:sandbox": "bun run test:coverage && bun run build:all && for h in claude codex; do bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness $h || exit 1; done && bun scripts/verify-dist.ts && bun test tests/t1-gate-integration.test.ts",
     "test:dist": "bun scripts/verify-dist.ts",
     "test:host": "bun scripts/verify-codex-host.ts",
-    "prepare:harnesses": "bun scripts/apply-harness-patches.ts"
+    "prepare:harnesses": "bun scripts/apply-harness-patches.ts",
+    "test:coverage": "bun test tests/t8-declaration-language.test.ts tests/t9-sensor-contract.test.ts && bun scripts/report-sensor-coverage.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12"

@@ -20,7 +20,10 @@ checks:
   - { rule_id: c, requirement: FR7.3, inputs: [impls, constructions, domain-symbols], outcome: finding }
   - { rule_id: d, requirement: FR7.4, inputs: [calls, domain-symbols], outcome: finding }
   - { rule_id: g, requirement: FR9.5, inputs: [uses, cargo-dependencies, layer-assignment], outcome: finding }
-  - { rule_id: "layer.*", requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
+  - { rule_id: layer.unknown, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
+  - { rule_id: layer.conflict, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
+  - { rule_id: layer.mixed-targets, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
+  - { rule_id: layer.unowned, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
   - { rule_id: model.invalid, requirement: FR6.4, inputs: [ddd-domain-model-yaml], outcome: finding }
 input_schema:
   output_path: string
@@ -32,7 +35,7 @@ output_schema:
 
 # rust-domain sensor (ddd)
 
-Blocking gate for `code-generation` on the domain layer. Reads only the claimed
-`.rs` files, Cargo.toml, the model and the state file. Reports rules (a)–(d),
+Blocking gate for `code-generation` on the domain layer. Uses claimed `.rs` files as entry points and also reads Cargo.toml, the model,
+the state file, and reachable modules of affected domain crates. Reports rules (a)–(d),
 the dependency safety net (g), and the U2 layer diagnostics (this manifest is
 the single reporter for them).

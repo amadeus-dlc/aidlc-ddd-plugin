@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import { fixtureMapping, withFixturePackages } from "../package-fixture.ts";
 /**
  * Rust golden cases (U5 BR10). Each case carries a `workspace/` (project-root
@@ -66,7 +67,7 @@ function project(
     const deps = (crate.deps ?? []).map((dep) => {
       const target = crates.find((candidate) => candidate.name === dep);
       if (!target) throw new Error(`unknown dep ${dep}`);
-      return `${dep} = { path = "../${target.path.split("/").slice(-1)[0]}" }`;
+      return `${dep} = { path = "${posix.relative(crate.path, target.path)}" }`;
     });
     workspace[`${crate.path}/Cargo.toml`] =
       `[package]\nname = "${crate.name}"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n${deps.join("\n")}\n`;

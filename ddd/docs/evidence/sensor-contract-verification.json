@@ -1,0 +1,68 @@
+{
+  "recorded_at": "2026-09-12T23:49:41.338479+00:00",
+  "command": "cd ddd && bun run test:sandbox",
+  "exit_code": 0,
+  "runtime": "Bun 1.3.13",
+  "framework": "AI-DLC 2.8.2",
+  "contract": {
+    "sensors": 9,
+    "rule_entries": 70,
+    "direct_finding_entries": 68,
+    "preempted_by_loader_entries": 2,
+    "admission_inputs_per_harness": 138
+  },
+  "coverage_and_heading_tests": {
+    "pass": 135,
+    "fail": 0
+  },
+  "compose": {
+    "claude": {
+      "clean": true,
+      "drops": 0,
+      "idempotent": true
+    },
+    "codex": {
+      "clean": true,
+      "drops": 0,
+      "idempotent": true
+    }
+  },
+  "distribution": {
+    "cases": 277,
+    "results": [
+      {
+        "harness": "claude",
+        "total": 277,
+        "failed": 0,
+        "problems": []
+      },
+      {
+        "harness": "codex",
+        "total": 277,
+        "failed": 0,
+        "problems": []
+      }
+    ]
+  },
+  "admission_tests": {
+    "pass": 316,
+    "skip": 1,
+    "fail": 0
+  },
+  "additional_source_checks": {
+    "foundation_and_installer": {
+      "pass": 45,
+      "fail": 0
+    },
+    "existing_sensor_regressions": {
+      "pass": 88,
+      "fail": 0
+    }
+  },
+  "limits": [
+    "The two preempted rules are checked through their actual loader rejection, not counted as directly emitted findings.",
+    "Per-rule admission tests isolate the target sensor; combined DDD tests remain. Q&A and reviewer evidence are disabled in test settings.",
+    "Standalone completion guard reproduction remains opt-in. Installation/update and model-driven generation are outside this suite.",
+    "Known old-dependency failures in the full test suite are outside this change."
+  ]
+}
