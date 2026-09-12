@@ -6,12 +6,16 @@ default_severity: blocking
 fire_on: gate
 description: The domain-design / functional-design gate — every aggregate is mapped on both axes, every use case declares its six items, and non-idempotent commands are caught (rule j).
 category: document-traceability
-matches: "**/{domain-design/ddd-aggregate-mapping.md,functional-design/ddd-use-case-declarations.md}"
+matches: "**/{domain-design/*,functional-design/*}"
 timeout_seconds: 10
 checks:
+  - { rule_id: domain-packaging.declaration, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.technical-name, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.duplicate, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: domain-packaging.coverage, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
   - rule_id: mapping-declarations.document
     requirement: ADR-008
-    inputs: [ddd-aggregate-mapping, ddd-use-case-declarations]
+    inputs: [ddd-aggregate-mapping, functional-spec]
     outcome: finding
   - rule_id: mapping-declarations.model
     requirement: FR6.1
@@ -31,15 +35,15 @@ checks:
     outcome: finding
   - rule_id: mapping-declarations.use-case-item
     requirement: FR4.1
-    inputs: [ddd-use-case-declarations]
+    inputs: [functional-spec]
     outcome: finding
   - rule_id: mapping-declarations.multi-aggregate-strategy
     requirement: FR4.1
-    inputs: [ddd-use-case-declarations]
+    inputs: [functional-spec]
     outcome: finding
   - rule_id: mapping-declarations.process-manager-required
     requirement: FR2.6
-    inputs: [ddd-use-case-declarations, ddd-aggregate-mapping]
+    inputs: [functional-spec, ddd-aggregate-mapping]
     outcome: finding
   - rule_id: mapping-declarations.j
     requirement: FR6.3

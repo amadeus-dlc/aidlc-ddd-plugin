@@ -1,124 +1,106 @@
-# DDDプラグイン ユースケース層設計（AI-DLC v2）
+# DDD plugin use-case-layer design
 
-grilling セッション（2026-09-10）での確定事項。前提となる境界契約は `ddd/docs/domain-layer-design.md` の §7 を参照。
+English | [Japanese](use-case-layer-design.ja.md)
 
-## 1. 提供形態
+Updated: 2026-09-13. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
 
-- **functional-design を contribution で拡張＋ナレッジ＋センサー**の形で提供する。
-  - 理由: domain-modeling と違い、ユースケース設計の居場所（functional-design ステージ）はコアに既にある。欠けているのは強制とガイドなので、fragments で手順を挿入し、センサーをバインドし、ナレッジを提供する形が重複を生まない。
+## 1. Delivery form
 
-## 2. 根本原則
+Extend functional-design through a contribution with declarations, knowledge, and sensors. Embed declarations in a required section of the registered functional-spec review artifact. See the [artifact contract](artifact-contract.md).
 
-- **ユースケースはビジネスロジックを記述する場所ではなく、進行役・フロー制御が責務**である。ビジネスロジックはドメイン層が担う。
+## 2. Responsibilities
 
-## 3. ユースケース層の規約セット
+A use case coordinates retrieval, business operations, persistence, and recovery. Delegate business decisions to the domain. State consistency, idempotency, ordering, failure and compensation, and observability explicitly.
 
-1. **DIP**: ユースケースはポート（trait）にのみ依存し、結線は composition root で行う
-2. **execute の引数は集約IDとVOのみ**: 集約インスタンスを直接渡さない（取得はユースケース内でポート経由）
-3. **ユースケース間呼出禁止**: 共通処理はドメインサービス等へ降ろす
-4. **業務判断はドメインに置く**: getter で値を取り出してユースケース層で判断・加工しない（Tell, Don't Ask）
-5. **I/O はポート経由のみ**: DB・外部システムへの直接アクセス禁止
+## 3. Conventions
 
-## 4. トランザクション境界と整合性
+1. Perform external I/O through ports; wire concrete adapters in the composition root. Dependencies on domain types are allowed.
+2. Pass aggregate IDs and value objects to command-side `execute`. Retrieve aggregates through ports.
+3. Do not call another use case directly. Put shared business decisions in the domain and coordination in an explicit flow. Calling an external port's `execute` is not prohibited.
+4. Do not extract values through getters to make business decisions. Call domain methods that return decisions.
+5. Do not use database or external-system clients directly.
 
-（根拠: [複数集約を跨ぐ処理を1つのDBトランザクションで括る前に読む記事](https://zenn.dev/j5ik2o/articles/59de072b6728ff)）
+The query side retrieves DTOs through DAOs; do not impose command-side aggregate retrieval and persistence conventions on it unchanged.
 
-- **強整合の境界を決めるのは集約（不変条件）であり、ユースケースの形ではない**。ユースケースは弱整合の境界。単一集約の更新を単一DBトランザクションで行うこと自体は問題ない
-- **複数集約を単一DBトランザクションに恒常的に束ねたい = 設計シグナル**。まず集約境界を疑い、中間状態（仮確保・申請中・調整中など）をドメイン語彙として発見して強整合を1集約の内側に収める再配置を検討する。集約境界は固定ではなく引き直す対象
-- それでも跨ぐ場合: **プロセスマネージャー（オーケストレーション型サーガ）** が弱整合の境界を担い、成功時の次アクションと失敗時の補償アクションをプロセスとして明示する。ACID ではなく **ACD**（Isolation を持たない）として扱い、中間状態・冪等性・再試行・タイムアウト・重複要求の吸収を設計対象にする
-- **読み取り側も影響を受ける**: 中間状態を状態としてモデル化し、読み取りモデルで公開範囲を制御する（通常一覧は確定済みのみ、処理中ビューは別）
-- 単一DBトランザクションへの束縛のコスト: 長いトランザクション（パージ遅延）、ロック獲得順序の循環待ち（楽観ロックでも消えない）、読み取り側への暗黙前提の漏洩
-- 1集約1アクター（CQRS/ES）では、強整合の境界が構造として閉じる
+## 4. Consistency and partial failure
 
-## 5. 再実行可能性と冪等性
+Use an aggregate as the basic strong-consistency boundary. Before routinely combining several aggregates in one transaction, reconsider invariants and aggregate boundaries. For operations that cannot be relocated, make intermediate states and recovery flows explicit. See the [design background](https://zenn.dev/j5ik2o/articles/59de072b6728ff).
 
-- **ユースケースはトランザクション境界ではない**ため、A→B の流れで B が失敗した場合、A はコミット済みとして残る。
-- 回復は2系統: (a) ユースケースはエラーを返し、**呼び出し側が当該ユースケースを最初から再実行できる**ようにする、(b) 失敗ステップを指数関数的バックオフでリトライする。リトライは無限にはできないので、最終的にはエラーを返す。したがって**ユースケースは呼び出し側から安全にリトライ可能（冪等）であること**が求められる。
+Persisting one aggregate update in one database transaction is allowed. A code unit called a use case does not by itself promise multi-aggregate atomicity.
 
-### 5-1. リポジトリの書き込みは store（upsert）
+If B fails after A is successfully persisted, A's commit remains. Design retries, compensation, or manual recovery. Saga compensation is a new operation and does not have database rollback's atomicity and isolation guarantees. Failed compensation also needs recovery.
 
-- リポジトリの書き込み操作は **`store`（insert or update のアップサート）として実装する**（RDB なら `INSERT ... ON CONFLICT ... DO UPDATE` 相当）。**`insert` 専用の実装は禁止** — ユースケース再実行時に、最初のコミット済みステップの再保存が主キー重複で失敗し、リトライ戦略全体が成立しなくなるため。
-- 既存ルールの「`find_by_id` と `store` の両動詞必須」という命名規約と整合する。
+Specify which processing, committed, and compensating states read models expose. Actor serialization does not automatically guarantee completion of external I/O or atomicity across aggregates.
 
-### 5-2. 新規作成ユースケース
+## 5. Re-execution and idempotency
 
-- 集約ID を実行ごとに内部生成することを**許容**する。再実行時は別IDの集約がもう1つ作られゴミ集約が残るが、参照されなければ**無害**として扱う。
+Distinguish caller re-execution from retrying a failed step with backoff. Define counts, time windows, and stopping conditions to prevent duplicate effects. Reconcile unknown persistence outcomes.
 
-### 5-3. 更新系ユースケース
+### 5-1. The store contract
 
-- 集約の操作は「**同じ値での更新・既に目的の状態への遷移を拒否しない**」よう設計する（FSM による吸収）。例: `dept.rename("AAA")` は既に AAA でも成功として受け入れる。
-- これにより、upsert な `store` と組み合わせて、再実行しても結果が同じになる。
+Use `store` as the baseline port write verb and safely handle repeated persistence of the same request. Upsert is the state-sourcing baseline, not permission for unconditional overwrites. Detect conflicts using expected versions, uniqueness constraints, or equivalent mechanisms.
 
-### 5-4. 本質的に非冪等な操作
+Event sourcing appends new events and never updates past events. Design duplicate handling, append conflicts, and outcome reconciliation together. SQL insert is not itself prohibited. A method named upsert does not establish idempotency for an entire flow.
 
-- 加算・追加系（カウンタのインクリメント、「カートに同じ商品を追加」等）は、同値更新の許容では吸収できない（再適用で効果が二重に乗る）。
-- 厳密には**コマンドIDによる重複適用の排除**が必要: 集約が適用済みコマンドIDを記憶する（例: `last_command_id`）。
-- **保持範囲は要件依存**: 直列性が保証されるなら（1集約1アクター、楽観ロックによる直列化等）直前1件で足りる。順不同・間を挟んだ再送があり得るなら複数保持や時間窓が必要。
+### 5-2. Creation
 
-### 5-5. 冪等性戦略のモデル化
+Define the association between an identifiable creation request, its aggregate ID, and result. If each re-execution creates another ID, explain when unreferenced data remains, how it is reclaimed, and its effects on events or external I/O. Being unreferenced alone does not make data harmless.
 
-- 正規モデルの **Command の属性として冪等性戦略を宣言する**:
-  - (i) 不要（同値更新の許容で吸収できる状態遷移型）
-  - (ii) コマンドID記憶（保持方針: 直前1件／複数・時間窓 — 宣言させる）
-- **本質的に非冪等な操作では (i) 以外を必須**とする。これにより、コード生成が `last_command_id` のようなフィールドの要否を機械的に導け、センサーが「非冪等操作なのに冪等性戦略が未宣言」を検出できる。
+### 5-3. State-setting operations
 
-### 5-6. Event Sourcing での再実行吸収
+If the same request has already reached the desired state, it may succeed without changes. If another request changes the state before an old request is retried, request IDs, expected versions, or equivalent checks are also needed.
 
-- replay 後の集約が目的状態を持っていれば、FSM は同じコマンドに対して新しいイベントを発生させず、`store` はイベント0件の no-op として成功する。**ES の吸収は FSM レベルで成立し、イベントストア固有の仕組みは不要**。
+### 5-4. Additive operations
 
-## 6. 宣言の軸（domain-design のマッピング属性）
+Additions cannot be absorbed by setting the same value again. Associate applied command IDs with their effects and prevent repeated application. Account for failures between duplicate detection and persistence.
 
-集約（または Bounded Context）ごとに、独立した2軸を宣言する。
+Retaining only the most recent ID is valid only when an old retry cannot arrive after another command. `C1 → C2 → retry C1` can occur even with serialization. Choose retention counts and windows from retry conditions and define treatment of requests outside the window.
 
-- **プログラミングモデル**: アクターモデル ／ クラスベース
-- **永続化方式**: ステートソーシング ／ イベントソーシング
+### 5-5. Current model representation
 
-組み合わせによる影響:
+Commands have `effect: transition | accumulation` and `idempotency`. Current checks reject `strategy: none` for `accumulation` and require `command-id-memory`. They do not prove whole-flow idempotency.
 
-- **プロセスマネージャー／サーガ**: アクターモデル（Akka/Pekko）でのみ実装可能。クラスベースでは実装が現実的に無理なため、**妥協策として「ユースケースを呼び出し元から単純に再実行可能にする」**（ゴミデータは残るが許容）
-- **ES の実装基盤**: クラスベースなら `j5ik2o/event-store-adapter-*`、アクターモデルなら Akka/Pekko persistence
-- **正規モデルの Process Manager 要素**: 含めるが、**必須化はアクターモデル選択時のみ**。クラスベースでは「複数集約フローは再実行可能なユースケースとして設計」を必須にする。センサーは宣言と実装の齟齬（アクターモデル宣言なのにプロセスマネージャー未定義、等）を検出する
+For state-setting operations, `none` means safety is justified by a method other than ID memory, not that no precautions are needed. Record re-execution rationale in the use-case declaration too.
 
-## 7. センサー（ユースケース層）
+### 5-6. Duplicate success in event sourcing
 
-進行を止める確定的違反（ブロッキング）:
+A command known to be already applied can succeed with zero new events. One event is the baseline for initial state-changing success; rejection is a Domain Error. Concrete return types remain T-03 work.
 
-- **(g) DIP 違反**: ユースケース層のコードがアダプタ層・インフラの具象型を直接 import/参照している。**位置づけ: 安全網**。サブプロジェクト構成では通常ビルドエラーで防げるが、AI がプロジェクトの依存構造を変えた場合に備えて残す
-- **(h) execute の引数違反**: 集約インスタンスを直接受け取っている
-- **(i) ユースケース間呼出**: 別のユースケースを呼んでいる
-- **(d) getter 呼出**（ドメイン層のセットと共通）
-- **(j) 非冪等操作なのに冪等性戦略が未宣言**（正規モデル側の検査）
+Distinguish cases where a state machine can recognize duplicates from those requiring request-ID memory. Using an FSM does not remove the need for event-store conflict control or duplicate-write protection.
 
-レビュー行き（意味判断が必要）:
+## 6. Two declaration axes and Process Managers
 
-- **複数集約の更新**: 「単一トランザクションへの束縛」は違反だが、「再実行可能な逐次更新」は合法なので、静的には区別しにくい。検出はしてもレビューに回す
+`programming_model: actor | class` and `persistence_method: state-sourcing | event-sourcing` are independent choices. Sagas are not actor-specific and can use ordinary classes. Distinguish platform support from technical possibility. See the [official Temporal Java example](https://github.com/temporalio/samples-java/blob/main/core/src/main/java/io/temporal/samples/hello/HelloSaga.java).
 
-## 8. functional-design の成果物に追加する宣言項目
+Current multi-aggregate declarations require `process-manager` or `re-execution`. When mappings are readable and every target aggregate is actor-based, the sensor requires `process-manager`. Classes can also use Process Managers. The existing contribution's instruction limiting classes to re-execution must be aligned with this design.
 
-各ユースケース定義に以下を**必須宣言**とする:
+Requirements for mixed actor/class flows and missing mappings remain T-03 decisions. The current sensor skips the Process Manager requirement when mappings are missing; do not treat that behavior as a safety guarantee.
 
-1. **対象集約**（正規モデルの参照ID）
-2. **使用するコマンド**（参照ID）
-3. **再実行可能性**: 呼び出し側からの再実行が安全であることの根拠（各ステップの冪等性戦略への参照）
-4. **失敗時の回復方針**: 呼出側再実行／ステップのバックオフリトライのどちらか（または併用）
-5. **複数集約に跨がる場合**: プロセスマネージャー参照（アクターモデル時）または再実行戦略の明示（クラスベース時）
-6. **読み取りモデルの公開範囲**: 中間状態（確定待ち・補償中など）をどのビューに出すか
+## 7. Checks and review
 
-## 9. ナレッジ
+g checks dependencies and external I/O, h aggregate arguments, i use-case chaining, d getters, and j model idempotency declarations. h/i use explicit types to distinguish aggregates from value objects and concrete use cases from ports. Syntax outside the [evaluation contract](rust-sensor-contract.md) is noted.
 
-言語横断（基盤）:
+Review and behavior tests assess recovery from partial failure, retention, aggregate boundaries, and exposure. Declaration presence and behavioral safety are distinct.
 
-- ユースケース規約5点セット（§3）と「進行役」原則（§2）
-- CQS の適用範囲（I/O 操作に適用、イミュータブルなドメインロジックは対象外）
-- 強整合／弱整合の境界（集約＝強整合、ユースケース＝弱整合）、複数集約の単一TX禁止と設計シグナル（§4、[記事](https://zenn.dev/j5ik2o/articles/59de072b6728ff)の内容）
-- 再実行可能性・冪等性（§5: store=upsert、同値更新の許容、コマンドID記憶、作成系のゴミ集約許容）
-- プロセスマネージャー設計（アクターモデル時: 状態機械、補償アクション、ACD、読み取りモデルの公開範囲）
+## 8. Use-case declarations
 
-言語別（Rust）:
+Give each definition an identifier and name and declare the following:
 
-- スタティックバインディング既定（use-case-rules.md 由来）
-- `event-store-adapter-rs` を参照実装とした ES の実装規約
+| Field | Content |
+|---|---|
+| `target_aggregates` | Target aggregate reference IDs |
+| `commands` | Command reference IDs |
+| `re_execution_basis` | Why each step is safe to re-execute |
+| `recovery_policy` | `caller-retry` / `step-backoff` / `both` |
+| `multi_aggregate_strategy` | Process Manager reference or re-execution strategy for multiple aggregates |
+| `read_model_exposure` | Views that expose intermediate states |
 
-## 10. 未決定事項
+Store these in `functional-spec.md` under `## DDD Use-case Declarations`. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Do not generate a separate declaration file. Normal approval detects missing documents and sections.
 
-ユースケース層スコープの未決定事項は**なし**（2026-09-10 時点でフロンティアは空）。次の設計対象はインターフェイスアダプタ層。
+## 9. Knowledge
+
+Cover responsibility separation, aggregate consistency, request-level idempotency, recovery, compensation, and exposure. Prefer port traits and static dispatch in Rust. Do not impose one saga platform or event store on every project.
+
+## 10. Remaining design decisions
+
+T-03 decides mixed-model recovery declarations, no-op return types, and whether retention periods belong in the model. Adding attributes requires coordinated loader, contract, generation, sensor, and test changes.

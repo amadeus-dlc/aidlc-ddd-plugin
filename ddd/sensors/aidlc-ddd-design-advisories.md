@@ -6,24 +6,24 @@ default_severity: advisory
 fire_on: gate
 description: Advisory checks for functional-design / infrastructure-design — multi-aggregate use cases, repository scope, and upsert store semantics. Advisory findings never close the gate.
 category: document-traceability
-matches: "**/{functional-design/ddd-use-case-declarations.md,infrastructure-design/ddd-layer-structure.md}"
+matches: "**/{functional-design/*,infrastructure-design/*}"
 timeout_seconds: 10
 checks:
   - rule_id: design-advisories.document
     requirement: ADR-008
-    inputs: [ddd-use-case-declarations, ddd-layer-structure]
+    inputs: [functional-spec, cicd-pipeline]
     outcome: finding
   - rule_id: design-advisories.multi-aggregate
     requirement: FR4.4
-    inputs: [ddd-use-case-declarations]
+    inputs: [functional-spec]
     outcome: finding
   - rule_id: design-advisories.repository-scope
     requirement: FR5.5
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: design-advisories.store-upsert
     requirement: FR5.5
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
 input_schema:
   output_path: string

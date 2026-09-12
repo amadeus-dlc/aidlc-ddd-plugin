@@ -8,7 +8,7 @@ import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import type { ElementKind } from "./ddd/lib/schema/element-id.ts";
 import type { ResolveReason } from "./ddd/lib/schema/index-builder.ts";
 import { finding, relPath } from "./ddd/lib/sensors/common.ts";
-import { type DeclarationKind, parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
+import { declarationPath, parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
 import type { FindingInput } from "./ddd/lib/shared/findings.ts";
 
 const REASON_RULE: Record<ResolveReason, string> = {
@@ -18,18 +18,21 @@ const REASON_RULE: Record<ResolveReason, string> = {
   malformed: "reference-ids.malformed",
 };
 
-function declarationKind(outputPath: string): DeclarationKind {
-  return outputPath.endsWith("ddd-aggregate-mapping.md") ? "aggregate-mapping" : "use-case-declarations";
-}
-
 process.exit(
   runSensor({
     sensor_id: "ddd-reference-ids",
     severity: "blocking",
     budget_ms: 9000,
     evaluate: (context) => {
-      const file = relPath(context, context.output_path);
-      const declaration = parseDeclaration(context.output_path, declarationKind(context.output_path));
+      const kind =
+        context.stage === "domain-design"
+          ? "aggregate-mapping"
+          : context.stage === "functional-design"
+            ? "use-case-declarations"
+            : "layer-structure";
+      const path = declarationPath(context, kind);
+      const file = relPath(context, path);
+      const declaration = parseDeclaration(path, kind);
       if (!declaration.ok) {
         return [finding("reference-ids.document", file, declaration.message)];
       }
@@ -49,9 +52,13 @@ process.exit(
       };
 
       if (declaration.document.kind === "aggregate-mapping") {
+        for (const pkg of declaration.document.domain_packages ?? []) {
+          for (const ref of pkg.model_refs) resolve(ref, undefined, pkg.line);
+        }
         for (const mapping of declaration.document.aggregate_mappings) {
           resolve(mapping.aggregate_ref, "aggregate", mapping.line);
           for (const reference of mapping.reference_ids) resolve(reference, undefined, mapping.line);
+          for (const replay of mapping.replay_methods) resolve(replay.event_ref, "event", mapping.line);
           if (mapping.reference_ids.length === 0) {
             findings.push(
               finding(

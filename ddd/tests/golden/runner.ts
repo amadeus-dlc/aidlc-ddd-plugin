@@ -32,9 +32,10 @@ export interface GoldenCase {
     /**
      * Expected finding file per rule_id, record-relative. Defaults to the
      * `output` path. A case that reports on a sibling artifact (model-presence
-     * reports on domain-model.yaml, not components.md) overrides it here.
+     * reports on ddd-domain-model-yaml.md, not components.md) overrides it here.
      */
     files?: Record<string, string>;
+    locations?: { rule: string; file: string }[];
     note_contains?: string;
   };
 }
@@ -135,7 +136,9 @@ export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResul
     // finding, or a wrong file all fail. Lines are optional (BR8.2).
     const key = (rule: string, file: string) => `${rule} @ ${file}`;
     const expected = new Set(
-      testCase.expect.rules.map((rule) => key(rule, testCase.expect.files?.[rule] ?? testCase.output)),
+      testCase.expect.locations
+        ? testCase.expect.locations.map((entry) => key(entry.rule, entry.file))
+        : testCase.expect.rules.map((rule) => key(rule, testCase.expect.files?.[rule] ?? testCase.output)),
     );
     const actual = new Set(verdict.findings.map((f) => key(f.rule_id, f.file)));
     for (const entry of expected) {

@@ -8,12 +8,15 @@ import { dirname, join } from "node:path";
 import { readSourceClaims, readStageStatus, type SensorRunContext } from "../runtime/context.ts";
 import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import { parse } from "../rust/analyzer.ts";
+import { MODEL_DATA_PATH } from "../schema/artifacts.ts";
 import { loadDomainModel } from "../schema/loader.ts";
 import { finding, relPath } from "../sensors/common.ts";
+import { parseDeclaration } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { assignLayers, classifyFile, type Layer, scanWorkspace } from "../workspace/resolver.ts";
 import { IO_CRATES } from "./lists.ts";
 import { buildEdges } from "./rust/edges.ts";
+import { buildProgram } from "./rust/program.ts";
 import { buildSymbolTable } from "./rust/symbols.ts";
 import type { InspectionContext, InspectionTarget, ModelAvailability } from "./types.ts";
 
@@ -98,22 +101,30 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
   if (status.execution === "SKIP" || status.execution === "absent") {
     model = {
       status: status.execution === "SKIP" ? "skipped" : "absent",
-      note: `domain-modeling is ${status.execution}; model-dependent checks (b, c-model, n-model) skipped`,
+      note: `domain-modeling is ${status.execution}; model-dependent checks (b, h, c-model, n-model) skipped`,
     };
   } else {
-    const modelPath = join(run.record_dir, "inception", "ddd-domain-modeling", "domain-model.yaml");
+    const modelPath = join(run.record_dir, MODEL_DATA_PATH);
     const loaded = loadDomainModel(modelPath);
     if (!loaded.ok) {
       model = { status: "invalid" };
       findings.push(
-        finding("model.invalid", relPath(run, modelPath), "domain-modeling ran but domain-model.yaml did not load"),
+        finding(
+          "model.invalid",
+          relPath(run, modelPath),
+          "domain-modeling ran but ddd-domain-model-yaml.md did not load",
+        ),
       );
     } else {
       model = { status: "available", index: loaded.index };
     }
   }
 
-  const symbols = buildSymbolTable(runtime, workspaceRoot, assignments, model);
+  const program = buildProgram(runtime, workspaceRoot, assignments);
+  const mappingPath = join(run.record_dir, "inception/domain-design/ddd-aggregate-mapping.md");
+  const mapping = existsSync(mappingPath) ? parseDeclaration(mappingPath, "aggregate-mapping") : undefined;
+  if (mapping && !mapping.ok) program.notes.add("replay.disabled: aggregate mapping is invalid");
+  const symbols = buildSymbolTable(program, model, mapping?.ok ? mapping.document.aggregate_mappings : []);
 
   const targets: InspectionTarget[] = [];
   const skipped: InspectionTarget[] = [];
@@ -161,12 +172,15 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
   if (model.note) noteParts.push(model.note);
 
   const context: InspectionContext = {
+    analyzer: runtime,
+    aggregateMapping: mapping,
     run,
     workspace,
     assignments,
     targets,
     skipped,
     symbols,
+    program,
     model,
     denylist: IO_CRATES,
     opaque,

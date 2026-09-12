@@ -1,58 +1,14 @@
-# Codex 実機でのフック検証
+# Historical Codex host verification
 
-> 更新：SubagentStart経由の転送を実装し、ワークフロー状態・単独ステージ指定の両経路で実機検証が成功しました。
-> 現在の証跡は [修正後の検証結果](evidence/codex-host-bridge-verification.json)、手順は [互換性修正](framework-compatibility.md) を参照してください。
-> 以下は修正前の調査記録です。修正は `.claude/`・`.codex/` 側に保持し、本家サブモジュールは元の状態へ戻して読み取り専用にしました。
+English | [Japanese](codex-host-verification.ja.md)
 
-2026年9月8日、ローカルの `codex-cli 0.153.4` と `gpt-6-astra` を使って検証しました。
-ChatGPT 認証による実際のモデル実行で、ホストによるツール呼び出しとフックの入出力を記録しています。
+This page and its JSON evidence record the earlier Codex integration investigated in September 2026. **They do not prove rule delivery works on current AI-DLC 2.8.2.** See [compatibility](framework-compatibility.md) for current policy and [T-05](completion-tasks.md) for re-verification.
 
-## 結果
+The initial investigation could not confirm child rule delivery because host tool names and encrypted input did not match the old delivery code's assumptions. Later, a custom bridge added to the old setup allowed verification of workflow-state and standalone-stage-hint routes.
 
-| 対象 | 結果 | 観測 |
-| --- | --- | --- |
-| Bash セッション付与 | VERIFIED | 修正版で実行コマンドにセッションIDが付与され、出力IDはスレッドIDと一致。`source` は `payload` |
-| Bash セッション付与・旧版 | 失敗を再現 | フックは実行されるが `permissionDecision` がない。コマンドは書き換わらず、IDとsourceはともに `null` |
-| 子エージェントへのルール転送 | NOT VERIFIED | 現行ホストの起動ツール名・入力形式とAI-DLCの想定が一致せず、子の回答は `TOKEN_MISSING` |
+| Evidence | Scope |
+|---|---|
+| [Initial investigation](evidence/codex-host-verification.json) | Old input formats, session binding, rule-delivery failures, and related observations. |
+| [After the old bridge](evidence/codex-host-bridge-verification.json) | Success with a custom bridge in the old setup. |
 
-修正版のBashセッション付与は、通常のマッチャーとマッチ条件なしの2回の実行で確認しました。
-
-## ルール転送の不一致
-
-通常の設定は `spawn_agent` をマッチャーとして使いますが、ホストがフックへ渡した実際の名前は **`collaborationspawn_agent`** でした。
-通常設定では該当フックが発火せず、マッチ条件を外すと入力を観測できました。
-
-その入力には `agent_type`、`task_name`、`message` があり、`agent_type` は指定した `aidlc-product-agent` でした。
-ただし、`message` は `gAAAAA` で始まる暗号化形式で、プロンプトに指定したステージのパスは含まれていません。
-この検証では進行中のintentを作らず、明示したステージパスからルールを解決する経路を対象にしています。
-現行のAI-DLCはツール名を認識できず、さらにこの本文からステージ名を解決できないため、単にマッチャーを広げても転送は成立しません。
-
-同じ検証環境で、平文の `spawn_agent` 入力をアダプターへ直接渡すと、`permissionDecision: "allow"` とともに検証用トークンを含む本文が生成されました。
-これはアダプター単体の動作確認であり、ホスト経由の転送成功を意味しません。
-暗号化された本文の変換や、ホスト側の復号とフックの実行順序は未調査です。
-進行中intentの状態を使う別経路、および他のモデル・Codexバージョンへの一般化もしていません。
-
-## 実行条件
-
-- Git管理対象外の `ddd-sandbox/codex-host-*` に、フック・ツール・ルールのコピーを作成。
-- 対象の2つのフックだけを有効化。ラッパーはstdin、stdout、stderr、終了コードを記録し、そのまま転送。
-- 診断用に空応答のSessionStartフックを追加。
-- `codex exec`、`workspace-write`、承認方針 `never`、通常セッションを使用。
-- 確認済みの検証用フックに限り、実行単位の `--dangerously-bypass-hook-trust` を使用。通常利用時の信頼登録手順はこの検証に含めていません。
-- 検証専用のCodex設定を使用。ユーザーの設定は変更せず、認証への一時参照は終了後に削除。
-- 初回の `--ephemeral` 実行ではフックが発火しなかったため、比較検証には通常セッションを使用。
-- 最初の補助実行では、ロール定義の重複と、ephemeralスレッドからの子起動失敗も観測。重複定義を除いた通常セッションで子起動と `TOKEN_MISSING` を確認。
-
-## 証跡
-
-共有用の構造化要約は [codex-host-verification.json](evidence/codex-host-verification.json) に保存しています。
-生ログのハッシュ、フックの実際の名前、出力の判定結果を含み、認証情報や暗号化された本文は含めていません。
-生ログと一時実行スクリプトはGit管理対象外の `ddd-sandbox/` にあります。
-
-修正箇所の仕様上の根拠として、[公式Hooksドキュメント](https://learn.chatgpt.com/docs/hooks) は、入力書き換え時に `permissionDecision: "allow"` と `updatedInput` を返す形式を示しています。
-ただし、本検証の成功・失敗の判定は仕様記述ではなく、実際のツール実行とフック記録に基づいています。
-
-## 次の対応
-
-ルール転送を実機で成立させるには、`collaboration.spawn_agent` のホスト実装と、暗号化本文を扱える拡張地点の調査が必要です。
-今回、マッチャーや本文処理の本番コードは追加変更していません。既存の単体・合成テストが通る状態と、ホスト経由のルール転送は区別して扱います。
+Preserve the original environments, dates, and hashes in JSON. Local raw-log paths identify historical locations and may not exist in a new working copy. Do not present reapplying old patches or changing authentication/trust settings as current recommended procedures.

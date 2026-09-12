@@ -5,7 +5,7 @@
  * invariant statements. It never hydrates the whole YAML tree for callers.
  */
 
-import type { ElementKind } from "./element-id.ts";
+import { type ElementKind, parseElementId } from "./element-id.ts";
 import type { Command, DomainModel, IndexedElement } from "./model.ts";
 
 export type ResolveReason = "undefined" | "deprecated" | "kind-mismatch" | "malformed";
@@ -38,6 +38,7 @@ export function createElementIndex(
       return registry.get(id);
     },
     resolve(id: string, expectedKind?: ElementKind): ResolveResult {
+      if (!parseElementId(id).ok) return { ok: false, reason: "malformed" };
       const element = registry.get(id);
       if (!element) {
         return retired.has(id) ? { ok: false, reason: "deprecated" } : { ok: false, reason: "undefined" };

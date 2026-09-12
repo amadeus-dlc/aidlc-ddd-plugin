@@ -1,45 +1,27 @@
-# インストール済みハーネスの互換性修正
+# AI-DLC compatibility
 
-`aidlc-workflows/` は本家参照用の読み取り専用サブモジュールです。パッチ適用・依存導入・再生成・commit・pushを行いません。
-変更先は親リポジトリの `.claude/`・`.codex/` に限定します。
+English | [Japanese](framework-compatibility.ja.md)
 
-## 修正内容
+Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Completion targets are Claude Code and Codex; Kimi and opencode are out of scope.
 
-- 合成処理は、Codexで `.codex/skills` がない場合に `.agents/skills` を参照します。
-- Bash入力の書き換え時に `permissionDecision: "allow"` を付けます。
-- `collaborationspawn_agent` はアダプター内で通常の起動名に正規化し、既存のガードにも渡します。
-- 暗号化本文は変更せず、起動前に保存したルール束を `SubagentStart` の追加コンテキストとして子へ渡します。
+## Use standard installed tools
 
-## 再適用と検証
+`.claude/tools/` and `.codex/tools/` are third-party framework distributions, not implementation targets for this plugin. Record framework gaps as reproductions and upstream proposals. Make plugin implementation changes under `ddd/`.
 
-`.claude/`・`.codex/` のコピーを配置した後、`ddd/` で実行します。
+This working copy has AI-DLC installed in `.claude/` and `.codex/`. DDD development validate/build/test commands use `.codex/tools/`. The installer uses the tools already installed for the selected destination harness.
 
-```sh
-bun install
-bun run prepare:harnesses
-bun run check
-bun run build:claude
-bun run build:codex
-```
+T-04 tracks remaining helper-code cleanup.
 
-`prepare:harnesses` は `patches/installed-harnesses.patch` を親リポジトリのコピーにだけ適用します。
-適用済みなら何も変更せず、ローカル変更と一致しなければ上書きせず停止します。
-サブモジュール用のパッチと適用スクリプトは削除しました。
-検証・ビルドは `.codex/tools/` のコピーを使用します。
+## Separate verified and unverified behavior
 
-## 実機検証
+The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. Standard standalone completion still skips general artifacts and sensors and can finish without artifacts. See the [artifact contract](artifact-contract.md) for reproduction and limits.
 
-```sh
-bun run test:host state
-bun run test:host task-name
-```
+Codex rule delivery depends on integration between standard AI-DLC and the execution host. T-05 verifies the current route from the DDD side. Old bridge success records are not a substitute.
 
-これは実際のCodexモデルを呼び出す明示実行用の検証です。通常の `check` には含めません。
-ワークフロー状態、または `task_name` による単独ステージ指定の両経路で検証用トークンの受信を確認しています。
-生ログはGit管理対象外の `ddd-sandbox/` に保存します。
+## Compatibility work order
 
-単独ステージ指定では、例えば `task_name: aidlc_stage_user_stories__review` を使います。
-ステージを確定できない起動はエラーにします。同じ親セッション・同じ役割の起動は、先の子がルールを受け取るまで待ってから再試行してください。
-変更済みフックの信頼状態は、通常のCodexセッションの `/hooks` で確認します。
+1. Normal approval is connected under T-01. The remaining standalone completion guarantee needs a standard AI-DLC fix.
+2. T-04 aligns build/verification paths and removes old dependencies for the two supported harnesses.
+3. T-05 verifies fresh installation, updates, and actual stage execution.
 
-詳しくは [実機検証結果](codex-host-verification.md) と [読み取り専用の運用](reference-read-only.md) を参照してください。
+See [remaining work](completion-tasks.md) and [measurements](current-state-assessment.md). Keep old-version details in the [historical Codex record](codex-host-verification.md).

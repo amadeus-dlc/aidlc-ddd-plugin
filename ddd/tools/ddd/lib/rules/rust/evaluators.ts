@@ -1,14 +1,16 @@
 /**
  * Rust rule evaluators (U5 BR4–BR6). Each evaluator reads U2 syntax facts and
- * the U1/U2 context; none touches tree-sitter nodes and none resolves types
- * (FR7.12).
+ * the U1/U2 context and explicit declaration bindings. They do not perform
+ * compiler inference, trait solving or macro expansion.
  */
 
-import { calls, constructions, impls, type Span, structs, traits, uses } from "../../rust/analyzer.ts";
+import { evaluateDomainPackaging } from "../../packaging/evaluate.ts";
+import { calls, constructions, fns, impls, type Span, structs, traits, uses } from "../../rust/analyzer.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
 import type { DomainTypeSymbol, InspectionContext, InspectionTarget } from "../types.ts";
+import { within as withinSpan } from "./program.ts";
 
 function within(span: Span, outer: Span): boolean {
   return (
@@ -64,8 +66,8 @@ function ruleB(target: InspectionTarget, context: InspectionContext): FindingInp
   if (!target.tree) return [];
   const out: FindingInput[] = [];
   for (const symbol of context.symbols.types) {
-    if (symbol.file !== target.tree.file) continue;
     for (const mutator of symbol.mutators) {
+      if (mutator.file !== target.tree.file) continue;
       if (mutator.classification === "undeclared") {
         out.push(
           finding(
@@ -118,19 +120,19 @@ function ruleC(target: InspectionTarget, context: InspectionContext): FindingInp
     }
   }
   for (const symbol of context.symbols.types) {
-    if (symbol.file !== target.tree.file) continue;
-    if (symbol.has_default) {
-      const first = symbol.mutators[0]?.line ?? 1;
+    for (const location of symbol.defaults) {
+      if (location.file !== target.tree.file) continue;
       out.push(
         finding(
           "c",
           target.tree.file,
           `domain type ${symbol.type_name} has a Default construction path (c-default)`,
-          first,
+          location.line,
         ),
       );
     }
     for (const mutator of symbol.mutators) {
+      if (mutator.file !== target.tree.file) continue;
       if (mutator.classification === "post-init") {
         out.push(
           finding(
@@ -154,7 +156,20 @@ function ruleD(target: InspectionTarget, context: InspectionContext): FindingInp
     if (call.kind !== "method-call") continue;
     const receiver = (call.receiver_text ?? "").replace(/\s+/g, " ").trim();
     if (["self", "&self", "&mut self", "Self", "&mut  self"].includes(receiver)) continue;
-    if (context.symbols.getter_names.has(call.callee_text)) {
+    if (!context.symbols.getter_names.has(call.callee_text)) continue;
+    const type = context.program.receiver(target.tree.file, call);
+    if (!type) {
+      context.program.notes.add(
+        `syntax.unresolved: ${target.tree.file}:${call.span.start_line} getter receiver; rule d not evaluated`,
+      );
+      continue;
+    }
+    if (
+      type.layer === "domain" &&
+      type.methods.some(
+        (entry) => entry.method.name === call.callee_text && entry.method.body_shape === "returns-field-only",
+      )
+    ) {
       out.push(
         finding(
           "d",
@@ -189,13 +204,24 @@ function ruleG(target: InspectionTarget, context: InspectionContext): FindingInp
 // --- (h) execute aggregate argument -----------------------------------------
 function ruleH(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
+  if (context.model.status !== "available") return [];
   const out: FindingInput[] = [];
-  const allowed = (name: string) => name.endsWith("Id");
-  const check = (name: string, params: { name: string; type_text: string }[], line: number) => {
+  const file = context.program.files.get(target.tree.file);
+  if (!file) return [];
+  const check = (name: string, params: { name: string; type_text: string }[], line: number, module: string[]) => {
     if (name !== "execute") return;
     for (const param of params) {
       const stripped = stripType(param.type_text);
-      if (context.symbols.type_names.has(stripped) && !allowed(stripped)) {
+      const type = context.program.resolveType(file.tree.file, [...file.module, ...module], param.type_text);
+      if (!type && !/^(bool|str|String|[uif](8|16|32|64|128)|[ui]size|\(\))$/.test(stripped)) {
+        context.program.notes.add(
+          `syntax.unresolved: ${file.tree.file}:${line} parameter ${param.type_text}; rule h not evaluated`,
+        );
+      }
+      if (
+        type &&
+        context.symbols.types.some((symbol) => symbol.key === type.key && symbol.aggregate_ref !== undefined)
+      ) {
         out.push(
           finding(
             "h",
@@ -208,8 +234,9 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
     }
   };
   for (const block of impls(target.tree)) {
-    for (const method of block.methods) check(method.name, method.params, method.span.start_line);
+    for (const method of block.methods) check(method.name, method.params, method.span.start_line, block.module_path);
   }
+  for (const fn of fns(target.tree)) check(fn.name, fn.params, fn.span.start_line, fn.module_path);
   return out;
 }
 
@@ -218,19 +245,36 @@ function ruleI(target: InspectionTarget, context: InspectionContext): FindingInp
   if (!target.tree) return [];
   const out: FindingInput[] = [];
   for (const call of calls(target.tree)) {
-    if (call.kind === "method-call" && call.callee_text === "execute") {
-      const receiver = (call.receiver_text ?? "").trim();
-      if (!["self", "Self"].includes(receiver)) {
-        out.push(
-          finding("i", target.tree.file, `use case calls another use case (${receiver}.execute)`, call.span.start_line),
-        );
-      }
-    } else if (call.kind === "path-call" && call.callee_text.endsWith("::execute")) {
-      out.push(
-        finding("i", target.tree.file, `use case calls another use case (${call.callee_text})`, call.span.start_line),
+    if (call.callee_text !== "execute" && !call.callee_text.endsWith("::execute")) continue;
+    if (["self", "Self"].includes((call.receiver_text ?? "").trim())) continue;
+    const file = context.program.files.get(target.tree.file);
+    if (!file) continue;
+    const type =
+      call.kind === "method-call"
+        ? context.program.receiver(target.tree.file, call)
+        : context.program.resolveType(
+            target.tree.file,
+            [...file.module, ...call.module_path],
+            call.callee_text.slice(0, -9),
+          );
+    if (!type) {
+      context.program.notes.add(
+        `syntax.unresolved: ${target.tree.file}:${call.span.start_line} execute receiver; rule i not evaluated`,
       );
+      continue;
     }
-    void context;
+    const caller = file.impls.find((block) => withinSpan(call.span, block.span));
+    const callerType =
+      caller &&
+      context.program.resolveType(target.tree.file, [...file.module, ...caller.module_path], caller.target_type_text);
+    if (callerType?.key === type.key) continue;
+    if (
+      type.layer === "use-case" &&
+      type.kind !== "trait" &&
+      type.methods.some((entry) => !entry.trait && entry.method.name === "execute")
+    ) {
+      out.push(finding("i", target.tree.file, `use case calls ${type.key}::execute`, call.span.start_line));
+    }
   }
   return out;
 }
@@ -389,4 +433,5 @@ export const CONTEXT_EVALUATORS: Record<
 > = {
   g: ruleG,
   k: ruleK,
+  "domain-packaging": evaluateDomainPackaging,
 };

@@ -6,7 +6,7 @@ default_severity: blocking
 fire_on: gate
 description: The infrastructure-design gate — the declared layer structure has the ADR-009 items and no forbidden dependencies (rules k, l), repository naming (m) or restoration path (n).
 category: document-traceability
-matches: "**/infrastructure-design/ddd-layer-structure.md"
+matches: "**/infrastructure-design/*.{md,json}"
 timeout_seconds: 10
 checks:
   - rule_id: layer-structure.model
@@ -15,35 +15,35 @@ checks:
     outcome: finding
   - rule_id: layer-structure.item
     requirement: ADR-009
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.cqrs-sides
     requirement: FR5.1
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.dependencies-incomplete
     requirement: FR5.1
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.k
     requirement: FR5.4 (k)
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.l
     requirement: FR5.4 (l)
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.m-name
     requirement: FR5.4 (m)
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.m-media
     requirement: FR5.4 (m)
-    inputs: [ddd-layer-structure]
+    inputs: [cicd-pipeline]
     outcome: finding
   - rule_id: layer-structure.n
     requirement: FR5.4 (n)
-    inputs: [ddd-layer-structure, ddd-domain-model-yaml]
+    inputs: [cicd-pipeline, ddd-domain-model-yaml]
     outcome: finding
 input_schema:
   output_path: string

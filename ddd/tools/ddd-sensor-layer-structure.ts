@@ -3,7 +3,7 @@
 import { join } from "node:path";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { finding, pascalCase, relPath } from "./ddd/lib/sensors/common.ts";
-import { parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
+import { declarationPath, parseDeclaration, readModel } from "./ddd/lib/sensors/declaration.ts";
 import type { FindingInput } from "./ddd/lib/shared/findings.ts";
 
 const MEDIA_WORDS = [
@@ -29,8 +29,15 @@ process.exit(
     severity: "blocking",
     budget_ms: 9000,
     evaluate: (context) => {
-      const file = relPath(context, context.output_path);
-      const declaration = parseDeclaration(context.output_path, "layer-structure");
+      const kind =
+        context.stage === "domain-design"
+          ? "aggregate-mapping"
+          : context.stage === "functional-design"
+            ? "use-case-declarations"
+            : "layer-structure";
+      const path = declarationPath(context, kind);
+      const file = relPath(context, path);
+      const declaration = parseDeclaration(path, "layer-structure");
       if (!declaration.ok) {
         return [finding("layer-structure.item", file, declaration.message)];
       }

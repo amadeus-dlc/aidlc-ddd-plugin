@@ -2,10 +2,11 @@
  * Design golden cases (U4 BR8). Each case materialises a minimal record
  * directory and drives one sensor script through its real entry point.
  *
- * The model-mutating cases carry matching domain-model.md text so the
+ * The model-mutating cases carry matching ddd-domain-model.md text so the
  * completeness (f) checks stay quiet unless a case targets them.
  */
 
+import { designDocument } from "../model-document.ts";
 import type { GoldenCase } from "../runner.ts";
 
 const M = `schema_version: 1
@@ -95,7 +96,7 @@ const MAP = `# Aggregate mapping
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/ddd-domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 aggregate_mappings:
   - aggregate_ref: aggregate.invoice
     programming_model: class
@@ -114,7 +115,7 @@ const MAP_DUP = `# Aggregate mapping
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/ddd-domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 aggregate_mappings:
   - { aggregate_ref: aggregate.invoice, programming_model: class, persistence_method: state-sourcing, crate: billing-domain, module: billing, ports: [], repository: InvoiceRepository, reference_ids: [entity.invoice] }
   - { aggregate_ref: aggregate.invoice, programming_model: class, persistence_method: state-sourcing, crate: billing-domain, module: billing, ports: [], repository: InvoiceRepository, reference_ids: [entity.invoice] }
@@ -125,7 +126,7 @@ const UC = `# Use cases
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/ddd-domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 use_cases:
   - use_case_id: uc.issue-invoice
     name: Issue invoice
@@ -141,7 +142,7 @@ const LAYER = `# Layer structure
 
 \`\`\`yaml
 schema_version: 1
-model_ref: inception/ddd-domain-modeling/domain-model.yaml
+model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 layer_structures:
   - context_ref: bc.billing
     cqrs: true
@@ -162,16 +163,16 @@ layer_structures:
 `;
 
 const MODEL_FILES = {
-  "inception/ddd-domain-modeling/domain-model.yaml": M,
-  "inception/ddd-domain-modeling/domain-model.md": MD,
+  "inception/ddd-domain-modeling/ddd-domain-model-yaml.md": M,
+  "inception/ddd-domain-modeling/ddd-domain-model.md": MD,
 };
 const MAP_PATH = "inception/domain-design/ddd-aggregate-mapping.md";
-const UC_PATH = "construction/u1/functional-design/ddd-use-case-declarations.md";
-const LAYER_PATH = "construction/u1/infrastructure-design/ddd-layer-structure.md";
-const MODEL_PATH = "inception/ddd-domain-modeling/domain-model.yaml";
-const MD_PATH = "inception/ddd-domain-modeling/domain-model.md";
+const UC_PATH = "construction/u1/functional-design/functional-spec.md";
+const LAYER_PATH = "construction/u1/infrastructure-design/cicd-pipeline.md";
+const MODEL_PATH = "inception/ddd-domain-modeling/ddd-domain-model-yaml.md";
+const MD_PATH = "inception/ddd-domain-modeling/ddd-domain-model.md";
 
-export const DESIGN_CASES: GoldenCase[] = [
+const RAW_DESIGN_CASES: GoldenCase[] = [
   // ---- model-completeness ----
   {
     sensor: "ddd-model-completeness",
@@ -303,7 +304,7 @@ export const DESIGN_CASES: GoldenCase[] = [
     output: MAP_PATH,
     files: {
       [MAP_PATH]: MAP.replace(
-        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/ddd-domain-model-yaml.md",
         "inception/ddd-domain-modeling/missing.yaml",
       ),
     },
@@ -386,7 +387,7 @@ export const DESIGN_CASES: GoldenCase[] = [
     output: MAP_PATH,
     files: {
       [MAP_PATH]: MAP.replace(
-        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/ddd-domain-model-yaml.md",
         "inception/ddd-domain-modeling/missing.yaml",
       ),
     },
@@ -449,8 +450,8 @@ export const DESIGN_CASES: GoldenCase[] = [
     files: {
       [MODEL_PATH]: M,
       [MAP_PATH]: MAP_ACTOR.replace(
-        "model_ref: inception/ddd-domain-modeling/domain-model.yaml",
-        "model_ref: inception/ddd-domain-modeling/domain-model.yaml",
+        "model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md",
+        "model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md",
       ).replace(
         "aggregate_mappings:",
         "aggregate_mappings:\n  - aggregate_ref: aggregate.other\n    programming_model: actor\n    persistence_method: state-sourcing\n    crate: other-domain\n    module: other\n    reference_ids: [entity.invoice]",
@@ -490,7 +491,7 @@ export const DESIGN_CASES: GoldenCase[] = [
     output: LAYER_PATH,
     files: {
       [LAYER_PATH]: LAYER.replace(
-        "inception/ddd-domain-modeling/domain-model.yaml",
+        "inception/ddd-domain-modeling/ddd-domain-model-yaml.md",
         "inception/ddd-domain-modeling/missing.yaml",
       ),
     },
@@ -636,3 +637,52 @@ export const DESIGN_CASES: GoldenCase[] = [
     expect: { pass: false, rules: ["design-advisories.store-upsert"] },
   },
 ];
+
+RAW_DESIGN_CASES.push(
+  {
+    sensor: "ddd-reference-ids",
+    name: "clean-replay-reference",
+    stage: "domain-design",
+    output: MAP_PATH,
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP.replace(
+        "    reference_ids:",
+        "    replay_methods: [{ method: apply_event, event_ref: event.invoice.issued }]\n    reference_ids:",
+      ),
+    },
+    expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-reference-ids",
+    name: "violation-replay-reference",
+    stage: "domain-design",
+    output: MAP_PATH,
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP.replace(
+        "    reference_ids:",
+        "    replay_methods: [{ method: apply_event, event_ref: event.invoice.unknown }]\n    reference_ids:",
+      ),
+    },
+    expect: { pass: false, rules: ["reference-ids.undefined"] },
+  },
+  {
+    sensor: "ddd-mapping-declarations",
+    name: "violation-replay-shape",
+    stage: "domain-design",
+    output: MAP_PATH,
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP.replace("    reference_ids:", "    replay_methods: invalid\n    reference_ids:"),
+    },
+    expect: { pass: false, rules: ["mapping-declarations.document"] },
+  },
+);
+
+export const DESIGN_CASES: GoldenCase[] = RAW_DESIGN_CASES.map((entry) => ({
+  ...entry,
+  files: Object.fromEntries(
+    Object.entries(entry.files).map(([path, content]) => [path, designDocument(path, content)]),
+  ),
+}));

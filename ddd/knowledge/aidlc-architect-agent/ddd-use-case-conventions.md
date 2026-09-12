@@ -1,66 +1,44 @@
 # Use-case conventions
 
+Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+
 ## Purpose
 
-The five-point convention set and the orchestrator principle for use cases.
-Read during functional-design.
-
-## Principles
-
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.use-case-conventions.1 | PREFER letting the use case orchestrate and hand every business judgement to the domain. | use case | guidance-only | The placement of a decision is a design judgement; the code-level half of it is enforced by sensor (d), which is rule `.5` below. | DL §6 |
-| K.use-case-conventions.2 | ALWAYS make a use case re-execution-safe by construction: every step declares its idempotency. | use case | sensor:mapping-declarations.j blocking | Retries are the norm, so safety cannot depend on the caller's discipline. | UC §5 |
-| K.use-case-conventions.3 | ALWAYS declare the transactional consistency boundary of the use case. | use case | stage-contract:after-step:2 | An implicit boundary is a boundary nobody agreed to. | UC §3 |
+Conventions for DDD design and code generation. A check name does not imply that the entire convention is enforced automatically. DDD checks are connected to normal approval admission; the framework still has a gap in standalone completion guards.
 
 ## Rules
 
-| Rule ID | Statement | Applies to | Enforcement | Rationale | Source |
-|---|---|---|---|---|---|
-| K.use-case-conventions.4 | ALWAYS write the five-point set explicitly: consistency, idempotency, ordering, failure/compensation, observability. | use case | stage-contract:after-step:2 | Completeness of the declaration. | UC §2 |
-| K.use-case-conventions.5 | NEVER let the use case make a business judgement; it orchestrates and delegates to the domain. | use case | sensor:d blocking | Tell, Don't Ask. | DL §6 |
-| K.use-case-conventions.6 | ALWAYS state the transactional consistency boundary. | use case | stage-contract:after-step:2 | Avoids implicit transactions. | UC §3 |
-| K.use-case-conventions.7 | ALWAYS make the flow re-execution-safe and declare each step's idempotency. | use case | sensor:mapping-declarations.j blocking | Retries are the norm. | UC §5 |
-| K.use-case-conventions.8 | ALWAYS model a cross-aggregate flow as a Process Manager, especially under actor models. | process manager | sensor:mapping-declarations.process-manager-required blocking | Long-running coordination must not collapse aggregate boundaries. | UC §6 |
-| K.use-case-conventions.9 | ALWAYS declare the six mandatory items per use case. | use case | sensor:mapping-declarations.use-case-item blocking | A reviewable contract. | FR4.1 |
-| K.use-case-conventions.10 | PREFER applying CQS to state-changing operations only, not to immutable re-derivation. | use case | guidance-only | Query versus command is a judgement at the edge; no sensor reads it. | DL §6 |
+| Rule ID | Convention | Current coverage |
+|---|---|---|
+| K.use-case-conventions.1 | Delegate business decisions to the domain and coordinate retrieval, persistence, and recovery. | Review. |
+| K.use-case-conventions.2 | Explain why each step is safe to re-execute. | Declaration presence is checked; safety requires review and tests. |
+| K.use-case-conventions.3 | Distinguish per-aggregate persistence from partial failure of a multi-aggregate flow. | Design convention. |
+| K.use-case-conventions.4 | Declare consistency, idempotency, ordering, failure and compensation, and observability. | Design procedure and review. |
+| K.use-case-conventions.5 | Do not extract values through getters to make business decisions. | d checks getter calls. Review assesses the placement of business decisions. |
+| K.use-case-conventions.6 | Do not implicitly promise automatic rollback of an entire flow. | Design convention. |
+| K.use-case-conventions.7 | Define retry identification, retention periods, and recovery from unknown persistence outcomes. | j checks only the strategy of additive commands. Safety requires review. |
+| K.use-case-conventions.8 | Represent multi-aggregate recovery with a Process Manager or an explicit re-execution strategy. | process-manager-required applies when every target is actor-based and its mapping is readable. |
+| K.use-case-conventions.9 | Declare the six use-case items, identifier, and name. | mapping-declarations.use-case-item and related checks. Connected to normal approval; standalone completion has limits. |
+| K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. | Design convention. |
 
 ## Rationale
 
-A use case is the consistency boundary. Naming the idempotency strategy of each
-step makes retries safe; a Process Manager carries multi-aggregate flows without
-collapsing aggregate boundaries.
+A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Retaining only the most recent ID is insufficient if C1 → C2 → retry C1 is allowed. Sagas can also use classes; declarations for mixed flows remain T-03 work.
 
-The core agrees on this layer's shape and is cited as support: a repository
-exists per aggregate root and query logic belongs in a separate read model
-(`.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-Pattern), which is what keeps the use case orchestrating rather than querying.
+## Examples
 
-## Examples (index)
+The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../tests/golden/rust/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
 
-| Rule ID | Fixture path | What it shows | Projection note |
-|---|---|---|---|
-| K.use-case-conventions.2 | tests/golden/design/cases.ts#clean-mapping | a use-case declaration whose steps each carry an idempotency strategy | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.5 | tests/golden/rust/cases.ts#clean-domain | a domain type whose getters are not called from outside the domain | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/rust/cases.ts` and run it with `bun test tests/u5-golden.test.ts`. |
-| K.use-case-conventions.7 | tests/golden/design/cases.ts#clean-mapping | a mapping document whose use-case declaration sensor `mapping-declarations.j` accepts | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.8 | tests/golden/design/cases.ts#clean-mapping | the same case: no cross-aggregate flow is left without a Process Manager | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-| K.use-case-conventions.9 | tests/golden/design/cases.ts#clean-mapping | the same case: a use-case declaration that carries all six mandatory items | `tests/golden/` is not copied into `.claude/knowledge/`, so this path is not reachable from the projected harness; in this repository, find the case by name in `tests/golden/design/cases.ts` and run it with `bun test tests/u4-golden.test.ts`. |
-
-The rows name the clean case of the sensor suite that runs each rule, not a case
-built to exercise the rule's subject matter; the limitations are listed in this
-unit's `code-summary.md`.
-
-## Retired rules
-
-None.
+The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 
 ## Sources
 
-- `ddd/docs/use-case-layer-design.md` §2–§8
-- `construction/u1-sensor-foundation/functional-design/` — the
-  `<kind>.<segments>` ID grammar and the completeness check that the
-  declaration sensors build on (`functional-spec.md`, `entities.md`,
-  `rules.md`). Record-relative path under
-  `aidlc/spaces/default/intents/<intent>/`.
-- `.claude/knowledge/aidlc-architect-agent/ddd-patterns.md` → Repository
-  Pattern (the core statements cited as support)
+- [Current design](../../docs/use-case-layer-design.md)
+- [Measurements and known issues](../../docs/current-state-assessment.md)
+- [Remaining work](../../docs/completion-tasks.md)
+
+## T-02 evaluation contract
+
+Rules b/d/h/i match crates, modules, and explicit type declarations. Do not confuse value objects or ports with aggregates or concrete use cases. Replay is allowed only when the aggregate mapping's replay_methods, event-sourcing mode, owning aggregate, and single event parameter type agree.
+
+Type inference, associated types, and trait implementation selection are outside coverage. Direct sensor JSON includes notes for unexamined code. The standard dispatcher may omit notes on success; record them in code-summary for review. See the [detailed contract](../../docs/rust-sensor-contract.md).

@@ -1,30 +1,46 @@
-# ddd テスト
+# DDDプラグインのテスト
 
 [English](README.md) | 日本語
 
-プラグインルート（`ddd/`）で `bun install && bun test` で実行します。ユニットとゴールデンの suite はフレームワークのサブモジュール無しで通ります。既存のハーネスアダプタの 2 suite は `aidlc-workflows` の dist fixture を必要とします。
+更新: 2026-09-13。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/sensor-coverage.ja.md)で管理します。全体テストには既知の旧依存20件の失敗が残ります。skipは標準側の単独完了不足を調べる任意実行の再現ケースです。
 
-## suite 一覧
+## 各テストの役割
 
-- `u1-sensor-foundation.test.ts` — スキーマライブラリとセンサーランタイム: 要素 ID の文法と段数、`loadDomainModel`（未知キー・重複・必須参照・フェイルクローズ）、`checkCompleteness`、verdict の組み立て（`(file, line, rule_id)` 整列と `finding_id` 採番）、`runSensor`（JSON 1 行・フェイルクローズ・資産欠落で終了 127）。
-- `u2-rust-analysis-foundation.test.ts` — Cargo workspace の層判定（members・targets・依存・層の決定表・許可表）と Rust 解析器（structs / impls / fns / uses / calls / constructions、解析エラー、content-hash キャッシュ）。
-- `u4-design-sensors.test.ts` — 設計センサー 6 本を子プロセスで `--stage` / `--output-path` から起動し、各センサーの clean と violation を 1 件ずつ検証。
-- `u4-golden.test.ts` — `tests/golden/design/cases.ts` 上のゴールデンランナー、網羅性（宣言 rule ごとに violation ケース）、決定性（3 回でバイト一致）。
-- `u5-rust-code-sensors.test.ts` — Rust センサー 3 本を一時 Cargo workspace に対して子プロセスで起動: clean ドメイン、a/b/d/g、SKIP note、h、i、m、n。
-- `u5-golden.test.ts` — rust ゴールデン suite（`tests/golden/rust/cases.ts`、各ケースが workspace と record を持つ）、網羅性、決定性。
-- `install.test.ts` — インストーラの純関数: 安定 semver 選択、ソースセレクタ、canonical payload ダイジェスト、tarball 展開（安全でないパス検査つき）、ローカル取得、マニフェスト検証。
-- `framework-compatibility.test.ts` / `codex-dispatch-bridge.test.ts` — 既存のハーネスアダプタ suite（Codex dispatch bridge、installed-harness patch）。`aidlc-workflows/dist/codex/aidlc` から fixture をコピーするため、dist 未生成の環境では失敗します。`.codex/hooks/` に復元した codex adapter を検証します。
+| ファイル | 対象 |
+|---|---|
+| t1-model-artifacts / t1-gate-integration | 正規成果物の直接検査、Claude/Codexの通常承認開始 |
+| t7-domain-packaging | 業務語彙による宣言と実モジュールの照合、技術分類・解析不能の検出 |
+| t9-sensor-contract | センサー×規則の網羅性、正常・異常・境界例、依存方向表、予約名全件、対応表の更新漏れ |
+| t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
+| u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
+| u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
+| u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
+| u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
+| u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
+| install | インストーラの純関数等。新規導入・更新全体の実証ではない |
+| framework-compatibility | 現行Claude/Codexのcompose・冪等性テストと、失敗する旧連携テストが混在 |
+| codex-dispatch-bridge | 旧bridgeと削除済みfixtureを前提にする。T-04で整理 |
 
-## fixture
+## 配布物の検査
 
-- `tests/fixtures/u1/` — U1 ローダー用の正しい／不正な正規モデル。
-- `tests/golden/runner.ts` — 共有ゴールデンランナー。ケースを一時 record ディレクトリへ materialize し（rust は workspace も）、実センサースクリプトを子プロセスで起動して verdict の `pass` と `(rule_id, file)` の所見集合全体を比較します。
-- `tests/golden/design/cases.ts` / `tests/golden/rust/cases.ts` — ケース表。設計ケースは宣言済みの全設計規則、rust ケースは規則 a〜n をカバーします。
+```sh
+bun run build:claude
+bun run build:codex
+bun scripts/verify-dist.ts claude codex
+```
 
-## `bun test` 以外の検証
+配布物の検査は各277ケースを実行します。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
 
-- `bun run test:dist`（`scripts/verify-dist.ts`）— 設計と Rust の全ゴールデンケースを、**ビルド済み** `dist/<harness>/tools`（ソースではなく投影済み成果物）で実行します。引数でハーネスを絞れます。
-- `bun run test:sandbox` — 4 ハーネスをビルドし、各ハーネスを `aidlc-plugin-test --install`（drops 0・グラフ搭載・2 回目 compose が冪等）で compose し、続けて dist 検証を実行します。
-- `bun run validate` — プラグインソースに `aidlc-plugin-validate.ts` を実行。
+`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各277件の配布物検査、通常承認の統合検査を順に実行します。規則表から選んだ138入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持します。
 
-注: コードセンサーは書き込みで発火するため、センサースクリプトを直接 import するテストは `process.exit` を呼んでしまいます。suite はスクリプトを spawn します（これは実際のディスパッチャ契約でもあります）。
+## 回帰で確認した範囲と残る検証
+
+承認開始時の欠落・不正・正常はt1-gate-integrationで検証済みです。VO・ポート・別ファイル・replayはT-02で回帰テストを追加しました。T-07は直接回帰55件と通常承認8件を追加しました。既存の正常ケースに対象構造が存在しない場合、その構造を正しく検査できる根拠にはしません。
+
+パッケージングの代表的な7配置はrustc 1.95.0でもコンパイルしました。全ゴールデン入力のコンパイルや業務動作の証明ではありません。新規導入・更新、実際のモデル実行とルール到達は引き続き確認が必要です。
+
+[残作業](../docs/completion-tasks.ja.md)と[実測](../docs/current-state-assessment.ja.md)を参照してください。テスト結果の更新時は対象バージョンと範囲を添えます。
+
+## 対応表の更新
+
+ケースと規則の対応は `golden/contract/coverage.ts`、追加ケースは `golden/contract/` に記載します。`bun scripts/report-sensor-coverage.ts --write` で英日両版を生成し、`bun run test:coverage` で参照切れや未検証項目を検出します。表は実装の全分岐・全Rust構文・業務上の意味の網羅率ではありません。

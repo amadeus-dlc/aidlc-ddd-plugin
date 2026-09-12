@@ -2,10 +2,11 @@
 // ddd-sensor-model-completeness — the domain-modeling gate (U4 BR2).
 //
 // Loads the normalised model with U1, transcribes load-time and completeness
-// violations, resolves references (iv), and checks domain-model.md against the
+// violations, resolves references (iv), and checks ddd-domain-model.md against the
 // yaml (v / rule f).
 import { dirname, join } from "node:path";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
+import { MODEL_DATA_FILE, MODEL_VIEW_FILE } from "./ddd/lib/schema/artifacts.ts";
 import { checkCompleteness } from "./ddd/lib/schema/completeness.ts";
 import { loadDomainModel } from "./ddd/lib/schema/loader.ts";
 import { collectUnresolved, finding, readText, relPath } from "./ddd/lib/sensors/common.ts";
@@ -24,7 +25,7 @@ process.exit(
     severity: "blocking",
     budget_ms: 9000,
     evaluate: (context) => {
-      const yamlPath = context.output_path;
+      const yamlPath = join(dirname(context.output_path), MODEL_DATA_FILE);
       const file = relPath(context, yamlPath);
       const loaded = loadDomainModel(yamlPath);
       if (!loaded.ok) {
@@ -48,10 +49,10 @@ process.exit(
         );
       }
 
-      const mdPath = join(dirname(yamlPath), "domain-model.md");
+      const mdPath = join(dirname(yamlPath), MODEL_VIEW_FILE);
       const markdown = readText(mdPath);
       if (markdown === undefined) {
-        findings.push(finding("model-completeness.f-absent", file, "domain-model.md is missing"));
+        findings.push(finding("model-completeness.f-absent", file, `${MODEL_VIEW_FILE} is missing`));
         return findings;
       }
 
@@ -62,14 +63,14 @@ process.exit(
             finding(
               "model-completeness.f-missing",
               file,
-              `element_id ${element.id.value} is not mentioned in domain-model.md`,
+              `element_id ${element.id.value} is not mentioned in ddd-domain-model.md`,
             ),
           );
         }
       }
       for (const id of mentioned) {
         if (loaded.index.byId(id) === undefined && !loaded.index.retiredIds().has(id)) {
-          findings.push(finding("model-completeness.f-unknown", file, `domain-model.md mentions unknown id ${id}`));
+          findings.push(finding("model-completeness.f-unknown", file, `ddd-domain-model.md mentions unknown id ${id}`));
         }
       }
       const normalizedMd = normalize(markdown);
@@ -81,7 +82,7 @@ process.exit(
                 finding(
                   "model-completeness.f-invariant",
                   file,
-                  `invariant ${invariant.element_id} statement is absent from domain-model.md`,
+                  `invariant ${invariant.element_id} statement is absent from ddd-domain-model.md`,
                 ),
               );
             }

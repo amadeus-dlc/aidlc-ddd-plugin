@@ -1,7 +1,49 @@
 # Changelog
 
-All notable changes to the `ddd` plugin are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+English | [Japanese](CHANGELOG.ja.md)
+
+All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## Unreleased — Sensor contract coverage
+
+- Map positive, negative, and boundary evidence per sensor/rule and generate English/Japanese reports.
+- Add dependency directions, Cargo-only edges, external I/O, every reserved name, invalid models, and heading compatibility cases.
+- Classify malformed reference IDs as malformed.
+- Verify sensor audit records, findings, and blocking/advisory behavior through normal admission.
+- Include contract coverage and heading tests in test:sandbox.
+
+## Unreleased — Documentation languages (2026-09-13)
+
+- Standardize knowledge, sensors, stages, and contributions on English.
+- Provide full English .md and Japanese .ja.md reader documentation. Keep aidlc/ records Japanese.
+- Use English declaration section markers while preserving compatibility with existing Japanese markers; reject duplicate sections across languages.
+
+## Unreleased — T-07 packaging (2026-09-13)
+
+- Add ubiquitous-language naming and technical-classification prohibitions to shared knowledge and design/generation instructions.
+- Require domain_packages in aggregate mappings and check terms, model references, and placement rationale.
+- Follow affected domain crates' modules, including empty/inline modules and path attributes, to match declarations and actual layout.
+- Add Claude/Codex normal approval tests. Document migration and limits in the [contract](docs/domain-packaging-design.md).
+
+## Unreleased — T-02 Rust evaluation (2026-09-13)
+
+- Distinguish aggregates from value objects and concrete use cases from ports using explicit types; resolve getter-name collisions.
+- Collect cross-file and trait impls and report mutation-method locations.
+- Add replay_methods contracts for explicit method and event matching.
+- Document type-matching limits in notes and the [evaluation contract](docs/rust-sensor-contract.md), without modifying framework distributions.
+
+## Unreleased — T-01 normal approval integration (2026-09-13)
+
+- Align canonical models with standard artifact names and read labelled YAML blocks.
+- Move added declarations into required sections of existing review artifacts; reject missing declarations at approval admission.
+- Add Claude/Codex integration tests; reproduce and document the standalone framework gap separately.
+
+## Unreleased — Documentation cleanup (2026-09-13)
+
+- Separate conventions, measurements, and remaining work; add the [document index](docs/README.md).
+- Record the policy excluding Kimi/opencode. Remaining distribution-route cleanup belongs to T-04.
+- Correct failure/re-execution/event/RMU explanations and knowledge coverage claims.
+- The 0.1.0 section below preserves implementation history. In particular, removing artifact registration did not establish current approval integration; see the [assessment](docs/current-state-assessment.md).
 
 ## [0.1.0] - 2026-09-11
 

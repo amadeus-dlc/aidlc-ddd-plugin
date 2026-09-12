@@ -1,100 +1,76 @@
-# DDDプラグイン インターフェイスアダプタ層設計（AI-DLC v2）
+# DDD plugin the Interface Adapter layer layer design
 
-grilling セッション（2026-09-10）での確定事項。前提となる境界契約は `ddd/docs/domain-layer-design.md` の §7、ユースケース層の設計は `ddd/docs/use-case-layer-design.md` を参照。
+English | [Japanese](interface-adapter-layer-design.ja.md)
 
-## 1. 提供形態
+Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
 
-- **infrastructure-design を contribution で拡張＋ナレッジ＋センサー**の形で提供する。
-  - 理由: functional-design と同じく、居場所（infrastructure-design ステージ）はコアに既にある。強制とガイドを足す形にして重複を避ける。
+## 1. Delivery form
 
-## 2. CQRS の層構造
+Extend infrastructure-design through a contribution with layer declarations, knowledge, and sensors. Embed declarations in a required section of the registered cicd-pipeline review artifact. See the [artifact contract](artifact-contract.md).
 
-### 非 CQRS の場合
+## 2. CQRS responsibilities
 
-- IA 層の対象は (i) 永続化アダプタ（リポジトリ実装、DTO、復元）、(ii) 外部システムクライアント、(iii) クエリ側（リードモデル）。(iv) API/UI ハンドラは薄い変換層としてナレッジのみ。
+The CQRS command side contains domain, use-case, and Interface Adapter layers; the query side contains use-case and Interface Adapter layers. Do not create an update-domain layer on the query side. Retrieve DTOs through DAOs.
 
-### CQRS の場合
+The command-side Interface Adapter layer contains update controllers, repository implementations, and external clients. The query-side Interface Adapter layer contains retrieval controllers and DAO implementations. Without CQRS, preserve the responsibilities of persistence adapters, external clients, and thin I/O conversion.
 
-- **コマンド側**: ドメイン層、コマンド用ユースケース層、コマンド用インターフェイスアダプタ層
-- **クエリ側**: クエリ用ユースケース層、クエリ用インターフェイスアダプタ層（**ドメイン層なし**）
+State sourcing persists current state; event sourcing reconstructs it from history. Database products and table normalization are separate choices. State sourcing can also use domain events.
 
-各層の責務:
+The component that updates read models from events is the RMU (Read Model Updater).
 
-- **コマンド用ユースケース層**: リポジトリのポートとドメインロジックを実行
-- **クエリ用ユースケース層**: DAO を使って DTO（リードモデル）を取得
-- **コマンド用IA層**: 更新系コントローラ、リポジトリ実装、その他更新系RPCクライアント実装
-- **クエリ用IA層**: データ取得系コントローラ、DAO実装、その他取得系RPCクライアント実装
+## 3. Command/query dependencies
 
-### 永続化方式との組み合わせ
+Prohibit mutual dependencies between command and query sides in CQRS. The RMU is an independent bridge that reads events and updates read storage, so it may depend on both sides.
 
-- **ステートソーシング**: コマンド側はドメインイベントを扱わず、集約をそのまま正規化されたテーブルに書き込む。クエリ側は集約・リポジトリを使わず DAO と DTO だけでテーブルから取得する（読み込みは副作用がないため）。RDB を使うことがある
-- **イベントソーシング**: コマンド側は集約がコマンドを実行して状態遷移し、ドメインイベントを DynamoDB 等に書き込む。RMU（リードモデルアップデータ）がドメインイベントを読み込み、発生のたびにクエリ側のリードDBを更新する。クエリ側は要求されたリードモデルを取得して返すだけで、**ビジネスロジックはない**
+Do not use read models for update decisions: asynchronous propagation may not yet reflect the latest change. They are not necessarily always stale. Protect decisions through aggregate retrieval combined with expected versions or other conflict controls.
 
-## 3. コマンド側 ⇄ クエリ側の相互依存禁止
+## 4. Query-side and RMU boundaries
 
-- **コマンド側はクエリ側に依存禁止。クエリ側はコマンド側に依存禁止**（双方向）。
-- **RMU は例外として両方に依存できる** — ドメインイベント型を読み、クエリ側のリードDBに書き込む必要があるため。
-- **コマンド側からリードモデルを読まない**（背理法による根拠）: コマンド側のユースケース実行で「最新データが欲しい」からといってクエリ側のリードモデルを取得しても、C→Q の伝播遅延があるため**常に古いデータしか取得できない**。最新状態が必要なら、コマンド側のリポジトリで集約を取得（ES なら replay）するしかない。**システムの状態とは集約が持つ状態のこと**である。
-- 機械検査: コマンド側サブプロジェクトがクエリ側コンポーネントを import/参照することを禁止（センサー (k)）。
+The query side does not reference update aggregates, domain types, or repository ports. It shapes search and display models without duplicating update invariants. The query-side Interface Adapter layer depends on query use cases.
 
-## 4. クエリ側のガードレール
+Keep the RMU independent of the command-side Interface Adapter layer and the query-side Interface Adapter layer. Align exposure of intermediate states with the use-case design.
 
-- クエリ側のサブプロジェクトが**集約・ドメイン型・リポジトリポートを import/参照することを禁止**（クエリ側は DAO＋DTO のみ）。「ビジネスロジックを置かない」は意味判断だが、ドメイン型不使用を機械強制すれば大半は構造的に防げる（センサー (l)）。
-- 依存方向: クエリ用IA層 → クエリ用ユースケース層（コマンド側と同じ向き）。
-- **RMU の位置づけ**: 独立したブリッジコンポーネント。コマンド用IA層にもクエリ用IA層にも属させない（イベント購読という性質上、どちらかに属させると依存方向がねじれる）。
+## 5. Ports and repositories
 
-## 5. ポート・リポジトリ設計規約
+Classify ports as `repository`, `external-client`, or `es-infrastructure`. Command-side I/O includes external clients as well as repositories, each handled by its port implementation.
 
-- **ポート責務の分類**: Repository（集約の永続化）／外部システムクライアント／ES 基盤ポート（ジャーナル等）を区別する。
-- **リポジトリの命名とスコープ**: `集約名＋Repository`。I/O の単位は**集約単体、もしくは集約の集合**。**集約の一部や、担当外の集約を扱ってはならない**。
-- **動詞**: 基本は `find_by_id` / `store` / `delete_by_id` の3つ。`store` は upsert（insert 専用は禁止、use-case-layer-design.md §5-1）。
-  - **ステートソーシング（RDB）**: `find_by_dept_id` のようなセカンダリインデックスを使う問い合わせを追加してよい。
-- **媒体名・造語の禁止**: `DynamoDbOrderRepository` のような媒体名をポート名に含めない。
-- **コマンド側の I/O は Repository 実装のみ**が担う（ユースケース層の I/O 禁止の裏返し）。
-- **in-memory 実装から始める**: テスト・開発初期は in-memory アダプタから。
-- **クエリ側は DAO＋DTO**: リポジトリ規約は適用しない。
+Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Place ports according to their inner-layer consumers; concrete implementations belong in the Interface Adapter layer.
 
-## 6. 永続化基盤の選定
+Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 
-- **CQRS/ES**: 非正規化されたドメインイベントを保存するため RDB は適さず、KVS（NoSQL）を使う（AWS DynamoDB、GCP Cloud Spanner、Bigtable 等）。**CDC に対応していないとフィージビリティが下がる**（イベント→RMU の伝播に必要）。
-- **ステートソーシング**: RDB を使うことがある。
+Start with in-memory implementations and test port contracts including conflicts and failures. Restore DTOs through full constructors. Follow domain-layer design §6 for replay; arbitrary restoration bypasses are not allowed.
 
-## 7. RMU（リードモデルアップデータ）設計
+## 6. Choosing persistence infrastructure
 
-- **順序**: DynamoDB Streams は順序保証されるため、アプリケーション側での順序制御は**不要**。
-- **冪等性**: リードモデルのカラムに処理済みドメインイベントのシーケンス番号を埋め込む。同じイベントを RMU が再受信した場合は、更新先リードモデルのシーケンス番号と処理対象イベントのシーケンス番号を比較する。**比較は更新クエリの条件に入れてよい（条件付き書き込み）**。
+Do not exclude relational databases solely because of event format. PostgreSQL, for example, supports JSON/JSONB, so denormalized data alone does not establish unsuitability. This is an inference from storage capabilities, not a performance guarantee for a particular workload. See the [PostgreSQL specification](https://www.postgresql.org/docs/current/datatype-json.html).
 
-## 8. センサー（IA層）
+Compare per-aggregate ordering, expected-version appends, duplicate detection, history retention, delivery, and operational cost. CDC is one delivery mechanism; lack of CDC is not a blanket exclusion criterion. Strategy-specific checks belong to later detailed design.
 
-ブロッキング（確定的に検査可能）:
+## 7. RMU ordering and idempotency
 
-- **(k) コマンド側 ⇄ クエリ側の相互参照禁止**（RMU は例外）
-- **(l) クエリ側でのドメイン型・リポジトリ参照禁止**（DAO＋DTO のみ）
-- **(m) リポジトリ命名違反**: `集約名＋Repository` 以外の名前、媒体名をポート名に含む
-- **(n) 復元経路の検査迂回**: アダプタが完全コンストラクタを経由せずにドメイン型を構築している（ドメイン側 (c) の IA 層側の検査面）
+DynamoDB Streams guarantees order per item. If one aggregate's events are stored as separate items, that does not automatically establish aggregate-wide ordering. Lambda may also process duplicates. See the [DynamoDB Streams documentation](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html) and [Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html).
 
-レビュー行き（意味判断が必要）:
+Declare and review the following for each RMU:
 
-- **リポジトリのスコープ違反**（集約の一部・担当外集約を扱う）: DTO の形と集約の対応は意味判断が必要
-- **store が upsert として実装されているか**: 静的には判定困難
+- Event IDs, aggregate IDs, per-aggregate sequence numbers, and their distinction from transport sequence numbers.
+- The ordering scope and treatment of delays, gaps, reordering, and duplicates.
+- How updates and processed records commit together, including any conditional-write predicates.
+- Rebuilds, retry limits, and isolation of unrecoverable events.
 
-## 9. ナレッジ
+Applying only higher-numbered events has different meanings for full-state replacement and incremental updates. Skipping deltas corrupts results; number comparison alone must not justify ignoring gaps. A view combining several aggregates may not have one sequence number that represents progress through every history.
 
-言語横断（基盤）:
+## 8. Declarations and sensors
 
-- CQRS の層構造（§2）と相互依存禁止（§3、RMU 例外）
-- ポート設計規約（§5）
-- 永続化基盤の選定（§6）
-- RMU 設計（§7）
-- コマンド側からリードモデルを読まない理由（§3 の背理法）
-- upstream-contracts（外部システムクライアント: Conformist/ACL、境界で変換）
-- infrastructure 層は言語拡張のみ（RPC/DB クライアントは置かない）
+Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Explain RMU details outside the schema in prose first.
 
-言語別（Rust）:
+k checks cross-side references, l query-side domain references, m naming, and n restoration. Design sensors inspect declarations; Rust sensors inspect syntax. Neither proves semantic safety. Review and test aggregate ownership scope and re-execution safety.
 
-- `event-store-adapter-rs` を参照実装とした ES アダプタの実装規約
-- ポートの trait 配置・実装命名（既存ルール準拠）
+Declarations are connected to normal approval. T-01 tracks the framework standalone completion gap, T-02 Rust naming/placement limits, and T-03 strategy-specific detail.
 
-## 10. 未決定事項
+## 9. Knowledge
 
-IA 層スコープの未決定事項は**なし**（2026-09-10 時点でフロンティアは空）。
+Cover CQRS separation, port responsibilities, restoration, RMU, and external-model translation. Put DB/RPC clients in the Interface Adapter layer; this plugin's infrastructure layer is only for language extensions. State this meaning of the layer name explicitly.
+
+## 10. Later detailed design
+
+The detailed RMU schema, strategy-specific required fields, and semantic replay verification remain unresolved. Matching declarations to explicit Rust types is implemented in [T-02](rust-sensor-contract.md). Determine needed fields in [T-03](completion-tasks.md); do not present unverified strategies as implemented.

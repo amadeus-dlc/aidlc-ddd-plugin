@@ -1,30 +1,46 @@
-# ddd tests
+# DDD plugin tests
 
-English | [日本語](README.ja.md)
+English | [Japanese](README.ja.md)
 
-Run with `bun install && bun test` from the plugin root (`ddd/`). The unit and golden suites pass without the framework submodule; the two pre-existing harness-adapter suites need the `aidlc-workflows` dist fixture.
+Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/sensor-coverage.md) tracks per-rule coverage. The full suite still has 20 known old-dependency failures. The skip is an optional reproduction of the framework standalone completion gap.
 
-## Suites
+## Test responsibilities
 
-- `u1-sensor-foundation.test.ts` — the schema library and the sensor runtime: element-ID grammar and arity, `loadDomainModel` (unknown keys, duplicates, required references, fail-closed), `checkCompleteness`, verdict assembly (`(file, line, rule_id)` ordering and `finding_id` numbering), and `runSensor` (one JSON line, fail-closed, exit 127 for a missing asset).
-- `u2-rust-analysis-foundation.test.ts` — the Cargo workspace layer resolver (members, targets, dependencies, the layer decision table, permissions) and the Rust analyzer (structs / impls / fns / uses / calls / constructions, parse errors, the content-hash cache).
-- `u4-design-sensors.test.ts` — the six design sensors driven as child processes through `--stage` / `--output-path`, one clean and one violation case per sensor.
-- `u4-golden.test.ts` — the golden runner over `tests/golden/design/cases.ts`, the coverage assertion (every declared rule has a violation case) and determinism (three runs byte-identical).
-- `u5-rust-code-sensors.test.ts` — the three Rust sensors driven as child processes against a temp Cargo workspace: clean domain, a/b/d/g, the SKIP note, h, i, m and n.
-- `u5-golden.test.ts` — the rust golden suite (`tests/golden/rust/cases.ts`, a `workspace` plus record per case), coverage and determinism.
-- `install.test.ts` — the installer's pure helpers: stable-semver selection, source selector, canonical payload digest, tarball extraction (with an unsafe-path check), local acquisition and manifest validation.
-- `framework-compatibility.test.ts` / `codex-dispatch-bridge.test.ts` — the pre-existing harness-adapter suites (Codex dispatch bridge, installed-harness patches). They copy a fixture from `aidlc-workflows/dist/codex/aidlc` and therefore skip-fail when that dist is not built; they exercise the codex adapter restored in `.codex/hooks/`.
+| File | Scope |
+|---|---|
+| t1-model-artifacts / t1-gate-integration | Direct canonical-artifact checks and Claude/Codex normal approval admission. |
+| t7-domain-packaging | Vocabulary-based declaration/layout matching; technical names and unresolved analysis. |
+| t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
+| t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
+| u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
+| u2-rust-analysis-foundation | Cargo layer classification and Rust syntax analysis. |
+| u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
+| u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
+| u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
+| install | Installer pure functions and related checks, not complete installation/update proof. |
+| framework-compatibility | Current Claude/Codex compose/idempotency tests mixed with failing old integration tests. |
+| codex-dispatch-bridge | Depends on old bridge/deleted fixtures; T-04 tracks cleanup. |
 
-## Fixtures
+## Distribution checks
 
-- `tests/fixtures/u1/` — valid and invalid canonical models for the U1 loader.
-- `tests/golden/runner.ts` — the shared golden runner. It materializes a case into a temp record directory (and, for rust, a workspace), runs the real sensor script as a child process and compares the verdict's `pass` and the full `(rule_id, file)` finding set.
-- `tests/golden/design/cases.ts` / `tests/golden/rust/cases.ts` — the case tables. The design cases cover all declared design rules and the rust cases cover rules a–n.
+```sh
+bun run build:claude
+bun run build:codex
+bun scripts/verify-dist.ts claude codex
+```
 
-## Beyond `bun test`
+Distribution checks run 277 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-- `bun run test:dist` (`scripts/verify-dist.ts`) — runs every design and rust golden case through the **built** `dist/<harness>/tools` (the projected artifacts, not the source tools). Pass `harness ...` to restrict it.
-- `bun run test:sandbox` — builds all four harnesses, composes each with `aidlc-plugin-test --install` (0 drops, the stage on the graph, an idempotent second compose), then runs the dist verification.
-- `bun run validate` — `aidlc-plugin-validate.ts` over the plugin source.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 277 distribution cases per harness, and normal approval integration. It sends 138 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
 
-Note: because the code sensors fire on writes, a test that imported a sensor script directly would call `process.exit`; the suites spawn the scripts instead, which is also the real dispatcher contract.
+## Verified regressions and remaining checks
+
+Missing, invalid, and valid approval inputs are covered by t1-gate-integration. T-02 added value-object, port, cross-file, and replay regressions. T-07 added 55 direct and eight approval cases. A valid case lacking the target structure is not evidence that structure is correctly inspected.
+
+Seven representative package layouts were also compiled with rustc 1.95.0. This is not compilation of every golden input or proof of business behavior. Fresh installation, updates, actual model execution, and rule delivery still need verification.
+
+See [remaining work](../docs/completion-tasks.md) and [measurements](../docs/current-state-assessment.md). Include versions and scope when updating results.
+
+## Updating the matrix
+
+Define rule/case correspondence in `golden/contract/coverage.ts` and additional inputs under `golden/contract/`. Generate both editions with `bun scripts/report-sensor-coverage.ts --write`; run `bun run test:coverage` to catch missing references and evidence. The report does not measure all implementation branches, all Rust syntax, or business semantics.

@@ -1,133 +1,180 @@
-/**
- * DomainSymbolTable — the domain type / getter / constructor / mutator summary
- * built from every domain-layer crate in the workspace (U5 BR3).
- */
-
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
-import { type AnalyzerRuntime, impls, type MethodDecl, parse, structs } from "../../rust/analyzer.ts";
-import type { CrateLayerAssignment } from "../../workspace/resolver.ts";
-import { POST_INIT, REPLAY_EXEMPT, snakeToKebab, toKebab } from "../lists.ts";
+/** Domain summaries joined across explicitly resolved Rust declarations and impls. */
+import type { MethodDecl } from "../../rust/analyzer.ts";
+import type { Aggregate } from "../../schema/model.ts";
+import type { AggregateMapping } from "../../sensors/declaration.ts";
+import { POST_INIT, snakeToKebab, toKebab, toPascal } from "../lists.ts";
 import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability, MutatorSymbol } from "../types.ts";
-
-function listRustFiles(dir: string): string[] {
-  const out: string[] = [];
-  if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) return out;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...listRustFiles(full));
-    else if (entry.isFile() && entry.name.endsWith(".rs")) out.push(full);
-  }
-  return out.sort((a, b) => a.localeCompare(b, "en"));
-}
+import type { LocatedMethod, RustProgram, RustType } from "./program.ts";
 
 function isConstructor(method: MethodDecl, typeName: string): boolean {
   if (method.receiver !== "none") return false;
   const ret = method.return_type_text ?? "";
-  if (ret === "") return false;
   const outer = ret.replace(/^Result<|^Option<|^Box<|^Arc<|^Rc</, "").trim();
-  if (ret === "Self" || ret === typeName) return true;
-  return /^(Result|Option)<.*\bSelf\b/.test(ret) || ret.includes("Self") || outer === typeName;
+  return (
+    ret === "Self" ||
+    ret === typeName ||
+    /^(Result|Option)<.*\bSelf\b/.test(ret) ||
+    ret.includes("Self") ||
+    outer === typeName
+  );
+}
+
+function matchesLocation(type: RustType, mapping: AggregateMapping): boolean {
+  const module = mapping.module
+    .replace(/^crate(?:::|$)/, "")
+    .split("::")
+    .filter(Boolean);
+  return mapping.crate.replace(/-/g, "_") === type.crate && module.join("::") === type.module.join("::");
+}
+
+function aggregateFor(
+  type: RustType,
+  program: RustProgram,
+  model: ModelAvailability,
+  mappings: readonly AggregateMapping[],
+): { aggregate?: string; ambiguous: boolean } {
+  if (!model.index) return { ambiguous: false };
+  const matches = model.index.elements("aggregate").filter((entry) => {
+    const aggregate = entry.node as Aggregate;
+    const root = model.index?.byId(aggregate.root_element);
+    return root && (root.name === type.name || toPascal(root.id.segments.join("-")) === type.name);
+  });
+  if (matches.length === 0) return { ambiguous: false };
+  const sameNames = program.types.filter((candidate) => candidate.layer === "domain" && candidate.name === type.name);
+  const explicit = matches.filter((entry) =>
+    mappings.some((mapping) => mapping.aggregate_ref === entry.id.value && matchesLocation(type, mapping)),
+  );
+  if (explicit.length === 1) return { aggregate: explicit[0].id.value, ambiguous: false };
+  if (matches.length !== 1 || sameNames.length !== 1) {
+    program.notes.add(`model.unresolved: ${type.key} has an ambiguous model/type binding`);
+    return { ambiguous: true };
+  }
+  return { aggregate: matches[0].id.value, ambiguous: false };
 }
 
 export function buildSymbolTable(
-  runtime: AnalyzerRuntime,
-  workspaceRoot: string,
-  assignments: readonly CrateLayerAssignment[],
+  program: RustProgram,
   model: ModelAvailability,
+  mappings: readonly AggregateMapping[] = [],
 ): DomainSymbolTable {
   const types: DomainTypeSymbol[] = [];
-  const crates: string[] = [];
   const getterNames = new Set<string>();
   const typeNames = new Set<string>();
   const constructorsByType = new Map<string, Set<string>>();
-  let fileCount = 0;
-
-  for (const assignment of assignments) {
-    if (assignment.layer !== "domain") continue;
-    crates.push(assignment.crate_name);
-    const crateDir = assignment.path === "." ? workspaceRoot : join(workspaceRoot, assignment.path);
-    const roots = new Set<string>();
-    for (const target of assignment.targets) {
-      if (target.kind === "lib" || target.kind === "bin") roots.add(dirname(join(crateDir, target.src_path)));
-    }
-    for (const root of roots) {
-      for (const file of listRustFiles(root)) {
-        fileCount++;
-        const tree = parse(runtime, file, readFileSync(file));
-        const structDecls = structs(tree);
-        const implBlocks = impls(tree);
-        for (const decl of structDecls) {
-          const inherent = implBlocks.filter(
-            (block) => block.target_type_text === decl.name && block.trait_text === undefined,
-          );
-          const traitImpls = implBlocks.filter(
-            (block) => block.target_type_text === decl.name && block.trait_text !== undefined,
-          );
-          const methods = inherent.flatMap((block) => block.methods);
-          const getters = methods
-            .filter((method) => method.body_shape === "returns-field-only")
-            .map((method) => method.name);
-          const constructors = methods
-            .filter((method) => isConstructor(method, decl.name))
-            .map((method) => method.name);
-          const mutators: MutatorSymbol[] = methods
-            .filter((method) => method.receiver === "mut-self")
-            .map((method) => classifyMutator(method, decl.name, model));
-          const hasDefault =
-            decl.derives.includes("Default") ||
-            traitImpls.some((block) => (block.trait_text ?? "").endsWith("Default"));
-          const nonPrivate = decl.fields.filter((field) => field.visibility !== "private");
-
-          const typeSymbol: DomainTypeSymbol = {
-            type_name: decl.name,
-            crate_name: assignment.crate_name,
-            file: relative(workspaceRoot, file).split(sep).join("/"),
-            kind: decl.kind,
-            aggregate_slug: toKebab(decl.name),
-            getters,
-            constructors,
-            mutators,
-            has_default: hasDefault,
-            non_private_field_lines: nonPrivate.map((field) => field.span.start_line),
-            field_type_texts: decl.fields.map((field) => field.type_text),
-          };
-          types.push(typeSymbol);
-          for (const getter of getters) getterNames.add(getter);
-          typeNames.add(decl.name);
-          const existing = constructorsByType.get(decl.name) ?? new Set<string>();
-          for (const ctor of constructors) existing.add(ctor);
-          constructorsByType.set(decl.name, existing);
-        }
-      }
-    }
+  for (const type of program.types) {
+    if (type.layer !== "domain" || type.kind === "trait") continue;
+    const binding = aggregateFor(type, program, model, mappings);
+    const aggregate = binding.aggregate;
+    const inherent = type.methods.filter((entry) => !entry.trait);
+    const getters = inherent
+      .filter((entry) => entry.method.body_shape === "returns-field-only")
+      .map((entry) => entry.method.name);
+    const constructors = inherent
+      .filter((entry) => isConstructor(entry.method, type.name))
+      .map((entry) => entry.method.name);
+    const mutators = type.methods
+      .filter((entry) => entry.method.receiver === "mut-self")
+      .map((entry) =>
+        classifyMutator(
+          entry,
+          aggregate,
+          model,
+          isReplay(entry, type, aggregate, model, program, mappings),
+          binding.ambiguous,
+        ),
+      );
+    const defaults = type.methods
+      .filter((entry) => entry.trait === "Default" || entry.trait?.endsWith("::Default"))
+      .map((entry) => ({ file: entry.file, line: entry.method.span.start_line }));
+    if (type.derives.includes("Default")) defaults.push({ file: type.file, line: 1 });
+    types.push({
+      key: type.key,
+      type_name: type.name,
+      crate_name: type.crate.replace(/_/g, "-"),
+      file: type.file,
+      kind: type.kind,
+      aggregate_slug: aggregate?.slice("aggregate.".length) ?? toKebab(type.name),
+      aggregate_ref: aggregate,
+      getters,
+      constructors,
+      mutators,
+      has_default: defaults.length > 0,
+      defaults,
+      non_private_field_lines: type.fields
+        .filter((field) => field.visibility !== "private")
+        .map((field) => field.span.start_line),
+      field_type_texts: type.fields.map((field) => field.type_text),
+    });
+    for (const getter of getters) getterNames.add(getter);
+    typeNames.add(type.name);
+    const known = constructorsByType.get(type.name) ?? new Set<string>();
+    for (const factory of constructors) known.add(factory);
+    constructorsByType.set(type.name, known);
   }
-
-  types.sort((a, b) => `${a.crate_name}:${a.type_name}`.localeCompare(`${b.crate_name}:${b.type_name}`, "en"));
+  types.sort((a, b) => a.key.localeCompare(b.key, "en"));
   return {
-    crates: [...new Set(crates)].sort((a, b) => a.localeCompare(b, "en")),
+    crates: [...new Set(types.map((type) => type.crate_name))].sort(),
     types,
     getter_names: getterNames,
     type_names: typeNames,
     constructors_by_type: constructorsByType,
-    file_count: fileCount,
+    file_count: new Set(types.map((type) => type.file)).size,
   };
 }
 
-function classifyMutator(method: MethodDecl, typeName: string, model: ModelAvailability): MutatorSymbol {
+function isReplay(
+  entry: LocatedMethod,
+  type: RustType,
+  aggregate: string | undefined,
+  model: ModelAvailability,
+  program: RustProgram,
+  mappings: readonly AggregateMapping[],
+): boolean {
+  if (!aggregate || !model.index || entry.method.params.length !== 1) return false;
+  const declarations = mappings.filter((mapping) => mapping.aggregate_ref === aggregate);
+  if (declarations.length !== 1) return false;
+  const mapping = declarations[0];
+  if (mapping.persistence_method !== "event-sourcing" || !matchesLocation(type, mapping)) return false;
+  const methods = mapping.replay_methods.filter((replay) => replay.method === entry.method.name);
+  if (methods.length !== 1) return false;
+  const event = model.index.resolve(methods[0].event_ref, "event");
+  if (!event.ok || event.element.owner !== aggregate) return false;
+  const eventType = program.resolveType(entry.file, entry.module, entry.method.params[0].type_text);
+  return (
+    eventType !== undefined &&
+    eventType.kind !== "trait" &&
+    eventType.layer === "domain" &&
+    eventType.crate === type.crate &&
+    program.types.filter(
+      (candidate) =>
+        candidate.layer === "domain" && candidate.crate === eventType.crate && candidate.name === eventType.name,
+    ).length === 1 &&
+    (eventType.name === event.element.name || eventType.name === toPascal(event.element.id.segments.join("-")))
+  );
+}
+
+function classifyMutator(
+  entry: LocatedMethod,
+  aggregate: string | undefined,
+  model: ModelAvailability,
+  replay: boolean,
+  ambiguous: boolean,
+): MutatorSymbol {
+  const method = entry.method;
   const command_slug = snakeToKebab(method.name);
-  const base = { method_name: method.name, command_slug, line: method.span.start_line };
-  if (REPLAY_EXEMPT.has(method.name)) return { ...base, classification: "replay-exempt" };
+  const base = { method_name: method.name, command_slug, line: method.span.start_line, file: entry.file };
+  if (ambiguous) return { ...base, classification: "unknown" };
+  if (replay) return { ...base, classification: "replay-exempt" };
   if (POST_INIT.has(method.name)) return { ...base, classification: "post-init" };
   if (model.status !== "available" || !model.index) return { ...base, classification: "unknown" };
-  const aggregateId = `aggregate.${toKebab(typeName)}`;
-  if (!model.index.resolve(aggregateId, "aggregate").ok) return { ...base, classification: "undeclared" };
-  const declared = model.index
-    .commandsOf(aggregateId)
-    .some(
-      (command) =>
-        command.element_id.split(".").slice(2).join("-") === command_slug ||
-        command.element_id.endsWith(`.${command_slug}`),
-    );
+  const declared =
+    aggregate !== undefined &&
+    model.index
+      .commandsOf(aggregate)
+      .some(
+        (command) =>
+          command.element_id.split(".").slice(2).join("-") === command_slug ||
+          command.element_id.endsWith(`.${command_slug}`),
+      );
   return { ...base, classification: declared ? "declared-command" : "undeclared" };
 }

@@ -1,205 +1,134 @@
-# DDDプラグイン ドメイン層設計（AI-DLC v2）
+# DDD plugin domain-layer design
 
-grilling セッション（2026-09-08 〜 2026-09-10）での確定事項をまとめた設計ドキュメント。
+English | [Japanese](domain-layer-design.ja.md)
 
-**スコープの読み方**: 本書の中心は**ドメイン層**の設計（§1〜§6）。ただし議論の過程で、インターフェイスアダプタ層・永続化との**境界の契約**も確定したため、それらは「§7 レイヤー境界の契約」に分離して収録する。§7 の内容は「ドメイン層から見た外側との約束事」であり、IA 層・永続化そのもののステージ／ナレッジ／センサー設計は後続フェーズ（§12）である。混同しないこと。
+Updated: 2026-09-13. Current design conventions consolidated from the discussions of September 8–10. See the [assessment](current-state-assessment.md) for implementation status and [remaining work](completion-tasks.md) for completion criteria. These conventions do not imply complete automated enforcement.
 
-## 1. 目的とスコープ
+## 1. Purpose and scope
 
-- DDD／クリーンアーキテクチャを実現するときに機能する**ガイドとガードレール**を、AI-DLC v2 プラグインとして提供する。
-- 提供形態は、AI-DLC v2 の**ステージ・センサー・ナレッジ**。
-- 最初の価値: **Domain Primitive／Always Valid Domain Model を作れるようにする**。デフォルトのワークフローではこれらは作られない。
-- ナレッジもプラグインから提供する（方法論ナレッジ、後述の Tier 1）。
+Add procedures, knowledge, and sensors for designing and implementing Domain Primitives and Always Valid Domain Models in AI-DLC. Rust is the initial inspection language; Claude Code and Codex are the completion targets. Kimi and opencode are out of scope.
 
-## 2. domain-modeling ステージ
+Layer separation, restrictions on getter use, and physical crate separation are plugin conventions, not universal requirements of DDD.
 
-- 専用ステージ `domain-modeling` を新設し、**domain-design の前**に置く。
-  - 理由: domain-design に混ぜると既存の成果物や承認条件に埋もれる。Domain Primitive と Always Valid の不変条件は後続の functional-design や code-generation が参照する基盤なので、独立した成果物として先に確定させる。
-- **入力と位置**: user-stories 等の requirements-analysis 系の成果物を**推奨入力**としつつ、**単独実行も可能**にする（他ステージと同じく `--stage domain-modeling --single` 相当で動く形）。必須入力にはしない（既存コードベースへの後付け適用を可能にするため）。入力がない場合は対話でドメインの語彙を引き出す。
-- **トップダウンの導出経路**: ユーザーストーリーからイベントストーミング的にドメインイベントを逆算し、集約候補を導き出すアプローチをステージの手順として採用する。
-  - CQRS/Event Sourcing では分析上のドメインイベントがそのまま実装に反映される。
-  - CQRS/ステートソーシングでは分析ではドメインイベントを使うが、実装には反映しない。
-- ステージの責務分担:
-  - `domain-modeling`: 正規の意味モデルを確定する（下記「正規モデル」）。
-  - `domain-design`: 正規モデルをどのモジュール・型・ポート・リポジトリ境界へ落とすか（実装設計への写像）。永続化方式の宣言もここ（§7）。
-  - `functional-design`: ユースケースの振る舞い。コマンド・イベント・操作手順が正規モデルの不変条件と状態遷移をどう利用するか。
-- 境界の分離:
-  - `domain-modeling` は **Aggregate 境界まで**を所有する（ドメイン上の境界、不変条件、状態、Command／Event）。
-  - ソフトウェアコンポーネントの依存グラフ・外部依存・デプロイ単位は `domain-design` が所有する。
-  - `functional-design` は Unit 単位の投影、業務ルール、ユースケース手順。
-- **完了条件（ゲート）**: 機械条件＋人間のレビュー承認。
-  - (i) 全 Aggregate に不変条件が1つ以上ある
-  - (ii) 全 Command が状態遷移（または遷移なしの明示）を持つ
-  - (iii) 全 Command に失敗条件（Domain Error）が定義されている
-  - (iv) 全参照IDが解決できる
-  - (v) domain-model.md と domain-model.yaml が整合する
-  - (vi) 人間のレビュー承認（意味的な妥当性はここに委ねる）
+## 2. The ddd-domain-modeling stage
 
-## 3. 正規モデル（Always Valid Domain Model）
+The official name is `ddd-domain-modeling`. It accepts requirements-analysis and user-stories as optional inputs and creates the canonical model through aggregate boundaries before domain-design. When inputs are absent, elicit vocabulary through dialogue. Standalone application to existing projects is also intended. Normal approval integration is implemented; the framework's standalone completion guard remains incomplete.
 
-- domain-modeling の正規成果物は、以下の包含関係を持つ一体化モデルとする。
+Derive the model in this order: stories → past-tense business events → commands → aggregate candidates → invariants. Analysis events are independent of persistence strategy, and not every event discovered during analysis must be persisted.
 
-  ```
-  Bounded Context
-    → Aggregate
-      → Entity / Value Object / Domain Primitive
-      → Invariant
-      → Command / Event
-      → Domain Error（失敗条件つき）
-      → State Transition
-      → Factory / Constructor Rule
-  ```
+| Owner | Responsibility |
+|---|---|
+| ddd-domain-modeling | Vocabulary, aggregate boundaries, invariants, states, commands, events, errors, construction rules |
+| domain-design | Mapping to modules, types, ports, repositories, and persistence strategies |
+| functional-design | Per-Unit procedures, re-execution, recovery, and exposure |
 
-- **Domain Primitive の位置づけ**: DDD の Value Object をより小さく、明示的な不変条件と常時有効性に寄せた実装パターン。意味のある言語プリミティブを、生成時に不変条件を満たす不変型へ包むもの。モデルの**最下層の構成要素**。
-- **Always Valid Domain Model の包含範囲**: Domain Primitive だけを指さない。Value Object、Entity、Aggregate、それらの状態遷移、不変条件、生成・変更操作まで含め、「無効な状態を生成・保持できない」モデル全体を指す。
-- **Domain Error を正規モデルの要素に含める**（Command → Domain Error、失敗条件つき）。
-  - 理由: 「エラー時は状態遷移しない」が確定済みであり、どの失敗があり得るかは操作契約の一部。モデルにあればコード生成が `Result`/`Either` の型を機械的に導け、センサーが「宣言のない失敗」「宣言された失敗の未処理」を検出できる。
-- **Command → Event の関連付けは方式に関わらず行える**（分析上）。実装への反映は永続化方式による（§6 のコマンド戻り値を参照）。
-- このモデルから、後続の domain-design、functional-design、コード生成、センサーが**同じ不変条件を参照**する。
+Completion requires (i) invariants for every aggregate, (ii) a state transition or an explicit no-transition declaration for each command, (iii) Domain Errors for each command, (iv) resolved reference IDs, (v) YAML/Markdown correspondence, and (vi) human semantic review. The loader implements (iii) as `schema.command-no-error`. Normal approval is connected; see the [artifact contract](artifact-contract.md) for standalone completion limits.
 
-## 4. 成果物の所有権と参照
+## 3. Canonical model
 
-- **所有権**: Entity、Aggregate、不変条件の正式な定義は domain-modeling だけが所有する。下流ステージ（domain-design、functional-design）は**参照・写像のみ**を行い、独自に再定義しない。
-- **参照の単位**: モデル要素ごとの安定IDと不変条件IDを参照IDとして必須にする。例:
-  - `bc.billing`
-  - `aggregate.invoice`
-  - `entity.invoice`
-  - `primitive.invoice-number`
-  - `invariant.invoice.total-positive`
-  - `transition.invoice.issued-to-paid`
-- domain-design は型・モジュール・ポートをこれらのIDへ結び付け、functional-design はユースケースの操作・イベントをこれらのIDへ結び付ける。Domain Primitive は下流で再発明せず、正規モデルの型を参照する。
-- **参照ID必須化の実現方法**: 独自センサー（`fire_on: gate` ＋ `default_severity: blocking`）で参照IDの有無を検査し、contribution の `adds.sensors` でコアステージ（domain-design、functional-design）にバインドする**機械強制**と、`fragments` で対象ステージの手順に「参照IDを記載せよ」の prose を挿入する**指示**を併用する。
+Bounded Contexts contain aggregates. Aggregates contain Entities, value objects, Domain Primitives, invariants, commands, events, errors, state transitions, and FactoryRules. Process Managers can represent coordination across aggregates.
 
-## 5. 成果物の形式とIDのライフサイクル
+A Domain Primitive is a small immutable type with business meaning and invariants. Always Valid design applies to construction and mutation throughout the model, including aggregates, not only to primitives.
 
-- **形式**: 人間がレビューできる Markdown と、機械検証用の構造化データを併用する。
-  - `domain-model.md`: 説明、設計意図、レビュー用の図。
-  - `domain-model.yaml`: 要素ID、型、不変条件、遷移、参照関係。
-  - センサーは `domain-model.yaml` を正規解析し、Markdown との整合性も検査する。
-- **IDのライフサイクル**: IDは不変とし、名称変更は別の変更として追跡する。
-  - `element_id` は永続的な参照キー、`name` は表示・業務用語。
-  - rename では ID を維持する。
-  - split／merge／削除では後継・置換・廃止の関係を記録する。
-  - センサーは下流参照の切れ、廃止IDの再利用、循環する置換関係を検出する。
+A Domain Error records its owning command and failure condition. It is an input to generation and review; current sensors do not verify every error path or missing handler in generated code.
 
-## 6. コード規約（ドメイン層の実装ルール）
+## 4. Ownership and reference IDs
 
-> 本節はドメイン層の型（Entity／VO／Domain Primitive／Domain Service／Aggregate）に適用するルール。他層との接点に関わる部分は §7 と相互参照する。
+Only the canonical model owns formal definitions. Downstream stages reference and map them without redefining them. Examples include `bc.billing`, `aggregate.invoice`, `primitive.invoice-number`, and `invariant.invoice.total-positive`.
 
-- **公開フィールドの禁止**: 集約を含むドメインモデル（エンティティ、値オブジェクト、ドメインサービス）は内部フィールドをそのまま公開してはならない。`public readonly`（Rust の `pub` フィールド相当）も例外にしない。
-- **getter**（境界契約: §7-1）:
-  - 内部フィールドを外部に渡したい場合は getter を使う（定義自体は可）。
-  - getter は**ドメイン層・ユースケース層では呼び出し禁止**（Tell, Don't Ask 違反になるため）。
-  - **I/O 責務のインターフェイスアダプタ層では利用可**（DB保存、JSON レスポンス変換など、I/O を実現するために必要）。
-  - フィールドを返すだけのメソッドは、名前に関係なく getter として扱う。
-  - センサーは getter の有無ではなく**呼び出し元の層**を検査する（層の判定方法は §7-5）。
-- **完全コンストラクタでしか初期化できない**。必要な状態を揃え、不変条件を満たす場合だけ生成する。
-- **setter は禁止**。生成後に内部状態へ代入するメソッドを、名称・実装・生成方法に関係なく禁止する（`User::new(1, "kato").set_first("junichi")` も違反）。状態を変更し得るのは、正規モデルで Command として宣言された業務操作のみ（Rust の `&mut self` 業務操作はこれに該当）。
-- **不完全な生成経路の禁止**: 空コンストラクタ＋段階的初期化、`init()`/`setup()` のような後付け初期化、不変条件を検査しない復元経路を禁止する。setter の有無とは無関係に、生成経路だけを見て判定する（setter 禁止と OR の独立違反）。
-- **業務判断メソッドは許可**: `注文.canCancel()`、`金額.isGreaterThan(other)` のように、内部データを取り出さずドメイン自身が判断した結果を返すメソッドは許可する。業務上の判断はドメインに置く。
-- **可変性**:
-  - VO／Domain Primitive: 不変。
-  - Entity／Aggregate: **原則不変**。可変とするのは古典的なやり方と位置づける。
-    - Rust: 排他的な可変借用の下で業務操作が状態を更新する形を許可。
-    - 他言語: 元のインスタンスを変更せず、成功時に新しいインスタンス、失敗時にエラーを返す。
-  - Domain Service: 永続化責務を持たず、状態を保持せず、入力に対して純粋関数的な振る舞いを提供する。
-- **コマンドの戻り値（永続化方式に連動、宣言は §7-2）**:
-  - Event Sourcing: コマンドはドメインイベントを返す（1 コマンド 1 イベント、decide/apply 分離）。
-    - Rust: `add_item(&mut self, item: Item) -> Result<ItemAdded, AddItemError>`
-    - 他言語: `def addItem(item: Item) -> Either<(Cart, ItemAdded), AddItemError>`（新インスタンスとイベントの対を返す）
-  - ステートソーシング（RDB/KVS）: 戻り値は `Result<(), E>`。イベントは任意。
-- **CQS の適用範囲**: CQS は I/O 操作など実際に状態を変更する操作に適用する。イミュータブルなドメインロジックの「新インスタンスを返す操作」は意味論的には更新でも、実装は問い合わせメソッドであり **CQS の対象外**（集約のコマンドがイベントや新状態を返すのは書込の産物であり観測ではない）。
-- **エラー時は状態遷移しない**。呼び出し前と同じ状態を保証する（検証を済ませてから更新するなど、途中変更を残さない）。Rust の `&mut self` による操作にも適用する必須契約。
-- **永続化データからの復元**（境界契約: §7-4）: DTO 等からの再構成時は必ず完全コンストラクタで不変条件を検査する。不正な保存データは復元エラーとして扱い、無効なドメインオブジェクトを作らない。検査を迂回する**再構成**経路は禁止。
-  - **例外（ES replay）**: Event Sourcing のジャーナル replay／`apply_event` は「書き込み時に検査済みの事実の再生」であり初期化ではないため、本検査義務の対象外とする（失敗を返さず、壊れた歴史はクラッシュが正、という整理）。
+Requiring IDs needs stage instructions, registered artifacts, and reference sensors together. Adding `adds.sensors` alone cannot establish normal approval checks when the target artifact is unregistered.
 
-## 7. レイヤー境界の契約（ドメイン層の外側との接点）
+## 5. Artifacts and ID lifecycle
 
-> 本節は grilling の過程で確定した、ドメイン層と外側（インターフェイスアダプタ層・永続化・ユースケース層）の間の**約束事**である。これらはドメイン層のルール（§6）の検査前提や、後続フェーズ（§12）の設計入力となる。IA 層・ユースケース層そのものの設計は本書のスコープ外。
+Exactly one labelled YAML block in `ddd-domain-model-yaml.md` holds canonical data; `ddd-domain-model.md` is the human-facing explanation. Include every element ID and invariant statement in Markdown. Sensors check their literal presence; review assesses the meaning of the explanation as a whole.
 
-### 7-1. getter の利用許可（I/O アダプタ層）
+AI-DLC 2.8.2 resolves logical names `ddd-domain-model` and `ddd-domain-model-yaml` to `ddd-domain-model.md` and `ddd-domain-model-yaml.md`. Generation, references, and checks use these names consistently. Follow the [artifact contract](artifact-contract.md) to migrate older artifacts.
 
-- getter の呼び出しが許可されるのは I/O 責務のインターフェイスアダプタ層のみ（DB への保存、JSON レスポンスへの変換など）。ドメイン層・ユースケース層からの呼び出しは禁止（§6）。
+`element_id` is immutable; `name` is a display name. Renaming does not change the ID. Record successors, replacements, and retirement in `lineage` for splits, merges, and deletions. Never reuse retired IDs.
 
-### 7-2. 永続化方式の宣言
+A hand-written loader performs runtime validation. JSON Schema documents the contract; it is not the runtime validator.
 
-- 集約ごとに永続化方式（Event Sourcing / ステートソーシング）を **domain-design のマッピング属性**（正規モデルの Aggregate に対する写像）として宣言する。方式に応じてセンサーが必須設計を要求する。
-  - Event Sourcing: コマンドがイベントを返す、1 コマンド 1 イベント、replay 経路の区別。
-  - ステートソーシング: 一意性の担保手段の宣言、イベント公開と保存の結び付け。
+## 6. Domain code conventions
 
-### 7-3. 一意性の担保
+- Keep fields private, including read-only fields.
+- Construct through full constructors that satisfy invariants. Prohibit empty construction followed by incremental initialization and validation bypass during restoration.
+- Prohibit plain setters. Limit mutation to declared business commands or explicit event-application paths.
+- Keep value objects and Domain Primitives immutable. Rust Entities and aggregates may perform exclusive business operations through `&mut self`.
+- Domain Services make domain decisions without owning state or persistence responsibilities.
+- Getter definitions are allowed, but calls from domain and use-case layers are restricted. The Interface Adapter layer may use them for I/O conversion. Distinguish decision methods from getters.
+- Commands returning business errors preserve their pre-call state and leave no partial mutation.
+- Do not hide undeclared business mutations with `RefCell` or similar mechanisms. Review the distinction from caches.
 
-- 一意性（例: メールアドレスの未登録）は**ドメインサービスでは担保しない**。
-- ユニークインデックスを持つ集約として**保存に成功したこと**をもって重複がないこととする（RDB の一意制約）。
-- KVS や Event Sourcing のアクターモデルでは一意制約を張れないため、あらかじめ別のデータモデルでメールアドレスのインデックスを作り、そちらへも保存できたことをもって担保する。
-- リポジトリや DB への事前照会は「その時点で存在するか」が言えるだけであり、保存成功の保証として扱わない。
-- メールアドレスの形式など値そのものの妥当性は、Domain Primitive の生成時に保証する（ドメイン層側の責務、§6）。
+In event sourcing, separate business decisions from event application. The earlier “one command, one event” convention is the baseline for an initial state-changing success. Rejection and safely absorbed duplicates produce zero new events. Concrete Rust return types and operations needing multiple events remain T-03 decisions.
 
-### 7-4. 永続化のエラー契約
+For state sourcing, the baseline update result is `Result<(), E>`. Domain events are optional, not prohibited by the persistence strategy. When using CQS, explicitly define contracts for operations returning update results, new state, or generated events.
 
-- **重複による保存失敗の戻り値**: `RepositoryError<Id>` のような**統一ジェネリックエラー**を基本とし、リポジトリごとのエラー型は複製しない。業務上区別が必要な失敗（一意性競合など）は `EmailAlreadyInUse` のような**バリアント**として表現してよい（必須ではない）。ユースケース層に DB 固有エラーの解釈を持たせない。通信障害などは別のエラーとして扱う。
-- **「失敗したら状態遷移なし」の範囲**: ユースケース全体に要求する。
-  - インメモリでの状態遷移成功は仮の状態であり、**保存成功をもって確定**する。
-  - 保存失敗時は作業用インスタンスを破棄し、変更済み状態を外部へ公開しない（キャッシュや長寿命のアクターにも残さない）。永続化されなければランタイムだけの遷移となり、揮発する。
-- **ドメインイベントの公開タイミング**: 保存前の外部公開は禁止。イベントの生成・一時保持は許可し、**保存成功に結び付いた公開方法**を永続化方式ごとに設計する。Event Sourcing の実装例: [event-store-adapter-rs](https://github.com/j5ik2o/event-store-adapter-rs)（同様の考え方）。
+Replay of persisted events performs no new business decisions. This does not require accepting corrupt or unknown schemas: abort restoration, report the problem, and isolate it. Names such as `apply` alone are not evidence of a valid restoration path.
 
-### 7-5. 層構造と依存方向（検査の前提）
+## 7. Contracts with outer layers
 
-- **層は物理分離を前提とする**: `packages/` や `modules/` のようなサブプロジェクト単位で層を強制的に分ける。
-- **許可する依存方向**（これ以外の依存方向のコードは**ビルドエラー**）:
-  - interface-adapter → use-case、domain
-  - use-case → domain
-  - infrastructure → どの層からも依存できる（言語拡張のみを置く層であり、RPC/DB クライアントは置かない）
-- DI の結線（composition root）は interface-adapter の実装と use-case の両方に依存する必要があるため、上記レイヤー規則の外に置く前提とする。
-- センサーの層判定は、設定ファイルではなく**ファイルの所属サブプロジェクトから機械的に導く**。
+### 7-1. Getter use
 
-## 8. センサー方針
+The Interface Adapter layer may use getters for database persistence and DTO conversion. Express business decisions as domain operations.
 
-- **止める条件**: 機械的に確定できる違反は進行を止め、意味判断が必要な指摘はレビュー対象にする。
-  - 例: 未定義の不変条件IDへの参照は確定的な違反。「この集約境界では業務上の不変条件を守れない」という指摘は業務知識を踏まえた判断が必要で、レビューへ回す。
-- **検査対象**: 設計成果物と生成コードの両方。設計書が正しくても生成コードが不正な値の生成や状態変更を許せば目的を達成できない。
-- **対応言語**: 言語追加可能な構成とし、**初版は Rust のみ**。`&mut self` の扱いという言語固有ルールが既にあり、event-store-adapter-rs が実例としてあるため。2言語目以降は検査器を追加する形にする。
-- **センサー生成の仕組み**: 基盤はプラグインに組み込み・検証済みで提供し、プロジェクト固有の微調整や新言語対応は**ゴールデンケース検証つきの生成**でカバーする。
-  - 初版の Rust センサーはプラグインに組み込み・検証済み。
-  - 新言語はセンサー生成ナレッジとひな型で生成し、生成物はゴールデンケース（違反あり/なしの fixture）を通過して初めて有効化する。
-  - 生成ナレッジには「判定は構文解析ベースで行い、実行時の意味判断を混入させない」という**確定性の契約**を含める（都度生成では品質担保が難しいため）。
-- **初版で進行を止める確定的違反のセット**（確定。それぞれ独立した違反として検査する）:
-  - **(a) ドメイン型の公開フィールド**（§6）
-  - **(b) setter・任意代入メソッド**（§6。「モデルに宣言のない状態変更メソッド」として検出）
-  - **(c) 不完全な生成経路**（§6。空コンストラクタ＋段階的初期化、後付け初期化、検査なし復元経路）
-  - **(d) ドメイン層・ユースケース層からの getter 呼び出し**（§6、§7-1。呼び出し元の層で判定。層は所属サブプロジェクトから導く、§7-5）
-  - **(e) 未定義ID・廃止IDへの参照**（成果物間。循環する置換関係も検出）
-  - **(f) domain-model.md と domain-model.yaml の不整合**（構造化データを正とし、要素の欠落・不変条件の食い違いを検出）
+### 7-2. Persistence strategies
 
-## 9. ナレッジ構成
+Declare `programming_model: actor | class` and `persistence_method: state-sourcing | event-sourcing` per aggregate in the mapping. Detailed strategy-specific checks remain incomplete; a declaration alone does not guarantee the generated code shape.
 
-- **階層化**: 言語横断ナレッジ（基盤）＋ 言語別ナレッジの構成。
-- プラグインから方法論ナレッジ（Tier 1）を提供する。既存仕様では `knowledge/<agent-slug>/` に置き、担当エージェントがステージ開始時に参照する。業務固有の知識を置く `aidlc/spaces/<space>/knowledge/`（Tier 2）とは別で、プラグインからは ship できない。
-- **衝突対策**:
-  - ファイルの衝突: `ddd-always-valid-model.md` などプラグイン固有の名前を使う（既存ファイルへの上書きは合成処理でも拒否される）。
-  - 内容の矛盾: 既存ナレッジやプロジェクト方針とプラグインの Always Valid 方針が矛盾した場合、**矛盾を明示して判断を求める**。黙って優先順位を決めない。判断には、衝突した記述・適用範囲・採用理由を残す。
-- 必須条件はナレッジだけに任せず、**ステージ手順・成果物の契約・センサーにも定義**する。「下流は参照する」という合意も、既存ステージの手順へ反映して初めて成立する。
-- **既存コーディングルール集からの取り込み**（amadeus-ng の `aidlc/spaces/default/knowledge/aidlc-shared/coding-rules/` を分析済み。原則部分のみを抽出し、プロジェクト固有の例示はプラグイン側のゴールデンケースに置き換える）:
-  - **言語横断ナレッジ（基盤）に取り込む候補**: ADT 原則（「操作で定義され表現では定義されない」、理論的土台）、ドメインオブジェクト4種分類（エンティティ[グローバル/ローカル]・VO・FCC・ドメインイベント）＋新種の新設は人間の裁定、集約間参照はIDのみ（埋め込み禁止）、ドメインサービスは最後の手段、ユビキタス言語命名（集約ID = 集約名+`Id`）、upstream-contracts（Conformist/ACL）、**「集約は FSM」原則の明文化**（既存ルール集では参照のみで独立ファイルがない暗黙原則。プラグインの State Transition がこれに相当）
-  - **言語別ナレッジ（Rust）に取り込む候補**: field-visibility、tell-dont-ask、factory-naming（構築経路の一本化・命名表）、interior-mutability（`&self` への偽装禁止）、module-visibility、domain-equality（同値は意味論で実装）、error-handling（手実装エラー enum）、first-class-collections
-  - **メタ規律として取り込む候補**: 衝突時の優先順位の明文化、例外には必ず理由を記録する、良い例はスニペットではなく実在ファイルへの索引にする、失効ルールは消さず打ち消し線＋失効注記で残す、規則の記述はコード実測に anchored する、「実装済みと主張するのは強制できる範囲だけ」（機械化ロードマップの過大主張をしない）
+### 7-3. Uniqueness
 
-## 10. プラグイン機構上の実現方法（調査結果）
+A pre-query finding no existing value does not guarantee persistence will succeed. Arbitrate uniqueness through storage constraints, conditional writes, reservation models, or equivalent mechanisms. When using a separate index, design partial failure, release, and retry together with aggregate persistence. Validate value format when constructing the Domain Primitive.
 
-- **ステージ貢献**: `stages/<phase>/<slug>.md`（Markdown + YAML frontmatter）に配置。frontmatter に `plugin: ddd`、`produces:` の成果物は `ddd-` プレフィックス。グラフ位置は `requires_stage` エッジで決まる。SessionStart フック（`hooks/compose.ts`）が合成・再コンパイルし、合成された瞬間に実行可能になる。スコープ絞り込みは `scopes:` frontmatter で制御（`when:` 述語は未評価）。
-- **センサー**: マニフェスト `sensors/aidlc-<id>.md`（ファイル名はハード要件、フラット走査）＋ 実行スクリプト `tools/` のペア。`kind` は現状 `deterministic` のみ。必須フィールド: `id` / `kind` / `command` / `default_severity` / `description`。
-- **進行停止**: `fire_on: gate` ＋ `default_severity: blocking` の組み合わせのみ blocking が効く（write 発火の blocking は advisory）。ゲート直前に成果物ごと1回発火し、検証済み pass 以外はゲート進入を拒否。人間の明示オーバーライドは可能（ログ付き、自律モードでは禁止）。ディスパッチャは最終行に compact JSON verdict を出力する。
-- **バインディングはプル方式**: ステージ側 frontmatter の `sensors:` が bare id を列挙する。コアステージへの紐付けは contribution の `adds.sensors` を使う。
-- **コアステージの拡張**: contribution（`<plugin>/contributions/<phase>/<slug>.md`、`target:` で対象指定）は**追加のみ**で、上書き・削除は設計上不可能。利用可能な面: `adds.produces` / `adds.consumes` / `adds.sensors` / `adds.scopes` / `fragments`（prose 挿入）。注意: `adds.required_sections` は機械強制されない、`adds.requires_stage` は deferred。
-- **ナレッジの消費**: プラグインの `knowledge/<agent-slug>/` は compose 時に Tier 1 へ投影され、ステージ開始時に lead＋support エージェントへロードされる。全エージェント横断には `aidlc-shared/` が使える。ディレクトリ名はエージェント slug と完全一致必須（タイポは黙って無視される）。
+### 7-4. Errors and publication
 
-## 11. スコープ外・後続フェーズ
+Repositories translate database-specific failures into a common contract such as `RepositoryError<Id>`. Use variants for business-relevant conflicts such as uniqueness violations and distinguish them from communication failures.
 
-- ユースケース層の設計は確定済み → `ddd/docs/use-case-layer-design.md` を参照。
-- インターフェイスアダプタ層の設計は確定済み → `ddd/docs/interface-adapter-layer-design.md` を参照（§7 の境界契約を設計入力としている）。
-- 第2言語以降のセンサー実装（生成基盤の実装を含む）。
-- 永続化方式別チェックの詳細設計（宣言スキーマ、方式別の必須設計リスト）。
+| Failure scope | Guarantee |
+|---|---|
+| One domain operation | Preserve pre-operation state on business error. |
+| Persistence of one aggregate | Do not expose working state as committed before persistence. Discard and reload after confirmed persistence failure. |
+| Communication failure with unknown persistence outcome | Do not assume no write occurred; reconcile request IDs and persisted outcomes. |
+| Multi-aggregate flow | Partial commits may remain. Design retry, compensation, and intermediate states without promising automatic rollback of the whole flow. |
 
-## 12. 未決定事項
+Do not publish events externally before persistence succeeds. Declare how failures between persistence and publication are handled. Multi-aggregate recovery is covered by the [use-case design](use-case-layer-design.md).
 
-ドメイン層スコープの未決定事項は**なし**（2026-09-10 時点でフロンティアは空）。次の設計対象は「11. スコープ外・後続フェーズ」。
+### 7-5. Physical structure and dependencies
+
+Connect internal domain package names to ubiquitous language. Group by business concept and responsibility instead of technical classifications such as aggregate/, impl/, vo/, and entities/. domain-design declares terms, model references, and placement rationale; code generation checks the actual layout. See the [packaging contract](domain-packaging-design.md).
+
+Separate layers using crates or equivalent boundaries. Allowed dependencies are `interface-adapter → use-case / domain / infrastructure`, `use-case → domain / infrastructure`, and `domain → infrastructure`. Infrastructure is for language extensions: it contains no DB/RPC clients and must not depend on other layers.
+
+The composition root is outside this table because it performs wiring. Determine layers from names and placement. Cargo dependencies and checks maintain the convention, but crate separation alone does not make every prohibited direction a compilation error.
+
+## 8. Sensor guarantees
+
+| Rule | Current check | Limits and remaining work |
+|---|---|---|
+| a | Public struct fields | Detectable Rust syntax. |
+| b | Mutation methods not declared in the model | Matches across files and traits; permits replay only through explicit declaration matching. |
+| c / n | Construction sites, Default, incremental initialization, restoration calls | Does not verify the meaning of FactoryRule preconditions. |
+| d | Getter calls on explicitly identified receiver types | Notes unexamined receivers requiring inference. |
+| e | ID resolution, retirement, replacement | Connected to normal approval; standalone completion has limits. |
+| f | IDs and invariant statements in Markdown | Human review assesses semantic correspondence. |
+
+Deterministic syntax inspection and business correctness are distinct. Confirmed syntactic violations are blocking; semantic judgments require review. Test generated behavior against invariants. Universal semantic proof and exhaustive interior-mutability detection are not completion requirements, and knowledge files must state these limits.
+
+## 9. Knowledge
+
+Distribute language-independent design principles and Rust conventions in agent-specific and shared directories. Cover ADTs, ID references between aggregates, Domain Services, business vocabulary, state transitions, and external-model boundaries.
+
+Resolve conflicts with explicit project policy by identifying their scope and rationale. Do not give plugin conventions blanket precedence. Describe actual coverage accurately and link real examples. A passing case without the target structure is not evidence that the structure was validated.
+
+## 10. AI-DLC integration
+
+Compose stages, contributions, sensors, knowledge, and tools. Plugin-owned stages and logical artifacts use the `ddd-` prefix.
+
+Normal approval requires agreement between registered artifacts, actual filenames, `matches`, `fire_on: gate`, and severity. Sensor-only or compose-only success cannot prove approval integration. T-01 integration tests exercise normal approval; the standalone completion gap remains separate.
+
+## 11. Later extensions
+
+A second language, sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis are later candidates. Use-case and Interface Adapter conventions already have their own design documents; they are not unstarted designs.
+
+## 12. Unresolved implementation contracts
+
+Replay declarations are implemented as [replay_methods](rust-sensor-contract.md). Return types distinguishing success, duplicates, and rejection, and recovery declarations for mixed actor/class flows remain unresolved. Decide and verify them through [T-01–T-03](completion-tasks.md).
