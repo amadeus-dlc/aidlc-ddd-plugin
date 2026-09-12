@@ -24,9 +24,13 @@ Domain Model を設計工程として組み込み、生成コードが規約に�
 | `ddd-model-completeness` | blocking | 正規モデルの読み込み・完了条件 (i)(ii)(iv)・`domain-model.md` との整合 (f) |
 | `ddd-model-presence` | blocking | domain-modeling 実行時にモデルが存在・読み込み・参照解決できること |
 | `ddd-reference-ids` | blocking | 宣言 ID の解決（未定義・廃止・種別・循環） |
-| `ddd-mapping-declarations` | blocking | 集約写像の 2 軸・ユースケース 6 項目・(j) |
-| `ddd-layer-structure` | blocking | 層構造宣言の必須項目と (k)(l)(m)(n)（設計側） |
-| `ddd-design-advisories` | advisory | 複数集約・リポジトリスコープ・upsert store |
+| `ddd-mapping-declarations` | blocking | 集約写像の 2 軸・ユースケース 6 項目・(j)。宣言文書が解析できないとき（`.document`）と `model_ref` の正規モデルが読めないとき（`.model`）も所見にする |
+| `ddd-layer-structure` | blocking | 層構造宣言の必須項目と (k)(l)(m)(n)（設計側）。宣言文書が解析できないとき（`.item`）と `model_ref` の正規モデルが読めないとき（`.model`）も所見にする |
+| `ddd-design-advisories` | advisory | 複数集約・リポジトリスコープ・upsert store。宣言文書が解析できないとき（`.document`）も所見にする |
+
+設計センサーは**不正な入力を黙って通しません**。宣言文書そのものが解析できない場合と、
+参照する正規モデルが読めない場合は、検査を省略せず所見として報告します。
+このうち `ddd-design-advisories` を除く 5 本は blocking なので、宣言が壊れているとゲートが閉じます。
 
 ### Rust コードセンサー（U5）
 
