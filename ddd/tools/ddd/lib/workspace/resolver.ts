@@ -555,8 +555,10 @@ export function isAllowed(
   const toLayer = "layer" in to ? to.layer : to.effective_layer;
   const fromSide = from.cqrs_side;
   const toSide = to.cqrs_side;
+  // `rmu` never satisfies `opposite`, so it is already exempt from the cross-side
+  // rule without a second test — one that TypeScript flags as unreachable (TS2367).
   const opposite = (fromSide === "command" && toSide === "query") || (fromSide === "query" && toSide === "command");
-  if (opposite && fromSide !== "rmu") {
+  if (opposite) {
     return { allowed: false, reason: "cross-side" };
   }
   if (fromLayer === toLayer) return { allowed: true, reason: "ok" };
