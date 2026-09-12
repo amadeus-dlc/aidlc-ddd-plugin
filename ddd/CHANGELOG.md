@@ -40,7 +40,9 @@ four core-stage contributions, nine sensors and eight knowledge documents.
 
 - The plugin composes cleanly (`aidlc-plugin-test --install`, claude): 0 drops,
   the stage on the graph, and an idempotent second compose.
-- The design contributions deliberately bind sensors and instructions without
-  adding a `produces` artifact, because a contributed artifact is applicable to
-  every unit kind and would make a core stage with a kind-pruned
-  `review_artifact` fail its schema check.
+- Only the `domain-design` contribution adds a `produces` artifact
+  (`ddd-aggregate-mapping`). The `functional-design`, `infrastructure-design` and
+  `code-generation` contributions deliberately bind sensors and instructions
+  without adding one, because a contributed artifact is applicable to every unit
+  kind and would make a core stage with a kind-pruned `review_artifact` fail its
+  schema check.
