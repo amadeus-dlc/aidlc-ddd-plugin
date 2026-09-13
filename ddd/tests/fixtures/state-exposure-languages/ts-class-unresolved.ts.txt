@@ -1,0 +1,1 @@
+class Model extends Other { #value = 0; }

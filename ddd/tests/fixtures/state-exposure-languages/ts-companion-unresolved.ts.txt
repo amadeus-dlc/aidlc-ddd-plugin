@@ -1,0 +1,14 @@
+type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
+const brand: unique symbol = Symbol("Model");
+export type Model = { readonly [brand]: true; increment(): Result<void, "limit"> };
+export const Model = {
+  create(initial: number): Result<Model, "invalid"> {
+    if (initial < 0) return { ok: false, error: "invalid" };
+    const state = { value: initial };
+    const instance: Model = {
+      [brand]: true,
+      increment() { state.value++; return { ok: true, value: undefined }; },
+    };
+    return { ok: true, value: instance as Model };
+  },
+};

@@ -6,11 +6,23 @@ Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Complet
 
 ## Use standard installed tools
 
-`.claude/tools/` and `.codex/tools/` are third-party framework distributions, not implementation targets for this plugin. Record framework gaps as reproductions and upstream proposals. Make plugin implementation changes under `ddd/`.
+The framework implementations under `.claude/tools/` and `.codex/tools/` are third-party distributions. Make plugin implementation changes under `ddd/`. The repository-owned development scope manifests and their named scope-grid entries are configuration extensions that this project maintains.
+
+The plugin and its development scopes must supply inputs, artifacts, and explicit checks that work with the supported AI-DLC version. When an integration fails, first correct our configuration and generation flow using the available interfaces. Keep investigations local; external reports require an explicit user instruction.
 
 This working copy has AI-DLC installed in `.claude/` and `.codex/`. DDD development validate/build/test commands use `.codex/tools/`. The installer uses the tools already installed for the selected destination harness.
 
 Development checks use the current standard toolchain.
+
+## Development scope traceability on 2.8.2
+
+`plugin-dev` includes `user-stories` before `domain-design` and `units-generation`. Derive actual stories with actors, goals, and acceptance criteria from the approved requirements, then verify requirements → stories → Units. Keep the requirement IDs and define distinct story IDs; renaming requirement IDs does not create stories.
+
+This is the verified path through the standard 2.8.2 traceability sensor. The supported development scope does not rely on direct requirement-to-Unit mapping. `plugin-bugfix` and `plugin-refactor` do not generate Units, so this condition does not add a stories stage to those scopes.
+
+Run `bun run test:development-scopes` from `ddd/`; `bun run check` includes it. It checks installed repository-owned scope configurations and invokes the real `aidlc` command in a disposable workspace to verify both traceability links and rejection of a mismatched Unit. It requires Bun and the supported `aidlc` binary on PATH.
+
+For an existing intent that has reached Units Generation without stories, use the standard workflow routing to add and execute User Stories, then refresh the affected mappings. Editing the reusable scope alone does not repair an in-progress intent's artifacts.
 
 ## Separate verified and unverified behavior
 
@@ -20,7 +32,7 @@ Codex rule delivery depends on integration between standard AI-DLC and the execu
 
 ## Compatibility work order
 
-1. Normal approval is connected under T-01. The remaining standalone completion guarantee needs a standard AI-DLC fix.
+1. Maintain T-01 normal approval checks and the explicit direct checks before standalone completion. Do not infer verification success from completion or exit status alone.
 2. T-04 build/verification paths target the current Claude/Codex toolchain.
 3. T-05 installation/update CLI checks are complete; actual model-driven stage execution remains.
 

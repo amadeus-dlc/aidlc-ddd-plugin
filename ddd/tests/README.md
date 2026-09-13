@@ -46,3 +46,7 @@ See [remaining work](../docs/developers/completion-tasks.md) and [measurements](
 Define rule/case correspondence in `golden/contract/coverage.ts` and additional inputs under `golden/contract/`. Generate both editions with `bun scripts/report-sensor-coverage.ts --write`; run `bun run test:coverage` to catch missing references and evidence. The report does not measure all implementation branches, all Rust syntax, or business semantics.
 
 `bun run test:install` is included in the regular sandbox. Run real acquisition with `bun run test:install:remote`.
+
+## Shared state exposure verification
+
+Run `bun run prepare:state-exposure`, then `bun run test:state-exposure` and `bun run verify:state-exposure`. The ordinary `bun test tests/` suite also includes real language extraction, so it requires the prepared fixed-path binary. See [prerequisites, commands and supported shapes](../docs/developers/state-exposure-verification.md).

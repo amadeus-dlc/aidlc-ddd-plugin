@@ -36,3 +36,6 @@ The layer designs define conventions for generated applications and the plugin. 
 Keep measurements dated and scoped. The assessment preserves each checkpoint; the task list tracks current progress. Earlier host results do not establish current rule delivery.
 
 Run `bun scripts/report-sensor-coverage.ts --write` from `ddd/` to regenerate both coverage documents in this directory. Run `bun run test:coverage` to check the report against the fixtures. Update source documents and generators together when changing the documentation structure.
+
+- [Shared state exposure contract](state-exposure-inspection.md)
+- [Language extraction and verification](state-exposure-verification.md)

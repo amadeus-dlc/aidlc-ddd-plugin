@@ -120,6 +120,24 @@ aggregate/、impl/、vo/、entities/等の技術分類を避け、パッケー�
 
 状態: 仕様は合意済み、実装は未完了。最初のリリースまでに完了する。[共通設計](language-independent-design.ja.md)を参照。
 
+T-09は[親Issue #34](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/34)で管理する。親全体を一つのintentとして開始せず、子Issueごとに`plugin-dev`のintentを作る。各子Issueに限定した成果・対象外・試験・文書を持たせ、全体の契約と前提関係は親で維持する。
+
+| 子Issue | 単独で完成させる成果 | 必須の先行Issue |
+|---|---|---|
+| [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38) | Rust/TypeScriptで状態公開の一規則を共通判定 | なし |
+| [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) | プロジェクト設定と旧Rust設定の移行 | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38) |
+| [#40](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/40) | Rustの限定した戻り値・エラー参照解決 | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38)、[#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) |
+| [#41](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/41) | TypeScript Compiler APIによる戻り値・エラー参照解決 | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38)、[#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) |
+| [#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42) | 正規モデルの操作・生成時エラーと移行 | なし |
+| [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) | 集約・業務パッケージ・操作の実装写像と移行 | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38)、[#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42) |
+| [#44](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/44) | レイヤー宣言の移行とユースケース宣言の互換確認 | [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) |
+| [#45](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/45) | 操作・生成時エラー集合の共通照合 | [#40](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/40)、[#41](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/41)、[#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42)、[#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) |
+| [#46](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/46) | 新成果物の利用経路接続・一式移行・既存経路検証 | [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39)、[#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42)、[#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43)、[#44](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/44)、[#45](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/45) |
+
+最初は#38を実行し、状態公開の一規則・両言語・正常／違反／検査不能までに絞る。移行、パッケージ横断の参照解決、エラー集合照合は含めない。#42も独立して開始できる。表は必須の依存関係を示し、すべてを行順に実行する指定ではない。
+
+各子Issueは実装2〜3 Unitを目安とし、開始前に範囲を確認する。新要件は親へ明示的に記録し、進行中のintentの完了条件へ暗黙に追加しない。個別の読込・変換は最終切替前にも検証可能にする。#46は完成した成果物処理を接続し、形式の再設計や本番ソース解析器の置き換えを含めない。T-09の完了とは別に、T-10/T-11とリリースの完了条件を維持する。
+
 パッケージ、型、メソッド、エラー、検査の共通契約を定義し、言語固有情報は実装写像で保持する。生成時エラーの宣言とエラー所属の一致検査を追加する。設定・成果物のバージョンを定義し、既存Rust成果物の明示的な移行コマンドを実装する。一意に変換できる情報を移し、不足した業務定義はモデルの所有者が補完できるよう報告する。
 
 RustとTypeScriptの比較シナリオを先に定義する。最初のリリースに十分な共通契約と判断する前に、TypeScript Compiler APIを使う小さな実装で共通部分を試す。プロジェクト設定とAST・型情報を使い、コンパイラ固有のオブジェクトを共通契約へ持ち込まない。正規モデル、ローダー・スキーマ、生成指示、移行済みテスト入力を揃える。

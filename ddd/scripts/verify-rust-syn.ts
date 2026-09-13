@@ -37,22 +37,39 @@ interface Result {
 }
 
 try {
+  const rustHost = /^host: (.+)$/m.exec(command(["rustc", "-vV"]))?.[1];
+  ok(rustHost, "rustc must report the native host target");
   const buildStart = performance.now();
   command([
     "cargo",
     "build",
     "--locked",
+    "--offline",
     "--release",
     "--manifest-path",
     manifest,
     "--target-dir",
     join(experiment, "target"),
+    "--target",
+    rustHost,
   ]);
   const buildMs = performance.now() - buildStart;
   const executable = `ddd-rust-syn-spike${process.platform === "win32" ? ".exe" : ""}`;
-  const original = join(experiment, "target/release", executable);
+  const original = join(experiment, "target", rustHost, "release", executable);
   const relocated = join(temp, executable);
   copyFileSync(original, relocated);
+  // macOS may defer a newly copied executable in dyld before main. Keep this
+  // explicit preparation separate from the unchanged 10-second v1 test limit.
+  const warmupStart = performance.now();
+  const warmup = Bun.spawnSync([relocated, "--state-exposure-version"], {
+    cwd: temp,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: 180_000,
+  });
+  strictEqual(warmup.exitCode, 0, "relocated native executable did not become ready");
+  strictEqual(JSON.parse(warmup.stdout.toString()).protocol_version, 2);
+  const warmupMs = performance.now() - warmupStart;
   const emptyPath = join(temp, "empty-path");
   mkdirSync(emptyPath);
   const request = JSON.stringify({
@@ -261,10 +278,15 @@ try {
     },
     platform: `${process.platform}-${process.arch}`,
     inputs: Object.fromEntries(
-      ["Cargo.toml", "Cargo.lock", "src/main.rs", "src/analysis.rs", "cases.json"].map((file) => [
-        file,
-        hash(join(experiment, file)),
-      ]),
+      [
+        "Cargo.toml",
+        "Cargo.lock",
+        "src/main.rs",
+        "src/analysis.rs",
+        "src/state_evidence.rs",
+        "src/state_evidence_tests.rs",
+        "cases.json",
+      ].map((file) => [file, hash(join(experiment, file))]),
     ),
     verifier_sha256: hash(import.meta.path),
     native: {
@@ -279,6 +301,7 @@ try {
               .map((line) => line.trim())
           : null,
       build_ms: Math.round(buildMs),
+      relocated_warmup_ms: Math.round(warmupMs),
       first_batch_ms: Math.round(batchMs),
       warm_batch_median_ms: Math.round(nativeTimes[5]),
       timing_scope: "local warm filesystem; includes process startup and JSON; no performance comparison",

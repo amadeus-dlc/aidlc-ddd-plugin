@@ -16,9 +16,19 @@ const CONTRIBUTES: Record<string, string> = {
 /** FR11.2 keeps logical artifact names in a flat namespace behind the `ddd-` prefix. */
 const LOGICAL_NAME_PREFIX = "ddd-";
 
-/** FR11.3 requires these four scripts; `check` bundles three of them in this order. */
-const REQUIRED_SCRIPTS = ["validate", "build:claude", "build:codex", "check"];
-const CHECK_STEPS = ["bun run check:biome", "bun run validate", "bun run test"];
+/** FR11.3 requires build entry points and verified development-scope compatibility. */
+const REQUIRED_SCRIPTS = ["validate", "build:claude", "build:codex", "check", "test:development-scopes"];
+const CHECK_STEPS = [
+  "bun run check:biome",
+  "bun run validate",
+  "bun run test:development-scopes",
+  "bun run prepare:state-exposure",
+  "bun run test",
+  "bun run test:state-exposure:native",
+  "bun run experiment:rust-syn",
+  "bun run verify:state-exposure",
+  "bun run typecheck:state-exposure",
+];
 
 /** FR11.5 forbids relying on these: `adds.required_sections` is not enforced and `adds.requires_stage` is deferred. */
 const UNIMPLEMENTED_ADD_KEYS = ["requires_stage", "required_sections"];
@@ -147,7 +157,7 @@ describe("plugin scaffold", () => {
     }
   });
 
-  test("FR11.3: package.json wires the four scripts and check runs its three stages in order", () => {
+  test("FR11.3: package.json wires build and compatibility scripts in the check sequence", () => {
     for (const name of REQUIRED_SCRIPTS) {
       expect({ name, present: typeof manifest.scripts[name] === "string" }).toEqual({ name, present: true });
     }
@@ -156,6 +166,7 @@ describe("plugin scaffold", () => {
     expect(manifest.scripts.validate).toContain("aidlc-plugin-validate.ts");
     expect(manifest.scripts["build:claude"].trimEnd().endsWith("claude")).toBe(true);
     expect(manifest.scripts["build:codex"].trimEnd().endsWith("codex")).toBe(true);
+    expect(manifest.scripts["test:development-scopes"]).toBe("bun scripts/verify-development-scopes.ts");
   });
 
   test("FR11.2: logical artifact names produced by stages and contributions are prefixed", () => {

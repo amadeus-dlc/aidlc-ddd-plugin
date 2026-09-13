@@ -421,7 +421,7 @@
       "reverse-engineering": "EXECUTE",
       "practices-discovery": "SKIP",
       "requirements-analysis": "EXECUTE",
-      "user-stories": "SKIP",
+      "user-stories": "EXECUTE",
       "refined-mockups": "SKIP",
       "domain-design": "EXECUTE",
       "units-generation": "EXECUTE",

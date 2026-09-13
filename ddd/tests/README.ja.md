@@ -46,3 +46,7 @@ bun scripts/verify-dist.ts claude codex
 ケースと規則の対応は `golden/contract/coverage.ts`、追加ケースは `golden/contract/` に記載します。`bun scripts/report-sensor-coverage.ts --write` で英日両版を生成し、`bun run test:coverage` で参照切れや未検証項目を検出します。表は実装の全分岐・全Rust構文・業務上の意味の網羅率ではありません。
 
 `bun run test:install` は通常のサンドボックスにも含まれる。実取得は `bun run test:install:remote` で実行する。
+
+## 状態公開の共通検査
+
+`bun run prepare:state-exposure` の後に `bun run test:state-exposure` と `bun run verify:state-exposure` を実行します。通常の `bun test tests/` にも両言語の実抽出試験を含むため、準備済みの固定バイナリが必要です。[必要ツール・全コマンド・対応範囲](../docs/developers/state-exposure-verification.ja.md)を参照してください。

@@ -1,0 +1,34 @@
+bun test v1.3.13 (bf2e2cec)
+
+tests/state-exposure-inspection.test.ts:
+(pass) state exposure judgment > complete private state passes and retains the exact evidence [1.87ms]
+(pass) state exposure judgment > complete public state violates with its confirmed location [0.30ms]
+(pass) state exposure judgment > partial empty enumeration is unresolved, never an absence proof [0.29ms]
+(pass) state exposure judgment > partial evidence keeps confirmed exposure alongside enumeration failure [0.19ms]
+(pass) state exposure judgment > complete enumeration with an unresolved fact still remains unresolved [0.19ms]
+(pass) state exposure judgment > unknown member semantics do not erase another member's violation [0.19ms]
+(pass) state exposure judgment > retains unresolved target target-missing [0.18ms]
+(pass) state exposure judgment > retains unresolved target target-ambiguous [0.18ms]
+(pass) state exposure judgment > retains unresolved target syntax-error [0.32ms]
+(pass) state exposure judgment > a confirmed non-state member is absent, not exposed [0.18ms]
+(pass) state exposure judgment > complete empty enumeration passes only with target evidence [0.12ms]
+(pass) state exposure judgment > preserves unavailable execution and tool-unavailable cause [0.13ms]
+(pass) state exposure judgment > preserves failed execution and execution-failed cause [0.11ms]
+(pass) state exposure judgment > preserves failed execution and timeout cause [0.10ms]
+(pass) state exposure judgment > preserves failed execution and output-limit cause [0.11ms]
+(pass) state exposure judgment > preserves failed execution and resource-limit cause [0.08ms]
+(pass) public boundary integration > request preparation, JSON round trips and inspection preserve all evidence [0.31ms]
+(pass) public boundary integration > a pass with only a different evidence position remains observably different [0.25ms]
+(pass) public boundary integration > input mutations cannot alter an already returned request or result [0.12ms]
+(pass) public boundary integration > scalar member ordering and numeric evidence ordering retain duplicate evidence [0.30ms]
+(pass) public boundary integration > reasons sort by code, subject, null/location and message without deduplication [0.33ms]
+(pass) public boundary integration > same shared semantics in both languages: exposure=false incomplete=false [0.30ms]
+(pass) public boundary integration > same shared semantics in both languages: exposure=true incomplete=false [0.23ms]
+(pass) public boundary integration > same shared semantics in both languages: exposure=false incomplete=true [0.20ms]
+(pass) public boundary integration > same shared semantics in both languages: exposure=true incomplete=true [0.23ms]
+(pass) public boundary integration > multiple independent invocations and frozen evidence remain deterministic [0.43ms]
+
+ 26 pass
+ 0 fail
+ 42 expect() calls
+Ran 26 tests across 1 file. [22.00ms]
