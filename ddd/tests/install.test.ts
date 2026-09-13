@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   acquireLocal,
+  acquireRemote,
   canonicalPayloadSha256,
   extractTarGz,
   latestStableTag,
@@ -92,5 +93,51 @@ describe("acquireLocal", () => {
     const resolved = acquireLocal(root);
     expect(resolved.source).toBe("local");
     expect(validateManifest(resolved).version).toBe("0.1.0");
+  });
+});
+
+describe("remote source acquisition", () => {
+  function archive(): Uint8Array {
+    const root = makeTemp();
+    const manifest = join(root, "release/ddd/.aidlc-plugin/plugin.json");
+    mkdirSync(join(root, "release/ddd/.aidlc-plugin"), { recursive: true });
+    writeFileSync(manifest, '{"name":"ddd","version":"0.1.0"}');
+    const path = join(root, "source.tar.gz");
+    expect(Bun.spawnSync(["tar", "-czf", path, "-C", root, "release"]).exitCode).toBe(0);
+    return new Uint8Array(readFileSync(path));
+  }
+  test("a tagged archive is acquired and its manifest version is verified", async () => {
+    const bytes = archive();
+    const source = await acquireRemote("tag", "v0.1.0", async (url) => {
+      expect(String(url)).toBe("https://codeload.github.com/amadeus-dlc/aidlc-ddd-plugin/tar.gz/refs/tags/v0.1.0");
+      return new Response(bytes);
+    });
+    try {
+      expect(source.source).toBe("tag");
+      expect(validateManifest(source).version).toBe("0.1.0");
+      expect(() => validateManifest({ ...source, requestedTag: "v0.2.0" })).toThrow("does not match");
+    } finally {
+      if (source.cleanupRoot) rmSync(source.cleanupRoot, { recursive: true, force: true });
+    }
+  });
+  test("latest resolves a stable tag before downloading the archive", async () => {
+    const bytes = archive();
+    const source = await acquireRemote("latest", "", async (url) => {
+      if (String(url) === "https://api.github.com/repos/amadeus-dlc/aidlc-ddd-plugin/tags?per_page=100")
+        return new Response(JSON.stringify([{ name: "v0.1.0" }, { name: "v0.2.0-rc.1" }]));
+      expect(String(url)).toBe("https://codeload.github.com/amadeus-dlc/aidlc-ddd-plugin/tar.gz/refs/tags/v0.1.0");
+      return new Response(bytes);
+    });
+    try {
+      expect(source.source).toBe("latest");
+      expect(source.ref).toBe("v0.1.0");
+    } finally {
+      if (source.cleanupRoot) rmSync(source.cleanupRoot, { recursive: true, force: true });
+    }
+  });
+  test("HTTP failures are reported as acquisition failures", async () => {
+    await expect(
+      acquireRemote("ref", "main", async () => new Response("unavailable", { status: 503 })),
+    ).rejects.toThrow("HTTP 503");
   });
 });

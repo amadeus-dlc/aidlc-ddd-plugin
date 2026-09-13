@@ -64,9 +64,9 @@ Dependency: coordinate with T-01 artifact contracts.
 
 ## T-04: Remove old dependencies and excluded distribution routes
 
-Status: build, sandbox, and distribution-check targets now align with Claude/Codex. Installer target tables, old tests, and helper scripts remain. Priority: high.
+Status: build, sandbox, and distribution-check targets now align with Claude/Codex. Installer targets and patch application paths are also aligned. Old tests remain. Priority: high.
 
-`package.json` and `scripts/verify-dist.ts` now default to Claude/Codex, excluding Kimi/opencode builds and checks. Align accepted `install.ts` targets too. The framework's target list is not a promise of plugin support for every harness.
+`package.json` and `scripts/verify-dist.ts` now default to Claude/Codex, excluding Kimi/opencode builds and checks. Accepted `install.ts` targets also match Claude/Codex. The framework's target list is not a promise of plugin support for every harness.
 
 Remove or replace tests/helpers depending on the old dispatch bridge, deleted-submodule fixtures, and patch application. Preserve the current Claude/Codex compose and idempotency tests in `framework-compatibility.test.ts`. Deleting obsolete checks does not establish rule-delivery verification.
 
@@ -76,13 +76,13 @@ Dependency: final distribution verification follows T-01–T-03 changes.
 
 ## T-05: Verify installation, updates, and actual usage
 
-Status: not started. Priority: high.
+Status: mechanical installation/update CLI verification is complete. Actual model-driven stage execution and rule delivery remain unverified. Priority: high.
 
-In disposable projects, verify fresh installation, repeat-install idempotency, upgrades, failure states, and dry-run. Confirm unrelated files are preserved and recovery after failure is possible.
+Automated Claude/Codex checks cover fresh/repeat installs, payload and contribution updates, dry-run, failure protection, ownership, removed payload files, and source selectors. All 45 local tests and two real GitHub main installations passed. The [verification contract](installation-verification.md) records scope and evidence.
 
-For Claude/Codex, verify current AI-DLC delivers DDD rules to the responsible agent, downstream stages read design artifacts, and approval checks fire. Do not substitute old Codex host records.
+Remaining: verify that current AI-DLC delivers DDD rules to the responsible model and that it consumes upstream designs for generation and review. Sensor, compose, and CLI success do not establish model execution.
 
-Completion: record versions, environment, commands, results, and unverified scope; align installation guidance with observations. Distinguish sensor-only tests, compose, and actual model execution.
+Completion: record versions, results, and unverified scope for the usage path including actual model execution.
 
 Dependency: T-01–T-04.
 

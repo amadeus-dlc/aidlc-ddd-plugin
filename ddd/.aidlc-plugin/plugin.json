@@ -1,7 +1,7 @@
 {
   "name": "ddd",
   "version": "0.1.0",
-  "description": "AI-DLC v2 にドメイン駆動設計のワークフローを追加するプラグインのひな型。",
+  "description": "Adds canonical domain modeling workflows and design and Rust code checks to AI-DLC v2.",
   "author": {
     "name": "j5ik2o"
   },

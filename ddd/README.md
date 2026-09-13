@@ -55,7 +55,7 @@ Run all tests with `bun run check`. Twenty known old-dependency failures remain.
 
 ## Installation and supported environments
 
-Completion targets are Claude Code (`.claude`) and Codex (`.codex`, with skills in `.agents/skills`). Kimi/opencode are excluded. Old installer target tables remain but are not support guarantees.
+Completion targets are Claude Code (`.claude`) and Codex (`.codex`, with skills in `.agents/skills`). Kimi/opencode are excluded. The installer accepts only these two harnesses.
 
 The destination must already have AI-DLC. Preview local-source installation:
 
@@ -63,7 +63,7 @@ The destination must already have AI-DLC. Preview local-source installation:
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
 ```
 
-Remove dry-run to install. The script implements source retrieval, build, compose, provenance, and updates, but T-05 will verify current fresh-install/update/failure recovery. This document does not assume a latest tag exists or a release has been published.
+Remove dry-run to install. The script implements source retrieval, build, compose, provenance, and updates, with [automated verification](docs/installation-verification.md) of fresh installs, updates, and failure protection. This document does not assume a latest tag exists or a release has been published.
 
 ## Design and remaining work
 

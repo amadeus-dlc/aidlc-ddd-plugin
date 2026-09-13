@@ -17,7 +17,7 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
-| install | Installer pure functions and related checks, not complete installation/update proof. |
+| install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
 | framework-compatibility | Current Claude/Codex compose/idempotency tests mixed with failing old integration tests. |
 | codex-dispatch-bridge | Depends on old bridge/deleted fixtures; T-04 tracks cleanup. |
 
@@ -37,10 +37,12 @@ Distribution checks run 277 cases per harness. The runner creates a temporary di
 
 Missing, invalid, and valid approval inputs are covered by t1-gate-integration. T-02 added value-object, port, cross-file, and replay regressions. T-07 added 55 direct and eight approval cases. A valid case lacking the target structure is not evidence that structure is correctly inspected.
 
-Seven representative package layouts were also compiled with rustc 1.95.0. This is not compilation of every golden input or proof of business behavior. Fresh installation, updates, actual model execution, and rule delivery still need verification.
+Seven representative package layouts were also compiled with rustc 1.95.0. This is not compilation of every golden input or proof of business behavior. Installation/update CLI behavior is [verified](../docs/installation-verification.md). Actual model execution and rule delivery remain unverified.
 
 See [remaining work](../docs/completion-tasks.md) and [measurements](../docs/current-state-assessment.md). Include versions and scope when updating results.
 
 ## Updating the matrix
 
 Define rule/case correspondence in `golden/contract/coverage.ts` and additional inputs under `golden/contract/`. Generate both editions with `bun scripts/report-sensor-coverage.ts --write`; run `bun run test:coverage` to catch missing references and evidence. The report does not measure all implementation branches, all Rust syntax, or business semantics.
+
+`bun run test:install` is included in the regular sandbox. Run real acquisition with `bun run test:install:remote`.

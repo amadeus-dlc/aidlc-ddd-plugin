@@ -4,6 +4,13 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Installation and updates
+
+- Use the standard compose hook and include binary payloads and contributions in change detection.
+- Compose and verify in a candidate tree, then publish ownership-checked changes.
+- Automate fresh-install, update, dry-run, and failure-protection checks.
+- Align installer targets with Claude/Codex and use English package descriptions.
+
 ## Unreleased — Sensor contract coverage
 
 - Map positive, negative, and boundary evidence per sensor/rule and generate English/Japanese reports.

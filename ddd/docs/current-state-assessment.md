@@ -165,3 +165,7 @@ The [contract matrix](sensor-coverage.md) tracks nine sensors and 70 rule entrie
 - Temporary projects are removed after each test. The complete sandbox script exits 0.
 
 [Execution evidence](evidence/sensor-contract-verification.json) is retained. The investigation also fixed malformed reference IDs being classified as undefined. This does not claim coverage of every implementation branch, all Rust syntax, or business semantics. The optional standalone-guard reproduction and 20 known old-dependency failures remain separate work.
+
+## 13. Installation/update CLI verification
+
+[Installation verification](installation-verification.md) passed 45 local checks and two real GitHub main installs. Fixes cover standard compose invocation, binary hashing, contribution change detection, candidate composition, ownership, and failure protection. test:install is included in the regular sandbox. Actual model-driven stage execution remains unverified.

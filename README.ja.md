@@ -4,7 +4,7 @@
 
 AI-DLCに、集約・不変条件・Domain Primitiveの設計手順と、設計成果物・Rustコードの検査を追加するプラグインです。本体は [ddd/](ddd/README.ja.md) にあります。
 
-現在は完成に向けた修正中です。Claude/Codexのサンドボックス検証が成功し、通常承認のDDD検査、Rust判定の修正、業務語彙によるパッケージング検査を実装しました。単独完了の標準側ガードと新規導入・更新の確認には残件があります。[現状評価](ddd/docs/current-state-assessment.ja.md)と[残作業](ddd/docs/completion-tasks.ja.md)を参照してください。
+現在は完成に向けた修正中です。Claude/Codexのサンドボックス検証が成功し、通常承認のDDD検査、Rust判定の修正、業務語彙によるパッケージング検査を実装しました。単独完了の標準側ガードとモデル実行の確認には残件があります。[現状評価](ddd/docs/current-state-assessment.ja.md)と[残作業](ddd/docs/completion-tasks.ja.md)を参照してください。
 
 ## 提供するもの
 
@@ -33,7 +33,7 @@ AI-DLC導入済みの検証用プロジェクトで、まず導入スクリプ�
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-Claude Codeでは `--harness claude` を指定します。実際の新規導入・更新・ステージ完了の一連の検証は未完了です。[利用ガイド](docs/usage.ja.md)を確認してください。
+Claude Codeでは `--harness claude` を指定します。新規導入・更新CLIは[検証済み](ddd/docs/installation-verification.ja.md)です。モデルによるステージ実行は未確認です。[利用ガイド](docs/usage.ja.md)を確認してください。
 
 ## 文書と開発
 
