@@ -124,11 +124,15 @@ Define common package, type, method, error, and inspection contracts, preserving
 
 Define comparison scenarios for Rust and TypeScript up front. A small TypeScript implementation using the TypeScript Compiler API must exercise the common boundary before it is treated as sufficient for the first release. Use the project configuration and AST/type information, keeping compiler-specific objects out of the shared contract. Keep the canonical model, loader/schema, generation instructions, and migrated fixtures aligned.
 
+Implement the [inspection contract design](inspection-contract-design.md) with a limited Rust + syn adapter proof as well. Verify snapshot-bound identities, resolved/absent/unresolved facts, complete/partial sets, per-rule outcomes, and operation/error ownership against equivalent TypeScript cases. The parser experiment alone does not demonstrate the shared resolver/evaluator contract. Identify any intended-use cases requiring a deeper Rust semantic provider before declaring the first-release scope sufficient.
+
 Completion: shared contracts are concrete, migration preserves domain identities and meaning, incomplete inputs are reported, and both languages exercise the proposed contract. This task does not mean full TypeScript sensor support is shipped.
 
 ## T-10: Bring Rust into conformance with the shared contracts
 
 Status: agreed work; implementation pending. Depends on T-09 and coordinates with T-01/T-03/T-05/T-06. Required for the first release.
+
+Rust + syn adoption is approved following the [experiment](rust-syn-spike.md). Implement the native Rust backend and resolution boundary described in the [inspection design](inspection-contract-design.md). Fix the reproduced public tuple-field and explicit-return getter misses. Name/type resolution implementation, whole-sensor parity, and supported-platform distribution remain pending; the experiment does not complete T-10.
 
 Improve host/package separation, visibility and dependency checks, explicit publication, method-specific error-type/set validation, factory bindings, and blocking unresolved inspection. Review coverage of infrastructure, hosts, ownership isolation, and existing mutation/construction checks. Correct Rust gaps rather than treating current behavior as the final specification.
 

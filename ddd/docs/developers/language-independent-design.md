@@ -144,6 +144,14 @@ For a required inspection target, inability to resolve a reference or type block
 
 Keep normal gate checks and CI checks aligned, with direct execution for standalone paths. Standard AI-DLC 2.8.2 still has the separately tracked standalone-completion gap in T-01. This agreement does not modify third-party framework distributions or establish that the gap is fixed.
 
+### Use Rust + syn for Rust analysis
+
+Adopt a Rust executable using syn as the Rust syntax-analysis backend. Keep Rust syntax traversal and language-specific resolution in that implementation; the TypeScript wrapper does not parse Rust source. The [experiment](rust-syn-spike.md) establishes bounded syntax extraction and local native execution, not production sensor replacement.
+
+Combine syn syntax with Cargo package/target/configuration evidence and scope-aware explicit reference resolution. Do not equate parsing with compiler type analysis. Required facts needing unsupported inference, trait resolution, macro expansion, or conditional compilation remain unresolved and block approval. A deeper semantic provider, if needed for intended release scenarios, requires its own compatibility proof.
+
+The [inspection contract design](inspection-contract-design.md) defines shared facts, resolution/completeness states, operation-error comparison, per-rule results, and the Rust/TypeScript proof matrix. Keep business IDs separate from implementation symbol IDs, preserve access paths when resolving aliases, and bind results to the inspected source/configuration snapshot. Production native distribution and all-rule migration belong to T-10.
+
 ### Use the TypeScript Compiler API for TypeScript analysis
 
 Use the TypeScript Compiler API for syntax and type analysis, starting with the small T-09 proof and continuing into T-11. Build a Program with the target project's compiler configuration and use its AST, symbols, and TypeChecker for aliases, re-exports, type-only references, and method return/error types. Respect tsconfig module resolution and project references, together with package exports, when identifying actual targets. A syntax-only parse or transpilation result does not establish type-dependent checks.

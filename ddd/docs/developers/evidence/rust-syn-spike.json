@@ -1,0 +1,695 @@
+{
+  "experiment": "rust-syn",
+  "recorded_at": "2026-09-13T06:43:40.055Z",
+  "base_commit": "83fadbfb8ac1100637dd157bc55621eae441da02",
+  "versions": {
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "bun": "1.3.13",
+    "syn": "3.0.5"
+  },
+  "platform": "darwin-arm64",
+  "inputs": {
+    "Cargo.toml": "0f4172d205d76af18ae6c92e9b3da94c263c629ed851a6d7be153abcb4192bc0",
+    "Cargo.lock": "dfd66debba644865729f0c7665addac53587ee38a05c838f48dbea6451e8a5c4",
+    "src/main.rs": "a7507311bbdd3a5e475b6d27a793661ac81c542de3f8ff1620ff874ba0b29b2a",
+    "src/analysis.rs": "84b7a698441bba7c9b10f73825cc9dba7f85724164584f742c6ea5c95a9ec1e6",
+    "cases.json": "ef97ff8c7a630411d1f0d24845ff6e081c44e257a39ee9aa0f259df49df383b4"
+  },
+  "verifier_sha256": "e33677ae33c9c759d56e36f5d7579b7b0ea1d24bf639e0429f3b1d88557385f2",
+  "native": {
+    "bytes": 1859760,
+    "sha256": "5432bb2f8774b10e1c16f9dcd902093b9a69782961a66a8f3bb2205640d22b58",
+    "relocated_empty_path": true,
+    "binary_dependencies": [
+      "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+    ],
+    "build_ms": 31,
+    "first_batch_ms": 185,
+    "warm_batch_median_ms": 2,
+    "timing_scope": "local warm filesystem; includes process startup and JSON; no performance comparison"
+  },
+  "malformed_requests": 6,
+  "deterministic_output": true,
+  "cases": [
+    {
+      "name": "private-fields",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2015",
+          "success": true,
+          "codes": []
+        },
+        {
+          "edition": "2018",
+          "success": true,
+          "codes": []
+        },
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        },
+        {
+          "edition": "2024",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "public-field",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.amount@2"
+      ],
+      "legacy_fields": [
+        "Invoice.amount@2"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "crate-visible-field",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.amount@1"
+      ],
+      "legacy_fields": [
+        "Invoice.amount@1"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "super-visible-field",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.amount@1"
+      ],
+      "legacy_fields": [
+        "Invoice.amount@1"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "scoped-visible-field",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.amount@1"
+      ],
+      "legacy_fields": [
+        "Invoice.amount@1"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "private-tuple",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "public-tuple",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.0@1"
+      ],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "restricted-tuple",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.0@1"
+      ],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "raw-identifier",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.type@1"
+      ],
+      "legacy_fields": [
+        "Invoice.type@1"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "unicode-and-comments",
+      "parsed": true,
+      "state": "violation",
+      "fields": [
+        "Invoice.合計@2"
+      ],
+      "legacy_fields": [
+        "Invoice.合計@2"
+      ],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "direct-getter-and-command",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [
+        {
+          "name": "issue",
+          "receiver": "mut-self",
+          "returnType": "Result<(),IssueError>"
+        }
+      ],
+      "getter_comparison": {
+        "syn": [
+          "total"
+        ],
+        "legacy": [
+          "total"
+        ]
+      }
+    },
+    {
+      "name": "explicit-return-getter",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": {
+        "syn": [
+          "total"
+        ],
+        "legacy": []
+      }
+    },
+    {
+      "name": "alias-and-reexport",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [
+        {
+          "name": "issue",
+          "receiver": "mut-self",
+          "returnType": "Outcome<()>"
+        }
+      ],
+      "getter_comparison": null
+    },
+    {
+      "name": "associated-error",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [
+        {
+          "name": "save",
+          "receiver": "ref-self",
+          "returnType": "Result<(),Self::Error>"
+        }
+      ],
+      "getter_comparison": null
+    },
+    {
+      "name": "typed-self",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [
+        {
+          "name": "issue",
+          "receiver": "other",
+          "returnType": null
+        }
+      ],
+      "getter_comparison": null
+    },
+    {
+      "name": "inferred-receiver",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "async-in-2015",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2015",
+          "success": false,
+          "codes": [
+            "E0670"
+          ]
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "async-in-2018",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2018",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "unknown-type",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": false,
+          "codes": [
+            "E0425"
+          ]
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "wrong-return-type",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": false,
+          "codes": [
+            "E0308"
+          ]
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "shadowed-result",
+      "parsed": true,
+      "state": "pass",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [
+        {
+          "name": "issue",
+          "receiver": "none",
+          "returnType": "Result<(),()>"
+        }
+      ],
+      "getter_comparison": null
+    },
+    {
+      "name": "generated-public-field",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "macro-expansion"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "conditional-field",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [
+        "Invoice.amount@1"
+      ],
+      "legacy_fields": [
+        "Invoice.amount@1"
+      ],
+      "unresolved": [
+        "conditional-compilation"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "conditional-attribute",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "conditional-compilation"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "derive",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "attribute-or-derive-expansion"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "attribute-macro",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "attribute-or-derive-expansion"
+      ],
+      "compiler": [],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "named-external-module",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "external-module-not-loaded"
+      ],
+      "compiler": [],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "directory-external-module",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "external-module-not-loaded"
+      ],
+      "compiler": [],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "malformed-source",
+      "parsed": false,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": null,
+      "unresolved": [
+        "parse-error"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": false,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "unsupported-union",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "unsupported-item"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": true,
+          "codes": []
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    },
+    {
+      "name": "unstable-modifier",
+      "parsed": true,
+      "state": "unresolved",
+      "fields": [],
+      "legacy_fields": [],
+      "unresolved": [
+        "unsupported-modifier"
+      ],
+      "compiler": [
+        {
+          "edition": "2021",
+          "success": false,
+          "codes": [
+            "E0658"
+          ]
+        }
+      ],
+      "signature_checks": [],
+      "getter_comparison": null
+    }
+  ],
+  "actual_sensor_comparisons": [
+    {
+      "name": "clean-domain",
+      "existing_a_count": 0,
+      "syn_a_count": 0
+    },
+    {
+      "name": "violation-a",
+      "existing_a_count": 1,
+      "syn_a_count": 1
+    },
+    {
+      "name": "public-tuple",
+      "existing_a_count": 0,
+      "syn_a_count": 1
+    },
+    {
+      "name": "restricted-tuple",
+      "existing_a_count": 0,
+      "syn_a_count": 1
+    }
+  ],
+  "unverified": [
+    "full sensor parity",
+    "Cargo and cross-file resolution",
+    "type inference and trait solving",
+    "macro expansion and cfg selection",
+    "source edition selection",
+    "Linux/Windows/x86_64",
+    "minimum OS/Rust versions",
+    "WASM distribution",
+    "plugin installation and gate integration"
+  ]
+}

@@ -28,6 +28,14 @@ Define common comparison scenarios and validate a small TypeScript implementatio
 
 TypeScript analysis uses the TypeScript Compiler API, including Program/TypeChecker-based evidence for type-dependent checks. Keep these dependencies in the language-specific implementation; Rust and TypeScript feed the same shared inspection contract. Adopt this in the T-09 proof and carry it into T-11, with explicit API-version compatibility verification.
 
+## 2026-09-13: Adopt Rust + syn behind the shared inspection contract
+
+Status: adoption approved after the [parser experiment](rust-syn-spike.md); production replacement pending. Use Rust + syn for Rust syntax analysis and the TypeScript Compiler API for TypeScript. Keep language-specific traversal/resolution inside each implementation and DDD decision semantics in shared rules. This reduces Rust-specific parsing logic in TypeScript while preserving one domain policy.
+
+Syn does not provide compiler type inference, trait solving, or macro expansion. The [inspection design](inspection-contract-design.md) combines Cargo context with explicit reference resolution, records completeness, and blocks unresolved required facts. Separate proven absence from missing evidence, and resolved symbol identity from permission to access it. Business IDs remain owned by the canonical model.
+
+Retaining tree-sitter and fixing its current extractor was viable; the measured tuple/getter misses were implementation defects, not parser limitations. The selected direction is native Rust analysis, with all-rule parity and platform distribution still required. Do not select a compiler-internal semantic provider or claim release readiness from the small prototype.
+
 ## Consistency and recovery policy
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.
