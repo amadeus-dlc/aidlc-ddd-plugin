@@ -4,7 +4,7 @@ English | [Japanese](README.ja.md)
 
 Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plugin ID: `ddd`; current version: `0.1.0`.
 
-**Under development.** Direct sensor execution and normal approval integration are verified. The framework standalone completion guard remains incomplete, and Rust type inference is outside inspection coverage. See the [assessment](docs/current-state-assessment.md) and [completion tasks](docs/completion-tasks.md).
+**Under development.** Direct sensor execution and normal approval integration are verified. The framework standalone completion guard remains incomplete, and Rust type inference is outside inspection coverage. See the [assessment](docs/developers/current-state-assessment.md) and [completion tasks](docs/developers/completion-tasks.md).
 
 ## Structure
 
@@ -32,11 +32,11 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-rust-use-case | g/h/i/d. |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
 
-All manifests except the advisory sensor are blocking. Canonical models use registered names, and added declarations are required sections of existing review artifacts connected to normal approval. See the [artifact contract](docs/artifact-contract.md) for standalone limits.
+All manifests except the advisory sensor are blocking. Canonical models use registered names, and added declarations are required sections of existing review artifacts connected to normal approval. See the [artifact contract](docs/users/artifact-contract.md) for standalone limits.
 
-Rust checks use syntax and names without type inference or execution. T-02 corrected value-object, port, cross-file, and replay evaluation. The [Rust contract](docs/rust-sensor-contract.md) describes explicit-type matching and coverage notes. It does not exhaustively verify invariant semantics, recovery flows, or interior mutability.
+Rust checks use syntax and names without type inference or execution. T-02 corrected value-object, port, cross-file, and replay evaluation. The [Rust contract](docs/users/rust-sensor-contract.md) describes explicit-type matching and coverage notes. It does not exhaustively verify invariant semantics, recovery flows, or interior mutability.
 
-Package names must connect to ubiquitous language. Prohibit technical classifications such as aggregate/, impl/, vo/, and entities/. Sensors inspect declarations and actual modules; review assesses term meaning. See the [packaging contract](docs/domain-packaging-design.md).
+Package names must connect to ubiquitous language. Prohibit technical classifications such as aggregate/, impl/, vo/, and entities/. Sensors inspect declarations and actual modules; review assesses term meaning. See the [packaging contract](docs/users/domain-packaging-design.md).
 
 ## Development verification
 
@@ -51,7 +51,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Run all tests with `bun run check`. The [contract matrix](docs/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
+Run all tests with `bun run check`. The [contract matrix](docs/developers/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
 
 ## Installation and supported environments
 
@@ -63,11 +63,11 @@ The destination must already have AI-DLC. Preview local-source installation:
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
 ```
 
-Remove dry-run to install. The script implements source retrieval, build, compose, provenance, and updates, with [automated verification](docs/installation-verification.md) of fresh installs, updates, and failure protection. This document does not assume a latest tag exists or a release has been published.
+Remove dry-run to install. The script implements source retrieval, build, compose, provenance, and updates, with [automated verification](docs/developers/installation-verification.md) of fresh installs, updates, and failure protection. This document does not assume a latest tag exists or a release has been published.
 
 ## Design and remaining work
 
-Start with the [document index](docs/README.md) and distinguish conventions from measurements. [Domain design](docs/domain-layer-design.md) covers layer/CQRS naming; [use-case design](docs/use-case-layer-design.md) covers re-execution and persistence; [Interface Adapter design](docs/interface-adapter-layer-design.md) covers restoration and RMU.
+Start with the [document index](docs/README.md) and distinguish conventions from measurements. [Domain design](docs/developers/domain-layer-design.md) covers layer/CQRS naming; [use-case design](docs/developers/use-case-layer-design.md) covers re-execution and persistence; [Interface Adapter design](docs/developers/interface-adapter-layer-design.md) covers restoration and RMU.
 
 Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues) with versions and reproduction conditions.
 

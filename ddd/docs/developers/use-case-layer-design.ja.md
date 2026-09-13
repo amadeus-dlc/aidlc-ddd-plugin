@@ -6,7 +6,7 @@
 
 ## 1. 提供形態
 
-functional-designをcontributionで拡張し、宣言・ナレッジ・センサーを追加する。宣言は登録済みレビュー成果物functional-specの必須セクションへ組み込む。[成果物契約](artifact-contract.ja.md)を参照。
+functional-designをcontributionで拡張し、宣言・ナレッジ・センサーを追加する。宣言は登録済みレビュー成果物functional-specの必須セクションへ組み込む。[成果物契約](../users/artifact-contract.ja.md)を参照。
 
 ## 2. 責務
 
@@ -78,7 +78,7 @@ actor/class混在時の要件と写像欠落時の扱いはT-03で確定する�
 
 ## 7. 検査とレビュー
 
-gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖、dはgetter、jはモデルの冪等性宣言を検査する。h/iは明示型を照合し、集約とVO、具象ユースケースとポートを区別する。[判定範囲](rust-sensor-contract.ja.md)外の構文は注記する。
+gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖、dはgetter、jはモデルの冪等性宣言を検査する。h/iは明示型を照合し、集約とVO、具象ユースケースとポートを区別する。[判定範囲](../users/rust-sensor-contract.ja.md)外の構文は注記する。
 
 途中失敗の回復可能性、保持期間、集約境界、公開範囲はレビューと動作テストで確認する。宣言の存在と動作の安全性を区別する。
 
@@ -95,7 +95,7 @@ gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖�
 | `multi_aggregate_strategy` | 複数集約時のProcess Manager参照、または再実行戦略 |
 | `read_model_exposure` | 中間状態をどのビューへ公開するか |
 
-現行の格納先は `functional-spec.md` 内の `## DDD Use-case Declarations`（従来の日本語見出しも受理。[成果物契約](artifact-contract.ja.md)を参照）。独立した宣言ファイルは生成しない。通常承認では文書・セクションの欠落も検出する。
+現行の格納先は `functional-spec.md` 内の `## DDD Use-case Declarations`（従来の日本語見出しも受理。[成果物契約](../users/artifact-contract.ja.md)を参照）。独立した宣言ファイルは生成しない。通常承認では文書・セクションの欠落も検出する。
 
 ## 9. ナレッジ
 

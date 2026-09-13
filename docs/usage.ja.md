@@ -2,7 +2,7 @@
 
 [English](usage.md) | 日本語
 
-更新: 2026-09-13。現在は完成に向けた修正中です。[既知の問題](../ddd/docs/current-state-assessment.ja.md)を確認し、検証用プロジェクトで利用してください。
+更新: 2026-09-13。現在は完成に向けた修正中です。[既知の問題](../ddd/docs/developers/current-state-assessment.ja.md)を確認し、検証用プロジェクトで利用してください。
 
 ## 導入前の条件
 
@@ -14,7 +14,7 @@ BunとAI-DLC導入済みのClaude CodeまたはCodex環境を使います。kimi
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。新規導入・更新・失敗時の保護は[自動検証済み](../ddd/docs/installation-verification.ja.md)です。モデルによる実際のステージ実行はT-05に残ります。
+実導入は `--dry-run` を外す形式です。新規導入・更新・失敗時の保護は[自動検証済み](../ddd/docs/developers/installation-verification.ja.md)です。モデルによる実際のステージ実行はT-05に残ります。
 
 ## ワークフローでの役割
 
@@ -26,10 +26,10 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 ## 成果物を読む
 
-正規モデルの形式と移行方法は[ドメイン層設計 §5](../ddd/docs/domain-layer-design.ja.md)を参照してください。後続の写像は `ddd-aggregate-mapping.md`、ユースケース宣言はfunctional-spec、層構造宣言はcicd-pipelineの必須セクションです。[成果物契約](../ddd/docs/artifact-contract.ja.md)を参照してください。
+正規モデルの形式と移行方法は[ドメイン層設計 §5](../ddd/docs/developers/domain-layer-design.ja.md)を参照してください。後続の写像は `ddd-aggregate-mapping.md`、ユースケース宣言はfunctional-spec、層構造宣言はcicd-pipelineの必須セクションです。[成果物契約](../ddd/docs/users/artifact-contract.ja.md)を参照してください。
 
 コード検査は `source-manifest.json` で申告されたRustファイルを入口にします。所見なしの場合も、申告・層判定・モデルの有無・注記を確認します。所見なしを業務上の正しさの証明としては使いません。
 
 ## 問題が出た場合
 
-[互換性](../ddd/docs/framework-compatibility.ja.md)と[残作業](../ddd/docs/completion-tasks.ja.md)を照合し、対象バージョンと実行結果を記録してください。繰り返し再インストールする前に、単独完了の標準側の不足か、導入状態の問題か、個別モデルの違反かを切り分けます。
+[互換性](../ddd/docs/developers/framework-compatibility.ja.md)と[残作業](../ddd/docs/developers/completion-tasks.ja.md)を照合し、対象バージョンと実行結果を記録してください。繰り返し再インストールする前に、単独完了の標準側の不足か、導入状態の問題か、個別モデルの違反かを切り分けます。

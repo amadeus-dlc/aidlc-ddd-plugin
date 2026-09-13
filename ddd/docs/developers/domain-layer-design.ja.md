@@ -22,7 +22,7 @@ AI-DLCに、Domain PrimitiveとAlways Valid Domain Modelを設計・実装する
 | domain-design | モジュール・型・ポート・リポジトリへの写像と保存方式 |
 | functional-design | Unitごとの手順、再実行、回復、公開範囲 |
 
-完了条件は、(i)各集約に不変条件、(ii)各コマンドに状態遷移または遷移なしの明示、(iii)各コマンドにDomain Error、(iv)参照IDの解決、(v)YAMLとMarkdownの対応、(vi)人間による意味のレビューである。(iii)はローダーの `schema.command-no-error` で実装済み。通常承認への接続は実装した。単独完了の制約は[成果物契約](artifact-contract.ja.md)を参照。
+完了条件は、(i)各集約に不変条件、(ii)各コマンドに状態遷移または遷移なしの明示、(iii)各コマンドにDomain Error、(iv)参照IDの解決、(v)YAMLとMarkdownの対応、(vi)人間による意味のレビューである。(iii)はローダーの `schema.command-no-error` で実装済み。通常承認への接続は実装した。単独完了の制約は[成果物契約](../users/artifact-contract.ja.md)を参照。
 
 ## 3. 正規モデル
 
@@ -42,7 +42,7 @@ ID必須化には、手順の指示、登録済み成果物、参照センサー
 
 `ddd-domain-model-yaml.md` のラベル付きYAMLブロック1つを正規データ、`ddd-domain-model.md` を人間向けの説明とする。Markdownには全要素IDと不変条件本文を記載する。現行センサーはその字面を検査し、説明全体の意味的一致はレビューで確認する。
 
-論理名 `ddd-domain-model` / `ddd-domain-model-yaml` は、AI-DLC 2.8.2ではそれぞれ `ddd-domain-model.md` / `ddd-domain-model-yaml.md` に解決される。生成・参照・検査をこの名前へ統一した。旧成果物からの移行は[成果物契約](artifact-contract.ja.md)に従う。
+論理名 `ddd-domain-model` / `ddd-domain-model-yaml` は、AI-DLC 2.8.2ではそれぞれ `ddd-domain-model.md` / `ddd-domain-model-yaml.md` に解決される。生成・参照・検査をこの名前へ統一した。旧成果物からの移行は[成果物契約](../users/artifact-contract.ja.md)に従う。
 
 `element_id` は不変、`name` は表示名とする。名称変更でIDを変えない。分割・統合・削除では `lineage` に後継・置換・廃止を記録し、廃止IDを再利用しない。
 
@@ -94,7 +94,7 @@ DB保存、DTOへの変換などのためにインターフェイスアダプタ
 
 ### 7-5. 物理構造と依存方向
 
-ドメイン内部のパッケージ名はユビキタス言語に結び付ける。aggregate/、impl/、vo/、entities/等の技術分類で分けず、業務概念と責務でまとめる。domain-designが用語・モデル参照・配置理由を宣言し、コード生成時に実配置と照合する。詳細は [パッケージング契約](domain-packaging-design.ja.md)を参照。
+ドメイン内部のパッケージ名はユビキタス言語に結び付ける。aggregate/、impl/、vo/、entities/等の技術分類で分けず、業務概念と責務でまとめる。domain-designが用語・モデル参照・配置理由を宣言し、コード生成時に実配置と照合する。詳細は [パッケージング契約](../users/domain-packaging-design.ja.md)を参照。
 
 層をクレート等で分離する。許可方向は `interface-adapter → use-case / domain / infrastructure`、`use-case → domain / infrastructure`、`domain → infrastructure`。infrastructureは言語拡張用の層で、DB/RPCクライアントは置かず、他層への依存も許さない。
 
@@ -131,4 +131,4 @@ composition rootは結線のため、この表の外に置く。層は名前・�
 
 ## 12. 未確定の実装契約
 
-replay経路は[replay_methods](rust-sensor-contract.ja.md)として実装した。成功・重複・拒否を区別する戻り値、actor/class混在時の回復宣言は未確定。[T-01〜T-03](completion-tasks.ja.md)で決定・検証する。
+replay経路は[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。成功・重複・拒否を区別する戻り値、actor/class混在時の回復宣言は未確定。[T-01〜T-03](completion-tasks.ja.md)で決定・検証する。

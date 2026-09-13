@@ -6,7 +6,7 @@ Updated: 2026-09-13. Conventions for implementing the [domain boundary contract]
 
 ## 1. Delivery form
 
-Extend infrastructure-design through a contribution with layer declarations, knowledge, and sensors. Embed declarations in a required section of the registered cicd-pipeline review artifact. See the [artifact contract](artifact-contract.md).
+Extend infrastructure-design through a contribution with layer declarations, knowledge, and sensors. Embed declarations in a required section of the registered cicd-pipeline review artifact. See the [artifact contract](../users/artifact-contract.md).
 
 ## 2. CQRS responsibilities
 
@@ -61,7 +61,7 @@ Applying only higher-numbered events has different meanings for full-state repla
 
 ## 8. Declarations and sensors
 
-Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Explain RMU details outside the schema in prose first.
+Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](../users/artifact-contract.md). Explain RMU details outside the schema in prose first.
 
 k checks cross-side references, l query-side domain references, m naming, and n restoration. Design sensors inspect declarations; Rust sensors inspect syntax. Neither proves semantic safety. Review and test aggregate ownership scope and re-execution safety.
 
@@ -73,4 +73,4 @@ Cover CQRS separation, port responsibilities, restoration, RMU, and external-mod
 
 ## 10. Later detailed design
 
-The detailed RMU schema, strategy-specific required fields, and semantic replay verification remain unresolved. Matching declarations to explicit Rust types is implemented in [T-02](rust-sensor-contract.md). Determine needed fields in [T-03](completion-tasks.md); do not present unverified strategies as implemented.
+The detailed RMU schema, strategy-specific required fields, and semantic replay verification remain unresolved. Matching declarations to explicit Rust types is implemented in [T-02](../users/rust-sensor-contract.md). Determine needed fields in [T-03](completion-tasks.md); do not present unverified strategies as implemented.

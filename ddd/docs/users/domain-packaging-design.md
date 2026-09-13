@@ -81,7 +81,7 @@ Missing or ambiguous sources, paths escaping the crate, cycles, cfg_attr path sw
 
 ## Responsibilities and checks
 
-The normative rules live in [shared knowledge](../knowledge/aidlc-shared/ddd-domain-packaging.md).
+The normative rules live in [shared knowledge](../../knowledge/aidlc-shared/ddd-domain-packaging.md).
 
 | Stage | Responsibility |
 |---|---|
@@ -100,6 +100,6 @@ These checks are blocking and connected to normal approval admission. Term meani
 
 ## Verification and implementation
 
-[Direct regressions](../tests/t7-domain-packaging.test.ts) and [inputs](../tests/golden/packaging/cases.ts) cover valid layouts, prohibited names, invalid declarations, actual placement, auxiliary code, unresolved analysis, and replay through path attributes. [Approval tests](../tests/t1-gate-integration.test.ts) exercise valid/invalid domain-design and code-generation for both Claude and Codex. Distributions run the same inputs.
+[Direct regressions](../../tests/t7-domain-packaging.test.ts) and [inputs](../../tests/golden/packaging/cases.ts) cover valid layouts, prohibited names, invalid declarations, actual placement, auxiliary code, unresolved analysis, and replay through path attributes. [Approval tests](../../tests/t1-gate-integration.test.ts) exercise valid/invalid domain-design and code-generation for both Claude and Codex. Distributions run the same inputs.
 
-Implementation: [declaration checks](../tools/ddd/lib/packaging/declarations.ts), [Rust module collection](../tools/ddd/lib/packaging/rust-modules.ts), and [layout evaluation](../tools/ddd/lib/packaging/evaluate.ts). Third-party framework distributions were not modified. Counts and measurements are in the [assessment](current-state-assessment.md).
+Implementation: [declaration checks](../../tools/ddd/lib/packaging/declarations.ts), [Rust module collection](../../tools/ddd/lib/packaging/rust-modules.ts), and [layout evaluation](../../tools/ddd/lib/packaging/evaluate.ts). Third-party framework distributions were not modified. Counts and measurements are in the [assessment](../developers/current-state-assessment.md).

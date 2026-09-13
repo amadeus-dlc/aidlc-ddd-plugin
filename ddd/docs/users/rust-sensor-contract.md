@@ -56,6 +56,6 @@ The standard AI-DLC 2.8.2 dispatcher does not preserve arbitrary notes from succ
 
 ## Regression tests
 
-[Additional Rust cases](../tests/golden/rust/t2-cases.ts) execute the real sensor scripts against value objects, Domain Primitives, ports, other use cases, cross-file impls, trait mutations, aliases and qualified types, getter-name collisions, shadowing, explicit replay, and invalid exceptions.
+[Additional Rust cases](../../tests/golden/rust/t2-cases.ts) execute the real sensor scripts against value objects, Domain Primitives, ports, other use cases, cross-file impls, trait mutations, aliases and qualified types, getter-name collisions, shadowing, explicit replay, and invalid exceptions.
 
-[Design cases](../tests/golden/design/cases.ts) include valid replay references, unknown IDs, and malformed declarations. Run the same cases against source tools and both Claude/Codex distributions.
+[Design cases](../../tests/golden/design/cases.ts) include valid replay references, unknown IDs, and malformed declarations. Run the same cases against source tools and both Claude/Codex distributions.

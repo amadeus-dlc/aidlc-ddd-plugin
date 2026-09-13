@@ -35,15 +35,15 @@ The distribution does not include tests or docs, so these links are for the deve
 
 ## Sources
 
-- [Current design](../../docs/domain-layer-design.md)
-- [Measurements and known issues](../../docs/current-state-assessment.md)
-- [Remaining work](../../docs/completion-tasks.md)
+- [Current design](../../docs/developers/domain-layer-design.md)
+- [Measurements and known issues](../../docs/developers/current-state-assessment.md)
+- [Remaining work](../../docs/developers/completion-tasks.md)
 
 ## T-02 evaluation contract
 
 Rules b/d/h/i match crates, modules, and explicit type declarations. Do not confuse value objects or ports with aggregates or concrete use cases. Replay is allowed only when the aggregate mapping's replay_methods, event-sourcing mode, owning aggregate, and single event parameter type agree.
 
-Type inference, associated types, and trait implementation selection are outside coverage. Direct sensor JSON includes notes for unexamined code. The standard dispatcher may omit notes on success; record them in code-summary for review. See the [detailed contract](../../docs/rust-sensor-contract.md).
+Type inference, associated types, and trait implementation selection are outside coverage. Direct sensor JSON includes notes for unexamined code. The standard dispatcher may omit notes on success; record them in code-summary for review. See the [detailed contract](../../docs/users/rust-sensor-contract.md).
 
 ## Domain packaging
 

@@ -61,8 +61,8 @@ Normal test runs skip this one upstream reproduction, separating it from plugin 
 
 ## Verification scope
 
-[t1-gate-integration.test.ts](../tests/t1-gate-integration.test.ts) composes into disposable Claude/Codex projects and invokes the real `orchestrate report --result awaiting-approval` path. It checks valid, invalid, missing-file, missing-section, missing-list, and Unit-kind cases.
+[t1-gate-integration.test.ts](../../tests/t1-gate-integration.test.ts) composes into disposable Claude/Codex projects and invokes the real `orchestrate report --result awaiting-approval` path. It checks valid, invalid, missing-file, missing-section, missing-list, and Unit-kind cases.
 
 These tests exclude unrelated core document sensors and disable Q&A/reviewer evidence through test settings. DDD sensors and artifact guards remain active. This does not replace end-to-end host verification of model generation, review, and human approval.
 
-[t1-model-artifacts.test.ts](../tests/t1-model-artifacts.test.ts) and golden cases execute sensors directly with the same file format. Verify distributions with `bun scripts/verify-dist.ts claude codex`.
+[t1-model-artifacts.test.ts](../../tests/t1-model-artifacts.test.ts) and golden cases execute sensors directly with the same file format. Verify distributions with `bun scripts/verify-dist.ts claude codex`.

@@ -2,7 +2,7 @@
 
 English | [Japanese](README.ja.md)
 
-Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
+Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/developers/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
 
 ## Test responsibilities
 
@@ -36,9 +36,9 @@ Distribution checks run 277 cases per harness. The runner creates a temporary di
 
 Missing, invalid, and valid approval inputs are covered by t1-gate-integration. T-02 added value-object, port, cross-file, and replay regressions. T-07 added 55 direct and eight approval cases. A valid case lacking the target structure is not evidence that structure is correctly inspected.
 
-Seven representative package layouts were also compiled with rustc 1.95.0. This is not compilation of every golden input or proof of business behavior. Installation/update CLI behavior is [verified](../docs/installation-verification.md). Actual model execution and rule delivery remain unverified.
+Seven representative package layouts were also compiled with rustc 1.95.0. This is not compilation of every golden input or proof of business behavior. Installation/update CLI behavior is [verified](../docs/developers/installation-verification.md). Actual model execution and rule delivery remain unverified.
 
-See [remaining work](../docs/completion-tasks.md) and [measurements](../docs/current-state-assessment.md). Include versions and scope when updating results.
+See [remaining work](../docs/developers/completion-tasks.md) and [measurements](../docs/developers/current-state-assessment.md). Include versions and scope when updating results.
 
 ## Updating the matrix
 

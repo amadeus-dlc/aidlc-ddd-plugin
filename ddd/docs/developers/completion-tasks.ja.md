@@ -21,7 +21,7 @@ Claude CodeとCodex上で、Rust向けDDDワークフローの生成物と検査
 
 状態: プラグイン側の通常承認への接続は実装済み。標準AI-DLCの単独完了ガードが不足するため、T-01全体は未完了。優先度: 最優先。根拠: F-01/F-02。
 
-正規モデルは標準のMarkdownファイル名へ統一した。ユースケース宣言と層構造宣言は既存レビュー成果物の必須セクションにし、既存のUnit種別を引き継いだ。形式・移行・検証範囲は[成果物契約](artifact-contract.ja.md)を参照。
+正規モデルは標準のMarkdownファイル名へ統一した。ユースケース宣言と層構造宣言は既存レビュー成果物の必須セクションにし、既存のUnit種別を引き継いだ。形式・移行・検証範囲は[成果物契約](../users/artifact-contract.ja.md)を参照。
 
 対象: `stages/`、`contributions/`、`sensors/`、モデルパス解決、統合テスト。標準AI-DLCの拡張契約で表せる方式を先に調べる。コアへの場当たり的な名前変換パッチを前提にしない。
 
@@ -33,7 +33,7 @@ Claude CodeとCodex上で、Rust向けDDDワークフローの生成物と検査
 
 ## T-02: Rustセンサーの誤検知・見逃しを修正する
 
-状態: 実装済み。F-03〜F-06を修正し、getter・別名・trait等の回帰ケースも追加した。[判定契約と限界](rust-sensor-contract.ja.md)を参照。
+状態: 実装済み。F-03〜F-06を修正し、getter・別名・trait等の回帰ケースも追加した。[判定契約と限界](../users/rust-sensor-contract.ja.md)を参照。
 
 | 修正 | 必須の回帰ケース |
 |---|---|
@@ -94,7 +94,7 @@ Claude/Codexの新規導入、再導入、通常更新、contributionのみの�
 
 ## T-07: 業務語彙によるドメイン層のパッケージング
 
-状態: 実装済み。[パッケージング契約](domain-packaging-design.ja.md)に宣言・検査範囲・意味レビューの分担を記載した。
+状態: 実装済み。[パッケージング契約](../users/domain-packaging-design.ja.md)に宣言・検査範囲・意味レビューの分担を記載した。
 
 aggregate/、impl/、vo/、entities/等の技術分類を避け、パッケージ名をユビキタス言語へ結び付ける。ナレッジで原則を共有し、domain-designで語彙と配置を宣言、code-generationで実体を検査する。物理配置を正規モデルへ混ぜない。
 

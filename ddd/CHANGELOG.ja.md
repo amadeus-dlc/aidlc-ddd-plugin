@@ -30,14 +30,14 @@ dddプラグインの主な変更を記録します。形式は[Keep a Changelog
 - ユビキタス言語に基づく命名と技術分類の禁止を共有ナレッジ・設計・生成手順へ追加。
 - 集約写像のdomain_packagesを必須化し、用語・モデル参照・配置理由を検査。
 - 影響するドメインクレートのモジュールをたどり、空・インライン・path属性を含む宣言と実配置を照合。
-- Claude/Codexの通常承認テストを追加。移行方法と限界は [契約](docs/domain-packaging-design.ja.md)へ記載。
+- Claude/Codexの通常承認テストを追加。移行方法と限界は [契約](docs/users/domain-packaging-design.ja.md)へ記載。
 
 ## 未リリース — T-02のRust判定（2026-09-13）
 
 - 集約とVO、具象ユースケースとポートを明示型で区別し、getter名の衝突も解消。
 - 別ファイル・traitのimplを収集し、変更メソッドの所在を報告。
 - replay_methodsによるreplay契約を追加し、メソッドとイベントを明示的に照合。
-- 型照合の限界をnoteと[判定契約](docs/rust-sensor-contract.ja.md)へ明記。フレームワーク配布コードの変更なし。
+- 型照合の限界をnoteと[判定契約](docs/users/rust-sensor-contract.ja.md)へ明記。フレームワーク配布コードの変更なし。
 
 ## 未リリース — T-01の通常承認接続（2026-09-13）
 
@@ -50,7 +50,7 @@ dddプラグインの主な変更を記録します。形式は[Keep a Changelog
 - 設計規約・実測・残作業を分離し、[文書一覧](docs/README.ja.md)を追加。
 - kimi・opencodeを対応対象から除外する方針を反映。コードの配布経路整理はT-04に残る。
 - 失敗・再実行・イベント・RMUの説明と、ナレッジの検査範囲を訂正。
-- 以下の0.1.0欄は当時の実装履歴。特に成果物登録を外した判断は、現在の承認接続を保証しない。[現状評価](docs/current-state-assessment.ja.md)を参照。
+- 以下の0.1.0欄は当時の実装履歴。特に成果物登録を外した判断は、現在の承認接続を保証しない。[現状評価](docs/developers/current-state-assessment.ja.md)を参照。
 
 ## [0.1.0] - 2026-09-11
 

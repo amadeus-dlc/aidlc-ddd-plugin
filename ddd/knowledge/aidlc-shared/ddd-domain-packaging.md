@@ -39,7 +39,7 @@ Follow mod declarations from domain crate lib/bin roots. Do not indiscriminately
 
 ## Sources
 
-- [Implementation contract](../../docs/domain-packaging-design.md)
+- [Implementation contract](../../docs/users/domain-packaging-design.md)
 - [Regression cases](../../tests/golden/packaging/cases.ts)
 
 Links target the development repository. All conventions needed by installed agents remain in this file.

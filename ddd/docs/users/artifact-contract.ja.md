@@ -61,8 +61,8 @@ DDD_VERIFY_FRAMEWORK_SINGLE=1 bun test ddd/tests/t1-gate-integration.test.ts -t 
 
 ## 検証範囲
 
-[t1-gate-integration.test.ts](../tests/t1-gate-integration.test.ts) はClaude/Codexへ一時的にcomposeし、実際の `orchestrate report --result awaiting-approval` から検査する。正常・不正・ファイル欠落・セクション欠落・リスト欠落と、Unit種別の適用範囲を確認する。
+[t1-gate-integration.test.ts](../../tests/t1-gate-integration.test.ts) はClaude/Codexへ一時的にcomposeし、実際の `orchestrate report --result awaiting-approval` から検査する。正常・不正・ファイル欠落・セクション欠落・リスト欠落と、Unit種別の適用範囲を確認する。
 
 このテストでは無関係なコア文書センサーを除外し、Q&A・レビュー証跡はテスト用設定で省略する。DDDセンサーと成果物ガードは有効なままにする。実際の人間の承認、モデルによる生成、レビューまでの一連の実機検証を代替するものではない。
 
-[t1-model-artifacts.test.ts](../tests/t1-model-artifacts.test.ts) と既存ゴールデンケースは、同じファイル形式でセンサーを直接実行する。配布物も `bun scripts/verify-dist.ts claude codex` で確認する。
+[t1-model-artifacts.test.ts](../../tests/t1-model-artifacts.test.ts) と既存ゴールデンケースは、同じファイル形式でセンサーを直接実行する。配布物も `bun scripts/verify-dist.ts claude codex` で確認する。

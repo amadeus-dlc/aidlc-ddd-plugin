@@ -6,7 +6,7 @@
 
 ## 1. 提供形態
 
-infrastructure-designをcontributionで拡張し、層構造宣言、ナレッジ、センサーを提供する。宣言は登録済みレビュー成果物cicd-pipelineの必須セクションへ組み込む。[成果物契約](artifact-contract.ja.md)を参照。
+infrastructure-designをcontributionで拡張し、層構造宣言、ナレッジ、センサーを提供する。宣言は登録済みレビュー成果物cicd-pipelineの必須セクションへ組み込む。[成果物契約](../users/artifact-contract.ja.md)を参照。
 
 ## 2. CQRSと責務分担
 
@@ -61,7 +61,7 @@ DynamoDB Streamsの順序保証は同一アイテム単位。同じ集約のイ�
 
 ## 8. 宣言とセンサー
 
-`cicd-pipeline.md` 内の `## DDD Layer Structure`（従来の日本語見出しも受理。[成果物契約](artifact-contract.ja.md)を参照） にモデルとcontextの参照、CQRS有無、各側のクレート一覧、依存、ポート、リポジトリ、復元経路、保存先を記載する。スキーマにないRMUの詳細はまず本文で説明する。
+`cicd-pipeline.md` 内の `## DDD Layer Structure`（従来の日本語見出しも受理。[成果物契約](../users/artifact-contract.ja.md)を参照） にモデルとcontextの参照、CQRS有無、各側のクレート一覧、依存、ポート、リポジトリ、復元経路、保存先を記載する。スキーマにないRMUの詳細はまず本文で説明する。
 
 kは両側の参照、lはクエリ側のドメイン参照、mは命名、nは復元を検査する。設計側は宣言、Rust側は構文を対象とし、意味的な安全性の証明には使わない。担当集約の範囲や再実行安全性はレビューとテストで確認する。
 
@@ -73,4 +73,4 @@ CQRS分離、ポートの責務、復元、RMU、外部モデルとの境界変�
 
 ## 10. 後続の詳細設計
 
-RMUの詳細スキーマ、方式別必須項目、replayの意味的な正しさの検証方法は未確定。宣言と明示されたRust型の照合は[T-02](rust-sensor-contract.ja.md)で実装した。[T-03](completion-tasks.ja.md)で必要な項目を決め、未検証の方式を実装済みと表示しない。
+RMUの詳細スキーマ、方式別必須項目、replayの意味的な正しさの検証方法は未確定。宣言と明示されたRust型の照合は[T-02](../users/rust-sensor-contract.ja.md)で実装した。[T-03](completion-tasks.ja.md)で必要な項目を決め、未検証の方式を実装済みと表示しない。

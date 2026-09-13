@@ -4,7 +4,7 @@
 
 AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコードの検査を追加します。識別子は `ddd`、現在のバージョンは `0.1.0` です。
 
-**開発中です。** センサーの直接実行と通常承認への接続を検証しました。単独完了の標準側ガードには不足があり、Rustの型推論等は検査範囲外です。[現状評価](docs/current-state-assessment.ja.md)と[完成までのタスク](docs/completion-tasks.ja.md)を参照してください。
+**開発中です。** センサーの直接実行と通常承認への接続を検証しました。単独完了の標準側ガードには不足があり、Rustの型推論等は検査範囲外です。[現状評価](docs/developers/current-state-assessment.ja.md)と[完成までのタスク](docs/developers/completion-tasks.ja.md)を参照してください。
 
 ## 構成
 
@@ -32,11 +32,11 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
 
-助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/artifact-contract.ja.md)を参照してください。
+助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/users/artifact-contract.ja.md)を参照してください。
 
-Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/rust-sensor-contract.ja.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
+Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/users/rust-sensor-contract.ja.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
 
-パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/domain-packaging-design.ja.md)を参照してください。
+パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/users/domain-packaging-design.ja.md)を参照してください。
 
 ## 開発時の検証
 
@@ -51,7 +51,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-全テストは `bun run check` です。規則ごとの正常・異常・境界例は[契約対応表](docs/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
+全テストは `bun run check` です。規則ごとの正常・異常・境界例は[契約対応表](docs/developers/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
 
 ## 導入と対応環境
 
@@ -63,11 +63,11 @@ bun scripts/verify-dist.ts claude codex
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、新規導入・更新・失敗時の保護は[自動検証済み](docs/installation-verification.ja.md)です。最新タグの存在やリリース済みであることは、この文書では前提にしません。
+実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、新規導入・更新・失敗時の保護は[自動検証済み](docs/developers/installation-verification.ja.md)です。最新タグの存在やリリース済みであることは、この文書では前提にしません。
 
 ## 設計と残作業
 
-[文書一覧](docs/README.ja.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/domain-layer-design.ja.md)、再実行と保存は[ユースケース層設計](docs/use-case-layer-design.ja.md)、復元とRMUは[インターフェイスアダプタ層設計](docs/interface-adapter-layer-design.ja.md)にあります。
+[文書一覧](docs/README.ja.md)を入口とし、設計規約と実測を区別してください。層・CQRSの命名規約は[ドメイン層設計](docs/developers/domain-layer-design.ja.md)、再実行と保存は[ユースケース層設計](docs/developers/use-case-layer-design.ja.md)、復元とRMUは[インターフェイスアダプタ層設計](docs/developers/interface-adapter-layer-design.ja.md)にあります。
 
 不具合は[GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues)へ、再現条件と対象バージョンを添えて報告してください。
 

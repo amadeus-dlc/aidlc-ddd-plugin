@@ -21,7 +21,7 @@ In addition to static checks and existing tests, completion requires:
 
 Status: plugin-side normal approval integration is implemented. T-01 remains incomplete because the standard AI-DLC standalone completion guard is insufficient. Priority: highest. Evidence: F-01/F-02.
 
-Canonical model filenames now match standard Markdown artifact names. Use-case and layer declarations are required sections of existing review artifacts and inherit their Unit kinds. See the [artifact contract](artifact-contract.md) for format, migration, and verification scope.
+Canonical model filenames now match standard Markdown artifact names. Use-case and layer declarations are required sections of existing review artifacts and inherit their Unit kinds. See the [artifact contract](../users/artifact-contract.md) for format, migration, and verification scope.
 
 Targets: stages, contributions, sensors, model-path resolution, and integration tests. Prefer mechanisms supported by standard AI-DLC extension contracts; do not assume ad hoc core filename patches.
 
@@ -33,7 +33,7 @@ Dependency: a standard AI-DLC fix for standalone completion.
 
 ## T-02: Correct Rust sensor false positives and misses
 
-Status: implemented. F-03–F-06 and getter/alias/trait regressions are addressed. See the [evaluation contract and limits](rust-sensor-contract.md).
+Status: implemented. F-03–F-06 and getter/alias/trait regressions are addressed. See the [evaluation contract and limits](../users/rust-sensor-contract.md).
 
 | Fix | Required regression |
 |---|---|
@@ -94,7 +94,7 @@ Dependency: T-01–T-05.
 
 ## T-07: Package the domain by business vocabulary
 
-Status: implemented. The [packaging contract](domain-packaging-design.md) describes declarations, scope, and semantic review.
+Status: implemented. The [packaging contract](../users/domain-packaging-design.md) describes declarations, scope, and semantic review.
 
 Avoid technical classifications such as aggregate/, impl/, vo/, and entities/ and connect package names to ubiquitous language. Share principles through knowledge, declare vocabulary/layout in domain-design, and inspect the implementation in code-generation. Keep physical placement outside the canonical model.
 
