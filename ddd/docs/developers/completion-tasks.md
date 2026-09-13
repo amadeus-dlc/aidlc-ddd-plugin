@@ -6,9 +6,11 @@ Updated: 2026-09-13. Track remaining work by T identifier, based on the [impleme
 
 Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation, T-07 domain packaging, and T-08 Rust module layout enforcement are also implemented. The framework standalone completion gap, T-03, model execution in T-05, and final T-06 reconciliation remain.
 
+The [agreed shared-language design](language-independent-design.md) adds T-09–T-11. These are planned work, not completed features.
+
 ## Completion scope
 
-Connect Rust-oriented DDD workflow outputs and checks on Claude Code and Codex. Kimi and opencode are excluded, and custom builds for them are no longer maintained. The user intends to access desired models through the Ollama Cloud Claude Code bridge; installing that bridge is outside this plugin's scope. Other harnesses are not completion targets.
+Deliver shared DDD contracts with Rust improvements and artifact migration first, then TypeScript support, on Claude Code and Codex. Kimi and opencode are excluded, and custom builds for them are no longer maintained. The user intends to access desired models through the Ollama Cloud Claude Code bridge; installing that bridge is outside this plugin's scope. Other harnesses are not completion targets.
 
 In addition to static checks and existing tests, completion requires:
 
@@ -50,13 +52,13 @@ Explicit replay is implemented through aggregate mapping replay_methods. Body se
 
 ## T-03: Resolve remaining implementation contracts and align generation
 
-Status: not started. Priority: high.
+Status: the shared method-error and generation-error policy is agreed; remaining decisions and implementation are pending. Priority: high.
 
 Use the revised [domain](domain-layer-design.md), [use-case](use-case-layer-design.md), and [Interface Adapter](interface-adapter-layer-design.md) conventions as design inputs.
 
 Replay declaration format was decided in T-02. Remaining decisions cover return values for first success, duplicate success, and rejection; multiple events; mixed actor/class recovery declarations; and missing-mapping behavior. Decide whether retry windows and RMU ordering belong in structured data or prose review.
 
-Revisit contribution instructions equating class with re-execution only and all storage with upsert. Coordinate any loader, JSON Schema, generation, and sensor changes. FactoryRule semantics and exhaustive interior-mutability detection are later candidates; use review and generated-code behavior tests for the first edition.
+Revisit contribution instructions equating class with re-execution only and all storage with upsert. Coordinate any loader, JSON Schema, generation, and sensor changes. Canonical factory error sets and method-specific return-error checks are now required by the shared design and T-09/T-10. Broader FactoryRule semantic proof and exhaustive interior-mutability detection are separate work; retain review and generated-code behavior tests.
 
 Completion: every unresolved item has a decision and scope, implementation/declaration/instruction differences are resolved, and concrete examples/tests explain failure, retry, and duplicate outcomes.
 
@@ -66,7 +68,7 @@ Dependency: coordinate with T-01 artifact contracts.
 
 Status: complete. Build, installation, and verification use the current Claude/Codex toolchain.
 
-`framework-compatibility.test.ts` verifies compose, graph compilation, and repeat-compose idempotency for both harnesses. The full check passes 726 tests with three skips and zero failures. Skips are the optional standalone-guard reproduction and two opt-in network installations.
+`framework-compatibility.test.ts` verifies compose, graph compilation, and repeat-compose idempotency for both harnesses. The T-04 checkpoint recorded 726 passing tests, three skips, and zero failures. Skips are the optional standalone-guard reproduction and two opt-in network installations.
 
 Actual rule delivery to a model remains T-05 work.
 
@@ -88,9 +90,9 @@ Status: old assumptions, misconceptions, and duplication have been addressed; fi
 
 Recheck design versus implementation, coverage, example evidence, and supported environments. A passing case that lacks the target structure does not demonstrate its validity. Align READMEs, knowledge, generation instructions, and plugin descriptions. Runtime instructions are English-only; reader docs have full English .md and Japanese .ja.md editions. aidlc/ records remain Japanese.
 
-Completion: documents agree with T-01–T-05 measurements, with valid links and usable procedures. Preserve historical failures; never rewrite them as successes.
+Completion: documents agree with the shared decisions and the measurements for tasks included in the release, with valid links and usable procedures. Preserve historical failures; never rewrite them as successes.
 
-Dependency: T-01–T-05.
+Dependency: the tasks included in each release. First-release reconciliation includes T-09/T-10; following-release reconciliation includes T-11.
 
 ## T-07: Package the domain by business vocabulary
 
@@ -114,6 +116,32 @@ The dedicated sensor is registered at code-generation, build-and-test, and ci-pi
 
 Verification covers both policies, source-claim/model independence, tests and other layers, renames/deletion remnants, explicit paths, malformed configuration, Cargo targets, direct sensor and CLI results, both distributions, and actual normal admission on both harnesses. See the [coverage matrix](sensor-coverage.md) and [verification record](evidence/module-layout-verification.json).
 
-## Extensions after completion
+## T-09: Define the common contracts and migrate artifacts
 
-Plan a second language, sensor-generation templates, advanced Rust analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.
+Status: agreed specification; implementation pending. Complete before the first release. See the [shared design](language-independent-design.md).
+
+Define common package, type, method, error, and inspection contracts, preserving native language details in implementation mappings. Add factory error declarations and explicit error-owner consistency. Specify configuration and artifact versions, then implement an explicit migration command for existing Rust artifacts. Convert deterministic information and report missing business definitions for completion by the model owner.
+
+Define comparison scenarios for Rust and TypeScript up front. A small TypeScript implementation must exercise the common boundary before it is treated as sufficient for the first release. Keep the canonical model, loader/schema, generation instructions, and migrated fixtures aligned.
+
+Completion: shared contracts are concrete, migration preserves domain identities and meaning, incomplete inputs are reported, and both languages exercise the proposed contract. This task does not mean full TypeScript sensor support is shipped.
+
+## T-10: Bring Rust into conformance with the shared contracts
+
+Status: agreed work; implementation pending. Depends on T-09 and coordinates with T-01/T-03/T-05/T-06. Required for the first release.
+
+Improve host/package separation, visibility and dependency checks, explicit publication, method-specific error-type/set validation, factory bindings, and blocking unresolved inspection. Review coverage of infrastructure, hosts, ownership isolation, and existing mutation/construction checks. Correct Rust gaps rather than treating current behavior as the final specification.
+
+Completion: updated Rust declarations, migration, knowledge, stages, sensors, existing regression tests, and application behavior scenarios agree. Cover both module layouts and record the aggregate execution/persistence combinations actually tested. Existing standalone and model-execution gaps retain their own acceptance obligations.
+
+## T-11: Add TypeScript against the same contracts
+
+Status: agreed work for the following release; full implementation pending. Depends on T-09/T-10.
+
+Implement package/exports and type-only dependency inspection, both domain source representations, closure/brand and # field privacy, method-specific Result errors, ownership checks, and both file layouts. Use infrastructure for Result support; library-specific neverthrow/Effect/fp-ts integration is outside scope. Verify ESM Next.js integration on server-side Node.js.
+
+Completion: source, distribution, gate, CI, and common behavior tests cover both layouts and both representations. Each new shared requirement is also implemented and verified in Rust. Keep aggregate execution, persistence, and source expression independent; do not advertise unverified host runtimes or combinations.
+
+## Further extensions
+
+Plan sensor-generation templates, advanced language analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.

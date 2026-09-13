@@ -30,7 +30,7 @@ Bounded Contexts contain aggregates. Aggregates contain Entities, value objects,
 
 A Domain Primitive is a small immutable type with business meaning and invariants. Always Valid design applies to construction and mutation throughout the model, including aggregates, not only to primitives.
 
-A Domain Error records its owning command and failure condition. It is an input to generation and review; current sensors do not verify every error path or missing handler in generated code.
+The current model records a Domain Error's owning command and failure condition. The [agreed shared design](language-independent-design.md) extends the contract to method-specific closed error sets, including generation operations. Current sensors do not yet compare each method's return error type and variants against those declarations, or verify every error path and missing handler.
 
 ## 4. Ownership and reference IDs
 
@@ -127,7 +127,7 @@ Normal approval requires agreement between registered artifacts, actual filename
 
 ## 11. Later extensions
 
-A second language, sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis are later candidates. Use-case and Interface Adapter conventions already have their own design documents; they are not unstarted designs.
+TypeScript is the agreed next language after shared contracts, Rust improvements, and artifact migration. The [shared design and release sequence](language-independent-design.md) govern that work. Sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis remain separate extensions. Use-case and Interface Adapter conventions already have their own design documents; they are not unstarted designs.
 
 ## 12. Unresolved implementation contracts
 

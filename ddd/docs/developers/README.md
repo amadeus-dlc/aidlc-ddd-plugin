@@ -8,6 +8,8 @@ For developers maintaining this plugin. Start with the assessment and remaining 
 
 | Topic | Document |
 |---|---|
+| Agreed shared contracts, Rust improvements, TypeScript support, and migration | [Shared language design](language-independent-design.md) |
+| Canonical terms for the plugin | [Project glossary](../../../CONTEXT.md) |
 | Plugin responsibilities and data flow | [Architecture overview](../../../docs/architecture.md) |
 | Current policy and rationale | [Decisions](decisions.md) |
 | Domain conventions and boundaries | [Domain-layer design](domain-layer-design.md) |

@@ -8,6 +8,8 @@
 
 | 論点 | 文書 |
 |---|---|
+| 合意した共通契約、Rust改善、TypeScript対応、移行 | [言語共通の設計](language-independent-design.ja.md) |
+| プラグインの用語 | [プロジェクト用語集](../../../CONTEXT.ja.md) |
 | プラグインの責務とデータの流れ | [アーキテクチャ概要](../../../docs/architecture.ja.md) |
 | 現行の方針と根拠 | [判断記録](decisions.ja.md) |
 | ドメインの規約と境界 | [ドメイン層設計](domain-layer-design.ja.md) |

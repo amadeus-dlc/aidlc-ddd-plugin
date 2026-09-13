@@ -16,6 +16,16 @@ Updated: 2026-09-13. Record current policy and its rationale. The [document inde
 | Use the full layer name Interface Adapter in prose. | Use the Japanese equivalent in Japanese editions. Keep machine identifiers such as interface-adapter unchanged. |
 | Use English for runtime instructions and maintain paired reader documentation. | knowledge/sensors/stages/contributions are English-only. Other plugin docs and guides have English .md and Japanese .ja.md bodies. aidlc/ records remain Japanese. |
 
+## 2026-09-13: Shared language contracts and release sequence
+
+Status: agreed design; implementation pending. The [shared design](language-independent-design.md) is the consolidated specification, with the current Rust implementation compared against the target.
+
+Improve Rust and TypeScript against one domain and inspection contract. Separate execution hosts from layered packages; enforce public boundaries and dependency direction, including type-only references. Keep aggregate execution, persistence, source representation, and module layout independent. Use method-specific closed business-error types, including generation errors, and block unresolved required inspections. Preserve state privacy, immutability, and ownership isolation in both languages.
+
+TypeScript selects class or structure/companion representation per project. The latter uses closure-held state and a private unique-symbol brand; classes use # private fields. Both apply to Domain Primitives and Value Objects too. Result belongs in language-support infrastructure; individual neverthrow, Effect, and fp-ts integrations are outside this scope. ESM with Next.js on the server-side Node.js runtime is the first TypeScript integration target.
+
+Define common comparison scenarios and validate a small TypeScript implementation before finishing the first release. That release includes shared contracts, Rust improvements, and explicit migration of existing Rust artifacts. Complete TypeScript support follows in the next release. Align specifications, knowledge, stages, sensors, and behavior tests for each shared change.
+
 ## Consistency and recovery policy
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.
