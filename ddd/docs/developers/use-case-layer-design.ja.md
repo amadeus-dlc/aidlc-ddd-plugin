@@ -76,6 +76,8 @@ Commandは `effect: transition | accumulation` と `idempotency` を持つ。現
 
 actor/class混在時の要件と写像欠落時の扱いはT-03で確定する。現在のセンサーは写像欠落時にProcess Manager必須チェックを省略するため、その動作を安全性の保証として採用しない。
 
+[言語共通の設計](language-independent-design.ja.md)では、TypeScriptのコード表現もプロジェクト単位の独立した選択とする。集約ごとのactor/class宣言は、ソース言語のclassキーワードを選ぶ指定ではない。
+
 ## 7. 検査とレビュー
 
 gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖、dはgetter、jはモデルの冪等性宣言を検査する。h/iは明示型を照合し、集約とVO、具象ユースケースとポートを区別する。[判定範囲](../users/rust-sensor-contract.ja.md)外の構文は注記する。

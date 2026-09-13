@@ -76,6 +76,8 @@ Current multi-aggregate declarations require `process-manager` or `re-execution`
 
 Requirements for mixed actor/class flows and missing mappings remain T-03 decisions. The current sensor skips the Process Manager requirement when mappings are missing; do not treat that behavior as a safety guarantee.
 
+The [shared language design](language-independent-design.md) also makes TypeScript source representation an independent project-level choice; the aggregate-level actor/class declaration does not select the source-language class keyword.
+
 ## 7. Checks and review
 
 g checks dependencies and external I/O, h aggregate arguments, i use-case chaining, d getters, and j model idempotency declarations. h/i use explicit types to distinguish aggregates from value objects and concrete use cases from ports. Syntax outside the [evaluation contract](../users/rust-sensor-contract.md) is noted.
