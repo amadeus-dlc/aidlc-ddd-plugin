@@ -4,7 +4,7 @@ English | [Japanese](completion-tasks.ja.md)
 
 Updated: 2026-09-13. Track remaining work by T identifier, based on the [implementation assessment](current-state-assessment.md) and supported-environment policy.
 
-Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation and T-07 packaging are also implemented. The framework standalone completion gap, T-03, model execution in T-05, and final T-06 reconciliation remain.
+Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation, T-07 domain packaging, and T-08 Rust module layout enforcement are also implemented. The framework standalone completion gap, T-03, model execution in T-05, and final T-06 reconciliation remain.
 
 ## Completion scope
 
@@ -103,6 +103,16 @@ Added domain_packages to the registered aggregate mapping with required terms, m
 Completion: valid vocabulary-based examples pass; technical classifications, missing declarations, broken references, and layout mismatches are detected. Distinguish inline modules from externally owned references, and leave semantic naming judgments to review. Include normal-approval and distribution tests.
 
 Dependency: reuse T-02's module index; no third-party framework modification is assumed.
+
+## T-08: Enforce one Rust module file layout
+
+Status: implemented. The [module layout contract](../users/rust-module-layout.md) defines the project-root configuration, file/mod-rs policies, inspection scope, and migration steps.
+
+Require one explicit `.ddd.toml` policy across owned Cargo packages and targets. Reject missing configuration, mixed mode, nested overrides, layout violations, and unresolved or unregistered source. Share declaration-based module resolution across inspected layers. Keep Cargo edition separate from the layout policy.
+
+The dedicated sensor is registered at code-generation, build-and-test, and ci-pipeline admission. The CI entry point uses the same checker and exits nonzero on failure or zero inspected packages. Contributions instruct generated pipelines to make it a required check and standalone stages to run it directly. Installing the plugin does not configure an external CI service or fix the standard standalone guard.
+
+Verification covers both policies, source-claim/model independence, tests and other layers, renames/deletion remnants, explicit paths, malformed configuration, Cargo targets, direct sensor and CLI results, both distributions, and actual normal admission on both harnesses. See the [coverage matrix](sensor-coverage.md) and [verification record](evidence/module-layout-verification.json).
 
 ## Extensions after completion
 

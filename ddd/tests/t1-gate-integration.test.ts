@@ -278,6 +278,7 @@ for (const harness of ["claude", "codex"] as const) {
         const entry = PACKAGING_CASES.find((candidate) => candidate.name === name);
         if (!entry) throw new Error(`package fixture missing: ${name}`);
         const f = fixture(harness);
+        write(join(f.root, ".ddd.toml"), 'schema_version = 1\n[rust]\nmodule_layout = "file"\n');
         f.state(
           stage,
           stage === "code-generation" ? "construction" : "inception",
@@ -302,12 +303,7 @@ for (const harness of ["claude", "codex"] as const) {
         const f = fixture(harness, entry.sensor);
         const stage = f.graph.find((candidate) => candidate.slug === entry.stage);
         expect(stage?.sensors_applicable.some((sensor) => sensor.id === entry.sensor)).toBe(true);
-        const phase =
-          entry.stage === "code-generation" ||
-          entry.stage === "functional-design" ||
-          entry.stage === "infrastructure-design"
-            ? "construction"
-            : "inception";
+        const phase = stage?.phase ?? "inception";
         const unit = entry.stage === "code-generation" ? "u1/" : "";
         f.state(entry.stage, phase, unit ? "feature" : "refactor");
         if (entry.stage !== "ddd-domain-modeling") {

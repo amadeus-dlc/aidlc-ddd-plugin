@@ -11,7 +11,7 @@ export interface DomainModule {
 }
 export interface ModuleInventory {
   modules: DomainModule[];
-  sources: { file: string; path: string; parts: string[] }[];
+  sources: { file: string; path: string; parts: string[]; root: boolean; hasChildren: boolean }[];
   files: Set<string>;
   problems: { file: string; line: number; reason: string }[];
 }
@@ -27,6 +27,7 @@ export function inspectModules(
   runtime: AnalyzerRuntime,
   workspace: string,
   crate: CrateLayerAssignment,
+  options: { includeAuxiliary?: boolean; checkBudget?: () => void } = {},
 ): ModuleInventory {
   const workspaceRoot = realpathSync(workspace);
   const root = realpathSync(join(workspace, crate.path));
@@ -41,7 +42,8 @@ export function inspectModules(
   const problem = (file: string, line: number, reason: string) =>
     inventory.problems.push({ file: location(file), line, reason });
 
-  function visit(path: string, namespace: string[], stack: Set<string>, ownsDirectory = false): void {
+  function visit(path: string, namespace: string[], stack: Set<string>, ownsDirectory = false, isRoot = false): void {
+    options.checkBudget?.();
     let actual: string;
     try {
       actual = realpathSync(path);
@@ -53,13 +55,19 @@ export function inspectModules(
       return;
     }
     const segments = posix(relative(root, actual)).split("/");
-    if (segments.some((part) => AUXILIARY.has(part))) return;
+    if (!options.includeAuxiliary && segments.some((part) => AUXILIARY.has(part))) return;
     inventory.files.add(location(path));
     inventory.files.add(location(actual));
     const tree = parse(runtime, location(actual), readFileSync(actual));
-    const layout = moduleLayout(tree);
-    if (layout.auxiliary) return;
-    inventory.sources.push({ file: location(path), path: actual, parts: namespace });
+    const layout = moduleLayout(tree, options.includeAuxiliary);
+    if (layout.auxiliary && !options.includeAuxiliary) return;
+    inventory.sources.push({
+      file: location(path),
+      path: actual,
+      parts: namespace,
+      root: isRoot,
+      hasChildren: layout.modules.some((mod) => options.includeAuxiliary || !mod.auxiliary),
+    });
     inventory.modules.push({ parts: namespace, physical: physical(actual), file: location(path), line: 1 });
     if (tree.has_parse_error) {
       problem(path, 1, "Rust module could not be parsed");
@@ -72,7 +80,7 @@ export function inspectModules(
       ownsDirectory || basename(actual) === "mod.rs" ? dirname(actual) : join(dirname(actual), basename(actual, ".rs"));
     const bases = new Map<string, string>([["", childBase]]);
     for (const mod of layout.modules) {
-      if (mod.auxiliary) continue;
+      if (mod.auxiliary && !options.includeAuxiliary) continue;
       const scope = mod.module_path.join("::");
       const base = bases.get(scope);
       if (!base || mod.local || mod.unresolved_path) {
@@ -107,7 +115,8 @@ export function inspectModules(
     }
   }
   for (const target of crate.targets) {
-    if (target.kind === "lib" || target.kind === "bin") visit(join(root, target.src_path), [], new Set(), true);
+    if (options.includeAuxiliary || target.kind === "lib" || target.kind === "bin")
+      visit(join(root, target.src_path), [], new Set(), true, true);
   }
   return inventory;
 }

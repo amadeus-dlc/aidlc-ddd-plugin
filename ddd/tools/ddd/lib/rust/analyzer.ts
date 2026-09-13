@@ -698,7 +698,10 @@ function testOnly(node: TSNode): boolean {
 }
 
 /** Namespace declarations, including empty modules; keywords in other items are not modules. */
-export function moduleLayout(tree: SyntaxTree): { modules: ModuleDecl[]; opaque: Span[]; auxiliary: boolean } {
+export function moduleLayout(
+  tree: SyntaxTree,
+  includeAuxiliary = false,
+): { modules: ModuleDecl[]; opaque: Span[]; auxiliary: boolean } {
   const internal = requireTree(tree);
   const modules: ModuleDecl[] = [];
   const opaque: Span[] = [];
@@ -706,7 +709,8 @@ export function moduleLayout(tree: SyntaxTree): { modules: ModuleDecl[]; opaque:
     (node) => node.type === "inner_attribute_item" && /^#!\[\s*cfg\s*\(\s*test\s*\)\s*\]$/.test(node.text),
   );
   walk(internal.rootNode, (node) => {
-    if (node.type === "macro_invocation" && isItemPosition(node) && !testOnly(node)) opaque.push(spanOf(node));
+    if (node.type === "macro_invocation" && isItemPosition(node) && (includeAuxiliary || !testOnly(node)))
+      opaque.push(spanOf(node));
     if (node.type !== "mod_item") return;
     const attributes = attributesOf(node);
     const paths = attributes.filter((attr) => /^#\[\s*path\s*=/.test(attr));

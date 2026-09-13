@@ -16,6 +16,18 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 実導入は `--dry-run` を外す形式です。新規導入・更新・失敗時の保護は[自動検証済み](../ddd/docs/developers/installation-verification.ja.md)です。モデルによる実際のステージ実行はT-05に残ります。
 
+## Rustモジュールの配置を選ぶ
+
+Rustコードの生成前に、プロジェクト直下の `.ddd.toml` で配置形式を選びます。
+
+```toml
+schema_version = 1
+[rust]
+module_layout = "file"
+```
+
+もう一方の選択肢は `mod-rs` です。混在や設定漏れは承認を止めます。両形式の定義、移行方法、CIの必須コマンドは[配置契約](../ddd/docs/users/rust-module-layout.ja.md)を参照してください。
+
 ## ワークフローでの役割
 
 プラグインをcomposeすると、専用ステージ、既存ステージへの手順追加、センサー、ナレッジが登録されます。実行対象は、導入先で合成された計画と専用ステージの条件で決まります。

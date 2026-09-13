@@ -4,6 +4,13 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Rust module layout
+
+- Require one project-root `.ddd.toml` policy: `file` or `mod-rs`; reject mixed or missing configuration.
+- Add an independent blocking sensor at code-generation, build-and-test, and ci-pipeline, and a CI command that exits nonzero on failure or zero inspected packages.
+- Inspect owned Cargo packages and targets without relying on source claims or domain models; unify logical module resolution across inspected layers.
+- Document configuration, migration, and limits in the [layout contract](docs/users/rust-module-layout.md).
+
 ## Unreleased — Installation and updates
 
 - Use the standard compose hook and include binary payloads and contributions in change detection.

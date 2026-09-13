@@ -6,6 +6,7 @@ adds:
     - artifact: ddd-aggregate-mapping
       required: false
   sensors:
+    - ddd-rust-module-layout
     - ddd-rust-domain
     - ddd-rust-use-case
     - ddd-rust-interface-adapter
@@ -23,6 +24,7 @@ fragments:
 Before planning, read the naming and placement conventions and carry them into
 the plan:
 
+- **Rust module layout.** Read `ddd-rust-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Establish one explicit layout before generating Rust. Follow it across all packages; do not infer it from edition or introduce `mod.rs` when `file` is selected.
 - **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included.
 - **Naming and placement.** Crate suffixes (`-domain`, `-use-case`,
   `-interface-adapter`, `-infrastructure`), the `packages/<layer>/` or
@@ -46,10 +48,14 @@ Rust checks match type declarations, explicit parameter/variable/field types, an
 
 ## fragment: in:Sensors
 
-The three DDD Rust sensors fire on `code-summary.md`: `ddd-rust-domain`
+The three layer-specific Rust sensors fire on `code-summary.md`: `ddd-rust-domain`
 (rules a, b, c, d, g plus the layer diagnostics), `ddd-rust-use-case`
 (rules g, h, i, d) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
 every query-side file). Fix the code as the finding names the rule; a repeated
 failure means the plan did not carry the conventions above.
 
 The domain sensor inspects the module structure of affected domain crates, in addition to changed files. Resolve technical-classification names, undeclared modules, broken references, and unresolved analysis. Review the correspondence between vocabulary and responsibilities in code review as well.
+
+The independent `ddd-rust-module-layout` sensor also fires on code-summary and checks every owned Cargo package, even with no source claims or a skipped domain model. For standalone completion, run `bun <project-root>/<harness-dir>/tools/ddd-check-rust-module-layout.ts --project <project-root>` and require exit status 0 before reporting completion.
+
+In these commands, `<harness-dir>` is `.claude` for Claude Code or `.codex` for Codex; replace both path placeholders with the installed project paths.

@@ -15,11 +15,11 @@ Requirements and stories
   → code-generation: Rust code and source-manifest
 ```
 
-Only the canonical model owns formal business elements. Downstream stages reference stable IDs. The [developer documentation](../ddd/docs/developers/README.md) hold details.
+Only the canonical model owns formal business elements. Downstream stages reference stable IDs. The [developer documentation](../ddd/docs/developers/README.md) holds details.
 
 ## Connect checks to approval
 
-Six design sensors read models and declarations. Three Rust sensors use Cargo structure, syntax, and model data. During normal approval, registered artifacts' actual paths must match sensor patterns.
+Six design sensors read models and declarations. Three Rust sensors use Cargo structure, syntax, and model data. A fourth independently enforces the project-wide Rust module layout from `.ddd.toml`, across all owned Cargo packages and targets. It runs at code-generation, build-and-test, and ci-pipeline admission without depending on model status or source claims. During normal approval, registered artifacts' actual paths must match sensor patterns.
 
 Canonical models use standard filenames; use-case declarations are required sections in functional-spec and layer declarations in cicd-pipeline. Missing, invalid, and valid cases are exercised through approval admission. See the [artifact contract](../ddd/docs/users/artifact-contract.md).
 

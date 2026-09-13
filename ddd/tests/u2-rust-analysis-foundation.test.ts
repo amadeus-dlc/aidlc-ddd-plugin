@@ -77,6 +77,30 @@ function layerOf(assignments: ReturnType<typeof assignLayers>, name: string) {
 }
 
 describe("scanWorkspace", () => {
+  test.each([{ members: [] }, { members: ["."] }, { members: [".", "crates/*"] }])(
+    "registers the root package once with %j",
+    ({ members }) => {
+      const root = makeTemp();
+      write(
+        root,
+        "Cargo.toml",
+        `[package]\nname = "billing-domain"\nversion = "0.1.0"\n[workspace]\nmembers = ${JSON.stringify(members)}\n`,
+      );
+      write(root, "src/lib.rs", "pub struct Invoice;\n");
+      if (members.includes("crates/*")) {
+        write(root, "crates/money/Cargo.toml", '[package]\nname = "money-domain"\nversion = "0.1.0"\n');
+        write(root, "crates/money/src/lib.rs", "pub struct Money;\n");
+      }
+      const workspace = scanWorkspace(root);
+      expect(workspace.diagnostics).toEqual([]);
+      expect(workspace.members.filter((member) => member.path === ".")).toHaveLength(1);
+      expect(workspace.members).toHaveLength(members.includes("crates/*") ? 2 : 1);
+      expect(assignLayers(workspace).filter((assignment) => assignment.crate_name === "billing-domain")).toHaveLength(
+        1,
+      );
+    },
+  );
+
   test("resolves members, targets and path dependencies", () => {
     const root = buildWorkspace([
       { path: "packages/domain/billing-domain", name: "billing-domain" },

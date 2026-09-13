@@ -4,6 +4,13 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — Rustモジュールの配置
+
+- プロジェクト直下の `.ddd.toml` で `file` または `mod-rs` を必須選択とし、混在指定や未設定を拒否。
+- code-generation・build-and-test・ci-pipelineに独立したblockingセンサーを追加。失敗や検査パッケージ0件で非0終了するCIコマンドも追加。
+- ソース申告やドメインモデルに依存せず、所有Cargoパッケージとターゲットを検査。検査対象の各層で論理モジュールの解決を共通化。
+- 設定、移行、制約を[配置契約](docs/users/rust-module-layout.ja.md)に記載。
+
 ## 未リリース — 導入・更新
 
 - 標準compose hookを使用し、バイナリとcontributionを含めて変更を判定。

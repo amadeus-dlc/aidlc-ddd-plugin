@@ -103,3 +103,5 @@ vo vos entity entities value_object value_objects valueobject valueobjects
 [直接回帰テスト](../../tests/t7-domain-packaging.test.ts)と [入力ケース](../../tests/golden/packaging/cases.ts)は、正常・禁止名・宣言不正・実配置・補助コード・解析不能・path経由replayを検査する。[承認テスト](../../tests/t1-gate-integration.test.ts)はClaude/Codexそれぞれのdomain-designとcode-generationで正常・違反を検査する。配布物にも同じ入力を実行する。
 
 実装は [宣言検査](../../tools/ddd/lib/packaging/declarations.ts)、[Rustモジュール収集](../../tools/ddd/lib/packaging/rust-modules.ts)、[実配置の照合](../../tools/ddd/lib/packaging/evaluate.ts)。第三者のフレームワーク配布コードは変更していない。件数と実測結果は [現状評価](../developers/current-state-assessment.ja.md)に記録する。
+
+モジュールのファイル名は、プロジェクト共通の[Rustモジュール配置規約](rust-module-layout.ja.md)に従います。業務語彙の検査はRustの両形式を読み取りますが、別の配置センサーが全所有パッケージで選択した形式を強制します。

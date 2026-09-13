@@ -11,10 +11,10 @@ Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plug
 | Kind | Content |
 |---|---|
 | One stage | ddd-domain-modeling owns the canonical model through aggregate boundaries. |
-| Four contributions | Extend domain-design, functional-design, infrastructure-design, and code-generation. |
+| Six contributions | Extend domain-design, functional-design, infrastructure-design, code-generation, build-and-test, and ci-pipeline. |
 | Six design sensors | Model loading/completeness/references, mappings, layers, and advisories. |
-| Three Rust sensors | Domain, use-case, and Interface Adapter syntax/dependency checks. |
-| Nine knowledge files | Language-independent design principles and Rust conventions. |
+| Four Rust sensors | Domain, use-case, and Interface Adapter checks, plus project-wide module layout. |
+| Ten knowledge files | Language-independent design principles and Rust conventions. |
 
 Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Implementation is divided into [schema](tools/ddd/lib/schema/), [Rust analysis](tools/ddd/lib/rust/), and [rules](tools/ddd/lib/rules/).
 
@@ -28,6 +28,7 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-mapping-declarations | Aggregate axes, use-case declarations, multi-aggregate strategy, additive-command idempotency, and vocabulary-based packages. |
 | ddd-layer-structure | Required layer fields, dependency direction, naming, and restoration declarations. |
 | ddd-design-advisories | Multi-aggregate, repository-scope, and storage-declaration guidance. |
+| ddd-rust-module-layout | Enforce the selected file layout across all owned Cargo packages, including tests. |
 | ddd-rust-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching. |
 | ddd-rust-use-case | g/h/i/d. |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
@@ -74,3 +75,5 @@ Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-
 ## License
 
 [MIT](../LICENSE). Bundled web-tree-sitter and Rust grammar licenses are in [vendor](tools/ddd/lib/rust/vendor/) and [wasm/LICENSE](tools/ddd/wasm/LICENSE).
+
+For Rust projects, explicitly select `file` or `mod-rs` in the project-root `.ddd.toml` before generation. See the [module layout contract](docs/users/rust-module-layout.md) for configuration, mandatory gate checks, and the CI command.

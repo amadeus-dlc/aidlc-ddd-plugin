@@ -59,3 +59,5 @@ replay_methods:
 [追加Rustケース](../../tests/golden/rust/t2-cases.ts)は、VO・Domain Primitive、ポート、別ユースケース、別ファイルのimpl、traitの変更、別名・修飾型、getter名衝突、シャドーイング、明示replayと不正な例外を、実際のセンサースクリプトから検査する。
 
 [設計ケース](../../tests/golden/design/cases.ts)には、replay参照の正常・未知ID・壊れた書式を追加した。同じケースをソースとClaude/Codexの配布物の両方で実行する。
+
+検査対象の全層で、物理ファイル名から名前空間を推測せず、明示パスを含むmod宣言から論理モジュールを解決します。[モジュール配置センサー](rust-module-layout.ja.md)は別途、全所有パッケージとターゲットで選択した配置規約を強制します。

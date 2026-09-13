@@ -103,3 +103,5 @@ These checks are blocking and connected to normal approval admission. Term meani
 [Direct regressions](../../tests/t7-domain-packaging.test.ts) and [inputs](../../tests/golden/packaging/cases.ts) cover valid layouts, prohibited names, invalid declarations, actual placement, auxiliary code, unresolved analysis, and replay through path attributes. [Approval tests](../../tests/t1-gate-integration.test.ts) exercise valid/invalid domain-design and code-generation for both Claude and Codex. Distributions run the same inputs.
 
 Implementation: [declaration checks](../../tools/ddd/lib/packaging/declarations.ts), [Rust module collection](../../tools/ddd/lib/packaging/rust-modules.ts), and [layout evaluation](../../tools/ddd/lib/packaging/evaluate.ts). Third-party framework distributions were not modified. Counts and measurements are in the [assessment](../developers/current-state-assessment.md).
+
+Module filenames follow the project-wide [Rust module layout policy](rust-module-layout.md). This vocabulary check accepts both Rust naming forms; the separate layout sensor enforces the selected form in every owned package.

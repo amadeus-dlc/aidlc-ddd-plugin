@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は9センサー・70規則項目。68項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では277ケースを各環境で実行する。承認経路には、この表から選んだ138入力を各環境で通す。
+対象は10センサー・73規則項目。71項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では327ケースを各環境で実行する。承認経路には、この表から選んだ153入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -80,6 +80,9 @@
 | ddd-rust-interface-adapter<br>`l` | `clean-query-dto` | `violation-l` | `violation-l`<br>クエリDTOは許可し、更新用ドメイン型は拒否する。 |
 | ddd-rust-interface-adapter<br>`m` | `clean-repository` | `violation-m-media` | `clean-storage-implementation-name`<br>実装名の媒体名は許可し、リポジトリポートのtraitでは拒否する。 |
 | ddd-rust-interface-adapter<br>`n` | `clean-restoration-constructor` | `violation-n`<br>`violation-default-restoration` | `violation-default-restoration`<br>既知の完全コンストラクタを許可し、Defaultによる復元は拒否する。 |
+| ddd-rust-module-layout<br>`module-layout.configuration` | `clean-file` | `violation-config-mixed`<br>`violation-config-unknown`<br>`violation-config-malformed`<br>`violation-config-version`<br>`violation-config-array`<br>`violation-config-override`<br>`violation-config-missing`<br>`violation-nested-config`<br>`violation-config-missing-build-and-test`<br>`violation-config-missing-ci-pipeline` | `clean-mod-rs-parent`<br>明示した2形式を許可し、未設定・混在指定・不正設定を拒否する。 |
+| ddd-rust-module-layout<br>`module-layout.unresolved` | `clean-path-attribute` | `violation-missing-module`<br>`violation-duplicate-module`<br>`violation-orphan-mod-rs`<br>`violation-unregistered-source`<br>`violation-cfg-path`<br>`violation-module-macro`<br>`violation-parse-error`<br>`violation-stale-default-target`<br>`violation-disabled-build-script` | `violation-orphan-mod-rs`<br>明示パスを解決し、残骸・欠落・曖昧・解析不能なモジュールを検査済みとしない。 |
+| ddd-rust-module-layout<br>`module-layout.violation` | `clean-file-parent` | `violation-file-parent-in-mod-mode`<br>`violation-file-parent-inline-child`<br>`violation-test-mod-rs`<br>`violation-cfg-test-mod-rs`<br>`violation-unclaimed-other-layer`<br>`violation-mod-rs-in-file-mode`<br>`violation-mod-rs-leaf`<br>`violation-path-name-bypass`<br>`violation-mod-rs-in-file-mode-build-and-test`<br>`violation-mod-rs-in-file-mode-ci-pipeline` | `violation-mod-rs-in-file-mode`<br>edition・層・変更申告に依存せず、親と末端のファイル名を選択した規約で検証する。 |
 | ddd-rust-use-case<br>`d` | `clean-d-unrelated-getter-name` | `violation-d-getter-alias` | `violation-d-getter-alias`<br>名前の衝突やimport別名があっても受信型の同一性で判定する。 |
 | ddd-rust-use-case<br>`g` | `clean-g-use-case-to-infrastructure-use` | `violation-g-use-case-to-interface-adapter-use`<br>`violation-g-use-case-to-interface-adapter-cargo`<br>`violation-g-use-case-to-rmu-use`<br>`violation-g-use-case-to-rmu-cargo`<br>`violation-g-use-case-to-composition-root-use`<br>`violation-g-use-case-to-composition-root-cargo`<br>`violation-g-use-case-external-io-use`<br>`violation-g-use-case-external-io-cargo` | `clean-g-use-case-to-infrastructure-cargo`<br>独立した層の許可表をuseとCargoのみの依存で検証し、外部I/Oも含める。 |
 | ddd-rust-use-case<br>`h` | `clean-h-value-object` | `violation-h`<br>`violation-h-import-alias`<br>`violation-h-type-alias`<br>`violation-h-qualified`<br>`violation-h-grouped-alias`<br>`violation-h-imported-box` | `clean-h-domain-primitive`<br>VOとDomain Primitiveの引数は許可し、集約引数は拒否する。 |

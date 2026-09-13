@@ -11,6 +11,8 @@ For users applying the DDD plugin to an application project. Start with the inst
 | Name domain packages using ubiquitous language | [Domain packaging contract](domain-packaging-design.md) |
 | Understand Rust type matching, replay declarations, and unexamined code | [Rust sensor contract](rust-sensor-contract.md) |
 
+| Enforce one Rust module file layout across the project | [Rust module layout](rust-module-layout.md) |
+
 ## Check support and limitations
 
 The plugin is under development. Before adoption, read [compatibility](../developers/framework-compatibility.md) and [remaining work](../developers/completion-tasks.md). [Installation verification](../developers/installation-verification.md) documents tested installation and update behavior. Actual model-driven stage execution remains unverified.

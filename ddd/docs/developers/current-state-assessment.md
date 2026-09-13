@@ -175,3 +175,11 @@ The [contract matrix](sensor-coverage.md) tracks nine sensors and 70 rule entrie
 `bun run check` completed with 726 passes, three skips, and zero failures. Biome and plugin validation also passed. The current suite retains both Claude/Codex compose checks.
 
 Skips are the optional standalone-guard reproduction and two opt-in network installations. Model execution remains T-05 work. Values in earlier sections describe their respective checkpoints. See the [current execution record](evidence/current-check-verification.json).
+
+## T-08 verification — 2026-09-13
+
+Implemented explicit project-wide file/mod-rs selection, a model-independent layout sensor at three normal gates, and a CI command with failure exit status. Inspection includes owned Cargo targets and orphan Rust files; module resolution now follows declarations across all inspected layers.
+
+The full check passed 865 tests, skipped three existing opt-in cases, and failed none. Both distributions passed 327 cases. The new layout suite passed 109 tests; normal layout admission passed 30 Claude/Codex cases across code-generation, build-and-test, and ci-pipeline. Both naming forms also compiled under rustc 1.95.0 in editions 2015, 2018, 2021, and 2024 (eight representative checks).
+
+See the [verification record](evidence/module-layout-verification.json) and [user contract](../users/rust-module-layout.md). External CI configuration and actual model-driven execution are not established by these results; the standard standalone-completion gap remains.
