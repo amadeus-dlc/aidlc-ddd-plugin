@@ -1,0 +1,45 @@
+{
+  "version": "aidlc 2.8.2 (runtime 2.8.2)",
+  "fixtureRoot": "<fixture-root>",
+  "observations": [
+    {
+      "name": "requirement",
+      "id": "FR1",
+      "expectedPass": true,
+      "exitCode": 0,
+      "verdict": {
+        "pass": false,
+        "gaps": [
+          "FR1"
+        ],
+        "orphans": [],
+        "missing_from_table": [],
+        "missing_from_upstream_ids": [],
+        "invalid_entries": [],
+        "invalid_targets": [
+          "FR1: target \"U1\" is not mapped in unit-of-work-story-map.md"
+        ],
+        "findings_count": 3,
+        "reason": "unit-of-work-story-map.md contains no story-to-unit mappings: <fixture-root>/requirement/aidlc/spaces/default/intents/260913-traceability-probe/inception/units-generation/unit-of-work-story-map.md"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "story-control",
+      "id": "US1.1",
+      "expectedPass": true,
+      "exitCode": 0,
+      "verdict": {
+        "pass": true,
+        "gaps": [],
+        "orphans": [],
+        "missing_from_table": [],
+        "missing_from_upstream_ids": [],
+        "invalid_entries": [],
+        "invalid_targets": [],
+        "findings_count": 0
+      },
+      "stderr": ""
+    }
+  ]
+}

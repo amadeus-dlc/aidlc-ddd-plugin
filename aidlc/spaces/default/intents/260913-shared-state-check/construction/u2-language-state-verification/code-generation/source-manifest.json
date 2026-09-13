@@ -1,0 +1,184 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-language-state-verification",
+  "version": 1,
+  "writes": [
+    {
+      "path": "ddd/biome.json"
+    },
+    {
+      "path": "ddd/bun.lock"
+    },
+    {
+      "path": "ddd/docs/developers/README.ja.md"
+    },
+    {
+      "path": "ddd/docs/developers/README.md"
+    },
+    {
+      "path": "ddd/docs/developers/evidence/state-exposure-check.json"
+    },
+    {
+      "path": "ddd/docs/developers/state-exposure-verification.ja.md"
+    },
+    {
+      "path": "ddd/docs/developers/state-exposure-verification.md"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/Cargo.lock"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/Cargo.toml"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/main.rs"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/state_evidence.rs"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/state_evidence_tests.rs"
+    },
+    {
+      "path": "ddd/package.json"
+    },
+    {
+      "path": "ddd/scripts/prepare-state-exposure.ts"
+    },
+    {
+      "path": "ddd/scripts/verify-rust-syn.ts"
+    },
+    {
+      "path": "ddd/scripts/verify-state-exposure.ts"
+    },
+    {
+      "path": "ddd/tests/README.ja.md"
+    },
+    {
+      "path": "ddd/tests/README.md"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/cases.json"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/child.ts"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/companion.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-mixed.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-private.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-public.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-target-missing.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-private.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-public.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-unresolved.rs"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-mixed.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-private.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-public.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-unresolved.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-private.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-public.ts.txt"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-unresolved.ts.txt"
+    },
+    {
+      "path": "ddd/tests/state-exposure-contract.test.ts"
+    },
+    {
+      "path": "ddd/tests/state-exposure-inspection.test.ts"
+    },
+    {
+      "path": "ddd/tests/state-exposure-rust.test.ts"
+    },
+    {
+      "path": "ddd/tests/state-exposure-typescript.test.ts"
+    },
+    {
+      "path": "ddd/tests/state-exposure-verification.test.ts"
+    },
+    {
+      "path": "ddd/tests/u3-plugin-scaffold.test.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/rust/state-evidence/index.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/cases.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/expected.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/input.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/options.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/process.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/report.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/run.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure/request.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/class.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/companion.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/constructor.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/context.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/extract.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/index.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/program.ts"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/worker.ts"
+    },
+    {
+      "path": "ddd/tsconfig.state-exposure.json"
+    }
+  ]
+}

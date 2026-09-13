@@ -1,0 +1,148 @@
+[
+  {
+    "id": 1,
+    "owner": "dependency",
+    "command": "bun install --frozen-lockfile",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:32:18.288436+00:00",
+    "elapsedSeconds": 0.02,
+    "evidence": "01-dependency.log"
+  },
+  {
+    "id": 2,
+    "owner": "build",
+    "command": "bun run build:all",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:32:18.308769+00:00",
+    "elapsedSeconds": 0.237,
+    "evidence": "02-build.log"
+  },
+  {
+    "id": 3,
+    "owner": "full-check",
+    "command": "bun run check",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:32:18.545711+00:00",
+    "elapsedSeconds": 536.529,
+    "evidence": "03-full-check.log"
+  },
+  {
+    "id": 4,
+    "owner": "u1-state-exposure-inspection",
+    "command": "bun test tests/state-exposure-contract.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.075574+00:00",
+    "elapsedSeconds": 0.077,
+    "evidence": "04-u1-state-exposure-inspection.log"
+  },
+  {
+    "id": 5,
+    "owner": "u1-state-exposure-inspection",
+    "command": "bun test tests/state-exposure-inspection.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.153317+00:00",
+    "elapsedSeconds": 0.039,
+    "evidence": "05-u1-state-exposure-inspection.log"
+  },
+  {
+    "id": 6,
+    "owner": "u1-state-exposure-inspection",
+    "command": "bun test tests/state-exposure-contract.test.ts tests/state-exposure-inspection.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.192557+00:00",
+    "elapsedSeconds": 0.071,
+    "evidence": "06-u1-state-exposure-inspection.log"
+  },
+  {
+    "id": 7,
+    "owner": "u1-state-exposure-inspection",
+    "command": "./node_modules/.bin/biome check --error-on-warnings tools/ddd/lib/state-exposure tests/state-exposure-contract.test.ts tests/state-exposure-inspection.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.263678+00:00",
+    "elapsedSeconds": 0.074,
+    "evidence": "07-u1-state-exposure-inspection.log"
+  },
+  {
+    "id": 8,
+    "owner": "u1-state-exposure-inspection",
+    "command": "bun build tools/ddd/lib/state-exposure/index.ts --target bun --format esm --outfile /tmp/aidlc-u1-01a09a8b-smoke.mjs",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.338412+00:00",
+    "elapsedSeconds": 0.018,
+    "evidence": "08-u1-state-exposure-inspection.log"
+  },
+  {
+    "id": 9,
+    "owner": "u2-language-state-verification",
+    "command": "bun run prepare:state-exposure",
+    "status": "covered-by-full-check",
+    "exitCode": 0,
+    "evidence": "03-full-check.log"
+  },
+  {
+    "id": 10,
+    "owner": "u2-language-state-verification",
+    "command": "cargo test --locked --offline --manifest-path experiments/rust-syn/Cargo.toml state_evidence",
+    "status": "covered-by-full-check",
+    "exitCode": 0,
+    "evidence": "03-full-check.log"
+  },
+  {
+    "id": 11,
+    "owner": "u2-language-state-verification",
+    "command": "bun test tests/state-exposure-rust.test.ts\nbun test tests/state-exposure-typescript.test.ts\nbun test tests/state-exposure-verification.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:15.357170+00:00",
+    "elapsedSeconds": 6.146,
+    "evidence": "11-u2-language-state-verification.log"
+  },
+  {
+    "id": 12,
+    "owner": "u2-language-state-verification",
+    "command": "bun test tests/state-exposure-rust.test.ts tests/state-exposure-typescript.test.ts tests/state-exposure-verification.test.ts",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:21.503547+00:00",
+    "elapsedSeconds": 6.109,
+    "evidence": "12-u2-language-state-verification.log"
+  },
+  {
+    "id": 13,
+    "owner": "u2-language-state-verification",
+    "command": "bun run verify:state-exposure --case all",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:27.613100+00:00",
+    "elapsedSeconds": 1.572,
+    "evidence": "13-u2-language-state-verification.log"
+  },
+  {
+    "id": 14,
+    "owner": "u2-language-state-verification",
+    "command": "./node_modules/.bin/tsc --noEmit --project tsconfig.state-exposure.json",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:29.185656+00:00",
+    "elapsedSeconds": 0.494,
+    "evidence": "14-u2-language-state-verification.log"
+  },
+  {
+    "id": 15,
+    "owner": "u2-language-state-verification",
+    "command": "./node_modules/.bin/biome check --error-on-warnings tools/ddd/lib/rust/state-evidence tools/ddd/lib/typescript/state-evidence tools/ddd/lib/state-exposure-verification scripts/prepare-state-exposure.ts scripts/verify-state-exposure.ts tests/state-exposure-rust.test.ts tests/state-exposure-typescript.test.ts tests/state-exposure-verification.test.ts package.json tsconfig.state-exposure.json",
+    "status": "passed",
+    "exitCode": 0,
+    "startedAt": "2026-09-13T14:41:29.680513+00:00",
+    "elapsedSeconds": 0.076,
+    "evidence": "15-u2-language-state-verification.log"
+  }
+]

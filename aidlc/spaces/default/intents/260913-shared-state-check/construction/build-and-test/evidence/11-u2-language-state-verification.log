@@ -1,0 +1,141 @@
+bun test v1.3.13 (bf2e2cec)
+
+tests/state-exposure-rust.test.ts:
+(pass) native version probe matches actual fixed parser [5.01ms]
+(pass) private struct Model { value: u8 } [3.99ms]
+(pass) private struct Model(u8); [2.56ms]
+(pass) pub tuple=false [2.32ms]
+(pass) pub tuple=true [2.24ms]
+(pass) pub(crate) tuple=false [2.09ms]
+(pass) pub(crate) tuple=true [2.36ms]
+(pass) pub(super) tuple=false [2.24ms]
+(pass) pub(super) tuple=true [2.21ms]
+(pass) pub(in crate::m) tuple=false [2.09ms]
+(pass) pub(in crate::m) tuple=true [1.82ms]
+(pass) target-missing [1.95ms]
+(pass) target-ambiguous [1.92ms]
+(pass) syntax-error [1.67ms]
+(pass) unsupported-syntax [1.78ms]
+(pass) unsupported-syntax [1.65ms]
+(pass) inline module target is exact [2.02ms]
+(pass) mixed evidence retains confirmed public field [2.10ms]
+(pass) native Unicode CRLF bytes match original source [1.93ms]
+(pass) native response validates identity, target, digest and required fields [1.95ms]
+(pass) normal termination with empty response [13.77ms]
+(pass) normal termination with whitespace response [13.64ms]
+(pass) normal termination with invalid response [13.99ms]
+(pass) normal termination with multiple response [14.02ms]
+(pass) normal termination with null response [14.02ms]
+(pass) BOM/shebang native offsets "﻿" [2.71ms]
+(pass) BOM/shebang native offsets "#!/usr/bin/env rust-script\n" [2.01ms]
+(pass) BOM/shebang native offsets "﻿#!/bin/rust\r\n" [2.12ms]
+(pass) type namespace collision type Model = u8; [2.39ms]
+(pass) type namespace collision enum Model {} [2.03ms]
+(pass) type namespace collision union Model { x: u8 } [2.06ms]
+(pass) frozen source changes and false parser versions are rejected before extraction [0.24ms]
+
+ 32 pass
+ 0 fail
+ 70 expect() calls
+Ran 32 tests across 1 file. [145.00ms]
+bun test v1.3.13 (bf2e2cec)
+
+tests/state-exposure-typescript.test.ts:
+(pass) actual Program and TypeChecker use only frozen sources and pinned libs [65.93ms]
+(pass) class runtime-private field and operations pass [32.03ms]
+(pass) runtime public  [27.90ms]
+(pass) runtime public readonly  [24.38ms]
+(pass) runtime public private  [24.10ms]
+(pass) runtime public protected  [22.35ms]
+(pass) unsupported class class Model extends Base { #value = 1; } [25.17ms]
+(pass) unsupported class class Model { declare value: number; } [20.65ms]
+(pass) unsupported class class Model { get value() { return 1; } } [23.53ms]
+(pass) unsupported class class Model { [Symbol.iterator]() {} } [20.34ms]
+(pass) unsupported class abstract class Model { abstract value: number; } [21.49ms]
+(pass) unsupported class @sealed class Model { #value = 1; } [22.17ms]
+(pass) target-missing [17.25ms]
+(pass) target-ambiguous [22.17ms]
+(pass) syntax-error [19.46ms]
+(pass) class mixed evidence retains exposed data beside unsupported member [20.69ms]
+(pass) agreed local const instance + success wrapper ignores nested returns [31.26ms]
+(pass) companion direct and local object returns [41.82ms]
+(pass) companion readonly public state is exposure [23.04ms]
+(pass) unsupported companion exported brand [18.77ms]
+(pass) unsupported companion export alias [20.05ms]
+(pass) unsupported companion shadow brand [21.27ms]
+(pass) unsupported companion assertion [19.63ms]
+(pass) unsupported companion external return [22.45ms]
+(pass) unsupported companion let instance [19.94ms]
+(pass) unsupported companion unknown path [17.69ms]
+(pass) unsupported companion alias mutation [23.99ms]
+(pass) companion spread and computed name retain independent state exposure [38.80ms]
+(pass) Unicode and every common newline use byte positions [95.48ms]
+(pass) real child process preserves evidence [170.92ms]
+(pass) explicit constructor assignments establish declared runtime fields [57.73ms]
+(pass) pinned standard library supplies Number and Symbol types [27.12ms]
+(pass) factory return type must identify the target successful value [18.01ms]
+(pass) extractor rejects a claimed compiler version different from actual [0.18ms]
+(pass) a unique-symbol annotation cannot hide an incompatible initializer [41.11ms]
+(pass) instance construction through a field initializer is not silently complete [18.32ms]
+(pass) brand creation must prove fresh standard Symbol: nested as [20.61ms]
+(pass) brand creation must prove fresh standard Symbol: angle assertion [22.96ms]
+(pass) brand creation must prove fresh standard Symbol: satisfies [18.81ms]
+(pass) brand creation must prove fresh standard Symbol: assertion in argument [19.31ms]
+(pass) brand creation must prove fresh standard Symbol: global registry [22.02ms]
+(pass) brand creation must prove fresh standard Symbol: shadowed Symbol [18.84ms]
+(pass) brand creation must prove fresh standard Symbol: aliased Symbol [18.39ms]
+(pass) brand creation must prove fresh standard Symbol: alias hides assertion [23.87ms]
+(pass) brand creation must prove fresh standard Symbol: factory hides assertion [18.05ms]
+(pass) fresh standard Symbol without a description or within parentheses is supported [39.62ms]
+(pass) R-01 untracked constructor direct call, confirmed exposure=false [105.13ms]
+(pass) R-01 untracked constructor direct call, confirmed exposure=true [80.21ms]
+(pass) R-01 untracked constructor immediate arrow, confirmed exposure=false [73.06ms]
+(pass) R-01 untracked constructor immediate arrow, confirmed exposure=true [70.37ms]
+(pass) R-01 untracked constructor synchronous callback, confirmed exposure=false [68.95ms]
+(pass) R-01 untracked constructor synchronous callback, confirmed exposure=true [69.20ms]
+(pass) constructor-local returns without instance capture are not factory returns [17.91ms]
+
+ 53 pass
+ 0 fail
+ 191 expect() calls
+Ran 53 tests across 1 file. [1.94s]
+bun test v1.3.13 (bf2e2cec)
+
+tests/state-exposure-verification.test.ts:
+(pass) options defaults and explicit bounds [1.33ms]
+(pass) invalid args --unknown 1 [0.04ms]
+(pass) invalid args --case
+(pass) invalid args --case all --case all
+(pass) invalid args --timeout-ms 0 [0.07ms]
+(pass) invalid args --timeout-ms -1
+(pass) invalid args --timeout-ms 1.5
+(pass) invalid args --timeout-ms 1e3
+(pass) invalid args --max-output-bytes 9007199254740992
+(pass) case validation rejects empty, duplicate, invalid expectation before execution [4.48ms]
+(pass) full outcome comparison and JSON preserve pass evidence [1.74ms]
+(pass) a different unresolved reason is a mismatch [1.38ms]
+(pass) controlled common result verifies reporting independently of language extraction [3.28ms]
+(pass) actual preparation failure never counts as intentional failure [1.22ms]
+(pass) unexpected execution exception is not a fabricated C1 outcome [1.43ms]
+(pass) unexpected source process failure is execution error [1.60ms]
+(pass) unknown case and empty case collection are usage errors [2.31ms]
+(pass) real controlled process failed [14.75ms]
+(pass) real controlled process timeout [102.96ms]
+(pass) real controlled process overflow [13.86ms]
+(pass) real controlled process resource [13.52ms]
+(pass) startup failure is unavailable, not failed [0.63ms]
+(pass) safe integer deadlines beyond timer range do not overflow [34.78ms]
+(pass) real C2 all executes both languages and intentional failures, then reproduces all outcomes [2896.89ms]
+(pass) CLI exit2 --case missing [99.22ms]
+(pass) CLI exit2 --case all --case all [17.06ms]
+(pass) CLI exit2 --timeout-ms 0 [16.43ms]
+(pass) CLI exit3 on actual deadline exhaustion [105.85ms]
+(pass) CLI exit1 preserves an independently introduced evidence-only mismatch [291.50ms]
+(pass) CLI exit3 on missing real binary and no fabricated tool version [117.56ms]
+(pass) CLI distinguishes an unstarted controlled failure from the intended failure branch [131.55ms]
+(pass) CLI usage errors precede loading a missing compiler dependency [63.62ms]
+
+ 32 pass
+ 0 fail
+ 79 expect() calls
+Ran 32 tests across 1 file. [4.03s]

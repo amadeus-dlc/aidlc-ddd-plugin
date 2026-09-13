@@ -1,0 +1,10 @@
+{
+  "casesCompared": 23,
+  "casesIdentical": true,
+  "toolchainIdentical": true,
+  "ignoredFields": [
+    "runId",
+    "command"
+  ],
+  "expectedActualAllEqual": true
+}

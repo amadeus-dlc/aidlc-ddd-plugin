@@ -1,0 +1,110 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-state-exposure-inspection",
+  "upstream_ids": [
+    "AC1.3.1",
+    "AC1.3.2",
+    "AC1.3.3",
+    "AC1.3.4",
+    "AC1.3.5",
+    "AC1.3.6",
+    "AC1.3.7",
+    "BR1.1",
+    "BR1.2",
+    "BR1.3",
+    "BR1.4",
+    "BR1.5",
+    "BR1.6",
+    "BR1.7",
+    "BR1.8",
+    "BR1.9",
+    "BR1.10"
+  ],
+  "coverage": [
+    {
+      "id": "AC1.3.1",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/request.ts"
+    },
+    {
+      "id": "AC1.3.2",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/inspection.ts"
+    },
+    {
+      "id": "AC1.3.3",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/inspection.ts"
+    },
+    {
+      "id": "AC1.3.4",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/canonical.ts"
+    },
+    {
+      "id": "AC1.3.5",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/evidence.ts"
+    },
+    {
+      "id": "AC1.3.6",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/evidence.ts"
+    },
+    {
+      "id": "AC1.3.7",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/index.ts"
+    },
+    {
+      "id": "BR1.1",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/canonical.ts"
+    },
+    {
+      "id": "BR1.2",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/request.ts"
+    },
+    {
+      "id": "BR1.3",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/evidence.ts"
+    },
+    {
+      "id": "BR1.4",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/evidence.ts"
+    },
+    {
+      "id": "BR1.5",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/locations.ts"
+    },
+    {
+      "id": "BR1.6",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/evidence.ts"
+    },
+    {
+      "id": "BR1.7",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/inspection.ts"
+    },
+    {
+      "id": "BR1.8",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/inspection.ts"
+    },
+    {
+      "id": "BR1.9",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/canonical.ts"
+    },
+    {
+      "id": "BR1.10",
+      "status": "OK",
+      "target": "ddd/tools/ddd/lib/state-exposure/index.ts"
+    }
+  ]
+}

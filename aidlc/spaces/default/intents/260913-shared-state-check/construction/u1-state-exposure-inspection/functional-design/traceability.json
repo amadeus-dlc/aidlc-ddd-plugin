@@ -1,0 +1,50 @@
+{
+  "stage": "functional-design",
+  "unit": "u1-state-exposure-inspection",
+  "upstream_ids": [
+    "AC1.3.1",
+    "AC1.3.2",
+    "AC1.3.3",
+    "AC1.3.4",
+    "AC1.3.5",
+    "AC1.3.6",
+    "AC1.3.7"
+  ],
+  "coverage": [
+    {
+      "id": "AC1.3.1",
+      "status": "OK",
+      "target": "BR1.2, BR1.5, BR1.8"
+    },
+    {
+      "id": "AC1.3.2",
+      "status": "OK",
+      "target": "BR1.6, BR1.7"
+    },
+    {
+      "id": "AC1.3.3",
+      "status": "OK",
+      "target": "BR1.5, BR1.6, BR1.7, BR1.8"
+    },
+    {
+      "id": "AC1.3.4",
+      "status": "OK",
+      "target": "BR1.1, BR1.2, BR1.3, BR1.4"
+    },
+    {
+      "id": "AC1.3.5",
+      "status": "OK",
+      "target": "BR1.3, BR1.7"
+    },
+    {
+      "id": "AC1.3.6",
+      "status": "OK",
+      "target": "BR1.6, BR1.7"
+    },
+    {
+      "id": "AC1.3.7",
+      "status": "OK",
+      "target": "BR1.7, BR1.8, BR1.9, BR1.10"
+    }
+  ]
+}
