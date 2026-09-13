@@ -302,7 +302,7 @@ export function scanWorkspace(rootPath: string): CargoWorkspace {
       }
     }
     memberDirs.push(...[...resolved].sort());
-    if (rootPkg) memberDirs.push(".");
+    if (rootPkg && !memberDirs.includes(".")) memberDirs.push(".");
     if (memberDirs.length === 0) {
       diagnostics.push(blocking("workspace.no-members", "Cargo.toml", "no workspace members resolved"));
     }
