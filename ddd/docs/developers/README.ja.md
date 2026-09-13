@@ -36,3 +36,6 @@
 実測には日付と対象範囲を添えてください。現状評価は各時点の記録を保持し、タスク表は現在の進捗を管理します。以前のホスト検証結果は、現在のルール転送を保証しません。
 
 対応表は `ddd/` で `bun scripts/report-sensor-coverage.ts --write` を実行すると、このディレクトリの英日両版を再生成します。`bun run test:coverage` でテスト入力との整合を確認してください。文書構造を変える際は、参照元と生成スクリプトを合わせて更新します。
+
+- [状態公開の共通契約](state-exposure-inspection.ja.md)
+- [言語別抽出と検証コマンド](state-exposure-verification.ja.md)

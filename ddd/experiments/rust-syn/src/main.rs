@@ -1,4 +1,5 @@
 mod analysis;
+mod state_evidence;
 
 use serde::Deserialize;
 use serde_json::json;
@@ -19,6 +20,13 @@ struct Source {
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::args().nth(1).as_deref() == Some("--state-exposure-version") {
+        println!(
+            "{}",
+            json!({"extractor": "0.0.0", "syn": "3.0.5", "protocol_version": 2})
+        );
+        return Ok(());
+    }
     let mut input = String::new();
     io::stdin()
         .take(8 * 1024 * 1024 + 1)
@@ -26,7 +34,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if input.len() > 8 * 1024 * 1024 {
         return Err("input exceeds the spike's 8 MiB limit".into());
     }
-    let input: Input = serde_json::from_str(&input)?;
+    let value: serde_json::Value = serde_json::from_str(&input)?;
+    if value.get("protocol_version").and_then(|v| v.as_u64()) == Some(2) {
+        println!("{}", state_evidence::run(value)?);
+        return Ok(());
+    }
+    let input: Input = serde_json::from_value(value)?;
     if input.protocol_version != 1 || input.files.is_empty() {
         return Err("expected protocol_version 1 and at least one file".into());
     }

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "tools/ddd/lib/state-exposure/**/*.ts",
+    "tools/ddd/lib/rust/state-evidence/**/*.ts",
+    "tools/ddd/lib/typescript/state-evidence/**/*.ts",
+    "tools/ddd/lib/state-exposure-verification/**/*.ts",
+    "scripts/prepare-state-exposure.ts",
+    "scripts/verify-state-exposure.ts",
+    "tests/state-exposure-*.test.ts"
+  ]
+}

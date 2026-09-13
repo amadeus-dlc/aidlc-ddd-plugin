@@ -41,7 +41,7 @@ Rust検査は構文と名前に基づき、型推論・実行を行いません�
 
 ## 開発時の検証
 
-前提はBunと `../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.8.2。
+前提はBun、PATH上の`aidlc`、`../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.8.2。
 
 ```sh
 cd ddd
@@ -52,7 +52,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-全テストは `bun run check` です。規則ごとの正常・異常・境界例は[契約対応表](docs/developers/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
+全テストは `bun run check` です。[開発スコープの互換性検証](docs/developers/framework-compatibility.ja.md#282での開発スコープの追跡)も含みます。規則ごとの正常・異常・境界例は[契約対応表](docs/developers/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
 
 ## 導入と対応環境
 

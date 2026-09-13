@@ -22,7 +22,7 @@ model_reasoning_effort = "high"
 # method files into context on demand. (.codex/rules/ remains Codex's native
 # Starlark permission-rules dir — D-10 — distinct from the AIDLC method.)
 [shell_environment_policy]
-set = { AIDLC_RULES_DIR = "aidlc/spaces/default/memory" }
+set = { AIDLC_RULES_DIR = "aidlc/spaces/default/memory", AIDLC_HARNESS_DIR = ".codex" }
 
 # Sandbox: workspace-write keeps <workspace>/.git read-only BY DESIGN;
 # interactive sessions escalate (deny -> approve -> retry unsandboxed) and the

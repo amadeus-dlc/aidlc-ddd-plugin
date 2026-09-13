@@ -1,0 +1,3909 @@
+{
+  "schemaVersion": "state-exposure-development-evidence/1",
+  "recordedAt": "2026-09-13T14:24:25.603552+00:00",
+  "environment": {
+    "os": "Darwin",
+    "osVersion": "26.5.1",
+    "architecture": "arm64"
+  },
+  "versions": {
+    "bun": "1.3.13",
+    "typescript": "6.0.3",
+    "@types/bun": "1.3.13",
+    "cargo": "1.95.0",
+    "rustc": "1.95.0",
+    "rustHost": "aarch64-apple-darwin",
+    "syn": "3.0.5",
+    "sha2": "0.10.9",
+    "biome": "2.5.12"
+  },
+  "commands": [
+    {
+      "command": "bun install --frozen-lockfile",
+      "exitCode": 0
+    },
+    {
+      "command": "bun run prepare:state-exposure",
+      "exitCode": 0,
+      "nativeStartupMs": 2,
+      "buildCommandLimitMs": 120000,
+      "startupLimitMs": 180000
+    },
+    {
+      "command": "cargo test --locked --offline --manifest-path experiments/rust-syn/Cargo.toml state_evidence",
+      "exitCode": 0,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "command": "bun run test:state-exposure",
+      "exitCode": 0,
+      "passed": 110,
+      "failed": 0,
+      "assertions": 257,
+      "files": 3,
+      "note": "R-01修正前の全U2実績。修正後の影響範囲は別行のTypeScript/検証実行85件で確認。"
+    },
+    {
+      "command": "bun run verify:state-exposure --case all",
+      "exitCode": 0,
+      "passedCases": 23,
+      "sourceCases": 14,
+      "controlledExecutionCases": 9
+    },
+    {
+      "command": "./node_modules/.bin/tsc --noEmit --project tsconfig.state-exposure.json",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/biome check --error-on-warnings <U2 paths plus verify-rust-syn.ts and shared config>",
+      "exitCode": 0,
+      "files": 25
+    },
+    {
+      "command": "cargo fmt --manifest-path experiments/rust-syn/Cargo.toml --check",
+      "exitCode": 0
+    },
+    {
+      "command": "bun test tests/state-exposure-contract.test.ts tests/state-exposure-inspection.test.ts",
+      "exitCode": 0,
+      "passed": 138,
+      "assertions": 273,
+      "note": "開始前と親による型注釈補修後に成功。"
+    },
+    {
+      "command": "bun test tests/u2-rust-analysis-foundation.test.ts tests/u5-rust-code-sensors.test.ts tests/u5-golden.test.ts",
+      "exitCode": 0,
+      "passed": 79,
+      "assertions": 162,
+      "note": "開始前と実装後に成功。"
+    },
+    {
+      "command": "bun run experiment:rust-syn",
+      "exitCode": 0,
+      "cases": 31,
+      "malformedRequests": 6,
+      "actualSensorComparisons": 4,
+      "deterministicOutput": true,
+      "warmupLimitMs": 180000,
+      "warmupMs": 138244,
+      "testTimeoutMs": 10000
+    },
+    {
+      "command": "bun test tests/u3-plugin-scaffold.test.ts",
+      "exitCode": 0,
+      "passed": 6,
+      "assertions": 67,
+      "note": "親が既存編集を保持し、追加されたcheck5ステップの完全一致期待値を更新して確認。"
+    },
+    {
+      "command": "bun test tests/framework-compatibility.test.ts",
+      "exitCode": 0,
+      "passed": 2,
+      "assertions": 10,
+      "note": "並行シェル/ファイル操作を止めて再確認。"
+    },
+    {
+      "command": "bun test tests/state-exposure-typescript.test.ts tests/state-exposure-verification.test.ts",
+      "exitCode": 0,
+      "passed": 85,
+      "failed": 0,
+      "assertions": 270,
+      "files": 2,
+      "reviewFinding": "R-01",
+      "components": {
+        "typescript": 53,
+        "verification": 32
+      }
+    }
+  ],
+  "diagnosticRuns": [
+    {
+      "command": "bun run check",
+      "exitCode": 1,
+      "passed": 1099,
+      "skipped": 3,
+      "failed": 6,
+      "errors": 1,
+      "assertions": 4083,
+      "testCount": 1108,
+      "durationSeconds": 298.59,
+      "failedTests": [
+        "claude composes in a disposable copy without drops or second-compose changes",
+        "real C2 all executes both languages and intentional failures, then reproduces all outcomes",
+        "a unique-symbol annotation cannot hide an incompatible initializer",
+        "instance construction through a field initializer is not silently complete",
+        "plugin scaffold > FR11.3: package.json wires build and compatibility scripts in the check sequence",
+        "normal termination with null response"
+      ],
+      "explanation": "実装中に開始した診断実行。live-mutationは並行フックが更新した .aidlc-hooks-health/*.last、C2は修正前prepareの再コピーによるOS起動待ち、3件はロード済みの修正前モジュールと後から保存した試験の混在、scaffoldはcheck配線期待値未更新。最終ソースの全体check成功とは扱わない。各該当試験は修正後に別途成功。確定ソース全体のcheckはBuild and Testで実行する。"
+    },
+    {
+      "command": "初回のnative/prepare/版1比較",
+      "explanation": "OSのdyld起動待ちと初期host依存ビルドで期限超過を観測。OS保護は変更せず、明示準備の冪等化と版プローブ、版1の準備/試験分離で解消。初回版1ウォームアップ158157ms、上限180000ms。C2の既定30000msは維持。"
+    },
+    {
+      "command": "ブランド生成の追加回帰",
+      "explanation": "親が文字列→unknown→symbolのassertionによる誤passを発見。標準ライブラリのSymbolへの直接呼出し・シンボル/呼出し署名同一性へ限定し、入れ子assertion、Symbol.for、shadow/alias、間接生成を拒否する10件の回帰を追加。通常SymbolのUniqueESSymbol型も確認し、最終110件とC2全23件が成功。"
+    }
+  ],
+  "independentChecks": {
+    "typescript": 5,
+    "rust": 6,
+    "cli": 6,
+    "largeTimeout": true,
+    "u1TypeOnlyChanges": "親が型注釈/import整形だけを逆変換し、3ファイル全てで変更前SHA-256との一致を確認。"
+  },
+  "verificationReport": {
+    "schemaVersion": "state-exposure-verification/1",
+    "runId": "ef3bdd32-f6e2-4dfa-b930-ff1228dbae6f",
+    "command": [
+      "bun",
+      "run",
+      "verify:state-exposure",
+      "--case",
+      "all"
+    ],
+    "toolchain": [
+      {
+        "name": "ddd-rust-syn-spike",
+        "version": "0.0.0"
+      },
+      {
+        "name": "ddd-typescript-state-evidence",
+        "version": "1"
+      },
+      {
+        "name": "syn",
+        "version": "3.0.5"
+      },
+      {
+        "name": "typescript",
+        "version": "6.0.3"
+      }
+    ],
+    "environment": {
+      "os": "darwin",
+      "architecture": "arm64",
+      "runtimeVersion": "1.3.13"
+    },
+    "cases": [
+      {
+        "caseId": "execution-empty",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-failed",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "execution-failed",
+                "subject": "extractor",
+                "message": "execution-failed",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "execution-failed",
+                "message": "execution-failed",
+                "subject": "extractor",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-invalid",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-multiple",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-overflow",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "output-limit",
+                "subject": "extractor",
+                "message": "output-limit",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "output-limit",
+                "message": "output-limit",
+                "subject": "extractor",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-resource",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "resource-limit",
+                "subject": "extractor",
+                "message": "resource-limit",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "resource-limit",
+                "message": "resource-limit",
+                "subject": "extractor",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-timeout",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "timeout",
+                "subject": "extractor",
+                "message": "timeout",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "failed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "timeout",
+                "message": "timeout",
+                "subject": "extractor",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-unavailable",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "unavailable",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "tool-unavailable",
+                "subject": "extractor",
+                "message": "tool-unavailable",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "unavailable",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "tool-unavailable",
+                "message": "tool-unavailable",
+                "subject": "extractor",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "execution-whitespace",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": null,
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "invalid-response",
+                "subject": "response",
+                "message": "response: Expected an object.",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-named-mixed",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:275b3db142a866ccf8d64b0c5f70ec30e802678248e1792fc60c2135604b04bd",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 54
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:other",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::field:other",
+                          "location": {
+                            "file": "model.rs",
+                            "line": 1,
+                            "byteStart": 30,
+                            "byteEnd": 52
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 28
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::field:value",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 15,
+                    "byteEnd": 28
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::field:other",
+                "location": {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 30,
+                  "byteEnd": 52
+                }
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:275b3db142a866ccf8d64b0c5f70ec30e802678248e1792fc60c2135604b04bd",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 54
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:other",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::field:other",
+                          "location": {
+                            "file": "model.rs",
+                            "line": 1,
+                            "byteStart": 30,
+                            "byteEnd": 52
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 28
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::field:value",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 15,
+                    "byteEnd": 28
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::field:other",
+                "location": {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 30,
+                  "byteEnd": 52
+                }
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-named-private",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 26
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 24
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:0ea4d9f31f4be2539eb854315717f955ef121b2680e868686ea49cf217c63ce4",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 26
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 24
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-named-public",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:498a9073ee41a7457e26447702c2587d91f88a0e5994896fd7950973f4cfb06e",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 30
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 28
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::field:value",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 15,
+                    "byteEnd": 28
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:498a9073ee41a7457e26447702c2587d91f88a0e5994896fd7950973f4cfb06e",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 30
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::field:value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 15,
+                          "byteEnd": 28
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::field:value",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 15,
+                    "byteEnd": 28
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-target-missing",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:732ec9c5d949b5b6e9a80dc97e02b0b7bc471a386df9a02c15199360ce833631",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "target-missing",
+                  "message": "target-missing",
+                  "subject": "Model",
+                  "location": null
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "target-missing",
+                "message": "target-missing",
+                "subject": "Model",
+                "location": null
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:732ec9c5d949b5b6e9a80dc97e02b0b7bc471a386df9a02c15199360ce833631",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "target-missing",
+                  "message": "target-missing",
+                  "subject": "Model",
+                  "location": null
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "target-missing",
+                "message": "target-missing",
+                "subject": "Model",
+                "location": null
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-tuple-private",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:2d47268ef617a866dc9e820a80b38e4480fd1a625182e027389cae195a5ea1bf",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 17
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 13,
+                          "byteEnd": 15
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:2d47268ef617a866dc9e820a80b38e4480fd1a625182e027389cae195a5ea1bf",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 17
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 13,
+                          "byteEnd": 15
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-tuple-public",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:81f60d1d427b5c2be67e801f7edb65afa6774074aba60a0c4b702e5e70afd3c1",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 28
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 13,
+                          "byteEnd": 26
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::tuple:0",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 13,
+                    "byteEnd": 26
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:81f60d1d427b5c2be67e801f7edb65afa6774074aba60a0c4b702e5e70afd3c1",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 28
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.rs",
+                          "line": 1,
+                          "byteStart": 13,
+                          "byteEnd": 26
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::tuple:0",
+                "evidence": [
+                  {
+                    "file": "model.rs",
+                    "line": 1,
+                    "byteStart": 13,
+                    "byteEnd": 26
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "rust-tuple-unresolved",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:81f3f25b8d09444931c7f9d181b901eb2cf59ea78bf1f0768ad112f63db5d1df",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 30
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::tuple:0",
+                          "location": {
+                            "file": "model.rs",
+                            "line": 1,
+                            "byteStart": 13,
+                            "byteEnd": 28
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::tuple:0",
+                "location": {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 13,
+                  "byteEnd": 28
+                }
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:81f3f25b8d09444931c7f9d181b901eb2cf59ea78bf1f0768ad112f63db5d1df",
+            "target": {
+              "file": "model.rs",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "rust-struct"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 30
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::tuple:0",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::tuple:0",
+                          "location": {
+                            "file": "model.rs",
+                            "line": 1,
+                            "byteStart": 13,
+                            "byteEnd": 28
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::tuple:0",
+                "location": {
+                  "file": "model.rs",
+                  "line": 1,
+                  "byteStart": 13,
+                  "byteEnd": 28
+                }
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-class-mixed",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:2ec1ecce86a26b29dc8b8788c084430cb1130b9166017e7dfa22f1e58cc6b3c7",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 49
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::other",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::other",
+                          "location": {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 25,
+                            "byteEnd": 47
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 24
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 14,
+                    "byteEnd": 24
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::other",
+                "location": {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 25,
+                  "byteEnd": 47
+                }
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:2ec1ecce86a26b29dc8b8788c084430cb1130b9166017e7dfa22f1e58cc6b3c7",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 49
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::other",
+                    "stateExposure": {
+                      "status": "unresolved",
+                      "reasons": [
+                        {
+                          "code": "unsupported-syntax",
+                          "message": "unsupported-syntax",
+                          "subject": "Model::other",
+                          "location": {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 25,
+                            "byteEnd": 47
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 24
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 14,
+                    "byteEnd": 24
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model::other",
+                "location": {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 25,
+                  "byteEnd": 47
+                }
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-class-private",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:6268d1eda44992f5348414ace554bb80d25f06570d21ebac13665baf30bb45b1",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 27
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::#value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 25
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:6268d1eda44992f5348414ace554bb80d25f06570d21ebac13665baf30bb45b1",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 27
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::#value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": false,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 25
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-class-public",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:857892ded847fa8003dbd545cd35df6bd77f5cf9088f85141ebb3c37c6c33ee1",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 35
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 33
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 14,
+                    "byteEnd": 33
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:857892ded847fa8003dbd545cd35df6bd77f5cf9088f85141ebb3c37c6c33ee1",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 35
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 1,
+                          "byteStart": 14,
+                          "byteEnd": 33
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 14,
+                    "byteEnd": 33
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-class-unresolved",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:aedb8f9f782f652d584b5420d1c97d4fb2712eb4aa2762dc5bcca1733861662c",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 41
+                  }
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model",
+                "location": {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 41
+                }
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:aedb8f9f782f652d584b5420d1c97d4fb2712eb4aa2762dc5bcca1733861662c",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-class"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 41
+                  }
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model",
+                "location": {
+                  "file": "model.ts",
+                  "line": 1,
+                  "byteStart": 0,
+                  "byteEnd": 41
+                }
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-companion-private",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:3a100babd3ef6bcd9f1d7510fc29ff1919b6d36d5fff43813cd7d35876890934",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 3,
+                  "byteStart": 152,
+                  "byteEnd": 235
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::brand",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 448,
+                          "byteEnd": 461
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::increment",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 10,
+                          "byteStart": 469,
+                          "byteEnd": 538
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:3a100babd3ef6bcd9f1d7510fc29ff1919b6d36d5fff43813cd7d35876890934",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "pass",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 3,
+                  "byteStart": 152,
+                  "byteEnd": 235
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::brand",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 448,
+                          "byteEnd": 461
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::increment",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 10,
+                          "byteStart": 469,
+                          "byteEnd": 538
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-companion-public",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:d59bdf26bfff7ad2e85ca999be3299c686a123226a14136c7131c6a5af235246",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 3,
+                  "byteStart": 152,
+                  "byteEnd": 259
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::brand",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 472,
+                          "byteEnd": 485
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::increment",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 10,
+                          "byteStart": 513,
+                          "byteEnd": 582
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 487,
+                          "byteEnd": 505
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 9,
+                    "byteStart": 487,
+                    "byteEnd": 505
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:d59bdf26bfff7ad2e85ca999be3299c686a123226a14136c7131c6a5af235246",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "violation",
+            "checkedEvidence": {
+              "targetStatus": "resolved",
+              "targetEvidence": [
+                {
+                  "file": "model.ts",
+                  "line": 3,
+                  "byteStart": 152,
+                  "byteEnd": 259
+                }
+              ],
+              "members": {
+                "completeness": "complete",
+                "items": [
+                  {
+                    "memberId": "Model::brand",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 472,
+                          "byteEnd": 485
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::increment",
+                    "stateExposure": {
+                      "status": "absent",
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 10,
+                          "byteStart": 513,
+                          "byteEnd": 582
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "memberId": "Model::value",
+                    "stateExposure": {
+                      "status": "resolved",
+                      "value": true,
+                      "evidence": [
+                        {
+                          "file": "model.ts",
+                          "line": 9,
+                          "byteStart": 487,
+                          "byteEnd": 505
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "reasons": []
+              }
+            },
+            "findings": [
+              {
+                "code": "state-exposed",
+                "memberId": "Model::value",
+                "evidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 9,
+                    "byteStart": 487,
+                    "byteEnd": 505
+                  }
+                ]
+              }
+            ],
+            "unresolvedReasons": []
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      },
+      {
+        "caseId": "ts-companion-unresolved",
+        "expected": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:7a844e6c6a8a7848ec8b5412757d9e74acb89dfe9d27747d82689a2d72845200",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 5,
+                    "byteStart": 261,
+                    "byteEnd": 601
+                  }
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model",
+                "location": {
+                  "file": "model.ts",
+                  "line": 5,
+                  "byteStart": 261,
+                  "byteEnd": 601
+                }
+              }
+            ]
+          }
+        },
+        "actual": {
+          "kind": "evaluated",
+          "result": {
+            "schemaVersion": "state-exposure/1",
+            "requestIdentity": "sha256:7a844e6c6a8a7848ec8b5412757d9e74acb89dfe9d27747d82689a2d72845200",
+            "target": {
+              "file": "model.ts",
+              "declarationPath": [
+                "Model"
+              ],
+              "representation": "ts-companion"
+            },
+            "executionState": "completed",
+            "ruleResult": "unresolved",
+            "checkedEvidence": {
+              "targetStatus": "unresolved",
+              "reasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 5,
+                    "byteStart": 261,
+                    "byteEnd": 601
+                  }
+                }
+              ]
+            },
+            "findings": [],
+            "unresolvedReasons": [
+              {
+                "code": "unsupported-syntax",
+                "message": "unsupported-syntax",
+                "subject": "Model",
+                "location": {
+                  "file": "model.ts",
+                  "line": 5,
+                  "byteStart": 261,
+                  "byteEnd": 601
+                }
+              }
+            ]
+          }
+        },
+        "differences": [],
+        "status": "passed"
+      }
+    ],
+    "errors": [],
+    "status": "passed"
+  },
+  "legacyReport": {
+    "experiment": "rust-syn",
+    "recorded_at": "2026-09-13T14:09:11.449Z",
+    "base_commit": "65011b0b43e3c76f1d5d50521c16a8047960e23a",
+    "versions": {
+      "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+      "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "bun": "1.3.13",
+      "syn": "3.0.5"
+    },
+    "platform": "darwin-arm64",
+    "inputs": {
+      "Cargo.toml": "183e750155c0816c115ad5dcacfdaf78d1159ddbf410a7e5460c2148b928a8ca",
+      "Cargo.lock": "fdf89a191063769342cab95c3cec44bd647540ee8af45b1613cac72c2e686424",
+      "src/main.rs": "7efe7cf3e423948847b37d6bfc2a467edec837e32d474af9cc99b1a5cf822e6a",
+      "src/analysis.rs": "84b7a698441bba7c9b10f73825cc9dba7f85724164584f742c6ea5c95a9ec1e6",
+      "src/state_evidence.rs": "8d693359d28067520c27cf14615d09ecded2d3b7ff6459f809733ba82bf3de41",
+      "src/state_evidence_tests.rs": "596b85fc98560922ad285c4b2c8247bf85f191b5fc36a615c488d1af5c10ebe0",
+      "cases.json": "ef97ff8c7a630411d1f0d24845ff6e081c44e257a39ee9aa0f259df49df383b4"
+    },
+    "verifier_sha256": "269378fd8eee36e6466612181287ffee8ba46a652cdca4571cbdb4db11abc3a6",
+    "native": {
+      "bytes": 1943552,
+      "sha256": "8f820b4c587bdd21999182d74a8bbe60557cc8b2d2694b4fa86cd3af8051e369",
+      "relocated_empty_path": true,
+      "binary_dependencies": [
+        "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
+      ],
+      "build_ms": 125,
+      "relocated_warmup_ms": 138244,
+      "first_batch_ms": 8,
+      "warm_batch_median_ms": 2,
+      "timing_scope": "local warm filesystem; includes process startup and JSON; no performance comparison"
+    },
+    "malformed_requests": 6,
+    "deterministic_output": true,
+    "cases": [
+      {
+        "name": "private-fields",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2015",
+            "success": true,
+            "codes": []
+          },
+          {
+            "edition": "2018",
+            "success": true,
+            "codes": []
+          },
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          },
+          {
+            "edition": "2024",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "public-field",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.amount@2"
+        ],
+        "legacy_fields": [
+          "Invoice.amount@2"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "crate-visible-field",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.amount@1"
+        ],
+        "legacy_fields": [
+          "Invoice.amount@1"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "super-visible-field",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.amount@1"
+        ],
+        "legacy_fields": [
+          "Invoice.amount@1"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "scoped-visible-field",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.amount@1"
+        ],
+        "legacy_fields": [
+          "Invoice.amount@1"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "private-tuple",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "public-tuple",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.0@1"
+        ],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "restricted-tuple",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.0@1"
+        ],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "raw-identifier",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.type@1"
+        ],
+        "legacy_fields": [
+          "Invoice.type@1"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "unicode-and-comments",
+        "parsed": true,
+        "state": "violation",
+        "fields": [
+          "Invoice.合計@2"
+        ],
+        "legacy_fields": [
+          "Invoice.合計@2"
+        ],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "direct-getter-and-command",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [
+          {
+            "name": "issue",
+            "receiver": "mut-self",
+            "returnType": "Result<(),IssueError>"
+          }
+        ],
+        "getter_comparison": {
+          "syn": [
+            "total"
+          ],
+          "legacy": [
+            "total"
+          ]
+        }
+      },
+      {
+        "name": "explicit-return-getter",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": {
+          "syn": [
+            "total"
+          ],
+          "legacy": []
+        }
+      },
+      {
+        "name": "alias-and-reexport",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [
+          {
+            "name": "issue",
+            "receiver": "mut-self",
+            "returnType": "Outcome<()>"
+          }
+        ],
+        "getter_comparison": null
+      },
+      {
+        "name": "associated-error",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [
+          {
+            "name": "save",
+            "receiver": "ref-self",
+            "returnType": "Result<(),Self::Error>"
+          }
+        ],
+        "getter_comparison": null
+      },
+      {
+        "name": "typed-self",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [
+          {
+            "name": "issue",
+            "receiver": "other",
+            "returnType": null
+          }
+        ],
+        "getter_comparison": null
+      },
+      {
+        "name": "inferred-receiver",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "async-in-2015",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2015",
+            "success": false,
+            "codes": [
+              "E0670"
+            ]
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "async-in-2018",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2018",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "unknown-type",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": false,
+            "codes": [
+              "E0425"
+            ]
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "wrong-return-type",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": false,
+            "codes": [
+              "E0308"
+            ]
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "shadowed-result",
+        "parsed": true,
+        "state": "pass",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [
+          {
+            "name": "issue",
+            "receiver": "none",
+            "returnType": "Result<(),()>"
+          }
+        ],
+        "getter_comparison": null
+      },
+      {
+        "name": "generated-public-field",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "macro-expansion"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "conditional-field",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [
+          "Invoice.amount@1"
+        ],
+        "legacy_fields": [
+          "Invoice.amount@1"
+        ],
+        "unresolved": [
+          "conditional-compilation"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "conditional-attribute",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "conditional-compilation"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "derive",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "attribute-or-derive-expansion"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "attribute-macro",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "attribute-or-derive-expansion"
+        ],
+        "compiler": [],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "named-external-module",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "external-module-not-loaded"
+        ],
+        "compiler": [],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "directory-external-module",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "external-module-not-loaded"
+        ],
+        "compiler": [],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "malformed-source",
+        "parsed": false,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": null,
+        "unresolved": [
+          "parse-error"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": false,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "unsupported-union",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "unsupported-item"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": true,
+            "codes": []
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      },
+      {
+        "name": "unstable-modifier",
+        "parsed": true,
+        "state": "unresolved",
+        "fields": [],
+        "legacy_fields": [],
+        "unresolved": [
+          "unsupported-modifier"
+        ],
+        "compiler": [
+          {
+            "edition": "2021",
+            "success": false,
+            "codes": [
+              "E0658"
+            ]
+          }
+        ],
+        "signature_checks": [],
+        "getter_comparison": null
+      }
+    ],
+    "actual_sensor_comparisons": [
+      {
+        "name": "clean-domain",
+        "existing_a_count": 0,
+        "syn_a_count": 0
+      },
+      {
+        "name": "violation-a",
+        "existing_a_count": 1,
+        "syn_a_count": 1
+      },
+      {
+        "name": "public-tuple",
+        "existing_a_count": 0,
+        "syn_a_count": 1
+      },
+      {
+        "name": "restricted-tuple",
+        "existing_a_count": 0,
+        "syn_a_count": 1
+      }
+    ],
+    "unverified": [
+      "full sensor parity",
+      "Cargo and cross-file resolution",
+      "type inference and trait solving",
+      "macro expansion and cfg selection",
+      "source edition selection",
+      "Linux/Windows/x86_64",
+      "minimum OS/Rust versions",
+      "WASM distribution",
+      "plugin installation and gate integration"
+    ]
+  },
+  "sourceHashes": [
+    {
+      "path": "ddd/biome.json",
+      "sha256": "14eb53bcaaac507e65c6efd370d7bc1dfd00049ba952107b787ec9ed01c8463d"
+    },
+    {
+      "path": "ddd/bun.lock",
+      "sha256": "e04d9bb47ff5cb308ee5e69bc10bb629d3f8d46f73473c4a9869ab3ab580d6d3"
+    },
+    {
+      "path": "ddd/docs/developers/README.ja.md",
+      "sha256": "8a0e7a9d951a26012d42bf6d1f1a6b8b5b6920e925982945e0cc563ec8418966"
+    },
+    {
+      "path": "ddd/docs/developers/README.md",
+      "sha256": "1d57662262a5391d65b0270b1ba3ec0049286f428ded004df06aa8d63c0b872b"
+    },
+    {
+      "path": "ddd/docs/developers/state-exposure-verification.ja.md",
+      "sha256": "713dad157d355163a3d099399190d62a7a6cec6a763ed559648624f23967cbe8"
+    },
+    {
+      "path": "ddd/docs/developers/state-exposure-verification.md",
+      "sha256": "3d03bd3b891eb2b51369f1d965d12059ca7088c41b87900696d4defa7012dc50"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/Cargo.lock",
+      "sha256": "fdf89a191063769342cab95c3cec44bd647540ee8af45b1613cac72c2e686424"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/Cargo.toml",
+      "sha256": "183e750155c0816c115ad5dcacfdaf78d1159ddbf410a7e5460c2148b928a8ca"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/main.rs",
+      "sha256": "7efe7cf3e423948847b37d6bfc2a467edec837e32d474af9cc99b1a5cf822e6a"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/state_evidence.rs",
+      "sha256": "8d693359d28067520c27cf14615d09ecded2d3b7ff6459f809733ba82bf3de41"
+    },
+    {
+      "path": "ddd/experiments/rust-syn/src/state_evidence_tests.rs",
+      "sha256": "596b85fc98560922ad285c4b2c8247bf85f191b5fc36a615c488d1af5c10ebe0"
+    },
+    {
+      "path": "ddd/package.json",
+      "sha256": "ac374c5824b2e797d5b90a8ec95e85c8e530028a65b016bc7dcb11bc0b60e20d"
+    },
+    {
+      "path": "ddd/scripts/prepare-state-exposure.ts",
+      "sha256": "9edf7d2643af9cf8591d5bd5bf385d1cfcc0fdccc99553243aa3954c42283181"
+    },
+    {
+      "path": "ddd/scripts/verify-rust-syn.ts",
+      "sha256": "269378fd8eee36e6466612181287ffee8ba46a652cdca4571cbdb4db11abc3a6"
+    },
+    {
+      "path": "ddd/scripts/verify-state-exposure.ts",
+      "sha256": "068ed0945478ddc87607666f5c92632426e7f6576fdd7e3c5ec5147877aa4889"
+    },
+    {
+      "path": "ddd/tests/README.ja.md",
+      "sha256": "f477371e60271dfe97be7bf2581fea71f5877cf18d625f11597a2ccec9a66737"
+    },
+    {
+      "path": "ddd/tests/README.md",
+      "sha256": "96d65ca6b88eb39591d9ce0b5d2fae057e3f266a0f43049cd020a848534281c2"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/cases.json",
+      "sha256": "3c86f19cc3b4170cbf5c8bfc4a6cfa133fce72e52acb322db0bf656d91b65dbf"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/child.ts",
+      "sha256": "3678192b01eaa7e7a64ed12e16a2a3d7cc4867b94f2b88e7cfff0bd0ecd3b97c"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/companion.ts.txt",
+      "sha256": "c5ae6f7c906e641f7ab1dc224c9aa0bebf0eb731dbcf06e47044b88cf85e25df"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-mixed.rs",
+      "sha256": "ec78c7f280114bc8924cec488033ced08b746fc138a9437feadd4b6e88182fa4"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-private.rs",
+      "sha256": "6197f7fa9256b067d6c84c67670b834e7e73c86732c6d27173650da6187511a2"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-named-public.rs",
+      "sha256": "85247c39207416c95fafc8c57096faf6581d31ba8c9e00c7abf2b878f8e16cbf"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-target-missing.rs",
+      "sha256": "332e8c47c0b2c438a38be549126ed33f7474ac7296d16083ee47d3e18ca97c8e"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-private.rs",
+      "sha256": "6a095b425bd48585fcfd3fce61c93a3b1e5f3a508245be50fa1f71cc056fdb0e"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-public.rs",
+      "sha256": "ac18248fb10758be2e1aad2be62854b36b9f9ac21fb381cf56720cdff2dd1c72"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/rust-tuple-unresolved.rs",
+      "sha256": "71613ac152e412757dbb9670bc647d44c44774d5edb8b72172b3e415349e2beb"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-mixed.ts.txt",
+      "sha256": "e97b14f093d88a9adaafde7c17f8ba8db61fbafe4e41560d4759f427b68987e9"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-private.ts.txt",
+      "sha256": "3b1d00bc07cd08f95d458190deb4004f5dbaf1436cdeffc5a4dd9bd71957ee96"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-public.ts.txt",
+      "sha256": "098b259277ebbf52fa5429e22eebea52098e68ae2b985529dce9303334a68c74"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-class-unresolved.ts.txt",
+      "sha256": "6c2c0191110ee9b5cb08f42985bb02641c707a8cc5ad7c5f992029fe7927e363"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-private.ts.txt",
+      "sha256": "c5ae6f7c906e641f7ab1dc224c9aa0bebf0eb731dbcf06e47044b88cf85e25df"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-public.ts.txt",
+      "sha256": "142c61c5aa68c731b7dab88a66fc8b5e5f5c4826a1ceacc80d9228449fcff9e3"
+    },
+    {
+      "path": "ddd/tests/fixtures/state-exposure-languages/ts-companion-unresolved.ts.txt",
+      "sha256": "5315f9448c90be842317a98af5adffa8b492d6f35f8363f46ae8d80b06b05cc4"
+    },
+    {
+      "path": "ddd/tests/state-exposure-contract.test.ts",
+      "sha256": "aeac42bd99a3517e146100ab33a91d725c28d4c44e9826981aa57ffa3c7cba50"
+    },
+    {
+      "path": "ddd/tests/state-exposure-inspection.test.ts",
+      "sha256": "77107dbff42381b1cf030331c371cf4bad982ddd208ba7a17eb88be0d32479eb"
+    },
+    {
+      "path": "ddd/tests/state-exposure-rust.test.ts",
+      "sha256": "2afa63df69236b8274c68bd5e2b291ac07a7d2f470d442ae7f74bff6d5a9198f"
+    },
+    {
+      "path": "ddd/tests/state-exposure-typescript.test.ts",
+      "sha256": "559898218827cd3349f96baeb16c0d5a93e1060e8531e713e2651a2f12d0132d"
+    },
+    {
+      "path": "ddd/tests/state-exposure-verification.test.ts",
+      "sha256": "cd84bf8a9e3bde9dd11b423cd21be1423aad1cce1b8dbc094204f9cf3005a3d4"
+    },
+    {
+      "path": "ddd/tests/u3-plugin-scaffold.test.ts",
+      "sha256": "6544b45737c2ab80785976a99e5aef6bc7ee68bbfd1f6647b42f16f3d9fc138d"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/rust/state-evidence/index.ts",
+      "sha256": "110f9a6d12ee24dc11f9de3e85abafd124efbe19b6760ad86842a1751032282d"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/cases.ts",
+      "sha256": "a332464f2f7bb4f4baac9cc59b9abd9a167542084414e92cddb9953cd4156bf8"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/expected.ts",
+      "sha256": "cdb4099a7aa6b0595731b4e61908f03204546e46103106c141c6b52a0fec0f1d"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/input.ts",
+      "sha256": "1cd1fb11baba4bf8ad9f1d18eb60beebf71bf92cc4eb48a144a69a4f98b3c289"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/options.ts",
+      "sha256": "4c17d1381ae20b3f5ff0743b37807af7464118962cf63b58529a2c7d1e2fd88c"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/process.ts",
+      "sha256": "cb1d645f85eaca0d7b8ac8952e0cdc8bea664d8a7a67710e99b5598048f7a100"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/report.ts",
+      "sha256": "1b3c12deafe417ba4651885f3b3dea1b6d320d052a70f9c3b562f0de4a3b0565"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure-verification/run.ts",
+      "sha256": "58de06cb142f62ea93e23839b8f7c1d5647f4c98da7083254be4dec2d5f0a1e4"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/state-exposure/request.ts",
+      "sha256": "3bfa43129a94029813de794c4785dd871b3c8c6cd8ef82c4070798603a66e29d"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/class.ts",
+      "sha256": "febeaafab16216432e4c56e107a3dbe3212b8d9e957dcf8a61e2bdcd80c3bd74"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/companion.ts",
+      "sha256": "230914ce78deb50b809d99f4f26a2e9e898cc4909df36ac825233a09c7a170d0"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/constructor.ts",
+      "sha256": "a20bf15dbf60bc56eb6254f286c271ec1b77ecaf3bb38cbbdfce21ca8dc74d31"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/context.ts",
+      "sha256": "87bbe8aebcdcbfa5e4d8cbe8c13851f2453913742ef360e6471e3ecb9f26c1f4"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/extract.ts",
+      "sha256": "6494c4db913b2989feec18778afa69eda8352a9575fd92003d208d56d58679a1"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/index.ts",
+      "sha256": "563b314c3b94640cb212e5ab43588f0ef41617b9196ee5ab08ce1c60471df8e9"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/program.ts",
+      "sha256": "5422a61e4a3fb8c0af31ae002a99c61335a26b53a8cf83a681a5b6ca1e0ea4d0"
+    },
+    {
+      "path": "ddd/tools/ddd/lib/typescript/state-evidence/worker.ts",
+      "sha256": "c42474d850eaba1104527636791d28877c28e2e7574f102fd42b2051077ad2fa"
+    },
+    {
+      "path": "ddd/tsconfig.state-exposure.json",
+      "sha256": "02b3adb5a38dc22d395f72b65e08d0a9f2895ceb91c94ed59456ab9714908642"
+    }
+  ],
+  "unverified": [
+    "確定ソースに対する全体checkの再実行",
+    "macOS arm64以外",
+    "一般の型解決/Cargo意味解析",
+    "macro展開/cfg選択",
+    "副作用/可変参照漏出全般",
+    "外部Result",
+    "本番センサー切替/配布"
+  ],
+  "reviewCorrections": [
+    {
+      "finding": "R-01",
+      "reviewRecord": "aidlc/spaces/default/intents/260913-shared-state-check/.aidlc-reviews/code-generation/units/u2-language-state-verification/e67b77dd1ffcfde3/1.json",
+      "change": "constructor内の入れ子関数にthisが含まれる場合、その関数の位置をunsupported-syntaxとして列挙をpartialにする。関数間解析は追加せず、独立に確認済みの公開所見を保持。通常の操作メソッド/局所関数returnの分離を維持。",
+      "newTests": 7,
+      "testsPassed": 85,
+      "assertions": 270,
+      "c2CasesPassed": 23,
+      "typecheckExitCode": 0,
+      "biomeExitCode": 0,
+      "biomeFiles": 25,
+      "reproductionCommand": "bun /tmp/aidlc-u2-review-repro.ts",
+      "before": [
+        {
+          "name": "direct",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:36a2b3726bc62ebc3fbdbc6402a1420b4016e62ef09216c96d5c27e750a9759b",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "unresolved",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 86
+                  }
+                ],
+                "members": {
+                  "completeness": "partial",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": [
+                    {
+                      "code": "unsupported-syntax",
+                      "message": "unsupported-syntax",
+                      "subject": "Model",
+                      "location": {
+                        "file": "model.ts",
+                        "line": 1,
+                        "byteStart": 56,
+                        "byteEnd": 60
+                      }
+                    }
+                  ]
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 56,
+                    "byteEnd": 60
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "arrow",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:dbe1d2348046be17f51a1588f933695037d83452f77adcddb1bbbacad8663722",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "pass",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 101
+                  }
+                ],
+                "members": {
+                  "completeness": "complete",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": []
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": []
+            }
+          }
+        },
+        {
+          "name": "callback",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:910c07a77269f61cafe87ac628778562c8f1aea8ff993ad72aa23242ca67e990",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "pass",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 110
+                  }
+                ],
+                "members": {
+                  "completeness": "complete",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": []
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": []
+            }
+          }
+        }
+      ],
+      "after": [
+        {
+          "name": "direct",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:36a2b3726bc62ebc3fbdbc6402a1420b4016e62ef09216c96d5c27e750a9759b",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "unresolved",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 86
+                  }
+                ],
+                "members": {
+                  "completeness": "partial",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": [
+                    {
+                      "code": "unsupported-syntax",
+                      "message": "unsupported-syntax",
+                      "subject": "Model",
+                      "location": {
+                        "file": "model.ts",
+                        "line": 1,
+                        "byteStart": 56,
+                        "byteEnd": 60
+                      }
+                    }
+                  ]
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 56,
+                    "byteEnd": 60
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "arrow",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:dbe1d2348046be17f51a1588f933695037d83452f77adcddb1bbbacad8663722",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "unresolved",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 101
+                  }
+                ],
+                "members": {
+                  "completeness": "partial",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": [
+                    {
+                      "code": "unsupported-syntax",
+                      "message": "unsupported-syntax",
+                      "subject": "Model",
+                      "location": {
+                        "file": "model.ts",
+                        "line": 1,
+                        "byteStart": 43,
+                        "byteEnd": 93
+                      }
+                    }
+                  ]
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 43,
+                    "byteEnd": 93
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "callback",
+          "semanticDiagnostics": 0,
+          "actual": {
+            "kind": "evaluated",
+            "result": {
+              "schemaVersion": "state-exposure/1",
+              "requestIdentity": "sha256:910c07a77269f61cafe87ac628778562c8f1aea8ff993ad72aa23242ca67e990",
+              "target": {
+                "file": "model.ts",
+                "declarationPath": [
+                  "Model"
+                ],
+                "representation": "ts-class"
+              },
+              "executionState": "completed",
+              "ruleResult": "unresolved",
+              "checkedEvidence": {
+                "targetStatus": "resolved",
+                "targetEvidence": [
+                  {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 0,
+                    "byteEnd": 110
+                  }
+                ],
+                "members": {
+                  "completeness": "partial",
+                  "items": [
+                    {
+                      "memberId": "Model::#value",
+                      "stateExposure": {
+                        "status": "resolved",
+                        "value": false,
+                        "evidence": [
+                          {
+                            "file": "model.ts",
+                            "line": 1,
+                            "byteStart": 14,
+                            "byteEnd": 25
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "reasons": [
+                    {
+                      "code": "unsupported-syntax",
+                      "message": "unsupported-syntax",
+                      "subject": "Model",
+                      "location": {
+                        "file": "model.ts",
+                        "line": 1,
+                        "byteStart": 54,
+                        "byteEnd": 104
+                      }
+                    }
+                  ]
+                }
+              },
+              "findings": [],
+              "unresolvedReasons": [
+                {
+                  "code": "unsupported-syntax",
+                  "message": "unsupported-syntax",
+                  "subject": "Model",
+                  "location": {
+                    "file": "model.ts",
+                    "line": 1,
+                    "byteStart": 54,
+                    "byteEnd": 104
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "unrepeated": "影響しないRust内部7件、既存Rust79件、版1比較を再実行していない。全体checkはBuild and Testへ維持。"
+    }
+  ]
+}

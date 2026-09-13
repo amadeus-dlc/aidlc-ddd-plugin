@@ -41,7 +41,7 @@ Package names must connect to ubiquitous language. Prohibit technical classifica
 
 ## Development verification
 
-Requires Bun and AI-DLC development tools under `../.codex/tools/`. Assessment baseline: Bun 1.3.13 and AI-DLC 2.8.2.
+Requires Bun, `aidlc` on PATH, and AI-DLC development tools under `../.codex/tools/`. Assessment baseline: Bun 1.3.13 and AI-DLC 2.8.2.
 
 ```sh
 cd ddd
@@ -52,7 +52,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Run all tests with `bun run check`. The [contract matrix](docs/developers/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
+Run all tests with `bun run check`, including the [development scope compatibility check](docs/developers/framework-compatibility.md#development-scope-traceability-on-282). The [contract matrix](docs/developers/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
 
 ## Installation and supported environments
 
