@@ -32,6 +32,6 @@ The distribution does not include tests or docs, so these links are for the deve
 
 ## Sources
 
-- [Current design](../../docs/interface-adapter-layer-design.md)
-- [Measurements and known issues](../../docs/current-state-assessment.md)
-- [Remaining work](../../docs/completion-tasks.md)
+- [Current design](../../docs/developers/interface-adapter-layer-design.md)
+- [Measurements and known issues](../../docs/developers/current-state-assessment.md)
+- [Remaining work](../../docs/developers/completion-tasks.md)

@@ -30,14 +30,14 @@ All notable changes to the ddd plugin are recorded here, following [Keep a Chang
 - Add ubiquitous-language naming and technical-classification prohibitions to shared knowledge and design/generation instructions.
 - Require domain_packages in aggregate mappings and check terms, model references, and placement rationale.
 - Follow affected domain crates' modules, including empty/inline modules and path attributes, to match declarations and actual layout.
-- Add Claude/Codex normal approval tests. Document migration and limits in the [contract](docs/domain-packaging-design.md).
+- Add Claude/Codex normal approval tests. Document migration and limits in the [contract](docs/users/domain-packaging-design.md).
 
 ## Unreleased — T-02 Rust evaluation (2026-09-13)
 
 - Distinguish aggregates from value objects and concrete use cases from ports using explicit types; resolve getter-name collisions.
 - Collect cross-file and trait impls and report mutation-method locations.
 - Add replay_methods contracts for explicit method and event matching.
-- Document type-matching limits in notes and the [evaluation contract](docs/rust-sensor-contract.md), without modifying framework distributions.
+- Document type-matching limits in notes and the [evaluation contract](docs/users/rust-sensor-contract.md), without modifying framework distributions.
 
 ## Unreleased — T-01 normal approval integration (2026-09-13)
 
@@ -50,7 +50,7 @@ All notable changes to the ddd plugin are recorded here, following [Keep a Chang
 - Separate conventions, measurements, and remaining work; add the [document index](docs/README.md).
 - Record the policy excluding Kimi/opencode. Remaining distribution-route cleanup belongs to T-04.
 - Correct failure/re-execution/event/RMU explanations and knowledge coverage claims.
-- The 0.1.0 section below preserves implementation history. In particular, removing artifact registration did not establish current approval integration; see the [assessment](docs/current-state-assessment.md).
+- The 0.1.0 section below preserves implementation history. In particular, removing artifact registration did not establish current approval integration; see the [assessment](docs/developers/current-state-assessment.md).
 
 ## [0.1.0] - 2026-09-11
 

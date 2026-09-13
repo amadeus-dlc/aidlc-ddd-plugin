@@ -4,7 +4,7 @@ English | [Japanese](README.ja.md)
 
 An AI-DLC plugin that adds design procedures for aggregates, invariants, and Domain Primitives, plus checks for design artifacts and Rust code. The implementation lives in [ddd/](ddd/README.md).
 
-Work toward completion is ongoing. Claude/Codex sandbox verification passes, with normal approval checks, corrected Rust evaluation, and vocabulary-based domain packaging implemented. Framework standalone completion guards and actual model execution still have outstanding work. See the [assessment](ddd/docs/current-state-assessment.md) and [task list](ddd/docs/completion-tasks.md).
+Work toward completion is ongoing. Claude/Codex sandbox verification passes, with normal approval checks, corrected Rust evaluation, and vocabulary-based domain packaging implemented. Framework standalone completion guards and actual model execution still have outstanding work. See the [assessment](ddd/docs/developers/current-state-assessment.md) and [task list](ddd/docs/developers/completion-tasks.md).
 
 ## What it provides
 
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/current-check-verification.json) passes. Run the full suite with `bun run check`.
+The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/developers/evidence/current-check-verification.json) passes. Run the full suite with `bun run check`.
 
 ## Install into a destination project
 
@@ -33,11 +33,11 @@ Start with a dry-run against an AI-DLC-enabled test project:
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-Use `--harness claude` for Claude Code. Fresh-install/update CLI behavior is [verified](ddd/docs/installation-verification.md); actual model-driven stage execution remains unverified. See the [usage guide](docs/usage.md).
+Use `--harness claude` for Claude Code. Fresh-install/update CLI behavior is [verified](ddd/docs/developers/installation-verification.md); actual model-driven stage execution remains unverified. See the [usage guide](docs/usage.md).
 
 ## Documentation and development
 
-- [Document index](ddd/docs/README.md): design, decisions, compatibility.
+- [Document index](ddd/docs/README.md): user contracts and plugin developer documentation.
 - [Plugin structure and verification](ddd/README.md).
 - [Architecture overview](docs/architecture.md).
 - [Tests](ddd/tests/README.md).

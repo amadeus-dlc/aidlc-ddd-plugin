@@ -22,7 +22,7 @@ Derive the model in this order: stories → past-tense business events → comma
 | domain-design | Mapping to modules, types, ports, repositories, and persistence strategies |
 | functional-design | Per-Unit procedures, re-execution, recovery, and exposure |
 
-Completion requires (i) invariants for every aggregate, (ii) a state transition or an explicit no-transition declaration for each command, (iii) Domain Errors for each command, (iv) resolved reference IDs, (v) YAML/Markdown correspondence, and (vi) human semantic review. The loader implements (iii) as `schema.command-no-error`. Normal approval is connected; see the [artifact contract](artifact-contract.md) for standalone completion limits.
+Completion requires (i) invariants for every aggregate, (ii) a state transition or an explicit no-transition declaration for each command, (iii) Domain Errors for each command, (iv) resolved reference IDs, (v) YAML/Markdown correspondence, and (vi) human semantic review. The loader implements (iii) as `schema.command-no-error`. Normal approval is connected; see the [artifact contract](../users/artifact-contract.md) for standalone completion limits.
 
 ## 3. Canonical model
 
@@ -42,7 +42,7 @@ Requiring IDs needs stage instructions, registered artifacts, and reference sens
 
 Exactly one labelled YAML block in `ddd-domain-model-yaml.md` holds canonical data; `ddd-domain-model.md` is the human-facing explanation. Include every element ID and invariant statement in Markdown. Sensors check their literal presence; review assesses the meaning of the explanation as a whole.
 
-AI-DLC 2.8.2 resolves logical names `ddd-domain-model` and `ddd-domain-model-yaml` to `ddd-domain-model.md` and `ddd-domain-model-yaml.md`. Generation, references, and checks use these names consistently. Follow the [artifact contract](artifact-contract.md) to migrate older artifacts.
+AI-DLC 2.8.2 resolves logical names `ddd-domain-model` and `ddd-domain-model-yaml` to `ddd-domain-model.md` and `ddd-domain-model-yaml.md`. Generation, references, and checks use these names consistently. Follow the [artifact contract](../users/artifact-contract.md) to migrate older artifacts.
 
 `element_id` is immutable; `name` is a display name. Renaming does not change the ID. Record successors, replacements, and retirement in `lineage` for splits, merges, and deletions. Never reuse retired IDs.
 
@@ -94,7 +94,7 @@ Do not publish events externally before persistence succeeds. Declare how failur
 
 ### 7-5. Physical structure and dependencies
 
-Connect internal domain package names to ubiquitous language. Group by business concept and responsibility instead of technical classifications such as aggregate/, impl/, vo/, and entities/. domain-design declares terms, model references, and placement rationale; code generation checks the actual layout. See the [packaging contract](domain-packaging-design.md).
+Connect internal domain package names to ubiquitous language. Group by business concept and responsibility instead of technical classifications such as aggregate/, impl/, vo/, and entities/. domain-design declares terms, model references, and placement rationale; code generation checks the actual layout. See the [packaging contract](../users/domain-packaging-design.md).
 
 Separate layers using crates or equivalent boundaries. Allowed dependencies are `interface-adapter → use-case / domain / infrastructure`, `use-case → domain / infrastructure`, and `domain → infrastructure`. Infrastructure is for language extensions: it contains no DB/RPC clients and must not depend on other layers.
 
@@ -131,4 +131,4 @@ A second language, sensor-generation infrastructure, detailed schemas per persis
 
 ## 12. Unresolved implementation contracts
 
-Replay declarations are implemented as [replay_methods](rust-sensor-contract.md). Return types distinguishing success, duplicates, and rejection, and recovery declarations for mixed actor/class flows remain unresolved. Decide and verify them through [T-01–T-03](completion-tasks.md).
+Replay declarations are implemented as [replay_methods](../users/rust-sensor-contract.md). Return types distinguishing success, duplicates, and rejection, and recovery declarations for mixed actor/class flows remain unresolved. Decide and verify them through [T-01–T-03](completion-tasks.md).

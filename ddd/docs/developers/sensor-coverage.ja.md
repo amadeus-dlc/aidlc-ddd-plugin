@@ -2,7 +2,7 @@
 
 [English](sensor-coverage.md) | 日本語
 
-この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../tests/golden/contract/coverage.ts) と [ケース一覧](../tests/golden/catalog.ts)。手作業で件数を更新しない。
+この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
 対象は9センサー・70規則項目。68項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では277ケースを各環境で実行する。承認経路には、この表から選んだ138入力を各環境で通す。
 

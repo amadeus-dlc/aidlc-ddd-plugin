@@ -56,6 +56,6 @@ replay_methods:
 
 ## 回帰テスト
 
-[追加Rustケース](../tests/golden/rust/t2-cases.ts)は、VO・Domain Primitive、ポート、別ユースケース、別ファイルのimpl、traitの変更、別名・修飾型、getter名衝突、シャドーイング、明示replayと不正な例外を、実際のセンサースクリプトから検査する。
+[追加Rustケース](../../tests/golden/rust/t2-cases.ts)は、VO・Domain Primitive、ポート、別ユースケース、別ファイルのimpl、traitの変更、別名・修飾型、getter名衝突、シャドーイング、明示replayと不正な例外を、実際のセンサースクリプトから検査する。
 
-[設計ケース](../tests/golden/design/cases.ts)には、replay参照の正常・未知ID・壊れた書式を追加した。同じケースをソースとClaude/Codexの配布物の両方で実行する。
+[設計ケース](../../tests/golden/design/cases.ts)には、replay参照の正常・未知ID・壊れた書式を追加した。同じケースをソースとClaude/Codexの配布物の両方で実行する。

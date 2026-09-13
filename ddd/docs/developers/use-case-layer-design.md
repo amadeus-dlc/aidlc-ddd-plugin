@@ -6,7 +6,7 @@ Updated: 2026-09-13. Uses the failure and persistence contracts in [domain-layer
 
 ## 1. Delivery form
 
-Extend functional-design through a contribution with declarations, knowledge, and sensors. Embed declarations in a required section of the registered functional-spec review artifact. See the [artifact contract](artifact-contract.md).
+Extend functional-design through a contribution with declarations, knowledge, and sensors. Embed declarations in a required section of the registered functional-spec review artifact. See the [artifact contract](../users/artifact-contract.md).
 
 ## 2. Responsibilities
 
@@ -78,7 +78,7 @@ Requirements for mixed actor/class flows and missing mappings remain T-03 decisi
 
 ## 7. Checks and review
 
-g checks dependencies and external I/O, h aggregate arguments, i use-case chaining, d getters, and j model idempotency declarations. h/i use explicit types to distinguish aggregates from value objects and concrete use cases from ports. Syntax outside the [evaluation contract](rust-sensor-contract.md) is noted.
+g checks dependencies and external I/O, h aggregate arguments, i use-case chaining, d getters, and j model idempotency declarations. h/i use explicit types to distinguish aggregates from value objects and concrete use cases from ports. Syntax outside the [evaluation contract](../users/rust-sensor-contract.md) is noted.
 
 Review and behavior tests assess recovery from partial failure, retention, aggregate boundaries, and exposure. Declaration presence and behavioral safety are distinct.
 
@@ -95,7 +95,7 @@ Give each definition an identifier and name and declare the following:
 | `multi_aggregate_strategy` | Process Manager reference or re-execution strategy for multiple aggregates |
 | `read_model_exposure` | Views that expose intermediate states |
 
-Store these in `functional-spec.md` under `## DDD Use-case Declarations`. Existing Japanese section markers remain readable; see the [artifact contract](artifact-contract.md). Do not generate a separate declaration file. Normal approval detects missing documents and sections.
+Store these in `functional-spec.md` under `## DDD Use-case Declarations`. Existing Japanese section markers remain readable; see the [artifact contract](../users/artifact-contract.md). Do not generate a separate declaration file. Normal approval detects missing documents and sections.
 
 ## 9. Knowledge
 

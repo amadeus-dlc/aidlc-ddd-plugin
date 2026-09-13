@@ -2,7 +2,7 @@
 
 [English](README.md) | 日本語
 
-更新: 2026-09-13。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/sensor-coverage.ja.md)で管理します。通常実行では、標準側の単独完了ガードの再現1件と、ネットワークを使う導入2件をskipします。それぞれ明示的な実行オプションがあります。
+更新: 2026-09-13。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/developers/sensor-coverage.ja.md)で管理します。通常実行では、標準側の単独完了ガードの再現1件と、ネットワークを使う導入2件をskipします。それぞれ明示的な実行オプションがあります。
 
 ## 各テストの役割
 
@@ -36,9 +36,9 @@ bun scripts/verify-dist.ts claude codex
 
 承認開始時の欠落・不正・正常はt1-gate-integrationで検証済みです。VO・ポート・別ファイル・replayはT-02で回帰テストを追加しました。T-07は直接回帰55件と通常承認8件を追加しました。既存の正常ケースに対象構造が存在しない場合、その構造を正しく検査できる根拠にはしません。
 
-パッケージングの代表的な7配置はrustc 1.95.0でもコンパイルしました。全ゴールデン入力のコンパイルや業務動作の証明ではありません。新規導入・更新CLIは[検証済み](../docs/installation-verification.ja.md)です。実際のモデル実行とルール到達は引き続き確認が必要です。
+パッケージングの代表的な7配置はrustc 1.95.0でもコンパイルしました。全ゴールデン入力のコンパイルや業務動作の証明ではありません。新規導入・更新CLIは[検証済み](../docs/developers/installation-verification.ja.md)です。実際のモデル実行とルール到達は引き続き確認が必要です。
 
-[残作業](../docs/completion-tasks.ja.md)と[実測](../docs/current-state-assessment.ja.md)を参照してください。テスト結果の更新時は対象バージョンと範囲を添えます。
+[残作業](../docs/developers/completion-tasks.ja.md)と[実測](../docs/developers/current-state-assessment.ja.md)を参照してください。テスト結果の更新時は対象バージョンと範囲を添えます。
 
 ## 対応表の更新
 

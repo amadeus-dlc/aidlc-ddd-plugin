@@ -4,7 +4,7 @@
 
 調査日: 2026-09-13。対象は `ddd/` と、この作業コピーのAI-DLC 2.8.2。測定時のHEADは `97a6244`、Bunは `1.3.13`。
 
-**初回調査時点では中核は実装されていたが、承認時検査の接続とRustの判定精度に不具合が残っていた。** 本書は実測と根拠を保持する。現行の設計規約は[文書一覧](README.ja.md)、実装の進行は[残作業](completion-tasks.ja.md)を参照する。
+**初回調査時点では中核は実装されていたが、承認時検査の接続とRustの判定精度に不具合が残っていた。** 本書は実測と根拠を保持する。現行の設計規約は[文書一覧](../README.ja.md)、実装の進行は[残作業](completion-tasks.ja.md)を参照する。
 
 調査後に設計・案内・ナレッジを整理したが、この初回調査時点ではセンサーや生成手順のコードは修正していなかった。T-01・T-02・T-07の後続修正は末尾へ追記する。以下の実測値は文書整理前の値であり、修正後の再測定と混同しない。
 
@@ -12,13 +12,13 @@
 
 専用ステージ1本、contribution 4本、設計センサー6本、Rustセンサー3本、ナレッジ8本を持つ。手書きの正規モデルローダー、ID・系譜・参照解決、Cargoの層判定、tree-sitterのRust解析、配布・導入スクリプトも存在する。
 
-実体は[ステージ](../stages/inception/ddd-domain-modeling.md)、[追加手順](../contributions/)、[スキーマ](../tools/ddd/lib/schema/)、[解析](../tools/ddd/lib/rust/analyzer.ts)、[規則](../tools/ddd/lib/rules/rust/evaluators.ts)、[インストーラ](../scripts/install.ts)にある。
+実体は[ステージ](../../stages/inception/ddd-domain-modeling.md)、[追加手順](../../contributions)、[スキーマ](../../tools/ddd/lib/schema)、[解析](../../tools/ddd/lib/rust/analyzer.ts)、[規則](../../tools/ddd/lib/rules/rust/evaluators.ts)、[インストーラ](../../scripts/install.ts)にある。
 
 ## 2. 承認時検査には接続不良がある
 
 ### F-01: 正規モデルの論理名と実ファイル名が不一致
 
-一時コピーへCodex用プラグインをcomposeし、生成後のグラフと[artifactFilename](../../.codex/tools/aidlc-artifact-vocabulary.ts)の解決結果を確認した。
+一時コピーへCodex用プラグインをcomposeし、生成後のグラフと[artifactFilename](../../../.codex/tools/aidlc-artifact-vocabulary.ts)の解決結果を確認した。
 
 | 論理名・指定元 | 実際の解決名・要求名 |
 |---|---|
@@ -31,7 +31,7 @@
 
 ### F-02: ユースケース宣言と層構造宣言が未登録
 
-両contributionは文書生成を指示するが `produces` に登録しない。[existingDeclaredArtifactPaths / fireGateSensors](../../.codex/tools/aidlc-state.ts) は登録済みの既存ファイルだけを承認時検査へ渡す。未登録ファイルは単に置いても検査されず、`--artifacts` でも補えない。
+両contributionは文書生成を指示するが `produces` に登録しない。[existingDeclaredArtifactPaths / fireGateSensors](../../../.codex/tools/aidlc-state.ts) は登録済みの既存ファイルだけを承認時検査へ渡す。未登録ファイルは単に置いても検査されず、`--artifacts` でも補えない。
 
 | compose後のステージ | DDDセンサーに一致する登録済み成果物 |
 |---|---|
@@ -44,7 +44,7 @@
 
 ## 3. Rustの追加ケースで誤検知と見逃しを再現した
 
-既存の[ケース表](../tests/golden/rust/cases.ts)を複製し、[ランナー](../tests/golden/runner.ts)で一時ディレクトリから実センサースクリプトを呼んだ。
+既存の[ケース表](../../tests/golden/rust/cases.ts)を複製し、[ランナー](../../tests/golden/runner.ts)で一時ディレクトリから実センサースクリプトを呼んだ。
 
 | ID | 入力 | 実測 | 原因 |
 |---|---|---|---|
@@ -53,7 +53,7 @@
 | F-05 | Invoiceのstructと未宣言set_amountのimplを別ファイルに分け、両方を申告 | 所見なし | 同一ファイル内のstructとimplしか結び付けない |
 | F-06 | 未宣言の任意代入をapplyと命名する | 所見なし | 名前だけでreplay例外と判定 |
 
-F-03/F-04は[evaluators.ts](../tools/ddd/lib/rules/rust/evaluators.ts)のruleH/ruleI、F-05/F-06は[symbols.ts](../tools/ddd/lib/rules/rust/symbols.ts)の収集処理とclassifyMutatorが根拠。T-02で回帰テストにする。
+F-03/F-04は[evaluators.ts](../../tools/ddd/lib/rules/rust/evaluators.ts)のruleH/ruleI、F-05/F-06は[symbols.ts](../../tools/ddd/lib/rules/rust/symbols.ts)の収集処理とclassifyMutatorが根拠。T-02で回帰テストにする。
 
 再現時は、F-03にviolation-hを使い、ドメイン型を `pub struct Amount { value: i64 }`、引数をAmountに変更した。F-04はviolation-iにPaymentPort traitとexecuteを置いた。F-05はclean-domainへ `mod operations;` と別ファイルの代入メソッドを追加し、source-manifestにも追記した。F-06はclean-domainに任意代入のapplyを定義した。
 
@@ -73,7 +73,7 @@ Fable5.1の旧completion-tasks.mdには、次の問題があった。現在の[�
 
 | 旧記述・提案 | 確認結果 |
 |---|---|
-| Domain Error必須が未実装 | [loader.ts](../tools/ddd/lib/schema/loader.ts)が空配列をschema.command-no-errorで拒否。[専用テスト](../tests/u1-sensor-foundation.test.ts)も成功 |
+| Domain Error必須が未実装 | [loader.ts](../../tools/ddd/lib/schema/loader.ts)が空配列をschema.command-no-errorで拒否。[専用テスト](../../tests/u1-sensor-foundation.test.ts)も成功 |
 | インストーラ表にcopilot/cursor/kiroがない | 実装済み。対象表の重複と廃止対象の残存は別の問題 |
 | 互換性テストをファイルごと削除 | 同じファイルの現行Claude/Codex composeテストは維持する必要がある |
 | audit方針を改めて選ぶ | 現行AGENTS.mdと.gitignoreはコミット方針 |
@@ -97,7 +97,7 @@ kimi・opencodeは調査後のユーザー判断で対応対象から外れた�
 
 ## 7. T-01修正後の追記
 
-正規モデルの登録名へファイル名を揃え、追加宣言を既存レビュー成果物の必須セクションに移した。F-01/F-02の通常承認への接続は修正済み。詳細は[成果物契約](artifact-contract.ja.md)に記載した。
+正規モデルの登録名へファイル名を揃え、追加宣言を既存レビュー成果物の必須セクションに移した。F-01/F-02の通常承認への接続は修正済み。詳細は[成果物契約](../users/artifact-contract.ja.md)に記載した。
 
 - Claude/Codexの承認開始処理とUnit適用範囲: 新規統合テスト32件成功。
 - 新しいモデル形式の直接検査: 6件成功。
@@ -108,7 +108,7 @@ kimi・opencodeは調査後のユーザー判断で対応対象から外れた�
 
 ## 8. T-02修正後の追記
 
-F-03〜F-06を修正し、型別名、修飾型、フィールド経由の呼出し、trait実装、getter名衝突、シャドーイング、replay宣言の不正ケースも追加した。判定条件と未検査範囲は[Rustセンサー契約](rust-sensor-contract.ja.md)に記載した。
+F-03〜F-06を修正し、型別名、修飾型、フィールド経由の呼出し、trait実装、getter名衝突、シャドーイング、replay宣言の不正ケースも追加した。判定条件と未検査範囲は[Rustセンサー契約](../users/rust-sensor-contract.ja.md)に記載した。
 
 - 新規回帰ケース37件成功（Rust34件、設計宣言3件）。
 - 全体は216成功・1skip・既存の旧環境依存20件失敗。Biome・プラグイン構造検証は成功。
@@ -119,7 +119,7 @@ F-03〜F-06を修正し、型別名、修飾型、フィールド経由の呼出
 
 ## 9. T-07修正後の追記
 
-パッケージ名とユビキタス言語の対応をdomain_packagesへ宣言し、ナレッジ・ステージ手順・既存センサーで扱う。技術分類の予約名、宣言の欠落・重複・参照切れ、実モジュールの宣言漏れ、解析不能を検査する。詳細は [パッケージング契約](domain-packaging-design.ja.md)を参照。
+パッケージ名とユビキタス言語の対応をdomain_packagesへ宣言し、ナレッジ・ステージ手順・既存センサーで扱う。技術分類の予約名、宣言の欠落・重複・参照切れ、実モジュールの宣言漏れ、解析不能を検査する。詳細は [パッケージング契約](../users/domain-packaging-design.ja.md)を参照。
 
 - 新規直接回帰55件と、Claude/Codexの通常承認開始8件が成功。
 - `bun run check`: 279成功・1skip・20失敗。失敗は既知の旧bridge・削除済みfixture依存の20件で、新規失敗なし。Biome・プラグイン構造検証は成功。

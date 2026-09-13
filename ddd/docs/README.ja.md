@@ -1,30 +1,18 @@
-# DDDプラグインの文書
+# DDDプラグインの文書一覧
 
 [English](README.md) | 日本語
 
-更新: 2026-09-13。設計規約、実装の実測、残作業を分けて管理する。
+目的に合わせて、次の入口から進んでください。
 
-| 読みたい内容 | 文書 |
-|---|---|
-| 何を提供し、どう検証するか | [プラグインREADME](../README.ja.md) |
-| 業務語彙によるドメインのパッケージング | [パッケージング契約](domain-packaging-design.ja.md) |
-| センサーごとの正常・異常・境界ケース | [検査契約の対応表](sensor-coverage.ja.md) |
-| Rustの型照合・replay・未検査範囲 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
-| 成果物名・宣言形式・単独完了の制約 | [成果物契約](artifact-contract.ja.md) |
-| 完成までに何を直すか | [残作業と完了条件](completion-tasks.ja.md) |
-| どこまで確認したか | [2026-09-13の現状評価](current-state-assessment.ja.md) |
-| ドメイン層の規約と境界契約 | [ドメイン層設計](domain-layer-design.ja.md) |
-| 再実行・整合性・回復 | [ユースケース層設計](use-case-layer-design.ja.md) |
-| CQRS・永続化・RMU | [インターフェイスアダプタ層設計](interface-adapter-layer-design.ja.md) |
-| 方針と過去の判断の扱い | [判断記録](decisions.ja.md) |
-| AI-DLCとの互換性と未検証事項 | [互換性](framework-compatibility.ja.md) |
-| 旧Codex実機検証の来歴 | [過去の検証記録](codex-host-verification.ja.md) |
-| 新規導入・更新・失敗時の状態 | [導入・更新の検証](installation-verification.ja.md) |
+| 読者 | 入口 | 内容 |
+|---|---|---|
+| アプリケーション開発にプラグインを使う利用者 | [利用者向け文書](users/README.ja.md) | 導入ガイド、成果物の宣言、ドメインのパッケージング、センサーの判定と限界 |
+| このプラグインを修正・検証する開発者 | [開発者向け文書](developers/README.ja.md) | プラグインの設計、判断記録、互換性、テスト、検証記録、残作業 |
 
-## 文書の読み分け
+機能の概要は[プラグインREADME](../README.ja.md)を参照してください。
 
-設計3文書は、生成するアプリケーションとプラグインが目指す規約を定義する。コードがその規約を満たすかは、実装と実測で判断する。規約の存在を検査完了と読み替えない。
+## 文書の配置規約
 
-現状評価は調査時点の証拠を保持し、修正後に過去の失敗を成功へ書き換えない。残作業表は現在の進行を管理する。新たな検証結果は日時と対象を添えて更新する。
+各文書は、内容を揃えた英語版 `.md` と日本語版 `.ja.md` を用意します。利用者が従う契約は `users/`、プラグインの設計と検証記録は `developers/` に置きます。機械可読な検証記録は `developers/evidence/` に保存します。
 
-knowledge、sensors、stages、contributionsは英語のみとする。それ以外のプラグイン文書・利用ガイドは英語の `.md` と日本語の `.ja.md` に同じ内容の本文を用意する。`aidlc/` の記録は日本語を維持する。
+knowledge・sensors・stages・contributionsは、英語の実行時指示として管理します。`aidlc/` の記録は日本語のまま維持します。

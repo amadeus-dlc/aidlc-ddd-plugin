@@ -4,7 +4,7 @@
 
 AI-DLCに、集約・不変条件・Domain Primitiveの設計手順と、設計成果物・Rustコードの検査を追加するプラグインです。本体は [ddd/](ddd/README.ja.md) にあります。
 
-現在は完成に向けた修正中です。Claude/Codexのサンドボックス検証が成功し、通常承認のDDD検査、Rust判定の修正、業務語彙によるパッケージング検査を実装しました。単独完了の標準側ガードとモデル実行の確認には残件があります。[現状評価](ddd/docs/current-state-assessment.ja.md)と[残作業](ddd/docs/completion-tasks.ja.md)を参照してください。
+現在は完成に向けた修正中です。Claude/Codexのサンドボックス検証が成功し、通常承認のDDD検査、Rust判定の修正、業務語彙によるパッケージング検査を実装しました。単独完了の標準側ガードとモデル実行の確認には残件があります。[現状評価](ddd/docs/developers/current-state-assessment.ja.md)と[残作業](ddd/docs/developers/completion-tasks.ja.md)を参照してください。
 
 ## 提供するもの
 
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/current-check-verification.json)は成功です。全体の検査は `bun run check` で実行します。
+サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/developers/evidence/current-check-verification.json)は成功です。全体の検査は `bun run check` で実行します。
 
 ## 利用先への導入
 
@@ -33,11 +33,11 @@ AI-DLC導入済みの検証用プロジェクトで、まず導入スクリプ�
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-Claude Codeでは `--harness claude` を指定します。新規導入・更新CLIは[検証済み](ddd/docs/installation-verification.ja.md)です。モデルによるステージ実行は未確認です。[利用ガイド](docs/usage.ja.md)を確認してください。
+Claude Codeでは `--harness claude` を指定します。新規導入・更新CLIは[検証済み](ddd/docs/developers/installation-verification.ja.md)です。モデルによるステージ実行は未確認です。[利用ガイド](docs/usage.ja.md)を確認してください。
 
 ## 文書と開発
 
-- [文書一覧](ddd/docs/README.ja.md): 設計、判断記録、互換性
+- [文書一覧](ddd/docs/README.ja.md): 利用者向けの契約とプラグイン開発者向けの文書
 - [プラグイン構成と検証](ddd/README.ja.md)
 - [構成概要](docs/architecture.ja.md)
 - [テストの実行方法](ddd/tests/README.ja.md)

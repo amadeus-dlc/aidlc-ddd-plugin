@@ -4,7 +4,7 @@ English | [Japanese](current-state-assessment.ja.md)
 
 Assessment date: 2026-09-13. Scope: `ddd/` and AI-DLC 2.8.2 in this working copy. Measured HEAD: `97a6244`; Bun: `1.3.13`.
 
-**At the initial assessment, the core existed but approval integration and Rust evaluation had defects.** This document preserves measurements and evidence. See the [document index](README.md) for current conventions and [remaining work](completion-tasks.md) for progress.
+**At the initial assessment, the core existed but approval integration and Rust evaluation had defects.** This document preserves measurements and evidence. See the [document index](../README.md) for current conventions and [remaining work](completion-tasks.md) for progress.
 
 Design, guidance, and knowledge were cleaned up after the assessment. Sensor and generation code had not yet changed at that initial point. Later T-01, T-02, and T-07 results are appended below. Do not confuse baseline measurements with post-fix results.
 
@@ -12,13 +12,13 @@ Design, guidance, and knowledge were cleaned up after the assessment. Sensor and
 
 At the baseline, there were one dedicated stage, four contributions, six design sensors, three Rust sensors, and eight knowledge files. A hand-written model loader, ID/lineage/reference resolution, Cargo layer classification, tree-sitter Rust analysis, and distribution/installation scripts existed.
 
-See the [stage](../stages/inception/ddd-domain-modeling.md), [contributions](../contributions/), [schema](../tools/ddd/lib/schema/), [analyzer](../tools/ddd/lib/rust/analyzer.ts), [rules](../tools/ddd/lib/rules/rust/evaluators.ts), and [installer](../scripts/install.ts).
+See the [stage](../../stages/inception/ddd-domain-modeling.md), [contributions](../../contributions), [schema](../../tools/ddd/lib/schema), [analyzer](../../tools/ddd/lib/rust/analyzer.ts), [rules](../../tools/ddd/lib/rules/rust/evaluators.ts), and [installer](../../scripts/install.ts).
 
 ## 2. Approval integration defects
 
 ### F-01: Canonical model logical and physical names disagree
 
-Composed the Codex plugin into a disposable copy and compared the generated graph with [artifactFilename](../../.codex/tools/aidlc-artifact-vocabulary.ts).
+Composed the Codex plugin into a disposable copy and compared the generated graph with [artifactFilename](../../../.codex/tools/aidlc-artifact-vocabulary.ts).
 
 | Logical name or caller | Resolved or requested filename |
 |---|---|
@@ -31,7 +31,7 @@ Following the prose failed the completion existence check; following resolved na
 
 ### F-02: Use-case and layer declarations are unregistered
 
-Both contributions instructed generation without registering produces. [existingDeclaredArtifactPaths / fireGateSensors](../../.codex/tools/aidlc-state.ts) passes only existing registered artifacts into approval checks. Merely placing unregistered files does not inspect them, and `--artifacts` does not compensate.
+Both contributions instructed generation without registering produces. [existingDeclaredArtifactPaths / fireGateSensors](../../../.codex/tools/aidlc-state.ts) passes only existing registered artifacts into approval checks. Merely placing unregistered files does not inspect them, and `--artifacts` does not compensate.
 
 | Composed stage | Registered artifacts matching DDD sensors |
 |---|---|
@@ -44,7 +44,7 @@ This compared composed data and approval code, not a complete approval run. T-01
 
 ## 3. Additional Rust inputs reproduced false positives and misses
 
-Duplicated existing [case inputs](../tests/golden/rust/cases.ts) and used the [runner](../tests/golden/runner.ts) to execute real sensor scripts in temporary directories.
+Duplicated existing [case inputs](../../tests/golden/rust/cases.ts) and used the [runner](../../tests/golden/runner.ts) to execute real sensor scripts in temporary directories.
 
 | ID | Input | Observation | Cause |
 |---|---|---|---|
@@ -53,7 +53,7 @@ Duplicated existing [case inputs](../tests/golden/rust/cases.ts) and used the [r
 | F-05 | Invoice struct and undeclared set_amount impl in separate claimed files | No finding | Only structs and impls in the same file were joined. |
 | F-06 | Arbitrary undeclared assignment named apply | No finding | Replay exemption depended only on the method name. |
 
-F-03/F-04 came from ruleH/ruleI in [evaluators.ts](../tools/ddd/lib/rules/rust/evaluators.ts); F-05/F-06 from collection and classifyMutator in [symbols.ts](../tools/ddd/lib/rules/rust/symbols.ts). T-02 was assigned their regressions.
+F-03/F-04 came from ruleH/ruleI in [evaluators.ts](../../tools/ddd/lib/rules/rust/evaluators.ts); F-05/F-06 from collection and classifyMutator in [symbols.ts](../../tools/ddd/lib/rules/rust/symbols.ts). T-02 was assigned their regressions.
 
 For F-03, violation-h was changed to `pub struct Amount { value: i64 }` and an Amount argument. F-04 added PaymentPort and execute to violation-i. F-05 added `mod operations;`, a separate assignment method, and its source-manifest claim to clean-domain. F-06 added an apply method with arbitrary assignment to clean-domain.
 
@@ -73,7 +73,7 @@ Fable5.1's old completion-tasks.md had the following issues; the [current list](
 
 | Earlier claim or proposal | Finding |
 |---|---|
-| Domain Error requirement is unimplemented. | [loader.ts](../tools/ddd/lib/schema/loader.ts) rejects an empty list with schema.command-no-error; [dedicated tests](../tests/u1-sensor-foundation.test.ts) pass. |
+| Domain Error requirement is unimplemented. | [loader.ts](../../tools/ddd/lib/schema/loader.ts) rejects an empty list with schema.command-no-error; [dedicated tests](../../tests/u1-sensor-foundation.test.ts) pass. |
 | Installer lacks copilot/cursor/kiro. | Already implemented. Duplicate tables and obsolete targets are separate problems. |
 | Delete the entire compatibility test file. | Its current Claude/Codex compose tests must remain. |
 | Ask again whether audit data should be committed. | Current AGENTS.md and .gitignore already require commits. |
@@ -97,7 +97,7 @@ Kimi/opencode were excluded by the user's subsequent decision. Remove unnecessar
 
 ## 7. Results after T-01
 
-Aligned canonical model filenames with registered names and moved added declarations into required sections of existing review artifacts. F-01/F-02 normal approval integration is fixed; see the [artifact contract](artifact-contract.md).
+Aligned canonical model filenames with registered names and moved added declarations into required sections of existing review artifacts. F-01/F-02 normal approval integration is fixed; see the [artifact contract](../users/artifact-contract.md).
 
 - Claude/Codex approval admission and Unit applicability: 32 new integration cases passed.
 - New model format: six direct checks passed.
@@ -108,7 +108,7 @@ These measurements establish normal approval integration, not complete model exe
 
 ## 8. Results after T-02
 
-Fixed F-03–F-06 and added aliases, qualified types, field receivers, trait impls, getter collisions, shadowing, and invalid replay declarations. See the [Rust contract](rust-sensor-contract.md).
+Fixed F-03–F-06 and added aliases, qualified types, field receivers, trait impls, getter collisions, shadowing, and invalid replay declarations. See the [Rust contract](../users/rust-sensor-contract.md).
 
 - 37 new regressions passed: 34 Rust and three design-declaration cases.
 - Overall: 216 passed, one skipped, 20 existing old-dependency failures. Biome and plugin validation passed.
@@ -119,7 +119,7 @@ Type inference and trait selection remain outside guarantees; direct JSON record
 
 ## 9. Results after T-07
 
-Declared package-to-vocabulary correspondence in domain_packages and integrated it with knowledge, stage instructions, and existing sensors. Checks cover reserved technical names, missing/duplicate declarations, broken references, undeclared actual modules, and unresolved analysis. See the [packaging contract](domain-packaging-design.md).
+Declared package-to-vocabulary correspondence in domain_packages and integrated it with knowledge, stage instructions, and existing sensors. Checks cover reserved technical names, missing/duplicate declarations, broken references, undeclared actual modules, and unresolved analysis. See the [packaging contract](../users/domain-packaging-design.md).
 
 - 55 new direct regressions and eight Claude/Codex approval cases passed.
 - `bun run check`: 279 passed, one skipped, 20 known old-bridge/deleted-fixture failures; no new failures. Biome and plugin validation passed.

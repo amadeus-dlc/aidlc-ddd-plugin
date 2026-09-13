@@ -14,7 +14,7 @@ Development checks use the current standard toolchain.
 
 ## Separate verified and unverified behavior
 
-The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. Standard standalone completion still skips general artifacts and sensors and can finish without artifacts. See the [artifact contract](artifact-contract.md) for reproduction and limits.
+The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. Standard standalone completion still skips general artifacts and sensors and can finish without artifacts. See the [artifact contract](../users/artifact-contract.md) for reproduction and limits.
 
 Codex rule delivery depends on integration between standard AI-DLC and the execution host. T-05 verifies the current route from the DDD side. Old bridge success records are not a substitute.
 

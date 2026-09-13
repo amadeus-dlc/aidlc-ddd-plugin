@@ -2,7 +2,7 @@
 
 English | [Japanese](decisions.ja.md)
 
-Updated: 2026-09-13. Record current policy and its rationale. The [document index](README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
+Updated: 2026-09-13. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
 
 ## Current policy
 
@@ -35,14 +35,14 @@ Choose saga implementation, storage, and delivery-order guarantees from the actu
 
 ## T-01 artifact integration
 
-Wrap canonical YAML in Markdown using standard artifact names. Embed use-case and layer declarations in required sections of existing review artifacts without broadening their Unit kinds. Normal approval integration is verified; standard standalone completion can still finish without artifacts. See the [artifact contract](artifact-contract.md).
+Wrap canonical YAML in Markdown using standard artifact names. Embed use-case and layer declarations in required sections of existing review artifacts without broadening their Unit kinds. Normal approval integration is verified; standard standalone completion can still finish without artifacts. See the [artifact contract](../users/artifact-contract.md).
 
 ## T-02 Rust evaluation
 
 Associate canonical root_element with explicit Rust types instead of treating every domain type as an aggregate. Resolve callees through modules, use statements, simple aliases, explicit parameters, and fields. Do not perform type inference or trait implementation selection; note ambiguity.
 
-Record method/event IDs in aggregate mapping replay_methods. Rule b permits the exception only when persistence mode, placement, owning aggregate, and event parameter type agree. Keep the model schema unchanged; review and test body semantics. See the [evaluation contract](rust-sensor-contract.md).
+Record method/event IDs in aggregate mapping replay_methods. Rule b permits the exception only when persistence mode, placement, owning aggregate, and event parameter type agree. Keep the model schema unchanged; review and test body semantics. See the [evaluation contract](../users/rust-sensor-contract.md).
 
 ## 2026-09-13: Packaging by business vocabulary
 
-T-07 implements shared knowledge, existing-stage instructions, and design/Rust checks together. domain-design owns physical placement in domain_packages; it does not enter the canonical model. Automated checks cover reserved technical names and declaration/layout correspondence; review assesses naming and responsibilities. Future packages may be declared early, but actual undeclared modules are rejected. See the [contract and scope](domain-packaging-design.md).
+T-07 implements shared knowledge, existing-stage instructions, and design/Rust checks together. domain-design owns physical placement in domain_packages; it does not enter the canonical model. Automated checks cover reserved technical names and declaration/layout correspondence; review assesses naming and responsibilities. Future packages may be declared early, but actual undeclared modules are rejected. See the [contract and scope](../users/domain-packaging-design.md).
