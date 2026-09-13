@@ -1,0 +1,100 @@
+{
+  "verified_at": "2026-09-13T01:22:46.774510+00:00",
+  "scope": "T-08 project-wide Rust module layout policy and existing plugin regression checks",
+  "base_commit": "7ab5af0154a36cb0743a9dc4596aa55f5725825b",
+  "toolchain": {
+    "bun": "1.3.13",
+    "aidlc": "2.8.2",
+    "rustc": "1.95.0"
+  },
+  "runtime_content": {
+    "sha256": "849568a9408f1c2070aba6724772ce39bb761381631f29cfb0b6b390af413f78",
+    "algorithm": "SHA-256 of sorted paths and file bytes, each NUL-delimited, under tools, sensors, contributions, knowledge (directory order as listed)"
+  },
+  "checks": [
+    {
+      "command": "cd ddd && bun run check",
+      "result": "passed",
+      "passed": 865,
+      "skipped": 3,
+      "failed": 0,
+      "test_files": 16
+    },
+    {
+      "command": "cd ddd && bun test tests/t10-rust-module-layout.test.ts",
+      "result": "passed",
+      "passed": 109,
+      "failed": 0
+    },
+    {
+      "command": "cd ddd && bun test tests/t1-gate-integration.test.ts -t 'ddd-rust-module-layout'",
+      "result": "passed",
+      "passed": 30,
+      "harnesses": [
+        "claude",
+        "codex"
+      ],
+      "stages": [
+        "code-generation",
+        "build-and-test",
+        "ci-pipeline"
+      ]
+    },
+    {
+      "command": "cd ddd && bun run build:all && bun run test:dist",
+      "result": "passed",
+      "cases_per_harness": 327,
+      "harnesses": [
+        "claude",
+        "codex"
+      ],
+      "failed": 0
+    },
+    {
+      "command": "bun dist/<harness>/tools/ddd-check-rust-module-layout.ts --project <disposable-project>",
+      "result": "passed",
+      "scenarios": 4,
+      "harnesses": [
+        "claude",
+        "codex"
+      ],
+      "assertions": [
+        "file-mode compliant parent returns exit 0",
+        "same parent in mod-rs mode returns exit 1"
+      ]
+    },
+    {
+      "command": "rustc --edition <edition> --crate-type lib --emit metadata --out-dir <temporary-dir> <lib.rs>",
+      "result": "passed",
+      "scenarios": 8,
+      "layouts": [
+        "file",
+        "mod-rs"
+      ],
+      "editions": [
+        "2015",
+        "2018",
+        "2021",
+        "2024"
+      ]
+    }
+  ],
+  "coverage": {
+    "sensors": 10,
+    "rule_entries": 73,
+    "preempted_entries": 2,
+    "module_layout_fixtures": 50,
+    "admission_inputs_per_harness": 153
+  },
+  "skips": [
+    "Optional standard-framework standalone-completion reproduction",
+    "Opt-in real GitHub main installation for Claude",
+    "Opt-in real GitHub main installation for Codex"
+  ],
+  "limits": [
+    "Static declared module structure; no macro expansion or conditional compilation evaluation. Unsupported structure blocks inspection.",
+    "Standalone completion in standard AI-DLC 2.8.2 still needs an explicit direct check.",
+    "CI contributions and the runnable check are provided; no external application CI service was configured in this verification.",
+    "Actual model-driven stage execution remains outside this verification."
+  ]
+}

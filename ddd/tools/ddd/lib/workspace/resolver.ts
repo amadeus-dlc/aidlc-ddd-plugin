@@ -186,13 +186,16 @@ function detectAutoTargets(crateDir: string, pkg: Record<string, unknown>): Carg
     for (const entry of readdirSync(full, { withFileTypes: true })) {
       if (entry.isFile() && entry.name.endsWith(".rs")) {
         targets.push({ kind, name: entry.name.replace(/\.rs$/, ""), src_path: `${dir}/${entry.name}` });
+      } else if (entry.isDirectory() && existsSync(join(full, entry.name, "main.rs"))) {
+        targets.push({ kind, name: entry.name, src_path: `${dir}/${entry.name}/main.rs` });
       }
     }
   };
   autoDir("tests", "test", "autotests");
   autoDir("examples", "example", "autoexamples");
   autoDir("benches", "bench", "autobenches");
-  if (has("build.rs")) targets.push({ kind: "build-script", name: "build-script", src_path: "build.rs" });
+  if (pkg.build !== false && has("build.rs"))
+    targets.push({ kind: "build-script", name: "build-script", src_path: "build.rs" });
   return targets;
 }
 
@@ -299,6 +302,7 @@ export function scanWorkspace(rootPath: string): CargoWorkspace {
       }
     }
     memberDirs.push(...[...resolved].sort());
+    if (rootPkg) memberDirs.push(".");
     if (memberDirs.length === 0) {
       diagnostics.push(blocking("workspace.no-members", "Cargo.toml", "no workspace members resolved"));
     }
@@ -318,7 +322,16 @@ export function scanWorkspace(rootPath: string): CargoWorkspace {
     const pkg = asRecord(raw.package) ?? {};
     const name = asString(pkg.name) ?? basename(crateDir);
     const rootForTargets = rel === "." ? rootToml : raw;
-    const targets = dedupeTargets([...explicitTargets(pkg, rootForTargets), ...detectAutoTargets(crateDir, pkg)]);
+    const explicit = explicitTargets(pkg, rootForTargets);
+    const automatic = detectAutoTargets(crateDir, pkg).filter(
+      (target) =>
+        !explicit.some(
+          (entry) =>
+            entry.kind === target.kind &&
+            (target.kind === "lib" || entry.name === target.name || entry.src_path === target.src_path),
+        ),
+    );
+    const targets = dedupeTargets([...explicit, ...automatic]);
     const manifest: CrateManifest = { name, path: rel, targets, internal_dependencies: [] };
     manifests.push(manifest);
     memberDirToName.set(crateDir, name);

@@ -16,6 +16,18 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 Remove `--dry-run` to install. Fresh installation, updates, and failure protection are [automatically verified](../ddd/docs/developers/installation-verification.md). Actual model-driven stage execution remains T-05 work.
 
+## Select the Rust module layout
+
+Before generating Rust, choose one project-wide layout in `.ddd.toml`:
+
+```toml
+schema_version = 1
+[rust]
+module_layout = "file"
+```
+
+The alternative is `mod-rs`; mixed layouts and missing settings block approval. See the [layout contract](../ddd/docs/users/rust-module-layout.md) for both modes, migration, and the required CI command.
+
 ## Workflow responsibilities
 
 Compose registers the dedicated stage, contributions, sensors, and knowledge. The destination's composed plan and stage conditions determine execution.

@@ -1,6 +1,5 @@
 /** Explicit Rust declarations and bindings; no inference, macro expansion or trait solving. */
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { readFileSync } from "node:fs";
 import { inspectModules, type ModuleInventory } from "../../packaging/rust-modules.ts";
 import {
   type AnalyzerRuntime,
@@ -69,16 +68,6 @@ export function within(inner: Span, outer: Span): boolean {
   );
 }
 
-function rustFiles(directory: string): string[] {
-  if (!statSync(directory, { throwIfNoEntry: false })?.isDirectory()) return [];
-  return readdirSync(directory, { withFileTypes: true })
-    .flatMap((entry) => {
-      const path = join(directory, entry.name);
-      return entry.isDirectory() ? rustFiles(path) : entry.isFile() && path.endsWith(".rs") ? [path] : [];
-    })
-    .sort();
-}
-
 function importNames(text: string, prefix = ""): { name: string; target: string }[] {
   const start = text.indexOf("{");
   if (start !== -1) {
@@ -124,100 +113,82 @@ export function buildProgram(
   for (const assignment of assignments) {
     if (!["domain", "use-case", "interface-adapter", "rmu"].includes(assignment.layer)) continue;
     const crate = assignment.crate_name.replace(/-/g, "_");
-    const inventory = assignment.layer === "domain" ? inspectModules(runtime, root, assignment) : undefined;
-    if (inventory) moduleInventories.set(assignment.crate_name, inventory);
-    for (const target of assignment.targets) {
-      if (target.kind !== "lib" && target.kind !== "bin") continue;
-      const source = join(root, assignment.path, target.src_path);
-      const directory = dirname(source);
-      const sources =
-        inventory?.sources ??
-        rustFiles(directory).map((path) => ({
-          path,
-          file: relative(root, path).split(sep).join("/"),
-          parts: [] as string[],
-        }));
-      for (const entry of sources) {
-        const { path, file } = entry;
-        if (files.has(file)) continue;
-        let module: string[];
-        if (inventory) {
-          const namespaces = new Set(
-            sources.filter((candidate) => candidate.file === file).map((candidate) => candidate.parts.join("::")),
-          );
-          if (namespaces.size > 1) {
-            notes.add(`syntax.unresolved: ${file} is used in multiple module namespaces`);
-            continue;
-          }
-          module = entry.parts;
-        } else {
-          module = relative(directory, path).split(sep);
-          const leaf = module.pop() ?? "";
-          if (path !== source && !["mod.rs", "lib.rs", "main.rs"].includes(basename(path)))
-            module.push(leaf.slice(0, -3));
-        }
-        const tree = parse(runtime, file, readFileSync(path));
-        const imports = uses(tree);
-        files.set(file, {
-          tree,
+    const inventory = inspectModules(runtime, root, assignment);
+    moduleInventories.set(assignment.crate_name, inventory);
+    for (const issue of inventory.problems) notes.add(`syntax.unresolved: ${issue.file}:${issue.line} ${issue.reason}`);
+    const sources = inventory.sources;
+    for (const entry of sources) {
+      const { path, file } = entry;
+      if (files.has(file)) continue;
+      const namespaces = new Set(
+        sources.filter((candidate) => candidate.file === file).map((candidate) => candidate.parts.join("::")),
+      );
+      if (namespaces.size > 1) {
+        notes.add(`syntax.unresolved: ${file} is used in multiple module namespaces`);
+        continue;
+      }
+      const module = entry.parts;
+      const tree = parse(runtime, file, readFileSync(path));
+      const imports = uses(tree);
+      files.set(file, {
+        tree,
+        crate,
+        module,
+        impls: impls(tree),
+        localImports: imports.some((entry) => entry.local),
+      });
+      if (tree.has_parse_error) notes.add(`syntax.unresolved: ${file} has parse errors`);
+      for (const decl of structs(tree)) {
+        const scope = [...module, ...decl.module_path];
+        types.push({
+          key: [crate, ...scope, decl.name].join("::"),
+          name: decl.name,
           crate,
-          module,
-          impls: impls(tree),
-          localImports: imports.some((entry) => entry.local),
+          layer: assignment.layer,
+          file,
+          module: scope,
+          kind: decl.kind,
+          fields: decl.fields,
+          derives: decl.derives,
+          methods: [],
         });
-        if (tree.has_parse_error) notes.add(`syntax.unresolved: ${file} has parse errors`);
-        for (const decl of structs(tree)) {
-          const scope = [...module, ...decl.module_path];
-          types.push({
-            key: [crate, ...scope, decl.name].join("::"),
-            name: decl.name,
-            crate,
-            layer: assignment.layer,
-            file,
-            module: scope,
-            kind: decl.kind,
-            fields: decl.fields,
-            derives: decl.derives,
-            methods: [],
-          });
-        }
-        for (const decl of traits(tree)) {
-          const scope = [...module, ...decl.module_path];
-          types.push({
-            key: [crate, ...scope, decl.name].join("::"),
-            name: decl.name,
-            crate,
-            layer: assignment.layer,
-            file,
-            module: scope,
-            kind: "trait",
-            fields: [],
-            derives: [],
-            methods: [],
-          });
-        }
-        for (const entry of imports.filter((item) => !item.local)) {
-          const scope = [...module, ...entry.module_path];
-          for (const binding of importNames(entry.path_text)) {
-            aliases.push({
-              key: [crate, ...scope, binding.name].join("::"),
-              file,
-              module: scope,
-              target: binding.target,
-              generic: false,
-            });
-          }
-        }
-        for (const entry of typeAliases(tree)) {
-          const scope = [...module, ...entry.module_path];
+      }
+      for (const decl of traits(tree)) {
+        const scope = [...module, ...decl.module_path];
+        types.push({
+          key: [crate, ...scope, decl.name].join("::"),
+          name: decl.name,
+          crate,
+          layer: assignment.layer,
+          file,
+          module: scope,
+          kind: "trait",
+          fields: [],
+          derives: [],
+          methods: [],
+        });
+      }
+      for (const entry of imports.filter((item) => !item.local)) {
+        const scope = [...module, ...entry.module_path];
+        for (const binding of importNames(entry.path_text)) {
           aliases.push({
-            key: [crate, ...scope, entry.name].join("::"),
+            key: [crate, ...scope, binding.name].join("::"),
             file,
             module: scope,
-            target: entry.type_text,
-            generic: entry.generic,
+            target: binding.target,
+            generic: false,
           });
         }
+      }
+      for (const entry of typeAliases(tree)) {
+        const scope = [...module, ...entry.module_path];
+        aliases.push({
+          key: [crate, ...scope, entry.name].join("::"),
+          file,
+          module: scope,
+          target: entry.type_text,
+          generic: entry.generic,
+        });
       }
     }
   }

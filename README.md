@@ -8,7 +8,7 @@ Work toward completion is ongoing. Claude/Codex sandbox verification passes, wit
 
 ## What it provides
 
-One dedicated stage, four contributions to existing stages, six design sensors, three Rust sensors, and nine knowledge files. Designs reference IDs in one canonical model. Bundled tree-sitter handles Rust analysis without Cargo; building and testing generated Rust applications still requires a Rust toolchain.
+One dedicated stage, six contributions to existing stages, six design sensors, four Rust sensors, and ten knowledge files. Designs reference IDs in one canonical model. Bundled tree-sitter handles Rust analysis without Cargo; building and testing generated Rust applications still requires a Rust toolchain.
 
 Completion targets are Claude Code and Codex. Kimi/opencode are excluded, and custom builds for them are not maintained.
 
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/developers/evidence/current-check-verification.json) passes. Run the full suite with `bun run check`.
+The sandbox builds and composes both harnesses, runs 327 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/developers/evidence/module-layout-verification.json) passes. Run the full suite with `bun run check`.
 
 ## Install into a destination project
 
@@ -52,3 +52,5 @@ Report issues through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-p
 ## License
 
 [MIT](LICENSE). Bundled libraries have licenses under [tree-sitter](ddd/tools/ddd/lib/rust/vendor/) and [Rust grammar](ddd/tools/ddd/wasm/LICENSE).
+
+Rust application projects must select one module layout in `.ddd.toml`. See the [configuration and enforcement contract](ddd/docs/users/rust-module-layout.md).

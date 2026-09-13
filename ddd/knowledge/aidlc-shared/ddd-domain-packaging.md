@@ -43,3 +43,5 @@ Follow mod declarations from domain crate lib/bin roots. Do not indiscriminately
 - [Regression cases](../../tests/golden/packaging/cases.ts)
 
 Links target the development repository. All conventions needed by installed agents remain in this file.
+
+Read [Rust module layout](ddd-rust-module-layout.md) for the project-wide file-placement policy. Treat mod.rs as a Rust layout marker for vocabulary matching, then enforce whether it is allowed through the selected file convention.

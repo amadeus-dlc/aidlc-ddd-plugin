@@ -443,6 +443,30 @@ cover(
   "A known full constructor is allowed; Default restoration is not.",
   "既知の完全コンストラクタを許可し、Defaultによる復元は拒否する。",
 );
+cover(
+  "ddd-rust-module-layout",
+  ["module-layout.configuration"],
+  "clean-file",
+  "clean-mod-rs-parent",
+  "Both explicit project layouts are supported; missing, mixed, and malformed settings fail.",
+  "明示した2形式を許可し、未設定・混在指定・不正設定を拒否する。",
+);
+cover(
+  "ddd-rust-module-layout",
+  ["module-layout.violation"],
+  "clean-file-parent",
+  "violation-mod-rs-in-file-mode",
+  "Parent and leaf filenames follow the selected policy independently of edition, layer, and source claims.",
+  "edition・層・変更申告に依存せず、親と末端のファイル名を選択した規約で検証する。",
+);
+cover(
+  "ddd-rust-module-layout",
+  ["module-layout.unresolved"],
+  "clean-path-attribute",
+  "violation-orphan-mod-rs",
+  "Explicit paths resolve; stale, missing, ambiguous, and opaque modules cannot pass as inspected.",
+  "明示パスを解決し、残骸・欠落・曖昧・解析不能なモジュールを検査済みとしない。",
+);
 export const COVERAGE = rows;
 
 export function violations(row: CoverageRow, cases: readonly GoldenCase[] = ALL_CASES): GoldenCase[] {
@@ -501,5 +525,8 @@ export function gateCases(): GoldenCase[] {
     for (const name of [row.normal, row.boundary, violations(row)[0]?.name])
       if (name) keys.add(`${row.sensor}/${name}`);
   }
-  return ALL_CASES.filter((entry) => keys.has(caseKey(entry)));
+  return ALL_CASES.filter(
+    (entry) =>
+      keys.has(caseKey(entry)) || (entry.sensor === "ddd-rust-module-layout" && entry.stage !== "code-generation"),
+  );
 }

@@ -11,10 +11,10 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | 種類 | 内容 |
 |---|---|
 | ステージ1本 | `ddd-domain-modeling` が集約境界までの正規モデルを所有 |
-| contribution 4本 | domain-design、functional-design、infrastructure-design、code-generationへの追加 |
+| contribution 6本 | domain-design、functional-design、infrastructure-design、code-generation、build-and-test、ci-pipelineへの追加 |
 | 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
-| Rustセンサー3本 | ドメイン、ユースケース、インターフェイスアダプタの構文・依存検査 |
-| ナレッジ9本 | 言語横断の設計原則とRust規約 |
+| Rustセンサー4本 | 各層の構文・依存検査とプロジェクト全体のモジュール配置検査 |
+| ナレッジ10本 | 言語横断の設計原則とRust規約 |
 
 ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
 
@@ -28,6 +28,7 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-mapping-declarations | 集約の2軸、ユースケース宣言、複数集約戦略、加算型コマンドの冪等性宣言、業務語彙によるパッケージ宣言 |
 | ddd-layer-structure | 層構造の必須項目、依存方向、命名、復元宣言 |
 | ddd-design-advisories | 複数集約、リポジトリ範囲、保存宣言への助言 |
+| ddd-rust-module-layout | テストを含む全Cargoパッケージで、選択したファイル配置を強制 |
 | ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
@@ -74,3 +75,5 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 ## ライセンス
 
 [MIT](../LICENSE)。`web-tree-sitter` とRust文法の同梱ライセンスは [vendor](tools/ddd/lib/rust/vendor/) と [wasm/LICENSE](tools/ddd/wasm/LICENSE) にあります。
+
+Rustプロジェクトでは、生成前にプロジェクト直下の `.ddd.toml` で `file` か `mod-rs` を選択してください。設定、承認時の必須検査、CIコマンドは[モジュール配置契約](docs/users/rust-module-layout.ja.md)を参照してください。

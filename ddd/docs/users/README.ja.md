@@ -11,6 +11,8 @@
 | ユビキタス言語に基づくドメインパッケージの命名 | [パッケージング契約](domain-packaging-design.ja.md) |
 | Rustの型照合、replay宣言、未検査範囲の確認 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
 
+| Rustモジュールの配置をプロジェクト全体で統一 | [モジュール配置契約](rust-module-layout.ja.md) |
+
 ## 対応状況と制約の確認
 
 プラグインは開発中です。採用前に[互換性](../developers/framework-compatibility.ja.md)と[残作業](../developers/completion-tasks.ja.md)を確認してください。導入・更新で検証した挙動は[導入検証](../developers/installation-verification.ja.md)に記載しています。モデルによる実際のステージ実行は未検証です。

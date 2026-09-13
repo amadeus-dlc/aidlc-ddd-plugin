@@ -15,7 +15,7 @@
     "test": "bun test tests/",
     "test:sandbox": "bun run test:coverage && bun run build:all && for h in claude codex; do bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness $h || exit 1; done && bun scripts/verify-dist.ts && bun test tests/t1-gate-integration.test.ts && bun run test:install",
     "test:dist": "bun scripts/verify-dist.ts",
-    "test:coverage": "bun test tests/t8-declaration-language.test.ts tests/t9-sensor-contract.test.ts && bun scripts/report-sensor-coverage.ts",
+    "test:coverage": "bun test tests/t8-declaration-language.test.ts tests/t9-sensor-contract.test.ts tests/t10-rust-module-layout.test.ts && bun scripts/report-sensor-coverage.ts",
     "test:install": "bun test tests/install.test.ts tests/install-sandbox.test.ts",
     "test:install:remote": "DDD_VERIFY_REMOTE_INSTALL=1 bun test tests/install-sandbox.test.ts -t 'real GitHub main'"
   },

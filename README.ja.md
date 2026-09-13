@@ -8,7 +8,7 @@ AI-DLCに、集約・不変条件・Domain Primitiveの設計手順と、設計�
 
 ## 提供するもの
 
-専用ステージ1本、既存ステージへの追加4本、設計センサー6本、Rustセンサー3本、ナレッジ9本を持ちます。設計は同じ正規モデルのIDを参照します。Rust解析には同梱のtree-sitterを使い、解析自体にCargoは不要です。生成したRustアプリケーションのビルド・テストには別途Rust環境が必要です。
+専用ステージ1本、既存ステージへの追加6本、設計センサー6本、Rustセンサー4本、ナレッジ10本を持ちます。設計は同じ正規モデルのIDを参照します。Rust解析には同梱のtree-sitterを使い、解析自体にCargoは不要です。生成したRustアプリケーションのビルド・テストには別途Rust環境が必要です。
 
 完成時の検証対象はClaude CodeとCodexです。kimi・opencodeは対象外とし、両環境向けカスタムビルドは維持しません。
 
@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/developers/evidence/current-check-verification.json)は成功です。全体の検査は `bun run check` で実行します。
+サンドボックスはClaude/Codexのビルド、compose、配布物の各327ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/developers/evidence/module-layout-verification.json)は成功です。全体の検査は `bun run check` で実行します。
 
 ## 利用先への導入
 
@@ -52,3 +52,5 @@ Claude Codeでは `--harness claude` を指定します。新規導入・更新C
 ## ライセンス
 
 [MIT](LICENSE)。同梱ライブラリのライセンスは [tree-sitter](ddd/tools/ddd/lib/rust/vendor/) と [Rust文法](ddd/tools/ddd/wasm/LICENSE) を参照してください。
+
+Rustアプリケーションでは `.ddd.toml` で配置形式を選択します。[設定と検査の契約](ddd/docs/users/rust-module-layout.ja.md)を参照してください。

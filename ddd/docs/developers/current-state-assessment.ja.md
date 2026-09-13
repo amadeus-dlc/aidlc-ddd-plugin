@@ -175,3 +175,11 @@ knowledge、sensors、stages、contributionsは英語へ統一した。一般文
 `bun run check` は726成功・3skip・0失敗で完了した。Biomeとプラグイン構造検証も成功。Claude/Codexのcompose検証2件を含む現行のテスト構成で確認している。
 
 skipは標準側の単独完了ガードの任意再現1件と、任意のネットワーク導入2件。モデル実行の確認はT-05に残る。以前の節の数値は各時点の測定値である。[現在の実行記録](evidence/current-check-verification.json)を参照。
+
+## T-08の検証 — 2026-09-13
+
+プロジェクト共通のfile/mod-rs選択、モデルに依存しない3つの通常承認での配置検査、失敗時に非0終了するCIコマンドを実装した。所有Cargoターゲットと未登録Rustファイルを対象とし、検査対象の全層で宣言をたどるモジュール解決へ統一した。
+
+全体チェックは865件成功、既存の任意実行3件をskip、失敗0件だった。両配布物で327ケースずつ成功した。配置関連の追加テストは109件、通常承認はcode-generation・build-and-test・ci-pipelineを通じてClaude/Codex合計30件が成功した。両配置の代表例はrustc 1.95.0でedition 2015・2018・2021・2024それぞれのコンパイルにも成功した（計8件）。
+
+[検証記録](evidence/module-layout-verification.json)と[利用者向け契約](../users/rust-module-layout.ja.md)を参照。これらの結果は外部CIの設定やモデルによる実行を証明するものではなく、標準側の単独完了ガードの不足も残る。
