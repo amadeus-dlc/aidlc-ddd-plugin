@@ -120,6 +120,24 @@ Verification covers both policies, source-claim/model independence, tests and ot
 
 Status: agreed specification; implementation pending. Complete before the first release. See the [shared design](language-independent-design.md).
 
+T-09 is tracked by [parent Issue #34](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/34). Do not start the parent as one intent. Run each child as a separate `plugin-dev` intent, with its own bounded outcome, exclusions, tests, and documentation. The parent retains the full contract and prerequisite relationships.
+
+| Child | Independently finishable outcome | Prerequisites |
+|---|---|---|
+| [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38) | Shared state-exposure check in Rust and TypeScript | None |
+| [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) | Project configuration and Rust configuration migration | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38) |
+| [#40](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/40) | Bounded Rust return/error reference resolution | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38), [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) |
+| [#41](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/41) | TypeScript Compiler API return/error reference resolution | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38), [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39) |
+| [#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42) | Canonical operation/factory errors and model migration | None |
+| [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) | Shared aggregate/package/operation mappings and migration | [#38](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38), [#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42) |
+| [#44](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/44) | Layer declaration migration and use-case declaration compatibility | [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) |
+| [#45](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/45) | Shared closed error-set comparison | [#40](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/40), [#41](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/41), [#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42), [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43) |
+| [#46](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/46) | Artifact activation, coordinated migration, and existing-path verification | [#39](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/39), [#42](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/42), [#43](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/43), [#44](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/44), [#45](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/45) |
+
+Start with #38: one state-exposure rule, both languages, and pass/violation/unresolved outcomes. Keep migration, package-wide resolution, and error-set comparison out of that first intent. #42 is also independent; the table records hard prerequisites rather than requiring every row to finish in order.
+
+Each child targets two or three implementation units, subject to a scope check before starting. New requirements are tracked explicitly in the parent instead of silently extending an active intent. Individual readers/converters remain testable before the final activation; #46 connects completed artifact work without redesigning formats or replacing production source analyzers. T-09 completion does not imply T-10/T-11 or release completion.
+
 Define common package, type, method, error, and inspection contracts, preserving native language details in implementation mappings. Add factory error declarations and explicit error-owner consistency. Specify configuration and artifact versions, then implement an explicit migration command for existing Rust artifacts. Convert deterministic information and report missing business definitions for completion by the model owner.
 
 Define comparison scenarios for Rust and TypeScript up front. A small TypeScript implementation using the TypeScript Compiler API must exercise the common boundary before it is treated as sufficient for the first release. Use the project configuration and AST/type information, keeping compiler-specific objects out of the shared contract. Keep the canonical model, loader/schema, generation instructions, and migrated fixtures aligned.
