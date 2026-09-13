@@ -10,7 +10,7 @@ Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Complet
 
 This working copy has AI-DLC installed in `.claude/` and `.codex/`. DDD development validate/build/test commands use `.codex/tools/`. The installer uses the tools already installed for the selected destination harness.
 
-T-04 tracks remaining helper-code cleanup.
+Development checks use the current standard toolchain.
 
 ## Separate verified and unverified behavior
 
@@ -21,7 +21,7 @@ Codex rule delivery depends on integration between standard AI-DLC and the execu
 ## Compatibility work order
 
 1. Normal approval is connected under T-01. The remaining standalone completion guarantee needs a standard AI-DLC fix.
-2. T-04 aligns build/verification paths and removes old dependencies for the two supported harnesses.
-3. T-05 verifies fresh installation, updates, and actual stage execution.
+2. T-04 build/verification paths target the current Claude/Codex toolchain.
+3. T-05 installation/update CLI checks are complete; actual model-driven stage execution remains.
 
 See [remaining work](completion-tasks.md) and [measurements](current-state-assessment.md). Keep old-version details in the [historical Codex record](codex-host-verification.md).

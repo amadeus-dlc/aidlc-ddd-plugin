@@ -4,7 +4,7 @@ English | [Japanese](completion-tasks.ja.md)
 
 Updated: 2026-09-13. Track remaining work by T identifier, based on the [implementation assessment](current-state-assessment.md) and supported-environment policy.
 
-Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation and T-07 packaging are also implemented. The framework standalone completion gap and T-03–T-06 remain.
+Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation and T-07 packaging are also implemented. The framework standalone completion gap, T-03, model execution in T-05, and final T-06 reconciliation remain.
 
 ## Completion scope
 
@@ -62,17 +62,13 @@ Completion: every unresolved item has a decision and scope, implementation/decla
 
 Dependency: coordinate with T-01 artifact contracts.
 
-## T-04: Remove old dependencies and excluded distribution routes
+## T-04: Supported-harness build and verification paths
 
-Status: build, sandbox, and distribution-check targets now align with Claude/Codex. Installer targets and patch application paths are also aligned. Old tests remain. Priority: high.
+Status: complete. Build, installation, and verification use the current Claude/Codex toolchain.
 
-`package.json` and `scripts/verify-dist.ts` now default to Claude/Codex, excluding Kimi/opencode builds and checks. Accepted `install.ts` targets also match Claude/Codex. The framework's target list is not a promise of plugin support for every harness.
+`framework-compatibility.test.ts` verifies compose, graph compilation, and repeat-compose idempotency for both harnesses. The full check passes 726 tests with three skips and zero failures. Skips are the optional standalone-guard reproduction and two opt-in network installations.
 
-Remove or replace tests/helpers depending on the old dispatch bridge, deleted-submodule fixtures, and patch application. Preserve the current Claude/Codex compose and idempotency tests in `framework-compatibility.test.ts`. Deleting obsolete checks does not establish rule-delivery verification.
-
-Completion: `bun run check` and `bun run test:sandbox` pass for both targets; the installer explicitly rejects excluded targets; neither the old reference source nor custom builds are needed.
-
-Dependency: final distribution verification follows T-01–T-03 changes.
+Actual rule delivery to a model remains T-05 work.
 
 ## T-05: Verify installation, updates, and actual usage
 
@@ -110,4 +106,4 @@ Dependency: reuse T-02's module index; no third-party framework modification is 
 
 ## Extensions after completion
 
-Plan a second language, sensor-generation templates, advanced Rust analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Remaining T-04 cleanup can proceed independently. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.
+Plan a second language, sensor-generation templates, advanced Rust analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.

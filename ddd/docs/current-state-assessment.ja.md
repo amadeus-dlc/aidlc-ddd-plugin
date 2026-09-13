@@ -169,3 +169,9 @@ knowledge、sensors、stages、contributionsは英語へ統一した。一般文
 ## 13. 導入・更新CLIの検証
 
 [導入・更新の検証](installation-verification.ja.md)として、ローカル45件とGitHub mainの実取得2件が成功した。標準compose hookの呼出し、バイナリのハッシュ、contributionの変更検出、候補環境での合成、所有権と失敗時の保護を修正した。test:installは通常のサンドボックスにも含まれる。モデルによるステージ実行は未確認。
+
+## 14. 現行ツールによる全体チェック
+
+`bun run check` は726成功・3skip・0失敗で完了した。Biomeとプラグイン構造検証も成功。Claude/Codexのcompose検証2件を含む現行のテスト構成で確認している。
+
+skipは標準側の単独完了ガードの任意再現1件と、任意のネットワーク導入2件。モデル実行の確認はT-05に残る。以前の節の数値は各時点の測定値である。[現在の実行記録](evidence/current-check-verification.json)を参照。

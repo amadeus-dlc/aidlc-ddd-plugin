@@ -1,0 +1,41 @@
+{
+  "recorded_at": "2026-09-13T00:42:19.001475+00:00",
+  "framework": "AI-DLC 2.8.2",
+  "runtime": "Bun 1.3.13",
+  "commands": {
+    "bun run check": {
+      "exit_code": 0,
+      "pass": 726,
+      "skip": 3,
+      "fail": 0
+    },
+    "bun run test:dist": {
+      "exit_code": 0,
+      "cases": 277,
+      "results": [
+        {
+          "harness": "claude",
+          "total": 277,
+          "failed": 0,
+          "problems": []
+        },
+        {
+          "harness": "codex",
+          "total": 277,
+          "failed": 0,
+          "problems": []
+        }
+      ]
+    }
+  },
+  "retained_compose_checks": [
+    "claude",
+    "codex"
+  ],
+  "skipped_cases": [
+    "standard isolated completion must reject missing DDD artifacts",
+    "claude: install from the real GitHub main archive",
+    "codex: install from the real GitHub main archive"
+  ],
+  "scope": "Current plugin tests and standard-toolchain compatibility. Actual model-driven rule delivery is a separate verification task."
+}

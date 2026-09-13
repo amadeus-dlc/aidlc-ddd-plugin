@@ -464,10 +464,7 @@ if (import.meta.main) {
   }
 
   if (!existsSync(join(projectDir, target.harnessLeaf))) {
-    fail(
-      `${projectDir} has no ${target.harnessLeaf}/ — install AI-DLC v2 for the ` +
-        `"${harness}" harness there first (see aidlc-workflows dist/${harness}/)`,
-    );
+    fail(`${projectDir} has no ${target.harnessLeaf}/ — install AI-DLC for "${harness}" there first`);
   }
 
   let provenancePath = join(projectDir, target.harnessLeaf, "tools", "data", PROVENANCE_FILE);

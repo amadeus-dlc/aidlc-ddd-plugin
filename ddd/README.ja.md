@@ -51,7 +51,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-全テストは `bun run check` です。既知の旧環境依存20件は残ります。規則ごとの正常・異常・境界例は[契約対応表](docs/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
+全テストは `bun run check` です。規則ごとの正常・異常・境界例は[契約対応表](docs/sensor-coverage.ja.md)で確認できます。`build:all`、`test:sandbox`、引数なしの `test:dist` はClaude/Codexだけを対象にします。`bun run test:sandbox` は契約の網羅性・英日見出し・ビルド・一時環境へのcompose・配布物・通常承認開始をまとめて検証します。
 
 ## 導入と対応環境
 

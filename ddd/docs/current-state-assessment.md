@@ -169,3 +169,9 @@ The [contract matrix](sensor-coverage.md) tracks nine sensors and 70 rule entrie
 ## 13. Installation/update CLI verification
 
 [Installation verification](installation-verification.md) passed 45 local checks and two real GitHub main installs. Fixes cover standard compose invocation, binary hashing, contribution change detection, candidate composition, ownership, and failure protection. test:install is included in the regular sandbox. Actual model-driven stage execution remains unverified.
+
+## 14. Full check with the current toolchain
+
+`bun run check` completed with 726 passes, three skips, and zero failures. Biome and plugin validation also passed. The current suite retains both Claude/Codex compose checks.
+
+Skips are the optional standalone-guard reproduction and two opt-in network installations. Model execution remains T-05 work. Values in earlier sections describe their respective checkpoints. See the [current execution record](evidence/current-check-verification.json).
