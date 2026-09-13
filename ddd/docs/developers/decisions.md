@@ -26,6 +26,8 @@ TypeScript selects class or structure/companion representation per project. The 
 
 Define common comparison scenarios and validate a small TypeScript implementation before finishing the first release. That release includes shared contracts, Rust improvements, and explicit migration of existing Rust artifacts. Complete TypeScript support follows in the next release. Align specifications, knowledge, stages, sensors, and behavior tests for each shared change.
 
+TypeScript analysis uses the TypeScript Compiler API, including Program/TypeChecker-based evidence for type-dependent checks. Keep these dependencies in the language-specific implementation; Rust and TypeScript feed the same shared inspection contract. Adopt this in the T-09 proof and carry it into T-11, with explicit API-version compatibility verification.
+
 ## Consistency and recovery policy
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.

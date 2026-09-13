@@ -144,6 +144,14 @@ For a required inspection target, inability to resolve a reference or type block
 
 Keep normal gate checks and CI checks aligned, with direct execution for standalone paths. Standard AI-DLC 2.8.2 still has the separately tracked standalone-completion gap in T-01. This agreement does not modify third-party framework distributions or establish that the gap is fixed.
 
+### Use the TypeScript Compiler API for TypeScript analysis
+
+Use the TypeScript Compiler API for syntax and type analysis, starting with the small T-09 proof and continuing into T-11. Build a Program with the target project's compiler configuration and use its AST, symbols, and TypeChecker for aliases, re-exports, type-only references, and method return/error types. Respect tsconfig module resolution and project references, together with package exports, when identifying actual targets. A syntax-only parse or transpilation result does not establish type-dependent checks.
+
+Keep Compiler API objects inside the TypeScript-specific implementation. Pass language-independent facts and findings into the shared inspection contract, and improve Rust's extraction/resolution against that same contract. Unresolved required facts still block approval; the compiler's type information does not prove business invariants or ownership effects by itself.
+
+Record and test the supported compiler/API version and project compatibility range. The [official API guide](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API) currently describes TypeScript 6.0 and earlier and notes a different API for 7.1. Select the concrete version during implementation design and verify the integration rather than assuming all API generations are interchangeable.
+
 ## 9. Migrate artifacts to a common contract
 
 Keep the canonical domain model as the owner of business definitions and stable IDs. Express implementation locations, package/module/type/method bindings, and language-specific facts in the implementation mappings. Generalize the actual declaration and inspection contracts, including their semantics; renaming crate fields alone is insufficient.
