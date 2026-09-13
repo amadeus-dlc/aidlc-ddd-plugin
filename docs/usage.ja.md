@@ -14,7 +14,7 @@ BunとAI-DLC導入済みのClaude CodeまたはCodex環境を使います。kimi
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness codex --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。現行の新規導入・更新・失敗回復の一連の検証は[T-05](../ddd/docs/completion-tasks.ja.md)で行います。
+実導入は `--dry-run` を外す形式です。新規導入・更新・失敗時の保護は[自動検証済み](../ddd/docs/installation-verification.ja.md)です。モデルによる実際のステージ実行はT-05に残ります。
 
 ## ワークフローでの役割
 

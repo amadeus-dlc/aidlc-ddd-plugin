@@ -19,6 +19,7 @@
 | 方針と過去の判断の扱い | [判断記録](decisions.ja.md) |
 | AI-DLCとの互換性と未検証事項 | [互換性](framework-compatibility.ja.md) |
 | 旧Codex実機検証の来歴 | [過去の検証記録](codex-host-verification.ja.md) |
+| 新規導入・更新・失敗時の状態 | [導入・更新の検証](installation-verification.ja.md) |
 
 ## 文書の読み分け
 

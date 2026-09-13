@@ -1,0 +1,25 @@
+{
+  "recorded_at": "2026-09-13T00:31:03.571163+00:00",
+  "framework": "AI-DLC 2.8.2",
+  "runtime": "Bun 1.3.13",
+  "commands": {
+    "bun run test:install": {
+      "pass": 45,
+      "skip": 2,
+      "fail": 0
+    },
+    "bun run test:install:remote": {
+      "pass": 2,
+      "fail": 0
+    }
+  },
+  "harnesses": [
+    "claude",
+    "codex"
+  ],
+  "remote_ref": "main",
+  "limits": [
+    "Network main tests are opt-in. Tag/latest HTTP acquisition uses archive fixtures. No release tag was created or installed.",
+    "No model-driven stage execution was performed. Process termination and storage failure during publication were not fault-injected."
+  ]
+}

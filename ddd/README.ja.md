@@ -55,7 +55,7 @@ bun scripts/verify-dist.ts claude codex
 
 ## 導入と対応環境
 
-完成時の対象はClaude Code（`.claude`）とCodex（`.codex`、スキルは `.agents/skills`）。kimi・opencodeは対象外です。インストーラには旧対象表が残りますが、対応を保証する一覧とは扱いません。
+完成時の対象はClaude Code（`.claude`）とCodex（`.codex`、スキルは `.agents/skills`）。kimi・opencodeは対象外です。インストーラもこの2環境だけを受理します。
 
 利用先はAI-DLC導入済みである必要があります。ローカルソースによる事前確認:
 
@@ -63,7 +63,7 @@ bun scripts/verify-dist.ts claude codex
 bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-plugin --harness claude --dry-run
 ```
 
-実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、現在の新規導入・更新・失敗回復はT-05で検証します。最新タグの存在やリリース済みであることは、この文書では前提にしません。
+実導入は `--dry-run` を外す形式です。スクリプトにはソース取得、ビルド、compose、provenance記録、更新処理がありますが、新規導入・更新・失敗時の保護は[自動検証済み](docs/installation-verification.ja.md)です。最新タグの存在やリリース済みであることは、この文書では前提にしません。
 
 ## 設計と残作業
 

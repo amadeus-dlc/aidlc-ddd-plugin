@@ -165,3 +165,7 @@ knowledge、sensors、stages、contributionsは英語へ統一した。一般文
 - 一時環境は各テスト終了時に削除する。一括スクリプトは終了コード0で完走した。
 
 [実行結果](evidence/sensor-contract-verification.json)を保存した。形式不正な参照IDが未定義扱いになる不具合も、malformedとして報告するよう修正した。実装の全分岐・全Rust構文・業務上の意味の網羅を主張するものではない。単独完了ガードの再現1件と、既知の旧依存20件は別課題として残る。
+
+## 13. 導入・更新CLIの検証
+
+[導入・更新の検証](installation-verification.ja.md)として、ローカル45件とGitHub mainの実取得2件が成功した。標準compose hookの呼出し、バイナリのハッシュ、contributionの変更検出、候補環境での合成、所有権と失敗時の保護を修正した。test:installは通常のサンドボックスにも含まれる。モデルによるステージ実行は未確認。

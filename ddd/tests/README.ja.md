@@ -17,7 +17,7 @@
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
-| install | インストーラの純関数等。新規導入・更新全体の実証ではない |
+| install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
 | framework-compatibility | 現行Claude/Codexのcompose・冪等性テストと、失敗する旧連携テストが混在 |
 | codex-dispatch-bridge | 旧bridgeと削除済みfixtureを前提にする。T-04で整理 |
 
@@ -37,10 +37,12 @@ bun scripts/verify-dist.ts claude codex
 
 承認開始時の欠落・不正・正常はt1-gate-integrationで検証済みです。VO・ポート・別ファイル・replayはT-02で回帰テストを追加しました。T-07は直接回帰55件と通常承認8件を追加しました。既存の正常ケースに対象構造が存在しない場合、その構造を正しく検査できる根拠にはしません。
 
-パッケージングの代表的な7配置はrustc 1.95.0でもコンパイルしました。全ゴールデン入力のコンパイルや業務動作の証明ではありません。新規導入・更新、実際のモデル実行とルール到達は引き続き確認が必要です。
+パッケージングの代表的な7配置はrustc 1.95.0でもコンパイルしました。全ゴールデン入力のコンパイルや業務動作の証明ではありません。新規導入・更新CLIは[検証済み](../docs/installation-verification.ja.md)です。実際のモデル実行とルール到達は引き続き確認が必要です。
 
 [残作業](../docs/completion-tasks.ja.md)と[実測](../docs/current-state-assessment.ja.md)を参照してください。テスト結果の更新時は対象バージョンと範囲を添えます。
 
 ## 対応表の更新
 
 ケースと規則の対応は `golden/contract/coverage.ts`、追加ケースは `golden/contract/` に記載します。`bun scripts/report-sensor-coverage.ts --write` で英日両版を生成し、`bun run test:coverage` で参照切れや未検証項目を検出します。表は実装の全分岐・全Rust構文・業務上の意味の網羅率ではありません。
+
+`bun run test:install` は通常のサンドボックスにも含まれる。実取得は `bun run test:install:remote` で実行する。

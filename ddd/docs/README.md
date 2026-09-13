@@ -19,6 +19,7 @@ Updated: 2026-09-13. Design conventions, implementation measurements, and remain
 | Policy and historical decisions | [Decisions](decisions.md) |
 | AI-DLC compatibility and unverified scope | [Compatibility](framework-compatibility.md) |
 | Provenance of earlier Codex host evidence | [Historical verification](codex-host-verification.md) |
+| Fresh install, updates, and failure behavior | [Installation verification](installation-verification.md) |
 
 ## How to read these documents
 
