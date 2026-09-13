@@ -32,4 +32,4 @@ Code checks start from Rust files claimed in source-manifest.json. Even with no 
 
 ## Troubleshooting
 
-Compare [compatibility](../ddd/docs/framework-compatibility.md) and [remaining work](../ddd/docs/completion-tasks.md), recording versions and results. Before repeatedly reinstalling, distinguish the framework standalone gap, old dependencies, and actual model violations.
+Compare [compatibility](../ddd/docs/framework-compatibility.md) and [remaining work](../ddd/docs/completion-tasks.md), recording versions and results. Before repeatedly reinstalling, distinguish the framework standalone gap, installation-state problems, and actual model violations.

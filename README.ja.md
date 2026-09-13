@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/sensor-contract-verification.json)は成功です。`bun run check` に残る旧環境依存20件の失敗はT-04で管理しています。
+サンドボックスはClaude/Codexのビルド、compose、配布物の各277ケース、通常承認開始の統合検査を実行します。[検証結果](ddd/docs/evidence/current-check-verification.json)は成功です。全体の検査は `bun run check` で実行します。
 
 ## 利用先への導入
 

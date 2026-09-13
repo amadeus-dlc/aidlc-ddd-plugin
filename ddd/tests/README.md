@@ -2,7 +2,7 @@
 
 English | [Japanese](README.ja.md)
 
-Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/sensor-coverage.md) tracks per-rule coverage. The full suite still has 20 known old-dependency failures. The skip is an optional reproduction of the framework standalone completion gap.
+Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
 
 ## Test responsibilities
 
@@ -18,8 +18,7 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
 | install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
-| framework-compatibility | Current Claude/Codex compose/idempotency tests mixed with failing old integration tests. |
-| codex-dispatch-bridge | Depends on old bridge/deleted fixtures; T-04 tracks cleanup. |
+| framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
 
 ## Distribution checks
 

@@ -51,7 +51,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Run all tests with `bun run check`. Twenty known old-dependency failures remain. The [contract matrix](docs/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
+Run all tests with `bun run check`. The [contract matrix](docs/sensor-coverage.md) identifies positive, negative, and boundary evidence per rule. build:all, test:sandbox, and default test:dist target only Claude/Codex. `bun run test:sandbox` combines contract coverage, heading compatibility, builds, disposable compose, distribution checks, and normal approval integration.
 
 ## Installation and supported environments
 

@@ -2,7 +2,7 @@
 
 [English](README.md) | 日本語
 
-更新: 2026-09-13。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/sensor-coverage.ja.md)で管理します。全体テストには既知の旧依存20件の失敗が残ります。skipは標準側の単独完了不足を調べる任意実行の再現ケースです。
+更新: 2026-09-13。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/sensor-coverage.ja.md)で管理します。通常実行では、標準側の単独完了ガードの再現1件と、ネットワークを使う導入2件をskipします。それぞれ明示的な実行オプションがあります。
 
 ## 各テストの役割
 
@@ -18,8 +18,7 @@
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
-| framework-compatibility | 現行Claude/Codexのcompose・冪等性テストと、失敗する旧連携テストが混在 |
-| codex-dispatch-bridge | 旧bridgeと削除済みfixtureを前提にする。T-04で整理 |
+| framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
 
 ## 配布物の検査
 

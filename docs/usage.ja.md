@@ -32,4 +32,4 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 ## 問題が出た場合
 
-[互換性](../ddd/docs/framework-compatibility.ja.md)と[残作業](../ddd/docs/completion-tasks.ja.md)を照合し、対象バージョンと実行結果を記録してください。繰り返し再インストールする前に、単独完了の標準側の不足か、旧環境依存か、個別モデルの違反かを切り分けます。
+[互換性](../ddd/docs/framework-compatibility.ja.md)と[残作業](../ddd/docs/completion-tasks.ja.md)を照合し、対象バージョンと実行結果を記録してください。繰り返し再インストールする前に、単独完了の標準側の不足か、導入状態の問題か、個別モデルの違反かを切り分けます。

@@ -23,7 +23,7 @@ bun run validate
 bun run test:sandbox
 ```
 
-The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/sensor-contract-verification.json) passes. T-04 tracks the 20 old-dependency failures remaining in `bun run check`.
+The sandbox builds and composes both harnesses, runs 277 distribution cases per harness, and tests normal approval admission. [Recorded verification](ddd/docs/evidence/current-check-verification.json) passes. Run the full suite with `bun run check`.
 
 ## Install into a destination project
 
