@@ -1,0 +1,166 @@
+[
+  {
+    "name": "private-fields",
+    "source": "pub struct Invoice { amount: u64 }",
+    "fields": [], "compile": true, "editions": ["2015", "2018", "2021", "2024"]
+  },
+  {
+    "name": "public-field",
+    "source": "pub struct Invoice {\n    pub amount: u64,\n}",
+    "fields": ["Invoice.amount@2"], "compile": true
+  },
+  {
+    "name": "crate-visible-field",
+    "source": "pub struct Invoice { pub(crate) amount: u64 }",
+    "fields": ["Invoice.amount@1"], "compile": true
+  },
+  {
+    "name": "super-visible-field",
+    "source": "mod billing { pub struct Invoice { pub(super) amount: u64 } }",
+    "fields": ["Invoice.amount@1"], "compile": true,
+    "modules": ["billing:inline"]
+  },
+  {
+    "name": "scoped-visible-field",
+    "source": "mod billing { pub struct Invoice { pub(in crate::billing) amount: u64 } }",
+    "fields": ["Invoice.amount@1"], "compile": true
+  },
+  {
+    "name": "private-tuple",
+    "source": "pub struct Amount(u64);",
+    "fields": [], "compile": true
+  },
+  {
+    "name": "public-tuple",
+    "source": "pub struct Invoice(pub u64);",
+    "fields": ["Invoice.0@1"], "legacyFields": [], "compile": true
+  },
+  {
+    "name": "restricted-tuple",
+    "source": "pub struct Invoice(pub(crate) u64, u64);",
+    "fields": ["Invoice.0@1"], "legacyFields": [], "compile": true
+  },
+  {
+    "name": "raw-identifier",
+    "source": "pub struct Invoice { pub r#type: u64 }",
+    "fields": ["Invoice.type@1"], "compile": true
+  },
+  {
+    "name": "unicode-and-comments",
+    "source": "// 請求書\r\npub struct Invoice { pub 合計: u64 }",
+    "fields": ["Invoice.合計@2"], "compile": true
+  },
+  {
+    "name": "direct-getter-and-command",
+    "source": "pub struct Invoice { amount: u64 }\nimpl Invoice { pub fn total(&self) -> u64 { self.amount } pub fn issue(&mut self) -> Result<(), IssueError> { Ok(()) } }\npub enum IssueError { AlreadyIssued }",
+    "fields": [], "compile": true, "getters": ["total"],
+    "methods": [{"name": "issue", "receiver": "mut-self", "returnType": "Result<(),IssueError>"}]
+  },
+  {
+    "name": "explicit-return-getter",
+    "source": "pub struct Invoice { amount: u64 }\nimpl Invoice { pub fn total(&self) -> u64 { return self.amount; } }",
+    "fields": [], "compile": true, "getters": ["total"], "legacyGetters": []
+  },
+  {
+    "name": "alias-and-reexport",
+    "source": "mod errors { pub enum IssueError { AlreadyIssued } }\npub use errors::IssueError as Rejected;\npub type Outcome<T> = core::result::Result<T, Rejected>;\npub struct Invoice; impl Invoice { pub fn issue(&mut self) -> Outcome<()> { Ok(()) } }",
+    "fields": [], "compile": true, "aliases": ["Outcome"], "imports": 1,
+    "methods": [{"name": "issue", "receiver": "mut-self", "returnType": "Outcome<()>"}]
+  },
+  {
+    "name": "associated-error",
+    "source": "pub trait Repository { type Error; fn save(&self) -> Result<(), Self::Error>; }",
+    "fields": [], "compile": true,
+    "methods": [{"name": "save", "receiver": "ref-self", "returnType": "Result<(),Self::Error>"}]
+  },
+  {
+    "name": "typed-self",
+    "source": "pub struct Invoice; impl Invoice { pub fn issue(self: Box<Self>) {} }",
+    "fields": [], "compile": true,
+    "methods": [{"name": "issue", "receiver": "other", "returnType": null}]
+  },
+  {
+    "name": "inferred-receiver",
+    "source": "pub struct Invoice; impl Invoice { pub fn issue(&self) {} } pub fn run() { let invoice = Invoice; invoice.issue(); }",
+    "fields": [], "compile": true, "calls": ["issue"]
+  },
+  {
+    "name": "async-in-2015",
+    "source": "pub async fn issue() {}",
+    "fields": [], "compile": false, "editions": ["2015"], "compilerCode": "E0670"
+  },
+  {
+    "name": "async-in-2018",
+    "source": "pub async fn issue() {}",
+    "fields": [], "compile": true, "editions": ["2018"]
+  },
+  {
+    "name": "unknown-type",
+    "source": "pub struct Invoice { amount: MissingType }",
+    "fields": [], "compile": false, "compilerCode": "E0425"
+  },
+  {
+    "name": "wrong-return-type",
+    "source": "pub fn total() -> u64 { \"not a number\" }",
+    "fields": [], "compile": false, "compilerCode": "E0308"
+  },
+  {
+    "name": "shadowed-result",
+    "source": "pub struct Result<T, E>(T, E); pub fn issue() -> Result<(), ()> { Result((), ()) }",
+    "fields": [], "compile": true,
+    "methods": [{"name": "issue", "receiver": "none", "returnType": "Result<(),()>"}]
+  },
+  {
+    "name": "generated-public-field",
+    "source": "macro_rules! invoice { () => { pub struct Invoice { pub amount: u64 } } } invoice!();",
+    "fields": [], "compile": true, "unresolved": ["macro-expansion"]
+  },
+  {
+    "name": "conditional-field",
+    "source": "pub struct Invoice { #[cfg(any())] pub amount: u64 }",
+    "fields": ["Invoice.amount@1"], "compile": true, "unresolved": ["conditional-compilation"]
+  },
+  {
+    "name": "conditional-attribute",
+    "source": "#[cfg_attr(any(), derive(Debug))] pub struct Invoice;",
+    "fields": [], "compile": true, "unresolved": ["conditional-compilation"]
+  },
+  {
+    "name": "derive",
+    "source": "#[derive(Debug)] pub struct Invoice;",
+    "fields": [], "compile": true, "unresolved": ["attribute-or-derive-expansion"]
+  },
+  {
+    "name": "attribute-macro",
+    "source": "#[domain] pub struct Invoice;",
+    "fields": [], "unresolved": ["attribute-or-derive-expansion"]
+  },
+  {
+    "name": "named-external-module",
+    "path": "src/invoice.rs",
+    "source": "mod line;",
+    "fields": [], "modules": ["line:external"], "unresolved": ["external-module-not-loaded"]
+  },
+  {
+    "name": "directory-external-module",
+    "path": "src/invoice/mod.rs",
+    "source": "mod line;",
+    "fields": [], "modules": ["line:external"], "unresolved": ["external-module-not-loaded"]
+  },
+  {
+    "name": "malformed-source",
+    "source": "pub struct Invoice { pub amount: }",
+    "fields": [], "parsed": false, "compare": false, "compile": false,
+    "unresolved": ["parse-error"]
+  },
+  {
+    "name": "unsupported-union",
+    "source": "pub union Invoice { pub amount: u64 }",
+    "fields": [], "compile": true, "unresolved": ["unsupported-item"]
+  },
+  {
+    "name": "unstable-modifier",
+    "source": "struct Invoice; impl Invoice { default fn issue(&self) {} }",
+    "fields": [], "compile": false, "unresolved": ["unsupported-modifier"]
+  }
+]

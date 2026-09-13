@@ -13,6 +13,7 @@
     "check:biome": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "test": "bun test tests/",
+    "experiment:rust-syn": "bun scripts/verify-rust-syn.ts",
     "test:sandbox": "bun run test:coverage && bun run build:all && for h in claude codex; do bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness $h || exit 1; done && bun scripts/verify-dist.ts && bun test tests/t1-gate-integration.test.ts && bun run test:install",
     "test:dist": "bun scripts/verify-dist.ts",
     "test:coverage": "bun test tests/t8-declaration-language.test.ts tests/t9-sensor-contract.test.ts tests/t10-rust-module-layout.test.ts && bun scripts/report-sensor-coverage.ts",

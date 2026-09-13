@@ -9,6 +9,7 @@ For developers maintaining this plugin. Start with the assessment and remaining 
 | Topic | Document |
 |---|---|
 | Agreed shared contracts, Rust improvements, TypeScript support, and migration | [Shared language design](language-independent-design.md) |
+| Shared facts, resolution states, error comparison, and language boundaries | [Inspection contract design](inspection-contract-design.md) |
 | Canonical terms for the plugin | [Project glossary](../../../CONTEXT.md) |
 | Plugin responsibilities and data flow | [Architecture overview](../../../docs/architecture.md) |
 | Current policy and rationale | [Decisions](decisions.md) |
@@ -27,6 +28,7 @@ The layer designs define conventions for generated applications and the plugin. 
 | Measurements from each checkpoint | [Current-state assessment](current-state-assessment.md) |
 | Test commands and fixture organization | [Test guide](../../tests/README.md) |
 | Positive, negative, and boundary evidence per sensor | [Sensor coverage matrix](sensor-coverage.md) |
+| Native Rust parsing, comparison results, and semantic/distribution limits | [Rust + syn experiment](rust-syn-spike.md) |
 | Fresh installation, updates, and failure behavior | [Installation verification](installation-verification.md) |
 | Provenance of earlier Codex host results | [Historical host verification](codex-host-verification.md) |
 | Machine-readable execution records | [Evidence](evidence/) |

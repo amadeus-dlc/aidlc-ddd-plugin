@@ -9,6 +9,7 @@
 | 論点 | 文書 |
 |---|---|
 | 合意した共通契約、Rust改善、TypeScript対応、移行 | [言語共通の設計](language-independent-design.ja.md) |
+| 共通情報、解決状態、エラー比較、言語ごとの責務 | [共通検査契約の設計](inspection-contract-design.ja.md) |
 | プラグインの用語 | [プロジェクト用語集](../../../CONTEXT.ja.md) |
 | プラグインの責務とデータの流れ | [アーキテクチャ概要](../../../docs/architecture.ja.md) |
 | 現行の方針と根拠 | [判断記録](decisions.ja.md) |
@@ -27,6 +28,7 @@
 | 各時点での実測 | [現状評価](current-state-assessment.ja.md) |
 | テストコマンドと入力の構成 | [テストガイド](../../tests/README.ja.md) |
 | センサーごとの正常・異常・境界ケース | [検査契約の対応表](sensor-coverage.ja.md) |
+| Rustによる構文解析の比較結果と型解決・配布の限界 | [Rust＋synの試作](rust-syn-spike.ja.md) |
 | 新規導入、更新、失敗時の挙動 | [導入検証](installation-verification.ja.md) |
 | 以前のCodexホスト検証の根拠 | [過去のホスト検証](codex-host-verification.ja.md) |
 | 機械可読な実行記録 | [検証記録](evidence/) |
