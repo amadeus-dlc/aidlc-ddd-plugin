@@ -122,7 +122,7 @@ Status: agreed specification; implementation pending. Complete before the first 
 
 Define common package, type, method, error, and inspection contracts, preserving native language details in implementation mappings. Add factory error declarations and explicit error-owner consistency. Specify configuration and artifact versions, then implement an explicit migration command for existing Rust artifacts. Convert deterministic information and report missing business definitions for completion by the model owner.
 
-Define comparison scenarios for Rust and TypeScript up front. A small TypeScript implementation must exercise the common boundary before it is treated as sufficient for the first release. Keep the canonical model, loader/schema, generation instructions, and migrated fixtures aligned.
+Define comparison scenarios for Rust and TypeScript up front. A small TypeScript implementation using the TypeScript Compiler API must exercise the common boundary before it is treated as sufficient for the first release. Use the project configuration and AST/type information, keeping compiler-specific objects out of the shared contract. Keep the canonical model, loader/schema, generation instructions, and migrated fixtures aligned.
 
 Completion: shared contracts are concrete, migration preserves domain identities and meaning, incomplete inputs are reported, and both languages exercise the proposed contract. This task does not mean full TypeScript sensor support is shipped.
 
@@ -138,7 +138,7 @@ Completion: updated Rust declarations, migration, knowledge, stages, sensors, ex
 
 Status: agreed work for the following release; full implementation pending. Depends on T-09/T-10.
 
-Implement package/exports and type-only dependency inspection, both domain source representations, closure/brand and # field privacy, method-specific Result errors, ownership checks, and both file layouts. Use infrastructure for Result support; library-specific neverthrow/Effect/fp-ts integration is outside scope. Verify ESM Next.js integration on server-side Node.js.
+Use the TypeScript Compiler API for syntax, symbols, and type resolution; record the supported API version and project compatibility range. Implement package/exports and type-only dependency inspection, both domain source representations, closure/brand and # field privacy, method-specific Result errors, ownership checks, and both file layouts. Use infrastructure for Result support; library-specific neverthrow/Effect/fp-ts integration is outside scope. Verify ESM Next.js integration on server-side Node.js.
 
 Completion: source, distribution, gate, CI, and common behavior tests cover both layouts and both representations. Each new shared requirement is also implemented and verified in Rust. Keep aggregate execution, persistence, and source expression independent; do not advertise unverified host runtimes or combinations.
 
