@@ -11,6 +11,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   lstatSync,
@@ -19,6 +20,7 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -40,6 +42,8 @@ export interface InstallationProvenance {
   readonly source: SourceKind;
   readonly installed_at: string;
   readonly payload_sha256: string;
+  readonly projection_sha256?: string;
+  readonly owned_files?: Readonly<Record<string, string>>;
 }
 
 interface ResolvedSource {
@@ -245,11 +249,7 @@ export function validateManifest(source: ResolvedSource): { manifest: Manifest; 
 interface PluginTarget {
   harnessName: string;
   harnessLeaf: string;
-  // "store" hosts (claude, codex, copilot, kimi, opencode) keep the plugin
-  // outside the project, so compose reads straight from dist/ and nothing is
-  // copied. The storeless kinds (kiro, kiro-ide, cursor) expect the projection
-  // folder-dropped into the project root.
-  kind: "store" | "kiro" | "kiro-ide" | "cursor";
+  kind: "store";
 }
 
 function fail(message: string): never {
@@ -266,6 +266,146 @@ function run(label: string, command: string[], options: { cwd?: string; env?: Re
   });
   if (result.error) fail(`${label} failed: ${result.error.message}`);
   if (result.status !== 0) fail(`${label} exited with status ${result.status}`);
+}
+
+function fileHash(bytes: Uint8Array): string {
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+function ownedPayloadPath(path: string): boolean {
+  if (
+    !path ||
+    isAbsolute(path) ||
+    path.includes("\\") ||
+    path.split("/").some((part) => part === ".." || part === "." || part === "")
+  )
+    return false;
+  if (path.startsWith("tools/ddd/")) return true;
+  const parts = path.split("/");
+  const name = parts[parts.length - 1];
+  return (
+    ["tools", "sensors", "knowledge", "agents", "scopes", "aidlc-common"].includes(parts[0]) &&
+    (name.startsWith("ddd-") || name.startsWith("aidlc-ddd-"))
+  );
+}
+
+class CommitFailure extends Error {
+  constructor(
+    message: string,
+    readonly recoveryRequired: boolean,
+  ) {
+    super(message);
+  }
+}
+interface FileImage {
+  bytes: Buffer;
+  mode: number;
+}
+function treeFiles(root: string): Map<string, FileImage> {
+  const files = new Map<string, FileImage>();
+  function visit(directory: string): void {
+    for (const item of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, item.name);
+      if (item.isSymbolicLink()) throw new Error(`linked candidate path is not supported: ${path}`);
+      if (item.isDirectory()) visit(path);
+      else if (item.isFile())
+        files.set(relative(root, path), { bytes: readFileSync(path), mode: lstatSync(path).mode & 0o777 });
+      else throw new Error(`unsupported candidate file: ${path}`);
+    }
+  }
+  visit(root);
+  return files;
+}
+function sameFile(a: FileImage | undefined, b: FileImage | undefined): boolean {
+  return a === undefined ? b === undefined : b !== undefined && a.mode === b.mode && a.bytes.equals(b.bytes);
+}
+function unlinkedPath(root: string, path: string): void {
+  if (!isInside(root, path)) throw new Error(`path escapes destination: ${path}`);
+  let current = root;
+  for (const part of ["", ...relative(root, path).split(sep)]) {
+    current = join(current, part);
+    const info = lstatSync(current, { throwIfNoEntry: false });
+    if (info?.isSymbolicLink()) throw new Error(`refusing to modify a linked path: ${current}`);
+  }
+}
+function atomicFile(path: string, value: FileImage): void {
+  const temporary = `${path}.ddd-${randomUUID()}`;
+  try {
+    writeFileSync(temporary, value.bytes, { flag: "wx", mode: value.mode });
+    chmodSync(temporary, value.mode);
+    renameSync(temporary, path);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+}
+function applyCandidate(
+  destination: string,
+  before: Map<string, FileImage>,
+  after: Map<string, FileImage>,
+  roots: string[],
+  transactionRoot: string,
+): void {
+  const changes = [...new Set([...before.keys(), ...after.keys()])]
+    .filter((path) => !sameFile(before.get(path), after.get(path)))
+    .sort();
+  const backups = join(transactionRoot, "rollback");
+  for (const path of changes) {
+    if (!roots.some((root) => path === root || path.startsWith(`${root}${sep}`)))
+      throw new Error(`compose wrote outside managed roots: ${path}`);
+    const target = join(destination, path);
+    unlinkedPath(destination, target);
+    const info = lstatSync(target, { throwIfNoEntry: false });
+    if (info && !info.isFile()) throw new Error(`destination is not a regular file: ${path}`);
+    const current = info ? { bytes: readFileSync(target), mode: info.mode & 0o777 } : undefined;
+    if (!sameFile(current, before.get(path))) throw new Error(`destination changed during installation: ${path}`);
+    const previous = before.get(path);
+    if (previous) {
+      const backup = join(backups, path);
+      mkdirSync(dirname(backup), { recursive: true });
+      writeFileSync(backup, previous.bytes, { mode: previous.mode });
+    }
+  }
+  const applied: string[] = [];
+  const createdDirectories: string[] = [];
+  try {
+    for (const path of changes) {
+      const target = join(destination, path);
+      unlinkedPath(destination, target);
+      const parents: string[] = [];
+      for (let dir = dirname(target); !existsSync(dir); dir = dirname(dir)) parents.push(dir);
+      for (const dir of parents.reverse()) {
+        mkdirSync(dir);
+        createdDirectories.push(dir);
+      }
+      applied.push(path);
+      const value = after.get(path);
+      if (value) atomicFile(target, value);
+      else rmSync(target);
+    }
+  } catch (error) {
+    const failures: string[] = [];
+    for (const path of applied.reverse()) {
+      try {
+        const target = join(destination, path);
+        unlinkedPath(destination, target);
+        const previous = before.get(path);
+        if (previous) atomicFile(target, previous);
+        else rmSync(target, { force: true });
+      } catch {
+        failures.push(path);
+      }
+    }
+    for (const dir of createdDirectories.reverse()) {
+      try {
+        rmdirSync(dir);
+      } catch {
+        /* retain nonempty directories */
+      }
+    }
+    throw new CommitFailure(
+      `${error instanceof Error ? error.message : String(error)}${failures.length ? `; rollback failed for ${failures.join(", ")}` : "; destination files restored"}`,
+      failures.length > 0,
+    );
+  }
 }
 
 // ---- arguments --------------------------------------------------------------
@@ -297,24 +437,16 @@ if (import.meta.main) {
     } else fail(`unknown argument "${arg}"\n${USAGE}`);
   }
   if (!projectArg) fail(`--project is required\n${USAGE}`);
+  if ([fromArg, refArg, tagArg].filter(Boolean).length > 1)
+    fail("choose only one source selector: --from, --ref, or --tag");
 
   // ---- workspace layout -------------------------------------------------------
 
-  const projectDir = resolve(projectArg);
+  let projectDir = resolve(projectArg);
   if (!existsSync(projectDir)) fail(`project not found: ${projectDir}`);
-  const harnessLeaves: Readonly<Record<string, string>> = {
-    claude: ".claude",
-    codex: ".codex",
-    copilot: ".aidlc",
-    cursor: ".cursor",
-    kimi: ".kimi-code",
-    kiro: ".kiro",
-    "kiro-ide": ".kiro",
-    opencode: ".aidlc",
-  };
+  const harnessLeaves: Readonly<Record<string, string>> = { claude: ".claude", codex: ".codex" };
   const expectedLeaf = harnessLeaves[harness];
-  if (!expectedLeaf)
-    fail(`unknown harness "${harness}" — expected one of: ${Object.keys(harnessLeaves).sort().join(", ")}`);
+  if (!expectedLeaf) fail(`unsupported harness "${harness}" — supported: claude, codex`);
   const toolsDir = join(projectDir, expectedLeaf, "tools");
   const builderPath = join(toolsDir, "aidlc-plugin-build.ts");
   const pluginTestPath = join(toolsDir, "aidlc-plugin-test.ts");
@@ -327,8 +459,8 @@ if (import.meta.main) {
   }
   const targets = JSON.parse(readFileSync(targetsPath, "utf-8")) as Record<string, PluginTarget>;
   const target = targets[harness];
-  if (!target) {
-    fail(`unknown harness "${harness}" — expected one of: ${Object.keys(targets).sort().join(", ")}`);
+  if (!target || target.harnessLeaf !== expectedLeaf || target.kind !== "store" || target.harnessName !== harness) {
+    fail(`installed AI-DLC target metadata is incompatible with ${harness}`);
   }
 
   if (!existsSync(join(projectDir, target.harnessLeaf))) {
@@ -338,7 +470,7 @@ if (import.meta.main) {
     );
   }
 
-  const provenancePath = join(projectDir, target.harnessLeaf, "tools", "data", PROVENANCE_FILE);
+  let provenancePath = join(projectDir, target.harnessLeaf, "tools", "data", PROVENANCE_FILE);
 
   function readProvenance(): InstallationProvenance | null {
     if (!existsSync(provenancePath)) return null;
@@ -349,7 +481,15 @@ if (import.meta.main) {
         typeof value.ref !== "string" ||
         !["local", "ref", "tag", "latest"].includes(value.source) ||
         typeof value.installed_at !== "string" ||
-        !/^sha256:[0-9a-f]{64}$/.test(value.payload_sha256)
+        !/^sha256:[0-9a-f]{64}$/.test(value.payload_sha256) ||
+        (value.owned_files !== undefined &&
+          (typeof value.owned_files !== "object" ||
+            value.owned_files === null ||
+            Array.isArray(value.owned_files) ||
+            Object.entries(value.owned_files).some(
+              ([path, hash]) =>
+                !ownedPayloadPath(path) || typeof hash !== "string" || !/^sha256:[0-9a-f]{64}$/.test(hash),
+            )))
       )
         return null;
       return value;
@@ -364,6 +504,14 @@ if (import.meta.main) {
     fail("--update requires installation provenance; run a normal install with --from, --ref, --tag, or latest first");
   }
   if (update && existingProvenance?.source === "tag") {
+    const owned = existingProvenance.owned_files;
+    if (!owned || Object.keys(owned).length === 0)
+      fail("fixed-tag installation has no file ownership receipt; reinstall that tag to verify it");
+    for (const [path, expectedHash] of Object.entries(owned)) {
+      const file = join(projectDir, target.harnessLeaf, ...path.split("/"));
+      if (!existsSync(file) || !lstatSync(file).isFile() || fileHash(readFileSync(file)) !== expectedHash)
+        fail(`fixed-tag payload is missing or modified: ${path}`);
+    }
     console.log(`Changed 0 — fixed tag ${existingProvenance.ref} is already installed`);
     process.exit(0);
   }
@@ -422,31 +570,7 @@ if (import.meta.main) {
     run(`build dist/${harness}/`, ["bun", builderPath, pluginRoot, harness]);
   }
 
-  // ---- dry run ----------------------------------------------------------------
-
-  if (dryRun) {
-    run("compose dry-run (target is not modified)", [
-      "bun",
-      pluginTestPath,
-      pluginRoot,
-      "--install",
-      projectDir,
-      "--harness",
-      harness,
-    ]);
-    console.log("\n✓ dry run passed — rerun without --dry-run to install");
-    process.exit(0);
-  }
-
-  // ---- upgrade refresh --------------------------------------------------------
-  // The compose hook copies payload files no-clobber: new files land, but a
-  // file that already exists in the harness tree is never overwritten. That is
-  // the right default for a user-owned tree — and the wrong one for a plugin
-  // UPGRADE, where it leaves the previous version's files coexisting with the
-  // new version's. Before composing, remove the plugin's OWN payload files from
-  // the harness tree so compose re-places the current versions. Only files this
-  // plugin's projection ships are touched; contribution merges into core stages
-  // are content-based and refresh themselves.
+  // Refresh only recorded, unmodified plugin files inside the candidate tree.
 
   const PAYLOAD_MAP: [string, string[]][] = [
     ["sensors", ["sensors"]],
@@ -519,6 +643,15 @@ if (import.meta.main) {
       source: resolvedSource.source,
       installed_at: new Date().toISOString(),
       payload_sha256: payloadSha256,
+      projection_sha256: projectionDigest,
+      owned_files: Object.fromEntries(
+        candidatePayloadEntries()
+          .filter((entry) => ownedPayloadPath(entry.path))
+          .map((entry) => [
+            entry.path,
+            fileHash(readFileSync(join(projectDir, target.harnessLeaf, ...entry.path.split("/")))),
+          ]),
+      ),
     };
     mkdirSync(dirname(provenancePath), { recursive: true });
     const temporary = `${provenancePath}.tmp-${process.pid}-${randomUUID()}`;
@@ -531,47 +664,57 @@ if (import.meta.main) {
   }
 
   function refreshPluginPayloads(): number {
+    for (const candidate of candidatePayloadEntries()) {
+      const dst = join(projectDir, target.harnessLeaf, ...candidate.path.split("/"));
+      if (existsSync(dst) && !(candidate.path in priorOwnership)) {
+        if (!lstatSync(dst).isFile() || !readFileSync(dst).equals(candidate.bytes))
+          fail(`payload collision with an unowned file: ${candidate.path}`);
+      }
+    }
+    for (const [path, expectedHash] of Object.entries(priorOwnership)) {
+      const dst = join(projectDir, target.harnessLeaf, ...path.split("/"));
+      if (existsSync(dst) && (!lstatSync(dst).isFile() || fileHash(readFileSync(dst)) !== expectedHash))
+        fail(`installed plugin file was modified: ${path}`);
+    }
     let refreshed = 0;
-    for (const [srcDir, dstParts] of PAYLOAD_MAP) {
-      const srcRoot = join(distDir, srcDir);
-      if (!existsSync(srcRoot)) continue;
-      for (const rel of walkFiles(srcRoot)) {
-        const dst = join(projectDir, target.harnessLeaf, ...dstParts, rel);
-        if (existsSync(dst)) {
-          rmSync(dst, { force: true });
-          refreshed += 1;
-        }
+    for (const path of Object.keys(priorOwnership)) {
+      const dst = join(projectDir, target.harnessLeaf, ...path.split("/"));
+      if (existsSync(dst)) {
+        rmSync(dst);
+        refreshed++;
       }
     }
     return refreshed;
   }
 
-  // 廃止済みペイロードの tombstone: かつて配布し、もう dist に存在しないファイル
-  // またはディレクトリ。compose は no-clobber・refresh は「現 dist に在るもの」
-  // しか消せないため、ここに載せない限りアップグレード先へ孤児として残り続ける。
-  // 後方互換の残骸を残さない——何かを廃止したら同じ変更でこのリストに追記すること。
-  interface RemovedPayload {
-    readonly parts: readonly string[];
-    // "directory" は中身ごと消す（層ツリーのように再帰的に廃止されたもの）。
-    readonly kind: "file" | "directory";
-  }
-
-  const REMOVED_PAYLOADS: readonly RemovedPayload[] = [
-    // 初版はなし。何かを廃止したら { parts: ["tools", "..."], kind: "file" } /
-    // { parts: ["tools", "..."], kind: "directory" } をここに追記する。
-  ];
-
-  const beforePayload = installedPayloadEntries();
-  const candidateDigest = payloadDigest(candidatePayloadEntries());
-  const hasTombstonedPayload = REMOVED_PAYLOADS.some((payload) =>
-    existsSync(join(projectDir, target.harnessLeaf, ...payload.parts)),
+  const projectionDigest = canonicalPayloadSha256(
+    walkFiles(distDir).map((path) => ({ path: path.split(sep).join("/"), bytes: readFileSync(join(distDir, path)) })),
   );
+  const beforePayload = installedPayloadEntries();
+  if (
+    existingProvenance &&
+    existingProvenance.owned_files === undefined &&
+    (!beforePayload || payloadDigest(beforePayload) !== existingProvenance.payload_sha256)
+  ) {
+    fail("cannot verify ownership of the previous installation; reinstall its recorded source version before updating");
+  }
+  const priorOwnership =
+    existingProvenance?.owned_files ??
+    (existingProvenance && beforePayload && payloadDigest(beforePayload) === existingProvenance.payload_sha256
+      ? Object.fromEntries(
+          beforePayload
+            .filter((entry) => ownedPayloadPath(entry.path))
+            .map((entry) => [entry.path, fileHash(entry.bytes)]),
+        )
+      : {});
+  const candidateDigest = payloadDigest(candidatePayloadEntries());
   if (
     existingProvenance &&
     sameResolvedSource(existingProvenance) &&
     existingProvenance.version === pluginVersion &&
+    existingProvenance.owned_files !== undefined &&
+    existingProvenance.projection_sha256 === projectionDigest &&
     beforePayload &&
-    !hasTombstonedPayload &&
     payloadDigest(beforePayload) === candidateDigest &&
     existingProvenance.payload_sha256 === candidateDigest
   ) {
@@ -579,46 +722,45 @@ if (import.meta.main) {
     process.exit(0);
   }
 
-  function removeTombstonedPayloads(): number {
-    let removed = 0;
-    for (const payload of REMOVED_PAYLOADS) {
-      const dst = join(projectDir, target.harnessLeaf, ...payload.parts);
-      if (!existsSync(dst)) continue;
-      try {
-        rmSync(dst, { force: true, recursive: payload.kind === "directory" });
-      } catch (error) {
-        fail(`cannot remove retired payload ${dst}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-      removed += 1;
+  const destinationDir = projectDir;
+  const transactionRoot = mkdtempSync(join(tmpdir(), "ddd-transaction-"));
+  const candidateDir = join(transactionRoot, "candidate");
+  const managedRoots = [target.harnessLeaf, ".agents", "aidlc", ".gitignore", ".mcp.json"];
+  let retainRecovery = false;
+  const lockPath = join(destinationDir, ".ddd-install-lock");
+  let locked = false;
+  process.on("exit", () => {
+    if (!retainRecovery) rmSync(transactionRoot, { recursive: true, force: true });
+    if (locked) rmSync(lockPath, { recursive: true, force: true });
+  });
+  try {
+    if (!dryRun) {
+      mkdirSync(lockPath);
+      locked = true;
     }
-    return removed;
+    mkdirSync(candidateDir);
+    for (const name of managedRoots) {
+      const original = join(destinationDir, name);
+      if (existsSync(original))
+        cpSync(original, join(candidateDir, name), { recursive: true, dereference: true, preserveTimestamps: true });
+    }
+  } catch (error) {
+    fail(`cannot prepare installation candidate: ${error instanceof Error ? error.message : String(error)}`);
   }
+  const beforeCandidate = treeFiles(candidateDir);
+  projectDir = candidateDir;
+  provenancePath = join(candidateDir, target.harnessLeaf, "tools", "data", PROVENANCE_FILE);
 
   const refreshed = refreshPluginPayloads();
   if (refreshed > 0) {
-    console.log(
-      `\n▸ upgrade refresh: removed ${refreshed} previously composed plugin file(s) so compose re-places the current versions`,
-    );
+    console.log(`\n▸ candidate preparation: refreshing ${refreshed} owned plugin file(s)`);
   }
-  const tombstoned = removeTombstonedPayloads();
-  if (tombstoned > 0) {
-    console.log(`\n▸ upgrade cleanup: removed ${tombstoned} retired plugin file(s) that this version no longer ships`);
-  }
-
-  // ---- drop (storeless harnesses only) + compose ------------------------------
-
-  if (target.kind === "store") {
-    console.log(
-      `\n▸ ${harness} is a store harness — composing directly from dist/, nothing is copied into the project`,
-    );
-  } else {
-    console.log(`\n▸ copy ${distDir} → ${projectDir} (folder-drop, ${target.kind} layout)`);
-    cpSync(distDir, projectDir, { recursive: true });
-  }
+  // ---- compose candidate ----------------------------------------------------
 
   const composeEnv = {
     AIDLC_PLUGIN_ROOT: distDir,
     AIDLC_PROJECT_DIR: projectDir,
+    CLAUDE_PROJECT_DIR: projectDir,
     AIDLC_HARNESS_DIR: target.harnessLeaf,
     AIDLC_HARNESS_NAME: target.harnessName,
   };
@@ -633,15 +775,37 @@ if (import.meta.main) {
   if (!existsSync(sentinel)) {
     fail(`compose finished but ${sentinel} is missing — check the compose output above`);
   }
-  console.log(
-    `\n✓ installed into ${projectDir} (${target.harnessLeaf}/) — ` +
-      "the ddd-domain-modeling stage and the DDD sensors are now part of the workflow.\n" +
-      "  Next: run /aidlc --doctor in that project to check the install.",
-  );
-
   const installedPayload = installedPayloadEntries();
   if (!installedPayload) fail("compose completed but one or more plugin-owned payload files are missing");
   const installedDigest = payloadDigest(installedPayload);
+  const pluginChecks = await import(pluginTestPath);
+  if (typeof pluginChecks.readPluginDropEntries !== "function")
+    fail("installed AI-DLC tools do not expose plugin drop verification");
+  const drops = pluginChecks.readPluginDropEntries(candidateDir, PLUGIN_NAME) as { message: string }[];
+  if (drops.length > 0) fail(`candidate composition has drops: ${drops.map((drop) => drop.message).join("; ")}`);
+  run("verify candidate graph", ["bun", join(candidateDir, target.harnessLeaf, "tools", "aidlc-graph.ts"), "compile"], {
+    cwd: candidateDir,
+    env: composeEnv,
+  });
+  const graph = JSON.parse(
+    readFileSync(join(candidateDir, target.harnessLeaf, "tools/data/stage-graph.json"), "utf8"),
+  ) as { slug: string }[];
+  if (!graph.some((stage) => stage.slug === "ddd-domain-modeling"))
+    fail("candidate graph is missing ddd-domain-modeling");
+  if (installedDigest !== candidateDigest) fail("candidate payload differs from the selected projection");
   writeProvenance(installedDigest);
+  if (dryRun) {
+    console.log("\n✓ dry run passed — destination unchanged");
+    process.exit(0);
+  }
+  try {
+    applyCandidate(destinationDir, beforeCandidate, treeFiles(candidateDir), managedRoots, transactionRoot);
+  } catch (error) {
+    retainRecovery = error instanceof CommitFailure && error.recoveryRequired;
+    fail(
+      `installation could not be committed: ${error instanceof Error ? error.message : String(error)}${retainRecovery ? `; recovery files: ${join(transactionRoot, "rollback")}` : ""}`,
+    );
+  }
+  console.log(`\n✓ installed into ${destinationDir} (${target.harnessLeaf}/)`);
   console.log(`Changed 1 — recorded ${pluginVersion} from ${resolvedSource.source} ${resolvedSource.ref}`);
 }
