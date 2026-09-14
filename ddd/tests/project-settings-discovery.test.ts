@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ProjectSelection } from "../tools/ddd/lib/project-settings/index.ts";
 import { readProjectSettings } from "../tools/ddd/lib/project-settings/index.ts";
@@ -68,3 +68,45 @@ test("a directory that merely carries the document name is not a nested document
     expect(readProjectSettings(root)).toEqual({ kind: "validated", selection: ROOT_SELECTION });
   });
 });
+
+// Dropping read permission is the only way to make the search fail, and it does nothing for a
+// superuser, whose open succeeds regardless. Skipping there keeps the test honest: it either
+// observes the refusal or does not run at all.
+const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
+
+test.skipIf(RUNNING_AS_SUPERUSER)("a directory the search cannot list refuses the read instead of throwing", () => {
+  withWorkspace({ ".ddd.toml": ROOT_DOCUMENT }, (root) => {
+    const sealed = join(root, "packages");
+    mkdirSync(sealed, { recursive: true });
+    chmodSync(sealed, 0o000);
+    try {
+      const outcome = readProjectSettings(root);
+      if (outcome.kind !== "rejected") throw new Error(`expected a rejection, received ${JSON.stringify(outcome)}`);
+      expect(outcome.rejection.reason).toBe("unreadable");
+      expect(outcome.rejection.detail).toContain(sealed);
+    } finally {
+      // Restore before the fixture removes the tree, or the cleanup inherits the same refusal.
+      chmodSync(sealed, 0o755);
+    }
+  });
+});
+
+test.skipIf(RUNNING_AS_SUPERUSER)(
+  "an unlistable directory is refused rather than treated as holding no document",
+  () => {
+    withWorkspace({ ".ddd.toml": ROOT_DOCUMENT }, (root) => {
+      const sealed = join(root, "packages");
+      mkdirSync(join(sealed, "billing"), { recursive: true });
+      // A nested document the search would have reported, placed where the search cannot reach it.
+      writeFileSync(join(sealed, "billing/.ddd.toml"), NESTED_DOCUMENT);
+      chmodSync(sealed, 0o000);
+      try {
+        const outcome = readProjectSettings(root);
+        expect(outcome.kind).toBe("rejected");
+        if (outcome.kind === "rejected") expect(outcome.rejection.reason).toBe("unreadable");
+      } finally {
+        chmodSync(sealed, 0o755);
+      }
+    });
+  },
+);

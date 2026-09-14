@@ -41,7 +41,11 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     if (!VALUE_OPTIONS.includes(option))
       return { kind: "invalid-arguments", detail: `unknown option ${option}; ${USAGE}` };
     const value = argv[index + 1];
-    if (value === undefined) return { kind: "invalid-arguments", detail: `${option} needs a value; ${USAGE}` };
+    // No choice this command accepts is spelled like an option, so an option-shaped token is a
+    // missing value and not the value itself. Consuming it would drop the option it names: swallowing
+    // `--apply` leaves the request in preview, where nothing is written and nothing reports a refusal.
+    if (value === undefined || value.startsWith("--"))
+      return { kind: "invalid-arguments", detail: `${option} needs a value; ${USAGE}` };
     index++;
     if (option === "--project") root = value;
     if (option === "--typescript-layout") {

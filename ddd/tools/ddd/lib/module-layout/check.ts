@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { inspectModules } from "../packaging/rust-modules.ts";
@@ -36,7 +37,21 @@ export function checkModuleLayout(
   const sources: string[] = [];
   function discover(directory: string): void {
     checkBudget();
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch (error) {
+      // The project settings search refuses a tree it cannot list; this check reports the same fact in
+      // its own vocabulary, beside the symbolic links it already declines to inspect, so an unreadable
+      // directory yields a finding the caller can act on instead of an exception from the walk.
+      report(
+        "unresolved",
+        directory,
+        `cannot inspect this directory: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+    for (const entry of entries) {
       if (entry.name === ".ddd.toml" && directory !== root)
         report(
           "configuration",
