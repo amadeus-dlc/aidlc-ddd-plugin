@@ -12,7 +12,7 @@
     "check": "bun run check:biome && bun run validate && bun run test:development-scopes && bun run prepare:state-exposure && bun run test && bun run test:state-exposure:native && bun run experiment:rust-syn && bun run verify:state-exposure && bun run typecheck:state-exposure",
     "check:biome": "biome check --error-on-warnings .",
     "format": "biome format --write .",
-    "test": "bun test tests/",
+    "test": "bun test tests/ --coverage --coverage-reporter=text --coverage-reporter=lcov && bun scripts/check-coverage.ts",
     "test:development-scopes": "bun scripts/verify-development-scopes.ts",
     "experiment:rust-syn": "bun scripts/verify-rust-syn.ts",
     "test:sandbox": "bun run test:coverage && bun run build:all && for h in claude codex; do bun ../.codex/tools/aidlc-plugin-test.ts . --install .. --harness $h || exit 1; done && bun scripts/verify-dist.ts && bun test tests/t1-gate-integration.test.ts && bun run test:install",

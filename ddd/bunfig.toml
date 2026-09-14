@@ -1,0 +1,20 @@
+[test]
+# Coverage settings for `bun test --coverage`, which `bun run test` uses. A
+# plain `bun test` records nothing and is unaffected.
+#
+# The floor itself is NOT set here. Bun's `coverageThreshold` is evaluated per
+# file, so any floor high enough to be meaningful fails on the least-covered
+# file rather than on the state of the codebase. scripts/check-coverage.ts
+# enforces a line-weighted floor over the lcov report instead.
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = [
+  # The AI-DLC framework's own tools. Loaded by our tests, but third-party
+  # code this repository is not allowed to modify, so not ours to cover.
+  "**/.codex/tools/**",
+  # Vendored tree-sitter build.
+  "**/lib/rust/vendor/**",
+  # Test fixtures and helpers. coverageSkipTestFiles drops the *.test.ts
+  # entry points; these are the support files behind them, and counting code
+  # that runs by definition during a test run only inflates the figure.
+  "tests/**",
+]
