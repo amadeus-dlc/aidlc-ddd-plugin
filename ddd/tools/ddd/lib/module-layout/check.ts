@@ -1,13 +1,14 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { inspectModules } from "../packaging/rust-modules.ts";
+import { legacyRustModuleLayout } from "../project-settings/contract.ts";
 import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import { finding } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
+import { isExcludedFromProjectScan } from "../shared/project-scope.ts";
 import { scanWorkspace } from "../workspace/resolver.ts";
 
 export type ModuleLayout = "file" | "mod-rs";
-const EXCLUDED = new Set(["node_modules", "target", "vendor", "dist", "aidlc"]);
 const posix = (path: string) => path.split(sep).join("/");
 const within = (root: string, path: string) => {
   const rel = relative(root, path);
@@ -42,7 +43,7 @@ export function checkModuleLayout(
           join(directory, entry.name),
           "nested layout configuration is not allowed; use the project-root .ddd.toml",
         );
-      if (entry.name.startsWith(".") || EXCLUDED.has(entry.name)) continue;
+      if (isExcludedFromProjectScan(entry.name)) continue;
       const path = join(directory, entry.name);
       if (entry.isSymbolicLink()) {
         report("unresolved", path, "symbolic links in the inspected project are not supported");
@@ -57,20 +58,13 @@ export function checkModuleLayout(
   const configPath = join(root, ".ddd.toml");
   if (manifests.length === 0 && sources.length === 0 && !existsSync(configPath)) return result;
   try {
-    const config = Bun.TOML.parse(readFileSync(configPath, "utf8"));
-    const rust = config.rust as Record<string, unknown> | undefined;
-    if (
-      config.schema_version !== 1 ||
-      !rust ||
-      Object.keys(config).some((key) => !["schema_version", "rust"].includes(key)) ||
-      Object.keys(rust).some((key) => key !== "module_layout") ||
-      typeof rust.module_layout !== "string" ||
-      !["file", "mod-rs"].includes(rust.module_layout)
-    )
+    const config = Bun.TOML.parse(readFileSync(configPath, "utf8")) as Record<string, unknown>;
+    const layout = legacyRustModuleLayout(config);
+    if (layout === null)
       throw new Error(
         'expected schema_version = 1 and [rust] module_layout = "file" or "mod-rs"; no overrides or mixed mode',
       );
-    result.mode = rust.module_layout as ModuleLayout;
+    result.mode = layout;
   } catch (error) {
     report(
       "configuration",

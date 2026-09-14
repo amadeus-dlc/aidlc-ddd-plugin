@@ -221,6 +221,7 @@ function isolatedCli() {
     "tools/ddd/lib/state-exposure-verification",
     "tools/ddd/lib/rust/state-evidence",
     "tools/ddd/lib/typescript/state-evidence",
+    "tools/ddd/lib/project-settings",
     "tests/fixtures/state-exposure-languages",
   ])
     cpSync(resolve(root, path), resolve(sandbox, path), { recursive: true });

@@ -10,6 +10,7 @@ For users applying the DDD plugin to an application project. Start with the inst
 | Prepare canonical models, mappings, and required declarations | [Artifact contract](artifact-contract.md) |
 | Name domain packages using ubiquitous language | [Domain packaging contract](domain-packaging-design.md) |
 | Understand Rust type matching, replay declarations, and unexamined code | [Rust sensor contract](rust-sensor-contract.md) |
+| Declare the languages in use and migrate the legacy Rust configuration | [Project settings](project-settings.md) |
 
 | Enforce one Rust module file layout across the project | [Rust module layout](rust-module-layout.md) |
 

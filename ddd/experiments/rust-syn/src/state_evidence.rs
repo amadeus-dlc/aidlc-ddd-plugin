@@ -1,5 +1,5 @@
 //! Version 2 syntax evidence. Source is never compiled or executed.
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use syn::spanned::Spanned;
@@ -25,6 +25,101 @@ struct Request {
     files: Vec<super::Source>,
     target: Target,
     settings: Value,
+}
+
+/// The project-settings vocabulary, spelled exactly as the TypeScript owner emits it.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SettingsEnvelope {
+    #[serde(rename = "projectSettings")]
+    project_settings: ProjectSettings,
+}
+
+/// serde folds an explicit `null` onto the outer `Option` too, so a key that is present with a null
+/// value would read as absent. Forcing the outer `Some` keeps "the key is there" observable.
+fn present_field<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Ok(Some(Option::deserialize(deserializer)?))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectSettings {
+    version: u8,
+    languages: Vec<String>,
+    // The outer Option keeps "key absent" apart from "key present"; the contract defines the key's
+    // presence, so the two must not collapse into the same fact.
+    #[serde(default, deserialize_with = "present_field")]
+    rust: Option<Option<RustSelection>>,
+    #[serde(default, deserialize_with = "present_field")]
+    typescript: Option<Option<TypeScriptSelection>>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RustSelection {
+    #[serde(rename = "moduleLayout")]
+    module_layout: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TypeScriptSelection {
+    #[serde(rename = "moduleLayout")]
+    module_layout: String,
+    #[serde(rename = "codeRepresentation")]
+    code_representation: String,
+}
+
+/// A language key is present exactly when that language is in use, and a present key names choices
+/// the contract defines. Whether the key is there and whether its value is contract-defined stay
+/// separate facts: folded into one boolean, an unused language and a contract-external value cancel
+/// each other out and an undefined payload is accepted.
+fn declared_exactly_when_in_use<T>(
+    field: &Option<Option<T>>,
+    in_use: bool,
+    is_known: impl Fn(&T) -> bool,
+) -> bool {
+    match field {
+        None => !in_use,
+        Some(Some(choice)) => in_use && is_known(choice),
+        Some(None) => false,
+    }
+}
+
+/// Empty settings are the baseline every preserved case carries. Anything else must be exactly the
+/// project-settings payload and must put Rust in use; the chosen layout never steers extraction.
+fn accepts_settings(settings: &Value) -> bool {
+    if settings
+        .as_object()
+        .expect("run rejects a request whose settings are not an object")
+        .is_empty()
+    {
+        return true;
+    }
+    let Ok(envelope) = serde_json::from_value::<SettingsEnvelope>(settings.clone()) else {
+        return false;
+    };
+    let selection = envelope.project_settings;
+    if selection.version != 2 {
+        return false;
+    }
+    let rust_in_use = selection.languages.iter().any(|name| name == "rust");
+    let typescript_in_use = selection.languages.iter().any(|name| name == "typescript");
+    if selection.languages.len() != usize::from(rust_in_use) + usize::from(typescript_in_use) {
+        return false;
+    }
+    rust_in_use
+        && declared_exactly_when_in_use(&selection.rust, rust_in_use, |choice| {
+            ["file", "mod-rs"].contains(&choice.module_layout.as_str())
+        })
+        && declared_exactly_when_in_use(&selection.typescript, typescript_in_use, |choice| {
+            ["named-file", "index-file"].contains(&choice.module_layout.as_str())
+                && ["class", "companion"].contains(&choice.code_representation.as_str())
+        })
 }
 
 fn location(span: proc_macro2::Span) -> Value {
@@ -119,9 +214,7 @@ pub fn run(value: Value) -> Result<Value, Box<dyn std::error::Error>> {
     }
     let source = &files[0].source;
     let evidence = match syn::parse_file(source) {
-        Ok(_) if !request.settings.as_object().unwrap().is_empty() => {
-            unresolved("unsupported-syntax")
-        }
+        Ok(_) if !accepts_settings(&request.settings) => unresolved("unsupported-syntax"),
         Ok(file) if uncertain(&file.attrs) => unresolved("unsupported-syntax"),
         Ok(file) => {
             let offset = usize::from(source.starts_with('\u{feff}')) * 3
