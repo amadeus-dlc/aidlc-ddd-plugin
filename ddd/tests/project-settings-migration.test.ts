@@ -201,3 +201,25 @@ test("the current production layout entry point still does not accept the migrat
     expect((migrated.findings ?? []).map((entry) => entry.rule_id)).toContain("module-layout.configuration");
   });
 });
+
+test("a symbolic link planted at the previously predictable staging path is never written through", () => {
+  withWorkspace({ "secret.txt": "owned by someone else\n" }, (external) =>
+    withWorkspace({ ".ddd.toml": legacyDocument("mod-rs"), ...untouchableUserFiles() }, (root) => {
+      // The staging name used to be derived from the process id, so anyone who could create entries
+      // beside the document could aim the write at a file of their choosing. Nothing may reach it now.
+      const predictable = join(root, `.ddd.toml.${process.pid}.staging`);
+      symlinkSync(join(external, "secret.txt"), predictable);
+      expect(applyMigration(root, NOT_REQUESTED).kind).toBe("applied");
+      expect(readFileSync(join(external, "secret.txt"), "utf8")).toBe("owned by someone else\n");
+      // The entry belongs to whoever placed it; a write that avoids it must not delete it either.
+      expect(readFileSync(predictable, "utf8")).toBe("owned by someone else\n");
+    }),
+  );
+});
+
+test("an applied migration leaves no staging entry behind", () => {
+  withWorkspace({ ".ddd.toml": legacyDocument("mod-rs"), ...untouchableUserFiles() }, (root) => {
+    expect(applyMigration(root, NOT_REQUESTED).kind).toBe("applied");
+    expect(Object.keys(snapshotBytes(root)).filter((path) => path.includes(".staging"))).toEqual([]);
+  });
+});

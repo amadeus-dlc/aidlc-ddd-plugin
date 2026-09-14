@@ -112,3 +112,31 @@ for (const layer of ["domain", "use-case", "interface-adapter", "rmu"] as const)
     }
   });
 }
+
+// Dropping read permission does nothing for a superuser, whose listing succeeds regardless, so the
+// test either observes the finding or does not run at all.
+const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
+
+test.skipIf(RUNNING_AS_SUPERUSER)("a directory the walk cannot list is reported rather than thrown", async () => {
+  const root = mkdtempSync(join(tmpdir(), "ddd-layout-unreadable-"));
+  const sealed = join(root, "packages");
+  try {
+    const { initAnalyzer } = await import("../tools/ddd/lib/rust/analyzer.ts");
+    const { checkModuleLayout } = await import("../tools/ddd/lib/module-layout/check.ts");
+    const { chmodSync } = await import("node:fs");
+    writeFileSync(join(root, ".ddd.toml"), 'schema_version=1\n[rust]\nmodule_layout="file"\n');
+    mkdirSync(sealed, { recursive: true });
+    chmodSync(sealed, 0o000);
+    const runtime = await initAnalyzer();
+    const result = checkModuleLayout(runtime, root);
+    expect(result.findings.some((entry) => entry.rule_id === "module-layout.unresolved")).toBe(true);
+  } finally {
+    const { chmodSync } = await import("node:fs");
+    try {
+      chmodSync(sealed, 0o755);
+    } catch {
+      // The directory may not exist when the test failed before creating it.
+    }
+    rmSync(root, { recursive: true, force: true });
+  }
+});

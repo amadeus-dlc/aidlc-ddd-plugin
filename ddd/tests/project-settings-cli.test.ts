@@ -132,3 +132,34 @@ test("the shipped entry point runs on its own, with no production sensor switche
     expect(JSON.parse(refused.stdout.toString())).toMatchObject({ outcome: "rejected", reason: "file-absent" });
   });
 });
+
+test("an option left without a value never swallows the flag that follows it", () => {
+  withWorkspace({ ".ddd.toml": legacyDocument("mod-rs"), ...untouchableUserFiles() }, (root) => {
+    const before = snapshotBytes(root);
+    // `--apply` is not a layout, so reading it as one would drop the apply and leave a preview that
+    // writes nothing and still exits 0 — a caller reading the exit status alone would call that done.
+    const { exitCode, report } = run(["migrate", "--project", root, "--typescript-layout", "--apply"]);
+    expect(exitCode).toBe(2);
+    expect(report.outcome).toBe("invalid-arguments");
+    expect(report.detail).toContain("--typescript-layout needs a value");
+    expect(snapshotBytes(root)).toEqual(before);
+  });
+});
+
+test("a complete supplement still applies once the value is spelled out", () => {
+  withWorkspace({ ".ddd.toml": legacyDocument("mod-rs"), ...untouchableUserFiles() }, (root) => {
+    const { exitCode, report } = run([
+      "migrate",
+      "--project",
+      root,
+      "--typescript-layout",
+      "named-file",
+      "--typescript-representation",
+      "class",
+      "--apply",
+    ]);
+    expect(exitCode).toBe(0);
+    expect(report.outcome).toBe("applied");
+    expect(readFileSync(join(root, ".ddd.toml"), "utf8")).toContain('module_layout = "named-file"');
+  });
+});
