@@ -91,5 +91,8 @@ ddd-sandbox/
 # LCOV written by `bun test --coverage` (machine-local output)
 coverage/
 
-# Keep this intent's audit files local.
-/aidlc/spaces/default/intents/260913-shared-state-check/audit/
+# mise per-developer overrides. `*.local` above does not match a name that ends
+# in .toml, so these need their own rule; the files themselves say they are
+# ignored and that has to be true.
+mise.local.toml
+mise.*.local.toml
