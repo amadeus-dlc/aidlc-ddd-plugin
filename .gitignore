@@ -90,3 +90,6 @@ ddd-sandbox/
 
 # LCOV written by `bun test --coverage` (machine-local output)
 coverage/
+
+# Keep this intent's audit files local.
+/aidlc/spaces/default/intents/260913-shared-state-check/audit/
