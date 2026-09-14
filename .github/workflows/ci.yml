@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pin the AI-DLC runtime. aidlc-plugin-{dev,bugfix,refactor}.md declare 2.8.2
+  # as the supported baseline, and ddd/scripts/verify-development-scopes.ts
+  # runs the real binary. Bump this together with those scope files.
+  AIDLC_VERSION: "2.8.2"
+  # sha256 of install.sh in the v2.8.2 release (from its checksums.txt).
+  AIDLC_INSTALLER_SHA256: "c20d3b094c1b4e81dc4aa2adcda74c7117334b3f010d691db5b194a8cec859ea"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keep these versions equal to mise.toml; see the note at the top of it.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pinned AI-DLC runtime
+        env:
+          # install.sh verifies the release provenance with `gh attestation
+          # verify` whenever gh is present, and gh is preinstalled on the
+          # runner. Without a token that verification fails and aborts the
+          # install, so authenticate it explicitly.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          installer="${RUNNER_TEMP}/aidlc-install.sh"
+          curl -fsSL -o "${installer}" \
+            "https://github.com/awslabs/aidlc-workflows/releases/download/v${AIDLC_VERSION}/install.sh"
+          echo "${AIDLC_INSTALLER_SHA256}  ${installer}" | sha256sum -c -
+          sh "${installer}" --version "${AIDLC_VERSION}" --quiet
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Verify the AI-DLC runtime is the pinned version
+        run: |
+          installed="$(aidlc --version)"
+          echo "${installed}"
+          case "${installed}" in
+            "aidlc ${AIDLC_VERSION} "*) ;;
+            *) echo "expected aidlc ${AIDLC_VERSION}" >&2; exit 1 ;;
+          esac
+
+      - name: Install dependencies
+        working-directory: ddd
+        run: bun install --frozen-lockfile
+
+      # The Rust build and test steps run with --locked --offline, so the
+      # dependencies have to be in the local registry before check starts.
+      - name: Fetch Rust dependencies
+        working-directory: ddd
+        run: cargo fetch --locked --manifest-path experiments/rust-syn/Cargo.toml
+
+      - name: Check
+        working-directory: ddd
+        run: bun run check
