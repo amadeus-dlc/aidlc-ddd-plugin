@@ -21,7 +21,7 @@ AI-DLC（aidlc 2.8.2）が読む環境変数と、その設定場所・優先順
 
 `aidlc config flags` で記録できるのは次の 4 つの設定値と 9 つのバイパスだけ。それ以外の変数は環境変数でしか設定できない。
 
-```
+```sh
 aidlc config flags --harness claude --default-scope <scope> --project --yes
 aidlc config flags --harness claude --bypass AIDLC_DISABLE_PLAN_APPROVAL_GUARD --local --yes
 aidlc config flags --harness claude --clear-bypass AIDLC_DISABLE_PLAN_APPROVAL_GUARD --local --yes
@@ -76,7 +76,7 @@ aidlc config flags --harness claude --show
 | `AIDLC_GATE_SENSOR_DISPATCH_TIMEOUT_MS`                                     | ms                       | 承認ゲートで走るセンサー dispatch のタイムアウト                                                                                                                                                                                                                        |
 | `AIDLC_LOCK_STALE_MS`                                                       | ms（既定 10 分）         | `aidlc doctor` が「古いロック」と判定する閾値。自動取得は生きているロックを奪わない                                                                                                                                                                                     |
 | `AIDLC_AUDIT_LOCK_RETRIES`                                                  | 回数（既定 200 × 100ms） | 監査台帳ロックの取得リトライ回数。並列 Bolt の競合向け                                                                                                                                                                                                                  |
-| `AIDLC_METRICS_ENDPOINT` / `AIDLC_METRICS_HEADERS` / `AIDLC_METRICS_PREFIX` | URL など                 | 監査イベントを外部メトリクスへ送る。既定は未設定で何も送らない。ヘッダに認証値を入れるなら env のみに置く                                                                                                                                                               |
+| `AIDLC_METRICS_ENDPOINT` / `AIDLC_METRICS_HEADERS` / `AIDLC_METRICS_PREFIX` | URL など                 | 監査イベントを外部メトリクスへ送る。既定は未設定で何も送らない。認証値はシェル環境または gitignore 対象の `.claude/settings.local.json` にのみ設定し、コミット対象の `.claude/settings.json` には置かない                                                                                                                                                               |
 | `AIDLC_CA_BUNDLE`                                                           | パス                     | CLI が HTTPS で使う CA バンドル                                                                                                                                                                                                                                         |
 | `AIDLC_GH_BIN`                                                              | パス                     | リリース操作で使う `gh` の場所                                                                                                                                                                                                                                          |
 | `AIDLC_RULES_DIR`                                                           | パス                     | メソッド（org / team / project / phases）の置き場。Codex 用に `.codex/config.toml` が `aidlc/spaces/default/memory` を設定している。Claude 側は `@` import で読むので不要                                                                                               |
@@ -85,7 +85,7 @@ aidlc config flags --harness claude --show
 
 次はエンジンや hook が自分の子プロセスに渡す内部用、またはテスト用で、利用者が設定するものではない。設定すると診断が狂う。
 
-- 位置解決: `AIDLC_PROJECT_DIR` `AIDLC_HARNESS_DIR` `AIDLC_HARNESS_NAME` `AIDLC_RUNTIME_ROOT` `AIDLC_INSTALL_ROOT` `AIDLC_*_DIR`（`SCOPES` `STAGES` `AGENTS` `SENSORS` `TEMPLATES` など）
+- 位置解決: `AIDLC_PROJECT_DIR` `AIDLC_HARNESS_DIR` `AIDLC_HARNESS_NAME` `AIDLC_RUNTIME_ROOT` `AIDLC_INSTALL_ROOT` `AIDLC_*_DIR`（`SCOPES` `STAGES` `AGENTS` `SENSORS` `TEMPLATES` など。ただし、設定可能な `AIDLC_RULES_DIR` は除く）
 - 権限トークン: `AIDLC_STATE_TRANSITION_OWNER`（エンジンが `orchestrate:<pid>` を子に渡す）`AIDLC_WORKSPACE_LOCK_OWNER_PID` `AIDLC_STOP_HOOK_PROBE` `AIDLC_SESSION_OVERRIDE`
 - ルーティング: `AIDLC_ROUTE_*` `AIDLC_DISPATCH_*` `AIDLC_PLUGIN_*` `AIDLC_COMPILED_EXECUTABLE`
 - テスト: `AIDLC_TEST_*` `AIDLC_EXPORT_FIXTURE`
