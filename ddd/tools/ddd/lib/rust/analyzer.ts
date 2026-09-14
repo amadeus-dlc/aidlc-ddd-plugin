@@ -11,6 +11,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { forwardedArgumentCalls } from "./value-flow.ts";
 import type { TSLanguage, TSNode, TSParser, TSTree } from "./vendor/tree-sitter.ts";
 
 export type Visibility = "private" | "pub" | "pub-crate" | "pub-super" | "pub-in";
@@ -106,6 +107,8 @@ export interface CallSite {
   /** Explicit parameter/let type only; never inferred from an expression. */
   receiver_binding_type?: string;
   enclosing_fn?: string;
+  /** Every use forwards this result unchanged to these call arguments; absent if unproven. */
+  forwarded_argument_calls?: Span[];
   span: Span;
 }
 
@@ -262,7 +265,7 @@ function modulePathOf(node: TSNode): string[] {
   return path;
 }
 
-function bindingType(node: TSNode, name: string): string | undefined {
+function bindingDeclaration(node: TSNode, name: string): TSNode | undefined {
   if (!/^[a-zA-Z_]\w*$/.test(name)) return undefined;
   const mentions = (pattern: TSNode | null) => pattern && new RegExp(`\\b${name}\\b`).test(pattern.text);
   for (let child = node, parent = node.parent; parent; child = parent, parent = parent.parent) {
@@ -278,16 +281,14 @@ function bindingType(node: TSNode, name: string): string | undefined {
           continue;
         const pattern = sibling.childForFieldName("pattern");
         if (!mentions(pattern)) continue;
-        return /^(mut\s+)?[a-zA-Z_]\w*$/.test(pattern?.text ?? "")
-          ? sibling.childForFieldName("type")?.text
-          : undefined;
+        return /^(mut\s+)?[a-zA-Z_]\w*$/.test(pattern?.text ?? "") ? sibling : undefined;
       }
     }
     if (parent.type === "closure_expression" || parent.type === "function_item") {
       const params = parent.childForFieldName("parameters");
       for (const param of params?.namedChildren ?? []) {
         const pattern = param.childForFieldName("pattern") ?? param;
-        if (mentions(pattern)) return param.childForFieldName("type")?.text;
+        if (mentions(pattern)) return param;
       }
       if (parent.type === "function_item") return undefined;
     }
@@ -315,6 +316,10 @@ function bindingType(node: TSNode, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+function bindingType(node: TSNode, name: string): string | undefined {
+  return bindingDeclaration(node, name)?.childForFieldName("type")?.text;
 }
 
 function hasOpaqueMacro(node: TSNode): boolean {
@@ -537,11 +542,13 @@ function callFacts(file: string, tree: TSTree): CallSite[] {
     if (node.type !== "call_expression") return;
     const fn = node.childForFieldName("function");
     if (!fn) return;
+    const forwarded = forwardedArgumentCalls(node, bindingDeclaration);
     if (fn.type === "field_expression") {
       out.push({
         file,
         module_path: modulePathOf(node),
         kind: "method-call",
+        ...(forwarded ? { forwarded_argument_calls: forwarded.map(spanOf) } : {}),
         callee_text: fn.childForFieldName("field")?.text ?? fn.text,
         receiver_text: fn.childForFieldName("value")?.text ?? "",
         receiver_binding_type: bindingType(node, (fn.childForFieldName("value")?.text ?? "").split(".")[0]),

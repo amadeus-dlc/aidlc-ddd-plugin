@@ -14,7 +14,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-domain-conventions.2 | Construct through full constructors and provide no undeclared setters. | b/c cover some shapes; review and test all preconditions. |
 | K.rust-domain-conventions.3 | Limit mutation methods to declared commands or explicitly declared event-application paths. | b matches replay_methods, persistence mode, and types in the aggregate mapping. |
 | K.rust-domain-conventions.4 | Keep fields private. | a |
-| K.rust-domain-conventions.5 | Do not call getters from domain or use-case layers. | d matches explicitly identified receiver types. It emits notes when inference is needed. |
+| K.rust-domain-conventions.5 | Do not use domain getters to make business decisions in use cases. Allow unchanged forwarding to repository arguments in the use-case layer; domain-layer restrictions remain. | d checks resolved getter receivers and permits proven forwarding to a repository port. Unproven forwarding remains blocking. |
 | K.rust-domain-conventions.6 | Express construction intent through names and centralize invariant-preserving construction. | Naming meaning requires review; c/n cover some construction shapes. |
 | K.rust-domain-conventions.7 | Do not hide undeclared business mutations behind interior mutability. | Review, including the distinction from caches. |
 | K.rust-domain-conventions.8 | Do not infer valid replay from names such as apply. | b checks replay_methods correspondence. Review the method body. |
@@ -48,3 +48,9 @@ Type inference, associated types, and trait implementation selection are outside
 ## Domain packaging
 
 Follow the [shared packaging convention](../aidlc-shared/ddd-domain-packaging.md) and name crates and modules using ubiquitous language. Match domain_packages declarations to the actual layout. Distinguish Rust impl syntax from prohibited technical-classification packages.
+
+## Getter results as repository arguments
+
+Use-case code may pass a getter result unchanged to a repository port method, directly or through immutable local bindings. Parentheses and shared borrowing are allowed. Every use of a local value must reach a repository argument; comparison, arithmetic, transformation calls, mutable bindings, macros, and other consumers do not qualify. This does not authorize getter calls from the domain layer.
+
+The Rust check resolves the receiving type to an inner-layer trait named `<Aggregate>Repository` and verifies that the called method is declared on that trait. A variable named `repo` or a method named `save` is insufficient. Explicit parameter/field types, `impl`/`dyn` ports, and module-level import/type aliases are supported. Generic-bound resolution, trait implementation selection, associated-function syntax, and type inference remain outside this exception's coverage. Unknown recipients do not gain an exemption; the getter finding remains blocking and unresolved receiver information appears in the sensor note.

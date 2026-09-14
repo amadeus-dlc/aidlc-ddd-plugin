@@ -11,7 +11,7 @@ Updated: 2026-09-13, T-02. Changes are limited to the analyzer, rules, tests, ge
 | h: Aggregate arguments to execute | Only domain types corresponding to canonical Aggregate.root_element are aggregates. Distinguish value objects, Domain Primitives, and unrelated same-named types. |
 | i: Calls to other use cases | Resolve the receiver and detect calls to inherent execute methods on concrete use-case-layer types. Distinguish port traits, other layers, and calls to the same type as the caller. |
 | b: Undeclared mutation | Join structs/enums with impls using crate- and module-qualified type identity. Report cross-file and trait-implementation mutations at their actual file and line. |
-| d: Getter calls | Inspect getters on the identified domain receiver type. Same-named methods on unrelated types are not violations. Calls on self remain excluded. |
+| d: Getter calls | Inspect getters on the identified domain receiver type. Same-named methods on unrelated types are not violations. Calls on self remain excluded. Use-case calls proven to forward results unchanged as repository arguments are also allowed. |
 
 Match aggregate Rust types by the root element's name or PascalCase derived from its stable ID. When several candidates share a name, use crate/module from the aggregate mapping; if still ambiguous, emit `model.unresolved`. Giving a value object a command method named after an aggregate command does not authorize mutation.
 
@@ -24,6 +24,25 @@ Identify receivers through explicit parameter and let types, self, and fields of
 This is not Rust compiler name resolution. Generic aliases, associated types, trait implementation selection, macro expansion, and expressions requiring inference are outside coverage. Suppress type matching in files containing function-local use statements. Cargo dependency aliases and renamed libraries are not fully handled. T-07 follows explicit path attributes in domain crates and uses their logical modules for type matching. cfg_attr path switching and macro-generated modules are unresolved; see the [packaging contract](domain-packaging-design.md). Generated code still needs compilation and tests.
 
 This change does not guarantee exhaustive detection of interior mutability through `&self` or the validity of all ownership-consuming operations.
+
+## Repository argument forwarding is allowed
+
+Getter-based business decisions remain forbidden; forwarding a getter result as a repository argument in the use-case layer is allowed.
+
+```rust
+repo.remove(invoice.id()); // allowed
+let id = invoice.id();
+repo.remove(id);           // unchanged local forwarding is also allowed
+
+if invoice.id() == 42 { /* business decision: violation */ }
+repo.remove(invoice.id() + 1); // calculation inside an argument: violation
+```
+
+The check resolves the recipient to a trait named `<Aggregate>Repository` declared in the domain or use-case layer, and verifies that the method is declared on that trait. A variable named `repo` or a method named `save` alone does not grant an exemption. Explicit types, `impl`/`dyn` ports, import/type aliases, and field receivers are supported.
+
+Direct arguments, parentheses, shared borrowing, and immutable local bindings are supported. Every use of a local value must forward it to a repository argument. Comparison, calculation, transformation, mutable bindings, macros, and other function consumers do not qualify. Domain-layer getter restrictions remain unchanged.
+
+Generic-bound resolution, trait implementation selection, associated-function call syntax, and recipients requiring type inference cannot establish this exception. Getter calls with unproven forwarding remain blocking; unresolved recipient types also produce a `syntax.unresolved` note. The shared convention applies to TypeScript, but this Rust sensor does not establish TypeScript coverage.
 
 ## Permit replay through explicit declarations
 

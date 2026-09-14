@@ -17,7 +17,7 @@ A use case coordinates retrieval, business operations, persistence, and recovery
 1. Perform external I/O through ports; wire concrete adapters in the composition root. Dependencies on domain types are allowed.
 2. Pass aggregate IDs and value objects to command-side `execute`. Retrieve aggregates through ports.
 3. Do not call another use case directly. Put shared business decisions in the domain and coordination in an explicit flow. Calling an external port's `execute` is not prohibited.
-4. Do not extract values through getters to make business decisions. Call domain methods that return decisions.
+4. Do not extract values through getters to make business decisions. Call domain methods that return decisions. Passing a getter result as a repository argument is allowed when the value is not used for business branching or calculation.
 5. Do not use database or external-system clients directly.
 
 The query side retrieves DTOs through DAOs; do not impose command-side aggregate retrieval and persistence conventions on it unchanged.

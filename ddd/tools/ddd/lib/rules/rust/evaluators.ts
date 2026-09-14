@@ -5,7 +5,17 @@
  */
 
 import { evaluateDomainPackaging } from "../../packaging/evaluate.ts";
-import { calls, constructions, fns, impls, type Span, structs, traits, uses } from "../../rust/analyzer.ts";
+import {
+  type CallSite,
+  calls,
+  constructions,
+  fns,
+  impls,
+  type Span,
+  structs,
+  traits,
+  uses,
+} from "../../rust/analyzer.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
@@ -149,10 +159,45 @@ function ruleC(target: InspectionTarget, context: InspectionContext): FindingInp
 }
 
 // --- (d) getter call --------------------------------------------------------
+function isRepositoryArgument(
+  call: CallSite,
+  callSites: CallSite[],
+  target: InspectionTarget,
+  context: InspectionContext,
+): boolean {
+  if (target.classification.effective_layer !== "use-case" || !call.forwarded_argument_calls?.length || !target.tree) {
+    return false;
+  }
+  return call.forwarded_argument_calls.every((span) => {
+    const consumer = callSites.find(
+      (candidate) => withinSpan(candidate.span, span) && withinSpan(span, candidate.span),
+    );
+    if (consumer?.kind !== "method-call") return false;
+    const port = context.program.receiver(call.file, consumer);
+    if (!port) {
+      context.program.notes.add(
+        `syntax.unresolved: ${call.file}:${consumer.span.start_line} repository receiver; rule d exception not proven`,
+      );
+      return false;
+    }
+    if (port.kind !== "trait" || !["domain", "use-case"].includes(port.layer) || !port.name.endsWith("Repository")) {
+      return false;
+    }
+    const file = context.program.files.get(port.file);
+    if (!file) return false;
+    return traits(file.tree).some(
+      (decl) =>
+        [file.crate, ...file.module, ...decl.module_path, decl.name].join("::") === port.key &&
+        decl.methods.includes(consumer.callee_text),
+    );
+  });
+}
+
 function ruleD(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const out: FindingInput[] = [];
-  for (const call of calls(target.tree)) {
+  const callSites = calls(target.tree);
+  for (const call of callSites) {
     if (call.kind !== "method-call") continue;
     const receiver = (call.receiver_text ?? "").replace(/\s+/g, " ").trim();
     if (["self", "&self", "&mut self", "Self", "&mut  self"].includes(receiver)) continue;
@@ -170,6 +215,7 @@ function ruleD(target: InspectionTarget, context: InspectionContext): FindingInp
         (entry) => entry.method.name === call.callee_text && entry.method.body_shape === "returns-field-only",
       )
     ) {
+      if (isRepositoryArgument(call, callSites, target, context)) continue;
       out.push(
         finding(
           "d",
