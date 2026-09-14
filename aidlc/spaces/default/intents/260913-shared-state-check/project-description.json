@@ -1,1 +1,0 @@
-"Issue #38: 状態公開の一規則をRust/TypeScriptで共通判定する。https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/38 の限定範囲で、既存syn試作とTypeScript Compiler APIから正常・違反・検査不能を共通判定する最小経路を実装・検証する。"
