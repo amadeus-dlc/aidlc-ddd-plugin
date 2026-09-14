@@ -34,7 +34,7 @@ the plan:
   Command; construct aggregates only through a full constructor.
   Match Rust replay to `replay_methods` in the aggregate mapping: event-sourcing mode, aggregate crate and module, target event ID, and a single event parameter type must agree. Names such as `apply` alone do not exempt mutation methods.
 - **Use-case layer.** `execute` takes IDs and value objects, never an aggregate;
-  a use case never calls another use case.
+  a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations. See the getter argument contract in `ddd-rust-domain-conventions.md`.
 - **Interface Adapter layer.** The command side and query side do not depend on
   each other; the query side never references a domain type or repository port;
   repositories are named `<Aggregate>Repository`; adapters restore aggregates

@@ -109,7 +109,7 @@ A brand prevents ordinary assignment of a merely matching object shape; it is no
 
 ## 5. Preserve invariants and ownership in both languages
 
-Keep domain state private, including readonly fields. Domain Primitives and Value Objects are immutable and validated on creation. Use complete construction paths; reject empty construction followed by field filling and restoration that bypasses validation. Preserve the existing rules restricting mutation to declared business operations or explicit event application, and restricting getter calls from domain/use-case code.
+Keep domain state private, including readonly fields. Domain Primitives and Value Objects are immutable and validated on creation. Use complete construction paths; reject empty construction followed by field filling and restoration that bypasses validation. Preserve the existing rules restricting mutation to declared business operations or explicit event application, and restricting getter calls from domain/use-case code. Use-case code may forward getter results as repository arguments without using them for business decisions.
 
 Do not share mutable array or object references across the domain boundary. Separate ownership through appropriate copying or immutable representations on input and output. A private field or closure does not protect an object whose mutable reference remains outside. Rust ownership and explicit sharing mechanisms, and TypeScript references, require language-specific checks against this same contract. Business failure leaves the pre-operation state intact.
 

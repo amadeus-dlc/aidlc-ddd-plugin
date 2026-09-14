@@ -4,6 +4,12 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Getter exception for repository arguments
+
+- Fix false positives when use cases forward getter results to repository arguments, including through immutable local bindings.
+- Resolve port types and declared methods; continue rejecting business decisions, calculations, transformations, and other consumers.
+- Align generation knowledge and bilingual design documents with the exception and its coverage, and add regression cases.
+
 ## Unreleased — Rust module layout
 
 - Require one project-root `.ddd.toml` policy: `file` or `mod-rs`; reject mixed or missing configuration.

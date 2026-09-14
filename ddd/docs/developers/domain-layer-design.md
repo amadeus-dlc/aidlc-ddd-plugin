@@ -69,7 +69,7 @@ Replay of persisted events performs no new business decisions. This does not req
 
 ### 7-1. Getter use
 
-The Interface Adapter layer may use getters for database persistence and DTO conversion. Express business decisions as domain operations.
+The Interface Adapter layer may use getters for database persistence and DTO conversion. The use-case layer may also forward getter results as repository arguments without making business decisions from them. Express business decisions as domain operations. This exception does not extend to getter calls from the domain layer.
 
 ### 7-2. Persistence strategies
 

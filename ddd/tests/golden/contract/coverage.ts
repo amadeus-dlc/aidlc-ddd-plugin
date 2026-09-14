@@ -405,10 +405,10 @@ cover(
 cover(
   use,
   ["d"],
-  "clean-d-unrelated-getter-name",
-  "violation-d-getter-alias",
-  "Receiver identity matters even with name collisions or import aliases.",
-  "名前の衝突やimport別名があっても受信型の同一性で判定する。",
+  "clean-d-repository-argument",
+  "violation-d-repository-local-business-use",
+  "Proven repository forwarding is allowed; business use, transformations, and unrelated recipients remain violations.",
+  "リポジトリ引数への受け渡しを許可し、業務判断・加工・別の利用先は拒否する。",
 );
 const adapter = "ddd-rust-interface-adapter";
 cover(

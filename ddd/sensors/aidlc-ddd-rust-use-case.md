@@ -25,4 +25,4 @@ output_schema:
 
 Blocking gate for `code-generation` on the use-case layer: dependency direction
 and external I/O (g), aggregate arguments to `execute` (h), use-case chaining
-(i), and getter calls (d).
+(i), and getter calls (d). Rule d permits unchanged getter-result forwarding to resolved repository port methods, directly or through immutable local bindings used only for repository arguments. Business branching and calculation remain forbidden; naming a variable `repo` is not an exemption.

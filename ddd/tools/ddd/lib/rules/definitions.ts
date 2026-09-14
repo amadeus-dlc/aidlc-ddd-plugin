@@ -60,7 +60,7 @@ export const RULES: readonly RuleDefinition[] = [
   {
     rule_id: "d",
     name: "getter-call",
-    statement: "getter called from the domain or use-case layer",
+    statement: "domain getter call outside proven use-case repository argument forwarding",
     target_layers: ["domain", "use-case"],
     requires_model: false,
     facts: ["calls", "domain-symbols"],
