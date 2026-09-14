@@ -10,6 +10,7 @@
 | 正規モデル、写像、必須宣言の作成 | [成果物契約](artifact-contract.ja.md) |
 | ユビキタス言語に基づくドメインパッケージの命名 | [パッケージング契約](domain-packaging-design.ja.md) |
 | Rustの型照合、replay宣言、未検査範囲の確認 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
+| 使用言語の宣言と旧Rust設定の移行 | [プロジェクト設定](project-settings.ja.md) |
 
 | Rustモジュールの配置をプロジェクト全体で統一 | [モジュール配置契約](rust-module-layout.ja.md) |
 

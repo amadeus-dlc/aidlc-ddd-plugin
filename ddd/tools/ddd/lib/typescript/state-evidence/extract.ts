@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { acceptsTypeScriptSettings } from "../../project-settings/payload.ts";
 import type { EvidenceResponse, StateEvidence } from "../../state-exposure/index.ts";
 import { type FrozenTask, verifyTask } from "../../state-exposure-verification/input.ts";
 import { extractClass } from "./class.ts";
@@ -9,7 +10,10 @@ import { createFrozenProgram, TS_TOOLCHAIN } from "./program.ts";
 function extract(context: Context, program: ts.Program): StateEvidence {
   const { file, task } = context;
   if (program.getSyntacticDiagnostics(file).length) return unresolved(context, "syntax-error");
-  if (task.request.target.declarationPath.length !== 1 || Object.keys(task.input.settings).length)
+  if (
+    task.request.target.declarationPath.length !== 1 ||
+    !acceptsTypeScriptSettings(task.input.settings, task.request.target.representation)
+  )
     return unresolved(context, "unsupported-syntax");
   if (
     file.statements.some(
