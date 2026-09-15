@@ -1,0 +1,14 @@
+[package]
+name = "billing-domain"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# The selected feature set changes the error case set; it is part of the
+# inspected build condition, not a detail of the source snapshot.
+[features]
+extra-case = []
+
+[lib]
+name = "billing_domain"
+path = "src/lib.rs"

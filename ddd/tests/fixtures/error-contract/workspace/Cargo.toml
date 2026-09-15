@@ -1,0 +1,6 @@
+# Fixed inspection scenario: at most two workspace-owned crates, one build
+# condition per inspection. Path dependencies only, so `cargo metadata` resolves
+# with a frozen lockfile and without a registry.
+[workspace]
+resolver = "3"
+members = ["billing-domain", "billing-use-case"]

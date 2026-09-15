@@ -23,11 +23,14 @@ const CHECK_STEPS = [
   "bun run validate",
   "bun run test:development-scopes",
   "bun run prepare:state-exposure",
+  "bun run prepare:error-contract",
   "bun run test",
   "bun run test:state-exposure:native",
   "bun run experiment:rust-syn",
   "bun run verify:state-exposure",
+  "bun run verify:error-contract",
   "bun run typecheck:state-exposure",
+  "bun run typecheck:error-contract",
 ];
 
 /** FR11.5 forbids relying on these: `adds.required_sections` is not enforced and `adds.requires_stage` is deferred. */

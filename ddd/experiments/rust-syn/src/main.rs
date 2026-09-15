@@ -1,4 +1,5 @@
 mod analysis;
+mod error_contract;
 mod state_evidence;
 
 use serde::Deserialize;
@@ -27,6 +28,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if std::env::args().nth(1).as_deref() == Some("--error-contract-version") {
+        println!(
+            "{}",
+            json!({"extractor": "0.0.0", "syn": "3.0.5", "protocol_version": 3})
+        );
+        return Ok(());
+    }
     let mut input = String::new();
     io::stdin()
         .take(8 * 1024 * 1024 + 1)
@@ -37,6 +45,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let value: serde_json::Value = serde_json::from_str(&input)?;
     if value.get("protocol_version").and_then(|v| v.as_u64()) == Some(2) {
         println!("{}", state_evidence::run(value)?);
+        return Ok(());
+    }
+    if value.get("protocol_version").and_then(|v| v.as_u64()) == Some(3) {
+        println!("{}", error_contract::run(value)?);
         return Ok(());
     }
     let input: Input = serde_json::from_value(value)?;

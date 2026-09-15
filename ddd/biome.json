@@ -14,6 +14,7 @@
       "package.json",
       "tsconfig.json",
       "tsconfig.state-exposure.json",
+      "tsconfig.error-contract.json",
       "biome.json",
       "!!src/entries/data",
       "!!tests/fixtures",
