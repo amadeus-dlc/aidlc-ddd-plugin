@@ -20,6 +20,9 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
 | install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
 | framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
+| error-contract-contract | Business-error contract vocabulary, request identity including the Cargo condition, and response validation. |
+| error-contract-cargo | Cargo condition resolution at the boundary and the lockfile left untouched. |
+| error-contract-rust | Native resolution of supported reference forms in both module layouts, bounded cases, package identity, and a build condition change. |
 
 ## Distribution checks
 

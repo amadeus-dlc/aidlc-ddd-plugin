@@ -1,0 +1,17 @@
+[package]
+name = "billing-use-case"
+version = "0.1.0"
+# A different edition from billing-domain: edition is recorded per package.
+edition = "2024"
+publish = false
+
+[features]
+extra-case = ["billing/extra-case"]
+
+[lib]
+name = "billing_use_case"
+path = "src/lib.rs"
+
+# Renamed dependency: the referenced name `billing` is not the package name.
+[dependencies]
+billing = { path = "../billing-domain", package = "billing-domain" }

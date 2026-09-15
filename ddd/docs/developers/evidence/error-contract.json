@@ -1,0 +1,132 @@
+{
+  "contract": "error-contract/1",
+  "protocol_version": 3,
+  "platform": "darwin-arm64",
+  "versions": {
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "bun": "1.3.13",
+    "syn": "3.0.5"
+  },
+  "lockfile": {
+    "before": "sha256:a15a7f8b953047c776051d017ff7f0317937a08db37f3263e39eaf9456d8962d",
+    "after": "sha256:a15a7f8b953047c776051d017ff7f0317937a08db37f3263e39eaf9456d8962d",
+    "unchanged": true
+  },
+  "build_conditions": [
+    {
+      "condition": "no-feature",
+      "request_identity": "sha256:f259f545fde9209c67e57fbf1db38df54c7c5ae97f48c6c7f6630a3df3c12d35",
+      "error_cases": [
+        "AlreadyIssued",
+        "Empty"
+      ]
+    },
+    {
+      "condition": "extra-case",
+      "request_identity": "sha256:6722eea7e16acf4b601d2eb50c85b883a480c914e293e2a1b7b638a8c7a12118",
+      "error_cases": [
+        "AlreadyIssued",
+        "Empty",
+        "Rejected"
+      ]
+    }
+  ],
+  "fixed_scenario": [
+    {
+      "condition": "no-feature",
+      "compiler_accepted": true
+    },
+    {
+      "condition": "extra-case",
+      "compiler_accepted": true
+    }
+  ],
+  "cases": [
+    {
+      "name": "supported-reference",
+      "syntax_parsed": true,
+      "compiler_accepted": true,
+      "compiler_diagnostics": [],
+      "reasons": []
+    },
+    {
+      "name": "cyclic-alias",
+      "syntax_parsed": true,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [
+        "E0391"
+      ],
+      "reasons": [
+        "alias-cycle",
+        "alias-cycle"
+      ]
+    },
+    {
+      "name": "missing-referent",
+      "syntax_parsed": true,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [
+        "E0432"
+      ],
+      "reasons": [
+        "missing-referent",
+        "missing-referent"
+      ]
+    },
+    {
+      "name": "ambiguous-glob",
+      "syntax_parsed": true,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [
+        "E0659"
+      ],
+      "reasons": [
+        "ambiguous-candidate",
+        "ambiguous-candidate"
+      ]
+    },
+    {
+      "name": "alias-argument-count",
+      "syntax_parsed": true,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [
+        "E0107"
+      ],
+      "reasons": [
+        "unsupported-type-argument",
+        "unsupported-type-argument"
+      ]
+    },
+    {
+      "name": "standard-result-one-argument",
+      "syntax_parsed": true,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [
+        "E0107"
+      ],
+      "reasons": [
+        "unsupported-type-argument",
+        "unsupported-type-argument"
+      ]
+    },
+    {
+      "name": "unparsable",
+      "syntax_parsed": false,
+      "compiler_accepted": false,
+      "compiler_diagnostics": [],
+      "reasons": [
+        "syntax-error"
+      ]
+    }
+  ],
+  "unverified": [
+    "trait implementation selection",
+    "associated type projection",
+    "general expression inference",
+    "macro expansion",
+    "conditional compilation beyond the selected features",
+    "more than one build condition at a time",
+    "production sensor migration and distribution"
+  ]
+}

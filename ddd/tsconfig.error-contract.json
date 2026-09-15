@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "tools/ddd/lib/error-contract/**/*.ts",
+    "tools/ddd/lib/error-contract-verification/**/*.ts",
+    "tools/ddd/lib/rust/error-contract/**/*.ts",
+    "scripts/prepare-error-contract.ts",
+    "scripts/verify-error-contract.ts",
+    "tests/error-contract-*.test.ts"
+  ]
+}
