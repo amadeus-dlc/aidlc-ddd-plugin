@@ -78,9 +78,13 @@ function dependencyRenames(pkg: Record<string, unknown>, node: Record<string, un
   for (const entry of list(pkg.dependencies, "package.dependencies")) {
     const item = table(entry, "package.dependencies[]");
     if (typeof item.rename !== "string" || !item.rename.length) continue;
-    const packageId = externNames.get(item.rename);
+    // `resolve.nodes[].deps[].name` is the extern name, where Cargo replaces a hyphen with an
+    // underscore because a Rust identifier cannot carry one, while `rename` keeps the manifest
+    // spelling. The extern name is also what a path segment carries, so it is the stored alias.
+    const alias = item.rename.replaceAll("-", "_");
+    const packageId = externNames.get(alias);
     if (!packageId) throw new Error(`renamed dependency ${item.rename} is not in the resolve graph`);
-    renames.set(item.rename, packageId);
+    renames.set(alias, packageId);
   }
   return [...renames].map(([alias, packageId]) => ({ alias, packageId })).sort((a, b) => (a.alias < b.alias ? -1 : 1));
 }

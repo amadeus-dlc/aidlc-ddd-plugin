@@ -31,6 +31,16 @@ function pick(condition: CargoCondition, name: string): CargoPackage {
 function digestOf(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
+async function inCopy(edit: (root: string) => void): Promise<CargoCondition> {
+  const temp = mkdtempSync(join(tmpdir(), "ddd-error-contract-"));
+  try {
+    cpSync(WORKSPACE, temp, { recursive: true });
+    edit(temp);
+    return await resolved(join(temp, "Cargo.toml"));
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
 
 describe("the recorded Cargo condition of the fixed scenario", () => {
   test("records package identity, Cargo targets, per-package edition and dependency renames", async () => {
@@ -117,17 +127,6 @@ describe("inspection does not prepare dependencies", () => {
 
 /** Resolution enters a package through its library crate root, so only that target is recorded. */
 describe("the inspected Cargo target", () => {
-  async function inCopy(edit: (root: string) => void): Promise<CargoCondition> {
-    const temp = mkdtempSync(join(tmpdir(), "ddd-error-contract-"));
-    try {
-      cpSync(WORKSPACE, temp, { recursive: true });
-      edit(temp);
-      return await resolved(join(temp, "Cargo.toml"));
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  }
-
   test("records the library target and leaves a binary target of the same package out", async () => {
     const condition = await inCopy((root) => {
       writeFileSync(
@@ -155,5 +154,26 @@ describe("the inspected Cargo target", () => {
       writeFileSync(join(root, "billing-use-case/src/main.rs"), "fn main() {}\n");
     });
     expect(condition.packages.map((entry) => entry.name)).toEqual(["billing-domain"]);
+  });
+});
+
+/** A Rust path segment carries the extern name, so that is the alias an inspection resolves against. */
+describe("a renamed dependency whose alias carries a hyphen", () => {
+  test("records the extern name Cargo derives from the alias, not the manifest spelling", async () => {
+    const condition = await inCopy((root) => {
+      const manifest = join(root, "billing-use-case/Cargo.toml");
+      const replaced = readFileSync(manifest, "utf8")
+        .replace(
+          'billing = { path = "../billing-domain", package = "billing-domain" }',
+          'billing-alias = { path = "../billing-domain", package = "billing-domain" }',
+        )
+        .replace('extra-case = ["billing/extra-case"]', 'extra-case = ["billing-alias/extra-case"]');
+      expect(replaced).toContain("billing-alias = {");
+      writeFileSync(manifest, replaced);
+    });
+    // Cargo reports the rename as `billing-alias` but the extern name as `billing_alias`.
+    expect(pick(condition, "billing-use-case").dependencyRenames).toEqual([
+      { alias: "billing_alias", packageId: pick(condition, "billing-domain").packageId },
+    ]);
   });
 });

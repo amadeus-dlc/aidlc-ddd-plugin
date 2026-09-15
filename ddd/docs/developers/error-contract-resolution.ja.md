@@ -22,7 +22,7 @@ bun run check                    # 上記2件を含む全体検査
 
 検査は一つのビルド条件に結び付きます。呼出し元は [`resolveCargoCondition`](../../tools/ddd/lib/rust/error-contract/cargo-condition.ts) を使い、Cargo境界で条件を確定させます。この関数は `cargo metadata --format-version 1 --frozen` を、一つの `--filter-platform` と一つのfeature選択で実行します。`--frozen` はロックファイルの書き込みと取得を禁じるため、検査が依存を準備することはありません。ロックファイルが整っていないworkspaceは、ロックファイルを得るのではなく `unavailable` として報告されます。
 
-記録する条件は、ターゲットトリプルと、workspace所有パッケージごとの不透明なCargo package ID、検査対象となる `lib` ターゲット（プロジェクト相対のソースパス）、edition、選択feature、依存名変更です。検査対象は `lib` ターゲットだけです。解決はパッケージのライブラリcrateルートから入るためで、`lib` ターゲットを持たないworkspaceメンバーはcrateルートを提供しないため、検査が入れないパッケージとして記録するのではなく、条件から外します。パッケージ名は識別ではありません。名前を共有する2パッケージは別々のレコードのまま保たれ、その名前に到達した参照は統合されず `multiple-package-versions` として報告されます。
+記録する条件は、ターゲットトリプルと、workspace所有パッケージごとの不透明なCargo package ID、検査対象となる `lib` ターゲット（プロジェクト相対のソースパス）、edition、選択feature、依存名変更です。検査対象は `lib` ターゲットだけです。解決はパッケージのライブラリcrateルートから入るためで、`lib` ターゲットを持たないworkspaceメンバーはcrateルートを提供しないため、検査が入れないパッケージとして記録するのではなく、条件から外します。パッケージ名は識別ではありません。名前を共有する2パッケージは別々のレコードのまま保たれ、その名前に到達した参照は統合されず `multiple-package-versions` として報告されます。依存名変更は、マニフェストの綴りではなくextern名で記録します。Rustのパスが持てる名前にするため、Cargoがハイフンをアンダースコアへ置き換えるからです。別名 `billing-alias` は `billing_alias` として記録され、これがソースに書かれた参照の名前と一致します。
 
 要求識別は、識別自身を除く既知の全フィールドを正規化JSON化した `sha256:` です。Cargo条件・ソーススナップショット・プロジェクト設定・ツール版のすべてが参加します。選択feature、ターゲットトリプル、edition、package ID、Cargoターゲット、依存名変更のいずれを変えても識別は変わり、前の条件で作られた応答は再利用されず `identity-mismatch` として拒否されます。
 

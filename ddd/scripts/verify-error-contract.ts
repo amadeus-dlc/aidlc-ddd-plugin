@@ -227,8 +227,11 @@ try {
     if (parsed !== entry.syntax) problems.push(`${entry.name}: syntax parsing was ${parsed}, expected ${entry.syntax}`);
     if (accepted !== entry.compiles)
       problems.push(`${entry.name}: compiler acceptance was ${accepted}, expected ${entry.compiles}`);
-    if (entry.expected && !codes.includes(entry.expected))
-      problems.push(`${entry.name}: expected reason ${entry.expected}, read ${codes.join(",") || "none"}`);
+    if (entry.expected) {
+      if (!codes.includes(entry.expected))
+        problems.push(`${entry.name}: expected reason ${entry.expected}, read ${codes.join(",") || "none"}`);
+      // A case that must resolve cleanly is the one this gate would otherwise never check.
+    } else if (codes.length) problems.push(`${entry.name}: expected no reason, read ${codes.join(",")}`);
     rows.push({
       name: entry.name,
       syntax_parsed: parsed,

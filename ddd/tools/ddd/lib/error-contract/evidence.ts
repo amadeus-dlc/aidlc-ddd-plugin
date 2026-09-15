@@ -177,14 +177,21 @@ function contractEvidence(value: unknown, request: InspectionRequest): ContractE
   requireValue(item.operationStatus === "resolved", "response.evidence.operationStatus", "Unknown operation status.");
   withoutFields(item, ["reasons"], "response.evidence");
   const contract = fact(item.resultContract, request, "response.evidence.resultContract", resultContract);
+  const cases = fact(item.errorCases, request, "response.evidence.errorCases", (value, subject) =>
+    errorCaseSet(value, request, subject),
+  );
+  // An operation with no declared result contract states no error type, so it has no case set either.
+  requireValue(
+    contract.status !== "absent" || cases.status === "absent",
+    "response.evidence.errorCases",
+    "An absent result contract requires an absent case set.",
+  );
   return {
     operationStatus: "resolved",
     operation: operationIdentity(item.operation, request, "response.evidence.operation"),
     operationEvidence: evidenceLocations(item.operationEvidence, request, "response.evidence.operationEvidence"),
     resultContract: contract,
-    errorCases: fact(item.errorCases, request, "response.evidence.errorCases", (cases, subject) =>
-      errorCaseSet(cases, request, subject),
-    ),
+    errorCases: cases,
     // A resolved result contract states how the reference was reached, so its path is never empty.
     resolutionPath: resolutionPath(
       item.resolutionPath,
@@ -205,7 +212,6 @@ export function validateResponse(value: unknown, request: InspectionRequest): Re
     const item = record(value, "response");
     const version = nonempty(item.schemaVersion, "response.schemaVersion");
     requireValue(isDigest(item.requestIdentity), "response.requestIdentity", "Invalid response identity.");
-    requireValue(Object.hasOwn(item, "evidence"), "response.evidence", "Response requires evidence.");
     if (version !== SCHEMA_VERSION)
       return {
         valid: false,
@@ -226,6 +232,8 @@ export function validateResponse(value: unknown, request: InspectionRequest): Re
           location: null,
         },
       };
+    // `evidence` belongs to this schema version, so an unknown version is classified without it.
+    requireValue(Object.hasOwn(item, "evidence"), "response.evidence", "Response requires evidence.");
     return { valid: true, evidence: contractEvidence(item.evidence, request) };
   } catch (error) {
     if (error instanceof ContractError)

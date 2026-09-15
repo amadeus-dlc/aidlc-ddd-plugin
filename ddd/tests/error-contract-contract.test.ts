@@ -379,6 +379,14 @@ describe("resolution records", () => {
     ["blank operation symbol", evidence({ operation: { ...operation(), symbolId: "" } })],
     ["operation outside the requested package", evidence({ operation: { ...operation(), packageId: USE_CASE_ID } })],
     ["operation that is not the requested one", evidence({ operation: { ...operation(), operation: "cancel" } })],
+    [
+      "absent result contract beside a case set that resolved",
+      evidence({
+        resultContract: { status: "absent", evidence: [operationLocation()] },
+        errorCases: errorCases({ value: caseSet() }),
+        resolutionPath: [],
+      }),
+    ],
   ];
   test.each(inconsistentRecords)("rejects an inconsistent resolution record: %s", (_label, bad) => {
     invalidResponse(response(bad));
@@ -476,6 +484,10 @@ describe("resolution records", () => {
       valid: false,
       issue: { code: "unknown-version", subject: "response.schemaVersion" },
     });
+    // `evidence` belongs to this version, so a later one that carries no such field is still a version report.
+    expect(
+      validateResponse({ schemaVersion: "error-contract/2", requestIdentity: request().requestIdentity }, request()),
+    ).toMatchObject({ valid: false, issue: { code: "unknown-version", subject: "response.schemaVersion" } });
   });
 });
 
