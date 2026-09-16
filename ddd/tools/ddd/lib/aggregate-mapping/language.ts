@@ -40,11 +40,16 @@ const TYPESCRIPT_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const PACKAGE_SCOPE = /^@[^/]+\//;
 
 /**
- * The words a package name is made of, with its `-domain` suffix removed. A name that is nothing
- * but `domain` names the layer, not the business, and is refused like the other classifications.
+ * The technical classification a package name stands on, with its `-domain` suffix removed. The
+ * name has to be the classification rather than merely contain it: `value-objects` and
+ * `entities-domain` name one, while `invoice-entities` names invoices and only ends in the word,
+ * the same way a module segment is compared. A name that is nothing but `domain` names the layer,
+ * not the business, and is refused like the other classifications.
  */
-function technicalPackageWords(words: readonly string[]): string | undefined {
-  return technicalName(words) ?? (words.every((word) => word === "domain") ? "domain" : undefined);
+function technicalPackageName(name: string): string | undefined {
+  // crateParts spells the whole name first, then the words it is made of.
+  const [whole, ...words] = crateParts(name);
+  return technicalName([whole]) ?? (words.every((word) => word === "domain") ? "domain" : undefined);
 }
 
 const RUST: LanguageSpelling = {
@@ -54,7 +59,7 @@ const RUST: LanguageSpelling = {
   isErrorCase: (name) => RUST_IDENTIFIER.test(name),
   // `r#type` and `type` name one module; the raw prefix only lets a keyword be spelled.
   segmentIdentity: (segment) => segment.replace(RAW_IDENTIFIER_PREFIX, ""),
-  technicalPackage: (name) => technicalPackageWords(crateParts(name)),
+  technicalPackage: technicalPackageName,
   technicalSegment: (segment) => technicalName([segment]),
   // Associated functions and methods of one impl share a namespace.
   methodNamespace: () => "impl",
@@ -67,7 +72,7 @@ const TYPESCRIPT: LanguageSpelling = {
   isErrorCase: (name) => name.length > 0,
   segmentIdentity: (segment) => segment,
   // The scope names the publisher, not the package; `.` separates words like `-` and `_` do.
-  technicalPackage: (name) => technicalPackageWords(crateParts(name.replace(PACKAGE_SCOPE, "").replace(/\./g, "-"))),
+  technicalPackage: (name) => technicalPackageName(name.replace(PACKAGE_SCOPE, "").replace(/\./g, "-")),
   technicalSegment: (segment) => technicalName([segment.replace(/-/g, "_")]),
   // A factory rule is a static member and a command an instance member, so they never collide.
   methodNamespace: (kind) => (kind === "factory" ? "static" : "instance"),

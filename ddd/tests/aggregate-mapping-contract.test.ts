@@ -959,6 +959,18 @@ for (const [label, language, module] of [
     expect(loadSource(source).ok).toBe(true);
   });
 
+// A package name is compared the same way a module segment is: as a whole name, so a business name
+// that ends in a reserved word is not refused for containing it.
+for (const [label, language, name] of [
+  ["a Rust package that ends with a reserved word", "rust", "invoice-entities"],
+  ["a Rust package whose business name ends with the layer marker", "rust", "identity-domain"],
+  ["a scoped TypeScript package that ends with a reserved word", "typescript", "@acme/invoice-entities"],
+  ["a dot-separated TypeScript package that ends with a reserved word", "typescript", "@acme/invoice.entities"],
+] as const)
+  test(`${label} is a business name`, () => {
+    expect(loadSource(mappingSource(language, name)).ok).toBe(true);
+  });
+
 for (const [label, language, module] of [
   ["a Rust value-object segment", "rust", ["vo"]],
   ["a raw Rust implementation segment", "rust", ["invoice", "r#impl"]],
@@ -974,6 +986,7 @@ for (const [label, language, module] of [
 
 for (const [label, language, name] of [
   ["a Rust package of entities", "rust", "entities-domain"],
+  ["a Rust package of value objects", "rust", "value-objects"],
   ["a Rust package named only domain", "rust", "domain"],
   ["a scoped TypeScript package of value objects", "typescript", "@acme/value-objects-domain"],
   ["a scoped TypeScript package named only domain", "typescript", "@acme/domain"],
