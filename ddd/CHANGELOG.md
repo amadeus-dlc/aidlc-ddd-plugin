@@ -4,6 +4,14 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Operation-owned errors in the canonical model
+
+- Add `schema_version: 2` of `ddd-domain-model-yaml.md`: a DomainError names its owner with `operation`, and a FactoryRule declares its own non-empty `domain_errors`.
+- Check that a declared owner is the containing operation, for commands and factory rules alike, and register factory errors in the element index so duplicate and broken references are caught there too. **Two of the new ownership checks also apply to `schema_version: 1`**: a legacy model now fails to load where it used to pass when a DomainError's `command` key names an operation other than the command containing it (repair: name the containing command), or when a factory rule's id carries an aggregate name other than that of its containing aggregate (repair: rename the id to `factory.<aggregate>.<operation>`).
+- Choose the format at the reading entry point rather than from the document, so the production sensors keep reading version 1 and refuse a migrated document.
+- Add `ddd-domain-model.ts migrate --model <path> [--apply]`, which converts one model artifact, keeps every business id, reference, condition text and its language, and reports a factory rule's absent errors as `missing-information` instead of inventing them.
+- Document the format, the checks, the command and the current scope in [operation-owned errors](docs/users/domain-model-operation-errors.md).
+
 ## Unreleased — Getter exception for repository arguments
 
 - Fix false positives when use cases forward getter results to repository arguments, including through immutable local bindings.

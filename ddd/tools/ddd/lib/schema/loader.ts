@@ -45,6 +45,15 @@ export type LoadResult =
   | { ok: true; model: DomainModel; index: ElementIndex }
   | { ok: false; findings: FindingInput[] };
 
+/** The two formats of `ddd-domain-model-yaml.md` this loader reads. */
+export type SchemaVersion = 1 | 2;
+
+/** The format the production sensors read: only a Command owns DomainErrors. */
+export const LEGACY_SCHEMA_VERSION: SchemaVersion = 1;
+
+/** The format in which each operation — Command or FactoryRule — owns its own DomainErrors. */
+export const OPERATION_OWNED_SCHEMA_VERSION: SchemaVersion = 2;
+
 const SCALAR_TYPES = new Set(["string", "integer", "decimal", "boolean", "date", "datetime"]);
 
 const ALLOWED: Record<string, readonly string[]> = {
@@ -79,13 +88,29 @@ const ALLOWED: Record<string, readonly string[]> = {
     "idempotency",
   ],
   idempotency: ["strategy", "retention", "retention_count", "retention_window", "rationale"],
-  error: ["element_id", "name", "command", "condition"],
   event: ["element_id", "name", "aggregate", "produced_by"],
   transition: ["element_id", "name", "aggregate", "from_state", "to_state", "command"],
-  factory: ["element_id", "name", "target_element", "preconditions"],
   pm: ["element_id", "name", "aggregates", "steps", "compensations"],
   step: ["name", "command", "on_failure"],
   lineage: ["lineage_id", "element_id", "relation", "previous_name", "successors", "replaced_by", "deprecated_at"],
+};
+
+/** The key each format spells the owning operation with; both normalise to DomainError.operation. */
+const OWNER_KEY: Readonly<Record<SchemaVersion, string>> = { 1: "command", 2: "operation" };
+
+/**
+ * The two node kinds the format decides. Neither spelling is accepted by the other format: a
+ * document that mixes them has not been migrated, and saying so is more useful than guessing.
+ */
+const ALLOWED_BY_VERSION: Readonly<Record<SchemaVersion, { error: readonly string[]; factory: readonly string[] }>> = {
+  1: {
+    error: ["element_id", "name", OWNER_KEY[1], "condition"],
+    factory: ["element_id", "name", "target_element", "preconditions"],
+  },
+  2: {
+    error: ["element_id", "name", OWNER_KEY[2], "condition"],
+    factory: ["element_id", "name", "target_element", "preconditions", "domain_errors"],
+  },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -286,19 +311,42 @@ function readIdempotency(
 // Structural readers
 // ---------------------------------------------------------------------------
 
-function readDomainError(report: Report, node: Record<string, unknown>, where: string): DomainError | undefined {
-  report.checkKeys(node, ALLOWED.error, where);
+function readDomainError(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): DomainError | undefined {
+  report.checkKeys(node, ALLOWED_BY_VERSION[version].error, where);
   const element_id = report.idField(node, "element_id", where);
   const name = report.requiredString(node, "name", where);
-  const command = report.requiredString(node, "command", where);
+  // Read as a plain string, not as an element_id: an owner that is not well-formed is reported as
+  // an unresolvable reference by the cross-element pass, where the expected kind is also known.
+  const operation = report.requiredString(node, OWNER_KEY[version], where);
   const condition = report.requiredString(node, "condition", where);
-  if (element_id === undefined || name === undefined || command === undefined || condition === undefined) {
+  if (element_id === undefined || name === undefined || operation === undefined || condition === undefined) {
     return undefined;
   }
-  return { element_id, name, command, condition };
+  return { element_id, name, operation, condition };
 }
 
-function readCommand(report: Report, node: Record<string, unknown>, where: string): Command | undefined {
+function readDomainErrors(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): (DomainError | undefined)[] {
+  return readObjectArray(report, node, "domain_errors", where, true).map((raw, index) =>
+    readDomainError(report, raw, `${where}/domain_errors[${index}]`, version),
+  );
+}
+
+function readCommand(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): Command | undefined {
   report.checkKeys(node, ALLOWED.command, where);
   const element_id = report.idField(node, "element_id", where);
   const name = report.requiredString(node, "name", where);
@@ -311,9 +359,7 @@ function readCommand(report: Report, node: Record<string, unknown>, where: strin
   if (state_effect !== "transitions" && state_effect !== "none") {
     report.add("schema.structure", `${where}: state_effect must be transitions | none`);
   }
-  const domainErrors = readObjectArray(report, node, "domain_errors", where, true).map((raw, index) =>
-    readDomainError(report, raw, `${where}/domain_errors[${index}]`),
-  );
+  const domainErrors = readDomainErrors(report, node, where, version);
   if (domainErrors.length === 0) {
     report.add("schema.command-no-error", `${where}: every Command needs at least one DomainError`);
   }
@@ -430,17 +476,35 @@ function readTransition(report: Report, node: Record<string, unknown>, where: st
   return { element_id, name, aggregate, from_state, to_state, command };
 }
 
-function readFactory(report: Report, node: Record<string, unknown>, where: string): FactoryRule | undefined {
-  report.checkKeys(node, ALLOWED.factory, where);
+function readFactory(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): FactoryRule | undefined {
+  report.checkKeys(node, ALLOWED_BY_VERSION[version].factory, where);
   const element_id = report.idField(node, "element_id", where);
   const name = report.requiredString(node, "name", where);
   const target_element = report.requiredString(node, "target_element", where);
   const preconditions = readStringArray(report, node, "preconditions", where, true);
-  if (element_id === undefined || name === undefined || target_element === undefined) return undefined;
+  // The legacy format gives a factory rule no error set, so there is nothing to read and nothing
+  // to require; the key itself is rejected above as unknown.
+  const domainErrors = version === LEGACY_SCHEMA_VERSION ? [] : readDomainErrors(report, node, where, version);
+  if (version !== LEGACY_SCHEMA_VERSION && domainErrors.length === 0) {
+    report.add("schema.factory-no-error", `${where}: every FactoryRule needs at least one DomainError`);
+  }
+  if (
+    element_id === undefined ||
+    name === undefined ||
+    target_element === undefined ||
+    domainErrors.some((entry) => entry === undefined)
+  ) {
+    return undefined;
+  }
   if (preconditions.length === 0) {
     report.add("schema.structure", `${where}: preconditions needs at least one entry`);
   }
-  return { element_id, name, target_element, preconditions };
+  return { element_id, name, target_element, preconditions, domain_errors: domainErrors as DomainError[] };
 }
 
 function readProcessStep(report: Report, node: Record<string, unknown>, where: string): ProcessStep | undefined {
@@ -475,7 +539,12 @@ function readProcessManager(report: Report, node: Record<string, unknown>, where
   };
 }
 
-function readAggregate(report: Report, node: Record<string, unknown>, where: string): Aggregate | undefined {
+function readAggregate(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): Aggregate | undefined {
   report.checkKeys(node, ALLOWED.aggregate, where);
   const element_id = report.idField(node, "element_id", where);
   const name = report.requiredString(node, "name", where);
@@ -489,7 +558,7 @@ function readAggregate(report: Report, node: Record<string, unknown>, where: str
     readInvariant(report, raw, `${where}/invariants[${index}]`),
   );
   const commands = readObjectArray(report, node, "commands", where, false).map((raw, index) =>
-    readCommand(report, raw, `${where}/commands[${index}]`),
+    readCommand(report, raw, `${where}/commands[${index}]`, version),
   );
   const events = readObjectArray(report, node, "events", where, false).map((raw, index) =>
     readEvent(report, raw, `${where}/events[${index}]`),
@@ -498,7 +567,7 @@ function readAggregate(report: Report, node: Record<string, unknown>, where: str
     readTransition(report, raw, `${where}/transitions[${index}]`),
   );
   const factoryRules = readObjectArray(report, node, "factory_rules", where, false).map((raw, index) =>
-    readFactory(report, raw, `${where}/factory_rules[${index}]`),
+    readFactory(report, raw, `${where}/factory_rules[${index}]`, version),
   );
   if (elements.length === 0) {
     report.add("schema.structure", `${where}: elements needs at least one entry`);
@@ -529,12 +598,17 @@ function readAggregate(report: Report, node: Record<string, unknown>, where: str
   };
 }
 
-function readBoundedContext(report: Report, node: Record<string, unknown>, where: string): BoundedContext | undefined {
+function readBoundedContext(
+  report: Report,
+  node: Record<string, unknown>,
+  where: string,
+  version: SchemaVersion,
+): BoundedContext | undefined {
   report.checkKeys(node, ALLOWED.bc, where);
   const element_id = report.idField(node, "element_id", where);
   const name = report.requiredString(node, "name", where);
   const aggregates = readObjectArray(report, node, "aggregates", where, true).map((raw, index) =>
-    readAggregate(report, raw, `${where}/aggregates[${index}]`),
+    readAggregate(report, raw, `${where}/aggregates[${index}]`, version),
   );
   const processManagers = readObjectArray(report, node, "process_managers", where, false).map((raw, index) =>
     readProcessManager(report, raw, `${where}/process_managers[${index}]`),
@@ -680,6 +754,59 @@ function validateModel(report: Report, model: DomainModel, index: ElementIndex):
   }
 }
 
+type OperationKind = Extract<ElementId["kind"], "command" | "factory">;
+
+/** The aggregate key each kind of operation is declared under. */
+const OPERATION_SECTION: Readonly<Record<OperationKind, string>> = { command: "commands", factory: "factory_rules" };
+
+/** The operation a DomainError is declared under, as the ownership checks need to see it. */
+interface OwningOperation {
+  readonly element_id: string;
+  readonly kind: OperationKind;
+  /** The operation-name segment of its element_id, absent when that ID is malformed. */
+  readonly nameSegment: string | undefined;
+}
+
+/**
+ * A DomainError belongs to the operation that declares it. Resolving its owner reference is a
+ * separate question from that ownership: a reference naming a different operation that exists
+ * resolves cleanly, so the declared owner is also compared against the containing operation.
+ */
+function validateErrorOwnership(
+  report: Report,
+  index: ElementIndex,
+  where: string,
+  operation: OwningOperation,
+  aggregateSegment: string | undefined,
+  domainError: DomainError,
+): void {
+  requireRef(
+    report,
+    index,
+    `${where}.${OPERATION_SECTION[operation.kind]}.${operation.element_id}.domain_errors`,
+    domainError.operation,
+    operation.kind,
+  );
+  if (domainError.operation !== operation.element_id) {
+    report.add(
+      "schema.id-owner-mismatch",
+      `${where}: ${domainError.element_id} declares ${domainError.operation} but is contained by ${operation.element_id}`,
+    );
+  }
+  const errorParsed = parseElementId(domainError.element_id);
+  if (!errorParsed.ok) return;
+  const segments = errorParsed.id.segments;
+  if (
+    (aggregateSegment !== undefined && segments[0] !== aggregateSegment) ||
+    (operation.nameSegment !== undefined && segments[1] !== operation.nameSegment)
+  ) {
+    report.add(
+      "schema.id-owner-mismatch",
+      `${where}: ${domainError.element_id} does not match its owning operation ${operation.element_id}`,
+    );
+  }
+}
+
 function validateAggregate(report: Report, index: ElementIndex, bc: BoundedContext, aggregate: Aggregate): void {
   const where = `aggregate ${aggregate.element_id}`;
   requireRef(report, index, `${where}.bounded_context`, aggregate.bounded_context, "bc");
@@ -726,27 +853,13 @@ function validateAggregate(report: Report, index: ElementIndex, bc: BoundedConte
       }
       commandBySegment.set(parsed.id.segments[1], command);
     }
+    const owner: OwningOperation = {
+      element_id: command.element_id,
+      kind: "command",
+      nameSegment: parsed.ok ? parsed.id.segments[1] : undefined,
+    };
     for (const domainError of command.domain_errors) {
-      requireRef(
-        report,
-        index,
-        `${where}.commands.${command.element_id}.domain_errors`,
-        domainError.command,
-        "command",
-      );
-      const errorParsed = parseElementId(domainError.element_id);
-      if (errorParsed.ok) {
-        const seg = errorParsed.id.segments;
-        if (
-          (aggregateSegment !== undefined && seg[0] !== aggregateSegment) ||
-          (parsed.ok && seg[1] !== parsed.id.segments[1])
-        ) {
-          report.add(
-            "schema.id-owner-mismatch",
-            `${where}: ${domainError.element_id} does not match its owning command ${command.element_id}`,
-          );
-        }
-      }
+      validateErrorOwnership(report, index, where, owner, aggregateSegment, domainError);
     }
   }
 
@@ -815,6 +928,21 @@ function validateAggregate(report: Report, index: ElementIndex, bc: BoundedConte
       factory.target_element,
       "entity",
     );
+    const parsed = parseElementId(factory.element_id);
+    if (parsed.ok && aggregateSegment !== undefined && parsed.id.segments[0] !== aggregateSegment) {
+      report.add(
+        "schema.id-owner-mismatch",
+        `${where}.factory_rules: ${factory.element_id} carries a different aggregate name`,
+      );
+    }
+    const owner: OwningOperation = {
+      element_id: factory.element_id,
+      kind: "factory",
+      nameSegment: parsed.ok ? parsed.id.segments[1] : undefined,
+    };
+    for (const domainError of factory.domain_errors) {
+      validateErrorOwnership(report, index, where, owner, aggregateSegment, domainError);
+    }
   }
 
   for (const invariant of aggregate.invariants) {
@@ -961,7 +1089,11 @@ function validateLineage(report: Report, index: ElementIndex, lineage: ElementLi
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function loadDomainModel(path: string): LoadResult {
+/**
+ * The format is chosen by the caller, never guessed from the document: leaving it to the document
+ * would let the production sensors start accepting the new format the moment one appeared.
+ */
+export function loadDomainModel(path: string, version: SchemaVersion = LEGACY_SCHEMA_VERSION): LoadResult {
   const report = new Report(path);
   if (!existsSync(path)) {
     report.add("schema.yaml-parse", `domain model not found: ${path}`);
@@ -982,11 +1114,11 @@ export function loadDomainModel(path: string): LoadResult {
   report.checkKeys(raw, ALLOWED.domainModel, "domain-model");
 
   const schemaVersion = raw.schema_version;
-  if (schemaVersion !== 1) {
-    report.add("schema.structure", `schema_version must be 1, got ${JSON.stringify(schemaVersion)}`);
+  if (schemaVersion !== version) {
+    report.add("schema.structure", `schema_version must be ${version}, got ${JSON.stringify(schemaVersion)}`);
   }
   const boundedContexts = readObjectArray(report, raw, "bounded_contexts", "domain-model", true).map((node, index) =>
-    readBoundedContext(report, node, `bounded_contexts[${index}]`),
+    readBoundedContext(report, node, `bounded_contexts[${index}]`, version),
   );
   if (boundedContexts.length === 0) {
     report.add("schema.structure", "bounded_contexts needs at least one entry");
@@ -1026,6 +1158,13 @@ export function loadDomainModel(path: string): LoadResult {
     }
     registry.set(id, element);
   };
+  /** Commands and factory rules share one error namespace, so both index their errors alike. */
+  const registerDomainErrors = (domainErrors: readonly DomainError[], owner: string): void => {
+    for (const domainError of domainErrors) {
+      const id = parseElementId(domainError.element_id);
+      if (id.ok) register({ id: id.id, kind: "error", name: domainError.name, owner, node: domainError });
+    }
+  };
 
   const commandsByAggregate = new Map<string, Command[]>();
   for (const bc of model.bounded_contexts) {
@@ -1060,17 +1199,7 @@ export function loadDomainModel(path: string): LoadResult {
         const id = parseElementId(command.element_id);
         if (id.ok)
           register({ id: id.id, kind: "command", name: command.name, owner: aggregate.element_id, node: command });
-        for (const domainError of command.domain_errors) {
-          const errorId = parseElementId(domainError.element_id);
-          if (errorId.ok)
-            register({
-              id: errorId.id,
-              kind: "error",
-              name: domainError.name,
-              owner: aggregate.element_id,
-              node: domainError,
-            });
-        }
+        registerDomainErrors(command.domain_errors, aggregate.element_id);
       }
       for (const event of aggregate.events) {
         const id = parseElementId(event.element_id);
@@ -1091,6 +1220,7 @@ export function loadDomainModel(path: string): LoadResult {
         const id = parseElementId(factory.element_id);
         if (id.ok)
           register({ id: id.id, kind: "factory", name: factory.name, owner: aggregate.element_id, node: factory });
+        registerDomainErrors(factory.domain_errors, aggregate.element_id);
       }
     }
     for (const pm of bc.process_managers) {

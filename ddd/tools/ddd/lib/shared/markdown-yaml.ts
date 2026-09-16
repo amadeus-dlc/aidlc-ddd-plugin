@@ -1,11 +1,14 @@
+export interface YamlBlock {
+  yaml: string;
+  /** 1-based line number of the first body line, i.e. the line after the opening fence. */
+  startLine: number;
+}
+
 /** Read one labelled YAML block, optionally inside one exact H2 section. */
-export function readYamlBlock(
-  markdown: string,
-  heading?: string | readonly string[],
-): { yaml: string; startLine: number } {
+export function readYamlBlock(markdown: string, heading?: string | readonly string[]): YamlBlock {
   const headings = heading === undefined ? undefined : typeof heading === "string" ? [heading] : heading;
   const lines = markdown.split(/\r?\n/);
-  const blocks: { yaml: string; startLine: number }[] = [];
+  const blocks: YamlBlock[] = [];
   let selected = heading === undefined;
   let sections = 0;
   let fence: { marker: string; length: number; yaml: boolean; start: number; body: string[] } | undefined;
@@ -44,4 +47,25 @@ export function readYamlBlock(
   if (fence?.yaml && selected) throw new Error("the YAML block is not closed");
   if (blocks.length !== 1) throw new Error("exactly one labelled YAML block is required");
   return blocks[0];
+}
+
+/** Offsets of the first character of every line, so untouched regions keep their original bytes. */
+function lineStarts(markdown: string): number[] {
+  const starts = [0];
+  for (let i = 0; i < markdown.length; i++) {
+    if (markdown[i] === "\n") starts.push(i + 1);
+  }
+  return starts;
+}
+
+/**
+ * Put `yaml` in place of the body of `block`, keeping every byte outside it — prose, fence
+ * delimiters and any other fenced region — exactly as it was.
+ */
+export function replaceYamlBlock(markdown: string, block: YamlBlock, yaml: string): string {
+  const starts = lineStarts(markdown);
+  const first = block.startLine - 1;
+  const afterBody = first + block.yaml.split("\n").length;
+  const tail = afterBody < starts.length ? markdown.slice(starts[afterBody]) : "";
+  return `${markdown.slice(0, starts[first])}${yaml}\n${tail}`;
 }

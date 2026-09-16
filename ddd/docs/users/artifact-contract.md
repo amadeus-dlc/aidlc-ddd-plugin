@@ -14,7 +14,7 @@ Updated: 2026-09-13. T-01 uses standard AI-DLC 2.8.2 artifact naming and existin
 | functional-design | functional-spec (existing) | One YAML block under `## DDD Use-case Declarations` in `functional-spec.md`. |
 | infrastructure-design | cicd-pipeline (existing) | One YAML block under `## DDD Layer Structure` in `cicd-pipeline.md`. |
 
-Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. The YAML data schema remains version 1; Markdown is its envelope. IDs and invariant statements are still checked against the explanation.
+Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. Generation and every approval gate stay on YAML data schema version 1; Markdown is its envelope. Version 2, in which each operation owns its own business errors, is available for reading and for an explicit migration but is not accepted by any gate yet — see [operation-owned errors](domain-model-operation-errors.md). IDs and invariant statements are still checked against the explanation.
 
 The old `domain-model.yaml` and `domain-model.md` are not searched automatically. To migrate, wrap YAML in the new data file's code block, rename the explanation, update all model_ref values, and revalidate. The lower-level loader also accepts raw YAML, but that does not make the old name a valid generation target.
 

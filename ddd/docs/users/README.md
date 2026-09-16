@@ -8,6 +8,7 @@ For users applying the DDD plugin to an application project. Start with the inst
 |---|---|
 | Install the plugin, run stages, and troubleshoot | [Usage guide](../../../docs/usage.md) |
 | Prepare canonical models, mappings, and required declarations | [Artifact contract](artifact-contract.md) |
+| Close business errors over the command or factory rule that declares them, and migrate a model | [Operation-owned errors](domain-model-operation-errors.md) |
 | Name domain packages using ubiquitous language | [Domain packaging contract](domain-packaging-design.md) |
 | Understand Rust type matching, replay declarations, and unexamined code | [Rust sensor contract](rust-sensor-contract.md) |
 | Declare the languages in use and migrate the legacy Rust configuration | [Project settings](project-settings.md) |

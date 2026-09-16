@@ -8,6 +8,7 @@
 |---|---|
 | 導入、ステージ実行、問題の切り分け | [利用ガイド](../../../docs/usage.ja.md) |
 | 正規モデル、写像、必須宣言の作成 | [成果物契約](artifact-contract.ja.md) |
+| 業務エラーを宣言元のコマンド・生成操作へ閉じ、モデルを移行 | [操作ごとのエラー](domain-model-operation-errors.ja.md) |
 | ユビキタス言語に基づくドメインパッケージの命名 | [パッケージング契約](domain-packaging-design.ja.md) |
 | Rustの型照合、replay宣言、未検査範囲の確認 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
 | 使用言語の宣言と旧Rust設定の移行 | [プロジェクト設定](project-settings.ja.md) |
