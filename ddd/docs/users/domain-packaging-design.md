@@ -49,6 +49,8 @@ Natural-language terms and code identifiers need not match literally. Reference 
 
 Future packages may be declared before implementation. Code checks ask whether actual modules are declared; they do not require the current Unit to implement every future package. Existing artifacts must gain declarations; the old format is not automatically exempt.
 
+This example is the crate/module format, `schema_version: 1`, which the gates read. The language-neutral `schema_version: 2` keeps term, model_refs and rationale, writes the package and the module path as a segment list under `code` with its language (`module: []` for the root), and applies the same reserved names to Rust and TypeScript names; see [implementation mapping](implementation-mapping.md).
+
 ## Automated technical-name checks
 
 Reject these reserved names:

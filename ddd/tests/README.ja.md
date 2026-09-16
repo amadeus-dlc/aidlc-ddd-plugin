@@ -15,6 +15,7 @@
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
 | domain-model-operations / domain-model-migration | 正規モデルの操作ごとのエラー、モデル成果物1件のpreview・適用による移行 |
+| aggregate-mapping-contract / aggregate-mapping-migration | Rust/TypeScriptの言語共通の集約写像の読込と拒否、補足入力を使ったcrate/module形式の写像1件のpreview・適用による移行、version 1のまま残る本番ゲート |
 | u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |

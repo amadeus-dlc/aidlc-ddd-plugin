@@ -1,0 +1,105 @@
+schema_version: 2
+bounded_contexts:
+  - element_id: "bc.billing"
+    name: "Billing"
+    aggregates:
+      - element_id: "aggregate.invoice"
+        name: "Invoice"
+        bounded_context: "bc.billing"
+        root_element: "entity.invoice"
+        states:
+          - "draft"
+          - "issued"
+        elements:
+          - element_id: "entity.invoice"
+            kind: "entity"
+            name: "Invoice"
+            aggregate: "aggregate.invoice"
+        invariants:
+          - element_id: "invariant.invoice.total-positive"
+            name: "TotalPositive"
+            aggregate: "aggregate.invoice"
+            statement: "請求金額は負であってはならない。"
+        commands:
+          - element_id: "command.invoice.issue"
+            name: "Issue"
+            aggregate: "aggregate.invoice"
+            effect: "transition"
+            state_effect: "transitions"
+            transitions:
+              - "transition.invoice.issue"
+            domain_errors:
+              - element_id: "error.invoice.issue.already-issued"
+                name: "AlreadyIssued"
+                operation: "command.invoice.issue"
+                condition: "下書き: \"確定\" ではない # 注記\n2行目\\末尾"
+            events:
+              - "event.invoice.issued"
+            idempotency:
+              strategy: "none"
+        events:
+          - element_id: "event.invoice.issued"
+            name: "Issued"
+            aggregate: "aggregate.invoice"
+            produced_by: "command.invoice.issue"
+        transitions:
+          - element_id: "transition.invoice.issue"
+            name: "Issue"
+            aggregate: "aggregate.invoice"
+            from_state: "draft"
+            to_state: "issued"
+            command: "command.invoice.issue"
+      - element_id: "aggregate.payment"
+        name: "Payment"
+        bounded_context: "bc.billing"
+        root_element: "entity.payment"
+        elements:
+          - element_id: "entity.payment"
+            kind: "entity"
+            name: "Payment"
+            aggregate: "aggregate.payment"
+        invariants:
+          - element_id: "invariant.payment.non-negative"
+            name: "NonNegative"
+            aggregate: "aggregate.payment"
+            statement: "入金額は負であってはならない。"
+        commands:
+          - element_id: "command.payment.settle"
+            name: "Settle"
+            aggregate: "aggregate.payment"
+            effect: "transition"
+            state_effect: "none"
+            domain_errors:
+              - element_id: "error.payment.settle.already-settled"
+                name: "AlreadySettled"
+                operation: "command.payment.settle"
+                condition: "command: command.invoice.cancel を満たさない"
+            idempotency:
+              strategy: "none"
+          - element_id: "command.payment.refund"
+            name: "Refund"
+            aggregate: "aggregate.payment"
+            effect: "transition"
+            state_effect: "none"
+            domain_errors:
+              - element_id: "error.payment.refund.not-settled"
+                name: "NotSettled"
+                operation: "command.payment.refund"
+                condition: "未決済である。"
+            idempotency:
+              strategy: "none"
+    process_managers:
+      - element_id: "pm.billing-flow"
+        name: "BillingFlow"
+        aggregates:
+          - "aggregate.invoice"
+          - "aggregate.payment"
+        steps:
+          - name: "issue"
+            command: "command.invoice.issue"
+            on_failure: "refund"
+          - name: "settle"
+            command: "command.payment.settle"
+        compensations:
+          - name: "refund"
+            command: "command.payment.refund"
