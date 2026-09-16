@@ -181,6 +181,23 @@ test("an empty list under a required key is still declared, so the applied model
   });
 });
 
+// The YAML writer's helpers are shared with other migrations, so the bytes this migration writes are
+// pinned here: a change that still reads back the same model would otherwise go unnoticed.
+const GOLDEN_DIR = join(import.meta.dir, "fixtures/domain-model");
+const CONDITION_NEEDING_ESCAPES = '下書き: "確定" ではない # 注記\n2行目\\末尾';
+
+for (const [label, options, golden] of [
+  ["a condition that needs escaping", { issueCondition: CONDITION_NEEDING_ESCAPES }, "migrated-model.yaml"],
+  ["an empty list under a required key", { emptyProcessSteps: true }, "migrated-model-empty-steps.yaml"],
+] as const)
+  test(`the block written for ${label} keeps the exact layout the migration writes`, () => {
+    withWorkspace({ [MODEL_DATA_FILE]: modelDocument(legacyModelYaml(options)) }, (root) => {
+      const path = modelPathOf(root);
+      expect(applyModelMigration(path).kind).toBe("applied");
+      expect(`${modelYaml(readDocument(path))}\n`).toBe(readFileSync(join(GOLDEN_DIR, golden), "utf8"));
+    });
+  });
+
 test("an applied model declares exactly the element ids the source declared", () => {
   withWorkspace(legacyWorkspace(), (root) => {
     const path = modelPathOf(root);

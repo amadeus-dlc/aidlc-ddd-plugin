@@ -24,63 +24,7 @@ import type {
   ProcessStep,
   StateTransition,
 } from "../schema/model.ts";
-
-const INDENT = "  ";
-
-type Scalar = string | number | boolean;
-
-function scalar(value: Scalar): string {
-  return typeof value === "string" ? JSON.stringify(value) : String(value);
-}
-
-/** One `key: value` line, written without indentation for the caller to place. */
-function field(key: string, value: Scalar): string {
-  return `${key}: ${scalar(value)}`;
-}
-
-/** The same, dropped entirely when the model does not carry the value. */
-function optionalField(key: string, value: Scalar | undefined): string[] {
-  return value === undefined ? [] : [field(key, value)];
-}
-
-function indent(lines: readonly string[], depth: number): string[] {
-  const pad = INDENT.repeat(depth);
-  return lines.map((line) => `${pad}${line}`);
-}
-
-/** One list item: the node's first line takes the dash, the rest line up under it. */
-function item(lines: readonly string[]): string[] {
-  return lines.map((line, index) => (index === 0 ? `- ${line}` : `${INDENT}${line}`));
-}
-
-/** An optional list of scalars, omitted when empty so the document states only what the model has. */
-function scalarList(key: string, values: readonly string[]): string[] {
-  if (values.length === 0) return [];
-  return [
-    `${key}:`,
-    ...indent(
-      values.map((value) => `- ${scalar(value)}`),
-      1,
-    ),
-  ];
-}
-
-function nodeList(key: string, nodes: readonly (readonly string[])[]): string[] {
-  if (nodes.length === 0) return [];
-  return [`${key}:`, ...indent(nodes.flatMap(item), 1)];
-}
-
-/**
- * A list of nodes under a key the loader requires. An empty one is written as `[]` rather than
- * omitted, because dropping the key would leave a document the loader refuses to read back.
- */
-function requiredNodeList(key: string, nodes: readonly (readonly string[])[]): string[] {
-  return nodes.length === 0 ? [`${key}: []`] : nodeList(key, nodes);
-}
-
-function mapping(key: string, lines: readonly string[]): string[] {
-  return [`${key}:`, ...indent(lines, 1)];
-}
+import { field, mapping, nodeList, optionalField, requiredNodeList, scalarList } from "../shared/yaml-render.ts";
 
 function attributeLines(attribute: ElementAttribute): string[] {
   return [

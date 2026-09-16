@@ -14,7 +14,7 @@ Updated: 2026-09-13. T-01 uses standard AI-DLC 2.8.2 artifact naming and existin
 | functional-design | functional-spec (existing) | One YAML block under `## DDD Use-case Declarations` in `functional-spec.md`. |
 | infrastructure-design | cicd-pipeline (existing) | One YAML block under `## DDD Layer Structure` in `cicd-pipeline.md`. |
 
-Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. Generation and every approval gate stay on YAML data schema version 1; Markdown is its envelope. Version 2, in which each operation owns its own business errors, is available for reading and for an explicit migration but is not accepted by any gate yet — see [operation-owned errors](domain-model-operation-errors.md). IDs and invariant statements are still checked against the explanation.
+Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. Generation and every approval gate stay on YAML data schema version 1; Markdown is its envelope. Version 2, in which each operation owns its own business errors, is available for reading and for an explicit migration but is not accepted by any gate yet — see [operation-owned errors](domain-model-operation-errors.md). The same holds for version 2 of `ddd-aggregate-mapping.md`, the language-neutral mapping — see [implementation mapping](implementation-mapping.md). IDs and invariant statements are still checked against the explanation.
 
 The old `domain-model.yaml` and `domain-model.md` are not searched automatically. To migrate, wrap YAML in the new data file's code block, rename the explanation, update all model_ref values, and revalidate. The lower-level loader also accepts raw YAML, but that does not make the old name a valid generation target.
 
@@ -36,6 +36,8 @@ English section markers are used in the English generation instructions. For com
 ## Include package declarations in aggregate mappings
 
 T-07 makes `domain_packages` required in the YAML of `ddd-aggregate-mapping.md`. Record crate, module, term, model_refs, and rationale for each package, including roots, ancestors, and aggregate placements. Update existing artifacts and revalidate them. Skipping domain modeling alone does not exempt code from package declarations. See the [packaging contract](domain-packaging-design.md).
+
+This describes version 1, which the gates read. In version 2 the same declarations keep term, model_refs and rationale, and record the package and module path under `code` with the language they are written in; `ddd-aggregate-mapping.ts migrate` converts a version 1 document explicitly. See [implementation mapping](implementation-mapping.md).
 
 ## Detect missing artifacts at normal approval admission
 

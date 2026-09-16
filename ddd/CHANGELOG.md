@@ -4,6 +4,14 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Language-neutral implementation mapping
+
+- Add `schema_version: 2` of `ddd-aggregate-mapping.md`: business ids, vocabulary, the execution model and persistence stay at the top of each entry, and the language, package, module path, type, ports and repository move under `code`. Each aggregate also binds its commands and factory rules to a method and error type, and each business error to a case.
+- Add a reader for one mapping document that refuses unknown keys, compiler ids and source positions, names a language does not accept, broken or foreign model references, missing and duplicate package, type, operation and error mappings, and technical classifications as business package names in Rust and TypeScript alike. It reads only a `schema_version: 2` canonical model and never reads a version 1 mapping as the new format.
+- Add `ddd-aggregate-mapping.ts migrate --mapping <path> [--supplement <path>] [--apply]`, which converts one crate/module mapping, keeps every crate, module spelling, business term, replay method, execution model and persistence method and the language they are written in, and reports the type, operation and error-case names it has no source for as `missing-information` until a supplement file names them.
+- Keep the production sensors and the generation instructions on version 1; a migrated mapping is reported as `mapping-declarations.document`.
+- Document the format, the checks, the command and the current scope in [implementation mapping](docs/users/implementation-mapping.md).
+
 ## Unreleased — Operation-owned errors in the canonical model
 
 - Add `schema_version: 2` of `ddd-domain-model-yaml.md`: a DomainError names its owner with `operation`, and a FactoryRule declares its own non-empty `domain_errors`.

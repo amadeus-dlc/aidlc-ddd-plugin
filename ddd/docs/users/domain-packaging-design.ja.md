@@ -49,6 +49,8 @@ domain_packages:
 
 未実装のパッケージは計画として宣言できる。コード検査は「実モジュールが宣言されているか」を調べ、将来のUnit向けに宣言した全パッケージの実装を現在のUnitへ要求しない。既存成果物も宣言を補う必要があり、旧形式を自動免除しない。
 
+この例はゲートが読むcrate/module形式（`schema_version: 1`）である。言語共通の `schema_version: 2` はterm、model_refs、rationaleを保ち、パッケージとモジュールの位置を記述言語とともに `code` の下へ要素のリストで書く（rootは `module: []`）。同じ予約名をRustとTypeScriptの名前に適用する。[実装写像](implementation-mapping.ja.md)を参照。
+
 ## 技術分類名の機械検査
 
 次の名前を予約名として拒否する。
