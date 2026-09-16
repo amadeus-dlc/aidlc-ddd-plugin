@@ -41,7 +41,7 @@ Package names must connect to ubiquitous language. Prohibit technical classifica
 
 ## Development verification
 
-Requires Bun, `aidlc` on PATH, and AI-DLC development tools under `../.codex/tools/`. Assessment baseline: Bun 1.3.13 and AI-DLC 2.8.2.
+Requires Bun, `aidlc` on PATH, and AI-DLC development tools under `../.codex/tools/`. Assessment baseline: Bun 1.3.13 and AI-DLC 2.9.0.
 
 ```sh
 cd ddd

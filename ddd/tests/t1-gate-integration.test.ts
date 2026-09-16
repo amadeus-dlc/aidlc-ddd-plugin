@@ -342,7 +342,9 @@ for (const harness of ["claude", "codex"] as const) {
         expect(auditText).toContain(entry.expect.pass ? "SENSOR_PASSED" : "SENSOR_FAILED");
         expect(auditText).not.toMatch(/script-error|tool-unavailable|SENSOR_BUDGET_OVERRIDE/);
         if (!entry.expect.pass) {
-          const detailRoot = join(f.record, ".aidlc-sensors", entry.stage);
+          // 2.9.0 moved framework state under `.aidlc-engine/`; `.aidlc-sensors/` is the
+          // legacy location the engine only still reads from.
+          const detailRoot = join(f.record, ".aidlc-engine", "sensors", entry.stage);
           const details = readdirSync(detailRoot)
             .filter((path) => path.startsWith(`${entry.sensor}-`) && path.endsWith(".md"))
             .map((path) => readFileSync(join(detailRoot, path), "utf8"))

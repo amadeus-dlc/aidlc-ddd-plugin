@@ -71,4 +71,4 @@ below it. Never redefine an element owned by the model.
 
 In addition to automated declaration and model-ID checks, review whether each name and its contents follow ubiquitous language. Ensure every aggregate mapping module is declared in domain_packages. Packages planned for future implementation may be declared in advance.
 
-For standalone execution, explicitly run the model-presence, reference-ID, and mapping sensors with `aidlc engine sensor fire` against components and ddd-aggregate-mapping before reporting completion. Every final JSON result must be `result: passed`. Standard 2.8.2 standalone completion does not perform these checks for you.
+For standalone execution, explicitly run the model-presence, reference-ID, and mapping sensors with `aidlc engine sensor fire` against components and ddd-aggregate-mapping before reporting completion. Every final JSON result must be `result: passed`. Standard 2.9.0 standalone completion does not perform these checks for you.

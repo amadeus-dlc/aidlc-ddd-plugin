@@ -21,7 +21,7 @@ for (const harness of [".codex", ".claude"]) {
     }
     if (stages["units-generation"] === "EXECUTE" && stages["user-stories"] !== "EXECUTE") {
       errors.push(
-        `${harness}: ${name} must execute user-stories with units-generation for the AI-DLC 2.8.2 traceability contract`,
+        `${harness}: ${name} must execute user-stories with units-generation for the AI-DLC 2.9.0 traceability contract`,
       );
     }
   }

@@ -63,4 +63,4 @@ use_cases:
 A unit with no use cases writes `use_cases: []` and a one-line explanation.
 Reference the model by ID; never redefine it.
 
-For standalone execution, explicitly run `ddd-reference-ids`, `ddd-mapping-declarations`, and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's functional-spec before reporting completion. Both blocking sensors must return `result: passed` in their final JSON. Standard 2.8.2 standalone completion does not perform these checks for you.
+For standalone execution, explicitly run `ddd-reference-ids`, `ddd-mapping-declarations`, and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's functional-spec before reporting completion. Both blocking sensors must return `result: passed` in their final JSON. Standard 2.9.0 standalone completion does not perform these checks for you.
