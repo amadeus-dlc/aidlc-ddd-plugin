@@ -1,0 +1,237 @@
+{
+  "contract": "error-contract/1",
+  "language": "typescript",
+  "platform": "darwin-arm64",
+  "versions": {
+    "typescript": "6.0.3",
+    "bun": "1.3.13"
+  },
+  "project_condition": {
+    "module": "esnext",
+    "module_resolution": "bundler",
+    "target": "esnext",
+    "resolution_conditions": [
+      "development"
+    ],
+    "packages": [
+      {
+        "name": "billing-domain",
+        "version": "0.1.0",
+        "entry_points": [
+          ".",
+          "./result"
+        ],
+        "project_references": 0
+      },
+      {
+        "name": "billing-use-case",
+        "version": "0.1.0",
+        "entry_points": [
+          "."
+        ],
+        "project_references": 1
+      }
+    ],
+    "result_definition": "billing-domain/src/result.ts"
+  },
+  "project_conditions": [
+    {
+      "condition": "published-entry",
+      "request_identity": "sha256:5fbe07105d5b76b6bba97918fc5d138b67d773dd2f26b5fb8193390b2092c17b"
+    },
+    {
+      "condition": "withdrawn-entry",
+      "request_identity": "sha256:3cfb780ba08d186a2a59b94a78a51cd69a5f86fe4770098dd1d491502c16ef36"
+    }
+  ],
+  "fixed_scenario": [
+    {
+      "module": "billing-domain/src/limits/cycle.ts",
+      "compiler_accepted": false,
+      "reason": "a type alias chain that references itself",
+      "expected_diagnostic_codes": [
+        2315,
+        2456
+      ],
+      "compiler_diagnostics": [
+        "2456: Type alias 'Cycle' circularly references itself.",
+        "2315: Type 'CycleStep' is not generic.",
+        "2456: Type alias 'CycleStep' circularly references itself.",
+        "2315: Type 'Cycle' is not generic."
+      ]
+    },
+    {
+      "module": "billing-domain/src/limits/missing.ts",
+      "compiler_accepted": false,
+      "reason": "an import whose module is not in the project",
+      "expected_diagnostic_codes": [
+        2307
+      ],
+      "compiler_diagnostics": [
+        "2307: Cannot find module './absent.ts' or its corresponding type declarations."
+      ]
+    }
+  ],
+  "project_diagnostics": [],
+  "cases": [
+    {
+      "name": "declared-name",
+      "resolution_step": "direct",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "import-alias",
+      "resolution_step": "import-alias",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "type-only-import",
+      "resolution_step": "import-type",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "renamed-re-export",
+      "resolution_step": "re-export",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "transparent-type-alias",
+      "resolution_step": "type-alias",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "package-entry-point",
+      "resolution_step": "package-entry",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "path-into-internals",
+      "resolution_step": "internal-path",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "companion-generation-method",
+      "resolution_step": "companion",
+      "compiler_accepted": true,
+      "error_cases": [
+        "already-issued",
+        "empty"
+      ],
+      "resolution_reasons": []
+    },
+    {
+      "name": "escape-type",
+      "resolution_step": null,
+      "compiler_accepted": true,
+      "error_cases": [],
+      "resolution_reasons": [
+        "escape-type",
+        "escape-type"
+      ]
+    },
+    {
+      "name": "open-error-type",
+      "resolution_step": null,
+      "compiler_accepted": true,
+      "error_cases": [],
+      "resolution_reasons": [
+        "open-error-type",
+        "open-error-type"
+      ]
+    },
+    {
+      "name": "unchecked-assertion",
+      "resolution_step": null,
+      "compiler_accepted": true,
+      "error_cases": [],
+      "resolution_reasons": [
+        "unchecked-assertion",
+        "unchecked-assertion"
+      ]
+    },
+    {
+      "name": "expression-inference-required",
+      "resolution_step": null,
+      "compiler_accepted": true,
+      "error_cases": [],
+      "resolution_reasons": [
+        "expression-inference-required",
+        "expression-inference-required"
+      ]
+    },
+    {
+      "name": "shadowed-result-identity",
+      "resolution_step": null,
+      "compiler_accepted": true,
+      "error_cases": [],
+      "resolution_reasons": [
+        "shadowed-result-identity",
+        "shadowed-result-identity"
+      ]
+    },
+    {
+      "name": "missing-referent",
+      "resolution_step": null,
+      "compiler_accepted": false,
+      "error_cases": [],
+      "resolution_reasons": [
+        "missing-referent",
+        "missing-referent"
+      ]
+    },
+    {
+      "name": "alias-cycle",
+      "resolution_step": null,
+      "compiler_accepted": false,
+      "error_cases": [],
+      "resolution_reasons": [
+        "alias-cycle",
+        "alias-cycle"
+      ]
+    }
+  ],
+  "unverified": [
+    "arbitrary monorepo layouts and package manifests",
+    "conditional and pattern entry points",
+    "type features beyond transparent aliases and closed literal unions",
+    "third-party result libraries",
+    "framework and runtime integration",
+    "comparing the case set with canonical errors",
+    "production sensor migration"
+  ]
+}

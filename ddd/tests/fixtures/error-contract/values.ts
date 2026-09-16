@@ -16,13 +16,13 @@ import type {
   CargoCondition,
   CargoPackage,
   ErrorCase,
-  InspectionInput,
-  InspectionRequest,
   Issue,
   Location,
   OperationIdentity,
   ResolutionStep,
   ResolutionStepKind,
+  RustInspectionInput,
+  RustInspectionRequest,
 } from "../../../tools/ddd/lib/error-contract/contract.ts";
 import { prepareErrorContractRequest } from "../../../tools/ddd/lib/error-contract/request.ts";
 import { projectSettingsPayload } from "../../../tools/ddd/lib/project-settings/payload.ts";
@@ -81,7 +81,7 @@ export function condition(overrides: Partial<CargoCondition> = {}): CargoConditi
 export function settings() {
   return projectSettingsPayload({ languages: ["rust"], rust: { moduleLayout: "file" }, typescript: null });
 }
-export function input(overrides: Partial<InspectionInput> = {}): InspectionInput {
+export function input(overrides: Partial<RustInspectionInput> = {}): RustInspectionInput {
   return {
     language: "rust",
     cargoCondition: condition(),
@@ -98,9 +98,10 @@ export function input(overrides: Partial<InspectionInput> = {}): InspectionInput
     ...overrides,
   };
 }
-export function request(overrides: Partial<InspectionInput> = {}): InspectionRequest {
+export function request(overrides: Partial<RustInspectionInput> = {}): RustInspectionRequest {
   const prepared = prepareErrorContractRequest(input(overrides));
   if (prepared.kind !== "prepared") throw new Error(`Fixture preparation failed: ${JSON.stringify(prepared)}`);
+  if (prepared.request.language !== "rust") throw new Error("Fixture prepared another language.");
   return prepared.request;
 }
 

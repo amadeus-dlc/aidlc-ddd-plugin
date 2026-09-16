@@ -112,3 +112,13 @@ export function acceptsTypeScriptSettings(settings: Settings, representation: Ta
     selection.typescript !== null && representation === TARGET_REPRESENTATION[selection.typescript.codeRepresentation]
   );
 }
+
+/**
+ * Reads the TypeScript choice an inspection is bound to, or null when the settings name none.
+ * The business-error contract has no baseline to fall back on: which representation is inspected
+ * decides where an operation is looked for, so unnamed settings leave the inspection unresolved
+ * rather than being inspected under a guessed representation.
+ */
+export function typeScriptSelection(settings: Settings): TypeScriptSelection | null {
+  return parsePayload(settings)?.typescript ?? null;
+}

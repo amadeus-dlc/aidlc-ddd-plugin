@@ -29,6 +29,7 @@ const CHECK_STEPS = [
   "bun run experiment:rust-syn",
   "bun run verify:state-exposure",
   "bun run verify:error-contract",
+  "bun run verify:error-contract:typescript",
   "bun run typecheck:state-exposure",
   "bun run typecheck:error-contract",
 ];

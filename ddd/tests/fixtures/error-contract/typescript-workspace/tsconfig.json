@@ -1,0 +1,4 @@
+{
+  "files": [],
+  "references": [{ "path": "./billing-domain" }, { "path": "./billing-use-case" }]
+}

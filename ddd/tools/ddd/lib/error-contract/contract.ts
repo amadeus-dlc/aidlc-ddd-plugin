@@ -7,7 +7,7 @@
 
 export type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 export type SchemaVersion = "error-contract/1";
-export type Language = "rust";
+export type Language = "rust" | "typescript";
 export type Digest = string;
 export type RequestIdentity = string;
 
@@ -49,6 +49,46 @@ export interface CargoCondition {
   readonly packages: readonly CargoPackage[];
 }
 
+/** One published subpath of a package and the module it names, both as the project spells them. */
+export interface EntryPoint {
+  readonly subpath: string;
+  readonly target: string;
+}
+/** A package name is not an identity: two records may share a name and stay distinct. */
+export interface TypeScriptPackage {
+  readonly packageId: string;
+  readonly name: string;
+  readonly version: string;
+  readonly packageRoot: string;
+  readonly tsconfigPath: string;
+  readonly entryPoints: readonly EntryPoint[];
+  readonly projectReferences: readonly string[];
+  readonly dependencies: readonly string[];
+}
+/**
+ * The declaration the language-support result is: TypeScript has no standard one,
+ * so identity rather than the spelling of a name decides what a standard result is.
+ */
+export interface ResultDefinition {
+  readonly packageId: string;
+  readonly modulePath: string;
+  readonly typeName: string;
+}
+/** The module settings this condition models; anything else is refused at the boundary. */
+export type TypeScriptModuleKind = "esnext";
+export type TypeScriptModuleResolution = "bundler";
+export type TypeScriptLanguageTarget = "esnext";
+export interface TypeScriptCondition {
+  readonly compilerApiVersion: string;
+  readonly module: TypeScriptModuleKind;
+  readonly moduleResolution: TypeScriptModuleResolution;
+  readonly target: TypeScriptLanguageTarget;
+  readonly resolutionConditions: readonly string[];
+  readonly strict: true;
+  readonly packages: readonly TypeScriptPackage[];
+  readonly resultDefinition: ResultDefinition;
+}
+
 export interface OperationTarget {
   readonly packageId: string;
   readonly targetName: string;
@@ -57,24 +97,36 @@ export interface OperationTarget {
   readonly operation: string;
 }
 
-export interface InspectionInput {
-  readonly language: Language;
-  readonly cargoCondition: CargoCondition;
+/** The language names which analysis condition an inspection carries; it never carries the other. */
+interface InspectionBody<Source> {
   readonly target: OperationTarget;
-  readonly sources: readonly SourceInput[];
+  readonly sources: readonly Source[];
   readonly settings: { readonly [key: string]: JsonValue };
   readonly toolchain: readonly ToolVersion[];
 }
-export interface InspectionRequest {
+export interface RustInspectionInput extends InspectionBody<SourceInput> {
+  readonly language: "rust";
+  readonly cargoCondition: CargoCondition;
+}
+export interface TypeScriptInspectionInput extends InspectionBody<SourceInput> {
+  readonly language: "typescript";
+  readonly typeScriptCondition: TypeScriptCondition;
+}
+export type InspectionInput = RustInspectionInput | TypeScriptInspectionInput;
+
+export interface RustInspectionRequest extends InspectionBody<SourceSnapshot> {
   readonly schemaVersion: SchemaVersion;
   readonly requestIdentity: RequestIdentity;
-  readonly language: Language;
+  readonly language: "rust";
   readonly cargoCondition: CargoCondition;
-  readonly target: OperationTarget;
-  readonly sources: readonly SourceSnapshot[];
-  readonly settings: { readonly [key: string]: JsonValue };
-  readonly toolchain: readonly ToolVersion[];
 }
+export interface TypeScriptInspectionRequest extends InspectionBody<SourceSnapshot> {
+  readonly schemaVersion: SchemaVersion;
+  readonly requestIdentity: RequestIdentity;
+  readonly language: "typescript";
+  readonly typeScriptCondition: TypeScriptCondition;
+}
+export type InspectionRequest = RustInspectionRequest | TypeScriptInspectionRequest;
 
 export interface Location {
   readonly file: string;
@@ -108,7 +160,12 @@ export type ReasonCode =
   | "associated-type-required"
   | "expression-inference-required"
   | "unknown-cfg"
-  | "macro-generated";
+  | "macro-generated"
+  | "escape-type"
+  | "open-error-type"
+  | "unchecked-assertion"
+  | "invalid-project-reference"
+  | "unsupported-version-resolution";
 export interface Issue {
   readonly code: ReasonCode;
   readonly message: string;
@@ -127,7 +184,12 @@ export type ResolutionStepKind =
   | "re-export"
   | "type-alias"
   | "dependency-rename"
-  | "self-type";
+  | "self-type"
+  | "import-alias"
+  | "import-type"
+  | "package-entry"
+  | "internal-path"
+  | "companion";
 export interface ResolutionStep {
   readonly kind: ResolutionStepKind;
   readonly reference: string;
@@ -218,6 +280,11 @@ export const REASON_CODES: readonly ReasonCode[] = Object.freeze([
   "expression-inference-required",
   "unknown-cfg",
   "macro-generated",
+  "escape-type",
+  "open-error-type",
+  "unchecked-assertion",
+  "invalid-project-reference",
+  "unsupported-version-resolution",
 ]);
 export const RESOLUTION_STEP_KINDS: readonly ResolutionStepKind[] = Object.freeze([
   "direct",
@@ -227,4 +294,9 @@ export const RESOLUTION_STEP_KINDS: readonly ResolutionStepKind[] = Object.freez
   "type-alias",
   "dependency-rename",
   "self-type",
+  "import-alias",
+  "import-type",
+  "package-entry",
+  "internal-path",
+  "companion",
 ]);

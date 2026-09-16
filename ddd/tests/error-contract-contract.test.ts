@@ -1,11 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import type { InspectionRequest } from "../tools/ddd/lib/error-contract/contract.ts";
+import type {
+  InspectionRequest,
+  TypeScriptCondition,
+  TypeScriptPackage,
+} from "../tools/ddd/lib/error-contract/contract.ts";
 import { REASON_CODES, RESOLUTION_STEP_KINDS, SCHEMA_VERSION } from "../tools/ddd/lib/error-contract/contract.ts";
 import { validateExecution, validateResponse } from "../tools/ddd/lib/error-contract/evidence.ts";
 import { resolveErrorContract } from "../tools/ddd/lib/error-contract/inspection.ts";
 import { prepareErrorContractRequest, validateRequest } from "../tools/ddd/lib/error-contract/request.ts";
 import { canonicalJson, digest, jsonCopy } from "../tools/ddd/lib/state-exposure/canonical.ts";
 import { REASON_CODES as STATE_EXPOSURE_REASON_CODES } from "../tools/ddd/lib/state-exposure/contract.ts";
+import {
+  TS_SOURCE,
+  TS_SOURCE_PATH,
+  tsCondition,
+  tsInput,
+  tsLineStarts,
+  tsPackage,
+  tsResultDefinition,
+  tsSettings,
+  tsUseCasePackage,
+} from "./fixtures/error-contract/typescript-values.ts";
 import {
   cargoPackage,
   caseSet,
@@ -63,6 +78,11 @@ const BOUNDED_RESOLUTION_CODES = [
   "expression-inference-required",
   "unknown-cfg",
   "macro-generated",
+  "escape-type",
+  "open-error-type",
+  "unchecked-assertion",
+  "invalid-project-reference",
+  "unsupported-version-resolution",
 ];
 
 describe("bounded-resolution vocabulary", () => {
@@ -79,8 +99,13 @@ describe("bounded-resolution vocabulary", () => {
   });
   test("names every supported reference form as its own resolution step", () => {
     expect([...RESOLUTION_STEP_KINDS].sort()).toEqual([
+      "companion",
       "dependency-rename",
       "direct",
+      "import-alias",
+      "import-type",
+      "internal-path",
+      "package-entry",
       "qualified",
       "re-export",
       "self-type",
@@ -93,7 +118,7 @@ describe("bounded-resolution vocabulary", () => {
 describe("request preparation and identity", () => {
   test("prepares the exact snapshot and a recomputable identity", () => {
     const actual = prepared(input());
-    const fields: Omit<InspectionRequest, "requestIdentity"> = {
+    const fields: Omit<Extract<InspectionRequest, { language: "rust" }>, "requestIdentity"> = {
       schemaVersion: SCHEMA_VERSION,
       language: "rust",
       cargoCondition: condition(),
@@ -181,6 +206,7 @@ describe("request preparation and identity", () => {
       packages: [cargoPackage(), cargoPackage({ packageId: `${DOMAIN_ID}-other` })],
     };
     const actual = prepared({ ...input(), cargoCondition: duplicated });
+    if (actual.language !== "rust") throw new Error("expected a Rust request");
     expect(actual.cargoCondition.packages.map((entry) => entry.packageId)).toEqual([DOMAIN_ID, `${DOMAIN_ID}-other`]);
     expect(actual.cargoCondition.packages.map((entry) => entry.name)).toEqual(["billing-domain", "billing-domain"]);
   });
@@ -220,7 +246,9 @@ describe("request preparation and identity", () => {
     ["target file is not a source", { ...input(), target: { ...input().target, file: "billing-domain/src/gone.rs" } }],
     ["empty declaration path", { ...input(), target: { ...input().target, declarationPath: [] } }],
     ["blank operation", { ...input(), target: { ...input().target, operation: "" } }],
-    ["unknown language", { ...input(), language: "typescript" }],
+    ["unknown language", { ...input(), language: "python" }],
+    ["a condition the named language does not use", { ...tsInput(), cargoCondition: input().cargoCondition }],
+    ["no condition for the named language", { ...input(), language: "typescript", cargoCondition: undefined }],
     ["no sources", { ...input(), sources: [] }],
     ["duplicate sources", { ...input(), sources: [...input().sources, ...input().sources] }],
     ["absolute source path", { ...input(), sources: [{ path: `/${SOURCE_PATH}`, content: SOURCE }] }],
@@ -228,6 +256,182 @@ describe("request preparation and identity", () => {
     ["empty toolchain", { ...input(), toolchain: [] }],
   ];
   test.each(malformed)("rejects malformed input: %s", (_label, bad) => rejected(bad));
+});
+
+describe("a TypeScript request and its identity", () => {
+  /** The two-package baseline, so a change to one link between packages stands alone. */
+  function linked(overrides: Partial<TypeScriptPackage> = {}): TypeScriptCondition {
+    return { ...tsCondition(), packages: [tsPackage(), tsUseCasePackage(overrides)] };
+  }
+  function tsPrepared(condition: unknown): string {
+    return prepared({ ...tsInput(), typeScriptCondition: condition }).requestIdentity;
+  }
+
+  test("prepares the exact snapshot and a recomputable identity", () => {
+    const actual = prepared(tsInput());
+    const fields: Omit<Extract<InspectionRequest, { language: "typescript" }>, "requestIdentity"> = {
+      schemaVersion: SCHEMA_VERSION,
+      language: "typescript",
+      typeScriptCondition: tsCondition(),
+      target: tsInput().target,
+      sources: [
+        {
+          path: TS_SOURCE_PATH,
+          sha256: digest(TS_SOURCE),
+          byteLength: new TextEncoder().encode(TS_SOURCE).length,
+          lineStarts: tsLineStarts(),
+        },
+      ],
+      settings: tsSettings(),
+      toolchain: [{ name: "fixture", version: "1" }],
+    };
+    expect(actual).toEqual({ ...fields, requestIdentity: digest(canonicalJson(jsonCopy(fields, "expected"))) });
+    expect(validateRequest(actual)).toEqual(actual);
+  });
+
+  test("carries no Cargo condition and keeps its identity apart from the Rust request", () => {
+    const actual = prepared(tsInput());
+    expect(actual).not.toHaveProperty("cargoCondition");
+    expect(actual.requestIdentity).not.toBe(prepared(input()).requestIdentity);
+  });
+
+  const conditionChanges: [string, unknown][] = [
+    ["Compiler API version", { ...tsCondition(), compilerApiVersion: "6.0.4" }],
+    ["resolution conditions", { ...tsCondition(), resolutionConditions: ["production"] }],
+    ["package name", { ...tsCondition(), packages: [tsPackage({ name: "billing-domain-fork" })] }],
+    ["package version", { ...tsCondition(), packages: [tsPackage({ version: "0.2.0" })] }],
+    ["package root", { ...tsCondition(), packages: [tsPackage({ packageRoot: "domain" })] }],
+    [
+      "package build unit",
+      { ...tsCondition(), packages: [tsPackage({ tsconfigPath: "billing-domain/tsconfig.build.json" })] },
+    ],
+    [
+      "entry point subpath",
+      { ...tsCondition(), packages: [tsPackage({ entryPoints: [{ subpath: "./domain", target: TS_SOURCE_PATH }] })] },
+    ],
+    [
+      "entry point target",
+      {
+        ...tsCondition(),
+        packages: [tsPackage({ entryPoints: [{ subpath: ".", target: "billing-domain/src/entry.ts" }] })],
+      },
+    ],
+    [
+      "result module",
+      { ...tsCondition(), resultDefinition: tsResultDefinition({ modulePath: "billing-domain/src/result.ts" }) },
+    ],
+    ["result type name", { ...tsCondition(), resultDefinition: tsResultDefinition({ typeName: "Outcome" }) }],
+    ["package set", linked()],
+  ];
+  test.each(conditionChanges)("a changed project condition changes the request identity: %s", (_label, changed) => {
+    expect(tsPrepared(changed)).not.toBe(prepared(tsInput()).requestIdentity);
+  });
+
+  const linkChanges: [string, unknown][] = [
+    ["package identity", linked({ packageId: "path:billing-use-case#billing-use-case@0.2.0" })],
+    ["project references", linked({ projectReferences: [] })],
+    ["package dependencies", linked({ dependencies: [] })],
+  ];
+  test.each(linkChanges)("a changed link between packages changes the request identity: %s", (_label, changed) => {
+    expect(tsPrepared(changed)).not.toBe(tsPrepared(linked()));
+  });
+
+  test("keeps same-name packages apart instead of merging them by name", () => {
+    const fork = tsPackage({
+      packageId: "path:billing-domain-fork#billing-domain@0.1.0",
+      packageRoot: "billing-domain-fork",
+      tsconfigPath: "billing-domain-fork/tsconfig.json",
+      entryPoints: [{ subpath: ".", target: "billing-domain-fork/src/index.ts" }],
+    });
+    const actual = prepared({ ...tsInput(), typeScriptCondition: { ...tsCondition(), packages: [tsPackage(), fork] } });
+    if (actual.language !== "typescript") throw new Error("expected a TypeScript request");
+    expect(actual.typeScriptCondition.packages.map((entry) => entry.name)).toEqual([
+      "billing-domain",
+      "billing-domain",
+    ]);
+    expect(actual.typeScriptCondition.packages.map((entry) => entry.version)).toEqual(["0.1.0", "0.1.0"]);
+    expect(new Set(actual.typeScriptCondition.packages.map((entry) => entry.packageId)).size).toBe(2);
+  });
+
+  const malformed: [string, unknown][] = [
+    ["missing condition", { ...tsInput(), typeScriptCondition: undefined }],
+    ["a condition the named language does not use", { ...input(), typeScriptCondition: tsCondition() }],
+    ["empty package set", { ...tsInput(), typeScriptCondition: { ...tsCondition(), packages: [] } }],
+    [
+      "duplicate package identity",
+      { ...tsInput(), typeScriptCondition: { ...tsCondition(), packages: [tsPackage(), tsPackage()] } },
+    ],
+    ["blank Compiler API version", { ...tsInput(), typeScriptCondition: { ...tsCondition(), compilerApiVersion: "" } }],
+    ["unsupported module kind", { ...tsInput(), typeScriptCondition: { ...tsCondition(), module: "commonjs" } }],
+    [
+      "unsupported module resolution",
+      { ...tsInput(), typeScriptCondition: { ...tsCondition(), moduleResolution: "node16" } },
+    ],
+    ["unsupported language target", { ...tsInput(), typeScriptCondition: { ...tsCondition(), target: "es2020" } }],
+    ["a project that is not strict", { ...tsInput(), typeScriptCondition: { ...tsCondition(), strict: false } }],
+    [
+      "blank entry point subpath",
+      {
+        ...tsInput(),
+        typeScriptCondition: {
+          ...tsCondition(),
+          packages: [tsPackage({ entryPoints: [{ subpath: "", target: TS_SOURCE_PATH }] })],
+        },
+      },
+    ],
+    [
+      "absolute entry point target",
+      {
+        ...tsInput(),
+        typeScriptCondition: {
+          ...tsCondition(),
+          packages: [tsPackage({ entryPoints: [{ subpath: ".", target: `/${TS_SOURCE_PATH}` }] })],
+        },
+      },
+    ],
+    [
+      "project reference pointing outside the condition",
+      {
+        ...tsInput(),
+        typeScriptCondition: {
+          ...tsCondition(),
+          packages: [tsPackage({ projectReferences: ["path:absent#absent@0.1.0"] })],
+        },
+      },
+    ],
+    [
+      "dependency pointing outside the condition",
+      {
+        ...tsInput(),
+        typeScriptCondition: {
+          ...tsCondition(),
+          packages: [tsPackage({ dependencies: ["path:absent#absent@0.1.0"] })],
+        },
+      },
+    ],
+    [
+      "result definition pointing outside the condition",
+      {
+        ...tsInput(),
+        typeScriptCondition: {
+          ...tsCondition(),
+          resultDefinition: tsResultDefinition({ packageId: "path:absent#absent@0.1.0" }),
+        },
+      },
+    ],
+    [
+      "blank result type name",
+      {
+        ...tsInput(),
+        typeScriptCondition: { ...tsCondition(), resultDefinition: tsResultDefinition({ typeName: "" }) },
+      },
+    ],
+    [
+      "target file is not a source",
+      { ...tsInput(), target: { ...tsInput().target, file: "billing-domain/src/gone.ts" } },
+    ],
+  ];
+  test.each(malformed)("rejects malformed TypeScript input: %s", (_label, bad) => rejected(bad));
 });
 
 describe("execution envelope", () => {
