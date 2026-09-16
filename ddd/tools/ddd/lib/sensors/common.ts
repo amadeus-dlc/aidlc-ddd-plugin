@@ -63,7 +63,7 @@ export function collectUnresolved(model: DomainModel, index: ElementIndex): Unre
         check(command.aggregate, "aggregate");
         for (const transition of command.transitions) check(transition, "transition");
         for (const event of command.events) check(event, "event");
-        for (const error of command.domain_errors) check(error.command, "command");
+        for (const error of command.domain_errors) check(error.operation, "command");
       }
       for (const event of aggregate.events) {
         check(event.aggregate, "aggregate");

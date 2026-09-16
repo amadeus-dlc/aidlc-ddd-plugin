@@ -14,6 +14,7 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
+| domain-model-operations / domain-model-migration | Operation-owned errors in the canonical model, and preview/apply migration of one model artifact. |
 | u2-rust-analysis-foundation | Cargo layer classification and Rust syntax analysis. |
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |

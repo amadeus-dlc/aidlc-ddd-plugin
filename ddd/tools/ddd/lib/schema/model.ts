@@ -38,7 +38,8 @@ export type StateEffect = "transitions" | "none";
 export interface DomainError {
   element_id: string;
   name: string;
-  command: string;
+  /** The Command or FactoryRule that declares this error. The legacy `command` key normalises here. */
+  operation: string;
   condition: string;
 }
 
@@ -86,6 +87,8 @@ export interface FactoryRule {
   name: string;
   target_element: string;
   preconditions: string[];
+  /** Always empty in the legacy format, which gives a factory rule no error set of its own. */
+  domain_errors: DomainError[];
 }
 
 export interface Aggregate {
