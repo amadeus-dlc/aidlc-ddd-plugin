@@ -153,12 +153,17 @@ function entryPoints(manifest: Record<string, unknown>, packageRoot: string, sub
     .sort((a, b) => (a.subpath < b.subpath ? -1 : 1));
 }
 
+/** One entry of a package manifest's dependency table, as it is written there. */
+interface DeclaredDependency {
+  readonly name: string;
+  readonly selector: string;
+}
 interface ReadPackage {
   readonly root: string;
   readonly packageRoot: string;
   readonly package: Omit<TypeScriptPackage, "projectReferences" | "dependencies">;
   readonly references: readonly string[];
-  readonly dependencyNames: readonly string[];
+  readonly dependencies: readonly DeclaredDependency[];
   readonly settings: CompilerSettings;
 }
 function readPackage(workspaceRoot: string, root: string): ReadPackage {
@@ -187,9 +192,31 @@ function readPackage(workspaceRoot: string, root: string): ReadPackage {
       entryPoints: entryPoints(manifest, packageRoot, `${packageRoot}/package.json`),
     },
     references: config.references,
-    dependencyNames: Object.keys((dependencies ?? {}) as Record<string, unknown>),
+    dependencies: Object.entries((dependencies ?? {}) as Record<string, unknown>).map(([entry, selector]) => ({
+      name: entry,
+      selector: text(selector, `${packageRoot}/package.json.dependencies.${entry}`),
+    })),
     settings: compilerSettings(config.options, `${packageRoot}/tsconfig.json`),
   };
+}
+
+/**
+ * The dependency selectors this condition models. A workspace protocol selector
+ * names the package this project carries by construction, and an exact version
+ * names it when the two versions are the same. Every other selector — a range, a
+ * comparator set, a tag, a registry alias, a link — is refused rather than read
+ * as accepting whatever version this project happens to carry: which version a
+ * range accepts is a question this boundary does not answer.
+ */
+const WORKSPACE_PROTOCOL = "workspace:";
+const WORKSPACE_ANY = new Set(["*", "^", "~"]);
+const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+function requireSelectorAccepts(selector: string, version: string, subject: string): void {
+  const workspace = selector.startsWith(WORKSPACE_PROTOCOL);
+  const stated = workspace ? selector.slice(WORKSPACE_PROTOCOL.length) : selector;
+  if (workspace && WORKSPACE_ANY.has(stated)) return;
+  if (!EXACT_VERSION.test(stated)) notModelled(subject, "Expected an exact version or a workspace protocol selector.");
+  if (stated !== version) notModelled(subject, `Expected the version this project carries, which is ${version}.`);
 }
 
 function oneSetting<T>(values: readonly T[], subject: string, spell: (value: T) => string): T {
@@ -212,6 +239,7 @@ function condition(options: TypeScriptConditionOptions): TypeScriptCondition {
   const byName = new Map<string, string[]>();
   for (const entry of read)
     byName.set(entry.package.name, [...(byName.get(entry.package.name) ?? []), entry.package.packageId]);
+  const versionOf = new Map(read.map((entry) => [entry.package.packageId, entry.package.version]));
 
   const packages: TypeScriptPackage[] = read.map((entry) => ({
     ...entry.package,
@@ -221,13 +249,11 @@ function condition(options: TypeScriptConditionOptions): TypeScriptCondition {
         notModelled(`${entry.packageRoot}/tsconfig.json.references`, "Reference is outside this project.");
       return packageId;
     }),
-    dependencies: entry.dependencyNames.map((name) => {
+    dependencies: entry.dependencies.map(({ name, selector }) => {
+      const field = `${entry.packageRoot}/package.json.dependencies.${name}`;
       const candidates = byName.get(name) ?? [];
-      if (candidates.length !== 1)
-        notModelled(
-          `${entry.packageRoot}/package.json.dependencies.${name}`,
-          "Dependency is not one package of this project.",
-        );
+      if (candidates.length !== 1) notModelled(field, "Dependency is not one package of this project.");
+      requireSelectorAccepts(selector, versionOf.get(candidates[0]) ?? "", field);
       return candidates[0];
     }),
   }));
