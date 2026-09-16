@@ -52,6 +52,12 @@ function unavailable(root: string) {
   if (outcome.kind !== "unavailable") throw new Error(`expected an unavailable condition: ${JSON.stringify(outcome)}`);
   return outcome.reasons;
 }
+/** States one dependency selector for the package this workspace's use case depends on. */
+function dependOn(root: string, selector: string): void {
+  rewrite(root, "billing-use-case/package.json", (document) => {
+    (document.dependencies as Record<string, unknown>)["billing-domain"] = selector;
+  });
+}
 function rewrite(root: string, file: string, edit: (document: Record<string, unknown>) => void): void {
   const path = join(root, file);
   const document = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
@@ -136,6 +142,14 @@ describe("the recorded project condition of the fixed scenario", () => {
     );
     expect(changed.resolutionConditions).toEqual(["production"]);
   });
+
+  test.each([["0.1.0"], ["workspace:0.1.0"], ["workspace:*"], ["workspace:^"], ["workspace:~"]])(
+    "records a dependency whose selector accepts the version this project carries: %s",
+    (selector) => {
+      const condition = inCopy((root) => dependOn(root, selector), resolved);
+      expect(pick(condition, "billing-use-case").dependencies).toEqual([pick(condition, "billing-domain").packageId]);
+    },
+  );
 });
 
 describe("inspection reads the project without preparing it", () => {
@@ -241,6 +255,33 @@ describe("a project configuration the condition does not model", () => {
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }
+  });
+
+  test.each([
+    ["names another version", "0.2.0"],
+    ["states a range", "^0.1.0"],
+    ["states a comparator set", ">=0.1.0 <1.0.0"],
+    ["states a tag", "latest"],
+    ["accepts any version from anywhere", "*"],
+    ["links a directory", "link:../billing-domain"],
+    ["states a workspace version that is not the one carried", "workspace:0.2.0"],
+  ])("refuses a dependency selector that %s", (_label, selector) => {
+    const reasons = inCopy((root) => dependOn(root, selector), unavailable);
+    expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
+    expect(reasons.map((reason) => reason.subject)).toContain(
+      "billing-use-case/package.json.dependencies.billing-domain",
+    );
+  });
+
+  test("refuses a dependency selector that is not a string", () => {
+    const reasons = inCopy(
+      (root) =>
+        rewrite(root, "billing-use-case/package.json", (document) => {
+          (document.dependencies as Record<string, unknown>)["billing-domain"] = { version: "0.1.0" };
+        }),
+      unavailable,
+    );
+    expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
   });
 
   test("refuses a language-support result that no recorded package declares", () => {
