@@ -553,6 +553,54 @@ describe("symbol identity", () => {
     expect(codes(result)).not.toContain("missing-referent");
     expect(standardResult(result)).toBe(false);
   });
+
+  test("a scoped package name is one name, not a scope and a subpath", () => {
+    const line = "billing-use-case/src/invoice/line.ts";
+    const source = SOURCES.find((entry) => entry.path === line);
+    if (!source) throw new Error(`snapshot has no source ${line}`);
+    const spec = {
+      package: "billing-use-case" as const,
+      file: line,
+      declarationPath: ["Line"],
+      sources: withSource(line, source.content.replaceAll('"billing-domain', '"@billing/domain')),
+      condition: (base: TypeScriptCondition) => ({
+        ...base,
+        packages: base.packages.map((entry) =>
+          entry.name === "billing-domain" ? { ...entry, name: "@billing/domain" } : entry,
+        ),
+      }),
+    };
+
+    const entry = inspect({ ...spec, operation: "viaEntry" });
+    expect(entry.unresolvedReasons).toEqual([]);
+    expect(stepKinds(entry)).toContain("package-entry");
+    expect(standardResult(entry)).toBe(true);
+    expect(caseNames(entry)).toEqual(SHARED_CASES);
+
+    const internal = inspect({ ...spec, operation: "viaInternalPath" });
+    expect(errorSymbol(internal)).toBe(errorSymbol(entry));
+  });
+
+  test("a bare specifier that names only a scope resolves to no package", () => {
+    const line = "billing-use-case/src/invoice/line.ts";
+    const source = SOURCES.find((entry) => entry.path === line);
+    if (!source) throw new Error(`snapshot has no source ${line}`);
+    const result = inspect({
+      package: "billing-use-case",
+      file: line,
+      declarationPath: ["Line"],
+      operation: "viaEntry",
+      sources: withSource(line, source.content.replaceAll('"billing-domain"', '"@billing"')),
+      condition: (base) => ({
+        ...base,
+        packages: base.packages.map((entry) =>
+          entry.name === "billing-domain" ? { ...entry, name: "@billing/domain" } : entry,
+        ),
+      }),
+    });
+    expect(codes(result)).toContain("missing-referent");
+    expect(standardResult(result)).toBe(false);
+  });
 });
 
 describe("the shared contract carries no Compiler API detail", () => {

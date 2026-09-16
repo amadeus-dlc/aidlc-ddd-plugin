@@ -57,9 +57,19 @@ function notModelled(subject: string, message: string): never {
   throw new Refusal("unsupported-syntax", subject, message);
 }
 
+/**
+ * The path invariant the request contract states, applied where a path first
+ * enters the condition: a relative POSIX path with no empty and no dot segment.
+ * A condition that recorded any other path would be refused as a request, so it
+ * is refused here instead of being handed on as a resolved one.
+ */
+function insideProject(path: string): boolean {
+  return path.length > 0 && path.split("/").every((part) => part && part !== "." && part !== "..");
+}
+
 function projectRelative(workspaceRoot: string, absolute: string, subject: string): string {
   const path = relative(workspaceRoot, absolute).split(sep).join("/");
-  if (!path.length || path.startsWith("../")) notModelled(subject, "Path is outside the project.");
+  if (!insideProject(path)) notModelled(subject, "Path is outside the project.");
   return path;
 }
 
@@ -133,10 +143,12 @@ function entryPoints(manifest: Record<string, unknown>, packageRoot: string, sub
     notModelled(`${subject}.exports`, "Expected a subpath map.");
   return Object.entries(exported as Record<string, unknown>)
     .map(([subpath, value]) => {
-      const target = text(value, `${subject}.exports["${subpath}"]`);
-      if (!target.startsWith("./"))
-        notModelled(`${subject}.exports["${subpath}"]`, "Expected a package-relative target.");
-      return { subpath: text(subpath, `${subject}.exports`), target: `${packageRoot}/${target.slice(2)}` };
+      const field = `${subject}.exports["${subpath}"]`;
+      const target = text(value, field);
+      if (!target.startsWith("./")) notModelled(field, "Expected a package-relative target.");
+      const inPackage = target.slice(2);
+      if (!insideProject(inPackage)) notModelled(field, "Target is outside the package.");
+      return { subpath: text(subpath, `${subject}.exports`), target: `${packageRoot}/${inPackage}` };
     })
     .sort((a, b) => (a.subpath < b.subpath ? -1 : 1));
 }

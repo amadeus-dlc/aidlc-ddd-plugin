@@ -247,7 +247,8 @@ describe("request preparation and identity", () => {
     ["empty declaration path", { ...input(), target: { ...input().target, declarationPath: [] } }],
     ["blank operation", { ...input(), target: { ...input().target, operation: "" } }],
     ["unknown language", { ...input(), language: "python" }],
-    ["a condition the named language does not use", { ...input(), language: "typescript" }],
+    ["a condition the named language does not use", { ...tsInput(), cargoCondition: input().cargoCondition }],
+    ["no condition for the named language", { ...input(), language: "typescript", cargoCondition: undefined }],
     ["no sources", { ...input(), sources: [] }],
     ["duplicate sources", { ...input(), sources: [...input().sources, ...input().sources] }],
     ["absolute source path", { ...input(), sources: [{ path: `/${SOURCE_PATH}`, content: SOURCE }] }],
@@ -354,6 +355,7 @@ describe("a TypeScript request and its identity", () => {
 
   const malformed: [string, unknown][] = [
     ["missing condition", { ...tsInput(), typeScriptCondition: undefined }],
+    ["a condition the named language does not use", { ...input(), typeScriptCondition: tsCondition() }],
     ["empty package set", { ...tsInput(), typeScriptCondition: { ...tsCondition(), packages: [] } }],
     [
       "duplicate package identity",

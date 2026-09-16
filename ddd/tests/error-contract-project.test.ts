@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
@@ -184,6 +184,63 @@ describe("a project configuration the condition does not model", () => {
       unavailable,
     );
     expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
+  });
+
+  test.each([
+    ["leaves the package", "./../billing-use-case/src/index.ts"],
+    ["walks out and back through a dot segment", "./src/../result.ts"],
+    ["carries a dot segment", "./src/./result.ts"],
+    ["carries an empty segment", "./src//result.ts"],
+  ])("refuses an entry point target that %s", (_label, target) => {
+    const reasons = inCopy(
+      (root) =>
+        rewrite(root, "billing-domain/package.json", (document) => {
+          (document.exports as Record<string, unknown>)["./result"] = target;
+        }),
+      unavailable,
+    );
+    expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
+    expect(reasons.map((reason) => reason.subject)).toContain('billing-domain/package.json.exports["./result"]');
+  });
+
+  /**
+   * A reference to the project's own parent is the one path outside the project
+   * that no `../` prefix announces, so it stands apart from the cases above.
+   */
+  test("refuses a referenced package that is the project's own parent directory", () => {
+    const temporary = mkdtempSync(join(tmpdir(), "ddd-error-contract-ts-parent-"));
+    try {
+      const workspaceRoot = join(temporary, "workspace");
+      cpSync(TYPESCRIPT_WORKSPACE, workspaceRoot, { recursive: true });
+      mkdirSync(join(temporary, "src"));
+      writeFileSync(join(temporary, "src", "index.ts"), "export const outer = 1;\n");
+      writeFileSync(
+        join(temporary, "package.json"),
+        `${JSON.stringify(
+          {
+            name: "billing-outer",
+            version: "0.1.0",
+            private: true,
+            type: "module",
+            exports: { ".": "./src/index.ts" },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      writeFileSync(
+        join(temporary, "tsconfig.json"),
+        `${JSON.stringify({ extends: "./workspace/tsconfig.base.json", include: ["src/**/*.ts"] }, null, 2)}\n`,
+      );
+      rewrite(workspaceRoot, "tsconfig.json", (document) => {
+        document.references = [...(document.references as unknown[]), { path: ".." }];
+      });
+      const reasons = unavailable(workspaceRoot);
+      expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
+      expect(reasons.map((reason) => reason.subject)).toContain("reference");
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
   });
 
   test("refuses a language-support result that no recorded package declares", () => {

@@ -70,9 +70,17 @@ export function resolveSpecifier(
     return { kind: "internal-path", file, packageId: target.packageId };
   }
   const segments = specifier.split("/");
-  const found = namedPackage(condition, segments[0]);
+  // A scoped name is spelled across two segments, so the package a bare specifier
+  // names is its first two segments when it opens with a scope and its first one
+  // otherwise. A scope alone names no package.
+  const scoped = specifier.startsWith("@");
+  if (scoped && segments.length < 2)
+    return unresolved("missing-referent", `${specifier} names a scope rather than a package of this project.`);
+  const name = scoped ? segments.slice(0, 2).join("/") : segments[0];
+  const rest = segments.slice(scoped ? 2 : 1);
+  const found = namedPackage(condition, name);
   if ("kind" in found) return found;
-  const subpath = segments.length === 1 ? "." : `./${segments.slice(1).join("/")}`;
+  const subpath = rest.length === 0 ? "." : `./${rest.join("/")}`;
   const entry = found.entryPoints.find((point) => point.subpath === subpath);
   if (!entry) return unresolved("missing-referent", `${found.name} publishes no entry point ${subpath}.`);
   if (!sources.has(entry.target))

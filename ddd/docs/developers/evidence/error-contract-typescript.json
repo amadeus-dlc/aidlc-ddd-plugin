@@ -49,6 +49,10 @@
       "module": "billing-domain/src/limits/cycle.ts",
       "compiler_accepted": false,
       "reason": "a type alias chain that references itself",
+      "expected_diagnostic_codes": [
+        2315,
+        2456
+      ],
       "compiler_diagnostics": [
         "2456: Type alias 'Cycle' circularly references itself.",
         "2315: Type 'CycleStep' is not generic.",
@@ -60,11 +64,15 @@
       "module": "billing-domain/src/limits/missing.ts",
       "compiler_accepted": false,
       "reason": "an import whose module is not in the project",
+      "expected_diagnostic_codes": [
+        2307
+      ],
       "compiler_diagnostics": [
         "2307: Cannot find module './absent.ts' or its corresponding type declarations."
       ]
     }
   ],
+  "project_diagnostics": [],
   "cases": [
     {
       "name": "declared-name",

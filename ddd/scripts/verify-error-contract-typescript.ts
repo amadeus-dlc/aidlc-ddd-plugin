@@ -30,13 +30,24 @@ import {
 const root = resolve(import.meta.dir, "..");
 
 /**
- * The modules of the fixed scenario the compiler is expected to reject, and why.
- * Every other module of the project must type check, so a refusal by resolution
- * can never be mistaken for a refusal by the compiler.
+ * The modules of the fixed scenario the compiler is expected to reject, why, and
+ * the diagnostics it is expected to report for each. Every other module of the
+ * project must type check, so a refusal by resolution can never be mistaken for
+ * a refusal by the compiler. The diagnostic code, not the message, is what this
+ * gate compares: a rejection that moves to another cause is a changed scenario
+ * even when the same module is still rejected, and a reworded message is not.
  */
-const REJECTED_MODULES: Record<string, string> = {
-  "billing-domain/src/limits/cycle.ts": "a type alias chain that references itself",
-  "billing-domain/src/limits/missing.ts": "an import whose module is not in the project",
+const REJECTED_MODULES: Record<string, { readonly reason: string; readonly codes: readonly number[] }> = {
+  "billing-domain/src/limits/cycle.ts": {
+    // The unresolved chain also leaves each alias without its arity, which is
+    // why the circularity is reported alongside a use that is not generic.
+    reason: "a type alias chain that references itself",
+    codes: [2315, 2456],
+  },
+  "billing-domain/src/limits/missing.ts": {
+    reason: "an import whose module is not in the project",
+    codes: [2307],
+  },
 };
 
 /** Each case states the reference form it is written in and the one reason it reports. */
@@ -242,7 +253,17 @@ function parsed(configPath: string): ts.ParsedCommandLine {
  * manager would install, so acceptance never borrows the inspection's own answer
  * about which file a specifier names.
  */
-function compileScenario(): Map<string, string[]> {
+interface ScenarioDiagnostic {
+  readonly code: number;
+  readonly text: string;
+}
+interface ScenarioDiagnostics {
+  /** Diagnostics a module of the scenario carries, by project-relative path. */
+  readonly modules: Map<string, ScenarioDiagnostic[]>;
+  /** Diagnostics the compiler reports for the configuration itself, which name no module. */
+  readonly project: ScenarioDiagnostic[];
+}
+function compileScenario(): ScenarioDiagnostics {
   const references = parsed(join(TYPESCRIPT_WORKSPACE, "tsconfig.json")).projectReferences ?? [];
   const paths: Record<string, string[]> = {};
   for (const reference of references) {
@@ -253,23 +274,32 @@ function compileScenario(): Map<string, string[]> {
     for (const [subpath, target] of Object.entries(manifest.exports))
       paths[subpath === "." ? manifest.name : `${manifest.name}/${subpath.slice(2)}`] = [join(reference.path, target)];
   }
-  const diagnostics = new Map<string, string[]>();
+  const modules = new Map<string, ScenarioDiagnostic[]>();
+  const project: ScenarioDiagnostic[] = [];
+  const add = (into: ScenarioDiagnostic[], entry: ScenarioDiagnostic): ScenarioDiagnostic[] =>
+    into.some((seen) => seen.text === entry.text) ? into : [...into, entry];
   for (const reference of references) {
     const configuration = parsed(join(reference.path, "tsconfig.json"));
-    const program = ts.createProgram(configuration.fileNames, {
-      ...configuration.options,
-      baseUrl: TYPESCRIPT_WORKSPACE,
-      paths,
-      noEmit: true,
-    });
-    for (const diagnostic of ts.getPreEmitDiagnostics(program)) {
-      if (!diagnostic.file) continue;
+    // The path mapping states absolute targets, so it needs no `baseUrl` to be
+    // read against: the option is deprecated in this Compiler API version and
+    // setting it would reject the scenario configuration itself.
+    const program = ts.createProgram(configuration.fileNames, { ...configuration.options, paths, noEmit: true });
+    for (const diagnostic of [...configuration.errors, ...ts.getPreEmitDiagnostics(program)]) {
+      const entry = {
+        code: diagnostic.code,
+        text: `${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`,
+      };
+      // A configuration or global diagnostic names no file and is kept apart
+      // rather than dropped: it rejects the scenario as a whole.
+      if (!diagnostic.file) {
+        if (!project.some((seen) => seen.text === entry.text)) project.push(entry);
+        continue;
+      }
       const file = relative(TYPESCRIPT_WORKSPACE, diagnostic.file.fileName).split(sep).join("/");
-      const message = `${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
-      diagnostics.set(file, [...new Set([...(diagnostics.get(file) ?? []), message])]);
+      modules.set(file, add(modules.get(file) ?? [], entry));
     }
   }
-  return diagnostics;
+  return { modules, project };
 }
 
 const problems: string[] = [];
@@ -302,10 +332,20 @@ try {
     problems.push("withdrawing an entry point did not withdraw the reference that used it");
 
   const compiled = compileScenario();
-  const rejected = [...compiled.keys()].sort();
+  const rejected = [...compiled.modules.keys()].sort();
   const expectedRejected = Object.keys(REJECTED_MODULES).sort();
   if (JSON.stringify(rejected) !== JSON.stringify(expectedRejected))
     problems.push(`the compiler rejected ${rejected.join(",") || "no module"}, expected ${expectedRejected.join(",")}`);
+  if (compiled.project.length)
+    problems.push(
+      `the compiler rejected the scenario configuration: ${compiled.project.map((entry) => entry.text).join("; ")}`,
+    );
+  for (const file of expectedRejected) {
+    const read = [...new Set((compiled.modules.get(file) ?? []).map((entry) => entry.code))].sort((a, b) => a - b);
+    const expected = [...REJECTED_MODULES[file].codes].sort((a, b) => a - b);
+    if (JSON.stringify(read) !== JSON.stringify(expected))
+      problems.push(`${file}: expected diagnostic ${expected.join(",")}, read ${read.join(",") || "none"}`);
+  }
 
   const rows = [];
   for (const entry of CASES) {
@@ -328,7 +368,7 @@ try {
       name: entry.name,
       resolution_step: entry.step,
       // Resolution and acceptance are separate observations: most refused cases compile.
-      compiler_accepted: !compiled.has(entry.file),
+      compiler_accepted: !compiled.modules.has(entry.file),
       error_cases: cases,
       resolution_reasons: codes,
     });
@@ -359,9 +399,11 @@ try {
     fixed_scenario: expectedRejected.map((file) => ({
       module: file,
       compiler_accepted: false,
-      reason: REJECTED_MODULES[file],
-      compiler_diagnostics: compiled.get(file) ?? [],
+      reason: REJECTED_MODULES[file].reason,
+      expected_diagnostic_codes: [...REJECTED_MODULES[file].codes],
+      compiler_diagnostics: (compiled.modules.get(file) ?? []).map((entry) => entry.text),
     })),
+    project_diagnostics: compiled.project.map((entry) => entry.text),
     cases: rows,
     unverified: [
       "arbitrary monorepo layouts and package manifests",

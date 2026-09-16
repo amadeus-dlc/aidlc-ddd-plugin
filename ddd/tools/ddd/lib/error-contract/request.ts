@@ -239,13 +239,27 @@ function base(value: unknown, subject: string, ordered: boolean): BaseValues {
     settings: record(item.settings, `${subject}.settings`) as { readonly [key: string]: JsonValue },
     toolchain: tools(item.toolchain, `${subject}.toolchain`, ordered),
   };
-  if (item.language === "rust")
+  // The language names the one condition an inspection carries. Carrying the
+  // other language's condition as well is refused here rather than dropped
+  // silently, because a dropped field leaves no trace in the request identity.
+  if (item.language === "rust") {
+    requireValue(
+      item.typeScriptCondition === undefined,
+      `${subject}.typeScriptCondition`,
+      "A Rust inspection carries no TypeScript condition.",
+    );
     return {
       ...body,
       language: "rust",
       cargoCondition: cargoCondition(item.cargoCondition, `${subject}.cargoCondition`),
     };
+  }
   requireValue(item.language === "typescript", `${subject}.language`, "Unknown language.");
+  requireValue(
+    item.cargoCondition === undefined,
+    `${subject}.cargoCondition`,
+    "A TypeScript inspection carries no Cargo condition.",
+  );
   return {
     ...body,
     language: "typescript",
