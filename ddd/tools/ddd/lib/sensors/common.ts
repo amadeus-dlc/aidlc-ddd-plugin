@@ -73,7 +73,10 @@ export function collectUnresolved(model: DomainModel, index: ElementIndex): Unre
         check(transition.aggregate, "aggregate");
         check(transition.command, "command");
       }
-      for (const factory of aggregate.factory_rules) check(factory.target_element);
+      for (const factory of aggregate.factory_rules) {
+        check(factory.target_element);
+        for (const error of factory.domain_errors) check(error.operation, "factory");
+      }
     }
     for (const pm of bc.process_managers) {
       for (const aggregateId of pm.aggregates) check(aggregateId, "aggregate");

@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LoadResult } from "../tools/ddd/lib/schema/loader.ts";
 import { loadDomainModel } from "../tools/ddd/lib/schema/loader.ts";
+import { collectUnresolved } from "../tools/ddd/lib/sensors/common.ts";
 
 type SchemaVersion = 1 | 2;
 
@@ -174,6 +175,20 @@ describe("a DomainError declared under a factory rule", () => {
     if (!result.ok) return;
     expect(result.index.resolve("error.invoice.issue.already-issued", "error").ok).toBe(true);
     expect(result.index.resolve("error.invoice.open.negative-amount", "error").ok).toBe(true);
+  });
+
+  test("has its owner reference walked by the unresolved scan, which expects a factory rule", () => {
+    const result = load(commandAndFactory("factory.invoice.open"), 2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(collectUnresolved(result.model, result.index)).toEqual([]);
+
+    // A command that exists resolves on its own, so only the expected kind can reject it.
+    const model = structuredClone(result.model);
+    model.bounded_contexts[0].aggregates[0].factory_rules[0].domain_errors[0].operation = "command.invoice.issue";
+    expect(collectUnresolved(model, result.index)).toEqual([
+      { id: "command.invoice.issue", reason: "kind-mismatch", expected: "factory" },
+    ]);
   });
 
   test("is refused when one element_id is declared by both a command and a factory rule", () => {

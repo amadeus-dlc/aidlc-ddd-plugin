@@ -298,25 +298,32 @@ test("one model directory carries preview, apply, re-read and re-run across the 
   });
 });
 
-test("a target that cannot be written is not reported as success and leaves the document alone", () => {
-  withWorkspace(legacyWorkspace(), (root) => {
-    const path = modelPathOf(root);
-    const before = snapshotBytes(root);
-    chmodSync(path, 0o444);
-    try {
-      const outcome = applyModelMigration(path);
-      expect(outcome.kind).toBe("write-failed");
-      expect(snapshotBytes(root)).toEqual(before);
+// Dropping write permission does nothing for a superuser, whose write succeeds regardless, so the
+// test either observes the failure or does not run at all.
+const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
 
-      const { exitCode, report } = run(["migrate", "--model", path, "--apply"]);
-      expect(exitCode).toBe(3);
-      expect(report.outcome).toBe("write-failed");
-      expect(snapshotBytes(root)).toEqual(before);
-    } finally {
-      chmodSync(path, 0o644);
-    }
-  });
-});
+test.skipIf(RUNNING_AS_SUPERUSER)(
+  "a target that cannot be written is not reported as success and leaves the document alone",
+  () => {
+    withWorkspace(legacyWorkspace(), (root) => {
+      const path = modelPathOf(root);
+      const before = snapshotBytes(root);
+      chmodSync(path, 0o444);
+      try {
+        const outcome = applyModelMigration(path);
+        expect(outcome.kind).toBe("write-failed");
+        expect(snapshotBytes(root)).toEqual(before);
+
+        const { exitCode, report } = run(["migrate", "--model", path, "--apply"]);
+        expect(exitCode).toBe(3);
+        expect(report.outcome).toBe("write-failed");
+        expect(snapshotBytes(root)).toEqual(before);
+      } finally {
+        chmodSync(path, 0o644);
+      }
+    });
+  },
+);
 
 test("the production model gate reads the legacy format and does not accept the migrated one", () => {
   withWorkspace(recordFiles(modelDocument(legacyModelYaml()), viewDocument()), (root) => {
