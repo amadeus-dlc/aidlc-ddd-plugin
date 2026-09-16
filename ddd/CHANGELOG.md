@@ -4,6 +4,12 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Reserved package names are compared as whole names
+
+- Compare a crate or package name against the reserved technical classifications as one whole name instead of word by word, the way a module segment is already compared. **A name the gate used to refuse now loads**: a business name that merely ends in a reserved word, such as `invoice-entities` or `invoice_entities`, is accepted by `domain-packaging.technical-name` and by the `schema_version: 2` mapping reader alike.
+- `value-objects`, `ValueObjects`, `@acme/value-objects-domain`, `entities-domain` and a package named only `domain` stay refused, because there the name itself is the classification.
+- This is the behaviour [domain packaging](docs/users/domain-packaging-design.md) has always documented — substrings and single words inside a name do not trigger a violation — which the crate and package check contradicted.
+
 ## Unreleased — Language-neutral implementation mapping
 
 - Add `schema_version: 2` of `ddd-aggregate-mapping.md`: business ids, vocabulary, the execution model and persistence stay at the top of each entry, and the language, package, module path, type, ports and repository move under `code`. Each aggregate also binds its commands and factory rules to a method and error type, and each business error to a case.

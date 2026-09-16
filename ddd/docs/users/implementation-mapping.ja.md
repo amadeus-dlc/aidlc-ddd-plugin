@@ -116,7 +116,7 @@ domain_packages:
 | `aggregate-mapping.coverage` | ルートパッケージのないパッケージの使用、親が宣言されていないパッケージ、位置にパッケージのない集約、写像のないモデルの集約、`code.type` のない集約、写像のないモデルのコマンド・生成操作・業務エラー |
 | `aggregate-mapping.technical-name` | 技術分類（`aggregate`、`impl`、`vo`、`entities`、`value_objects` など、[予約名](domain-packaging-design.ja.md#技術分類名の機械検査)の一覧）で名付けたパッケージやモジュールの要素、および `domain` だけの名前のパッケージ |
 
-予約名は語全体で照合します。Rust のパッケージ名は `-` と `_` で分割します。TypeScript のパッケージ名はスコープを外してから `-`、`_`、`.` で分割し、TypeScript のモジュール要素は `-` を `_` と読み替えて比較します。`value-objects`、`ValueObjects`、`@acme/value-objects-domain` は拒否し、`identity` や `invoice-entities` は拒否しません。業務用語としての適切さは、引き続きレビューで確認します。
+予約名は名前の全体で照合します。部分文字列でも、名前に含まれる一語でもありません。パッケージ名は小文字化し、末尾の `-domain` 標識を外し、`-` を `_` と読み替えます。TypeScript のパッケージ名はさらにスコープを外し、`.` を `_` と読み替えます。モジュール要素も同じ扱いで、`-` を `_` と読み替えて比較します。`value-objects`、`ValueObjects`、`@acme/value-objects-domain` は名前そのものが技術分類なので拒否します。`identity` や `invoice-entities` は、予約語で終わるだけの業務用語なので拒否しません。業務用語としての適切さは、引き続きレビューで確認します。
 
 ローダーが照合する相手は正規モデルだけです。名指しされたパッケージ・型・メソッド・ケースがソースに実在するかは、後続の検査で確認します。
 
