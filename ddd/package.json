@@ -9,7 +9,7 @@
     "build:claude": "bun ../.codex/tools/aidlc-plugin-build.ts . claude",
     "build:codex": "bun ../.codex/tools/aidlc-plugin-build.ts . codex",
     "build:all": "bun run build:claude && bun run build:codex",
-    "check": "bun run check:biome && bun run validate && bun run test:development-scopes && bun run prepare:state-exposure && bun run prepare:error-contract && bun run test && bun run test:state-exposure:native && bun run experiment:rust-syn && bun run verify:state-exposure && bun run verify:error-contract && bun run typecheck:state-exposure && bun run typecheck:error-contract",
+    "check": "bun run check:biome && bun run validate && bun run test:development-scopes && bun run prepare:state-exposure && bun run prepare:error-contract && bun run test && bun run test:state-exposure:native && bun run experiment:rust-syn && bun run verify:state-exposure && bun run verify:error-contract && bun run verify:error-contract:typescript && bun run typecheck:state-exposure && bun run typecheck:error-contract",
     "check:biome": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "test": "bun test tests/ --coverage --coverage-reporter=text --coverage-reporter=lcov && bun scripts/check-coverage.ts",
@@ -27,6 +27,7 @@
     "typecheck:state-exposure": "tsc --noEmit --project tsconfig.state-exposure.json",
     "prepare:error-contract": "bun scripts/prepare-error-contract.ts",
     "verify:error-contract": "bun scripts/verify-error-contract.ts",
+    "verify:error-contract:typescript": "bun scripts/verify-error-contract-typescript.ts",
     "typecheck:error-contract": "tsc --noEmit --project tsconfig.error-contract.json"
   },
   "devDependencies": {

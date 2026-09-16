@@ -198,7 +198,7 @@ export async function extractRust(
   // The claimed parser is checked before the frozen snapshot: a request that names
   // another extractor is never sent to this binary.
   if (
-    task.input.language !== "rust" ||
+    task.request.language !== "rust" ||
     RUST_TOOLCHAIN.some(
       (tool) => !task.input.toolchain.some((claimed) => claimed.name === tool.name && claimed.version === tool.version),
     )

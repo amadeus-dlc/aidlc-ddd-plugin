@@ -1,0 +1,7 @@
+{
+  "name": "billing-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["billing-domain", "billing-use-case"]
+}

@@ -1,14 +1,18 @@
 import type { InspectionInput, InspectionRequest, Location } from "../error-contract/index.ts";
 import { prepareErrorContractRequest } from "../error-contract/index.ts";
 
-export interface FrozenTask {
-  input: InspectionInput;
-  request: InspectionRequest;
-}
-export function freezeInput(input: InspectionInput): FrozenTask {
+/** An input and its request always name one language, so a frozen task carries one analysis condition. */
+type FrozenTaskOf<Named extends InspectionInput["language"]> = {
+  input: Extract<InspectionInput, { language: Named }>;
+  request: Extract<InspectionRequest, { language: Named }>;
+};
+type FrozenTasks = { rust: FrozenTaskOf<"rust">; typescript: FrozenTaskOf<"typescript"> };
+export type FrozenTask<Named extends InspectionInput["language"] = InspectionInput["language"]> = FrozenTasks[Named];
+export function freezeInput<Input extends InspectionInput>(input: Input): FrozenTask<Input["language"]> {
   const prepared = prepareErrorContractRequest(input);
   if (prepared.kind !== "prepared") throw new Error(JSON.stringify(prepared.issues));
-  return { input: JSON.parse(JSON.stringify(input)), request: prepared.request };
+  // Preparation carries the language tag it validated, so the request names this input's own arm.
+  return { input: JSON.parse(JSON.stringify(input)), request: prepared.request } as FrozenTask<Input["language"]>;
 }
 export function verifyTask(task: FrozenTask): void {
   const prepared = prepareErrorContractRequest(task.input);

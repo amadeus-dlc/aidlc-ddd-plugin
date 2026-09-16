@@ -20,9 +20,11 @@
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
-| error-contract-contract | 業務エラー契約の語彙、Cargo条件を含む要求識別、応答検証 |
+| error-contract-contract | 業務エラー契約の語彙、Cargo条件とTypeScript条件を含む要求識別、応答検証 |
 | error-contract-cargo | 境界でのCargo条件解決と、ロックファイルを変更しないこと |
 | error-contract-rust | 両モジュール配置での対応書式のネイティブ解決、限界ケース、パッケージ識別、ビルド条件の変更 |
+| error-contract-project | 境界でのTypeScriptプロジェクト条件解決、継承したコンパイラ設定、プロジェクトを変更しないこと |
+| error-contract-typescript | 両モジュール配置・両コード表現での対応書式のCompiler API解決、限界ケース、シンボル識別、プロジェクト条件の変更 |
 
 ## 配布物の検査
 

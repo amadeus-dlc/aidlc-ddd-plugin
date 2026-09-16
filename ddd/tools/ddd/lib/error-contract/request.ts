@@ -15,12 +15,19 @@ import type {
   CargoPackage,
   CargoTarget,
   DependencyRename,
+  EntryPoint,
   InspectionRequest,
   JsonValue,
   OperationTarget,
+  RequestIdentity,
   RequestPreparation,
+  ResultDefinition,
+  RustInspectionRequest,
   SourceSnapshot,
   ToolVersion,
+  TypeScriptCondition,
+  TypeScriptInspectionRequest,
+  TypeScriptPackage,
 } from "./contract.ts";
 import { SCHEMA_VERSION } from "./contract.ts";
 
@@ -100,6 +107,91 @@ function cargoCondition(value: unknown, subject: string): CargoCondition {
   return { targetTriple, packages };
 }
 
+function entryPoints(value: unknown, subject: string): EntryPoint[] {
+  return array(value, subject).map((entry, index) => {
+    const item = record(entry, `${subject}.${index}`);
+    return {
+      subpath: nonempty(item.subpath, `${subject}.${index}.subpath`),
+      target: path(item.target, `${subject}.${index}.target`),
+    };
+  });
+}
+
+function typeScriptPackages(value: unknown, subject: string): TypeScriptPackage[] {
+  const packages = array(value, subject, 1).map((entry, index) => {
+    const field = `${subject}.${index}`;
+    const pkg = record(entry, field);
+    return {
+      packageId: nonempty(pkg.packageId, `${field}.packageId`),
+      name: nonempty(pkg.name, `${field}.name`),
+      version: nonempty(pkg.version, `${field}.version`),
+      packageRoot: path(pkg.packageRoot, `${field}.packageRoot`),
+      tsconfigPath: path(pkg.tsconfigPath, `${field}.tsconfigPath`),
+      entryPoints: entryPoints(pkg.entryPoints, `${field}.entryPoints`),
+      projectReferences: array(pkg.projectReferences, `${field}.projectReferences`).map((id, position) =>
+        nonempty(id, `${field}.projectReferences.${position}`),
+      ),
+      dependencies: array(pkg.dependencies, `${field}.dependencies`).map((id, position) =>
+        nonempty(id, `${field}.dependencies.${position}`),
+      ),
+    };
+  });
+  uniqueNames(
+    packages.map((entry) => entry.packageId),
+    subject,
+    false,
+  );
+  const known = new Set(packages.map((entry) => entry.packageId));
+  for (const [index, entry] of packages.entries())
+    for (const [key, links] of [
+      ["projectReferences", entry.projectReferences],
+      ["dependencies", entry.dependencies],
+    ] as const)
+      for (const [position, packageId] of links.entries())
+        requireValue(
+          known.has(packageId),
+          `${subject}.${index}.${key}.${position}`,
+          "Linked package is not a package of this condition.",
+        );
+  return packages;
+}
+
+function resultDefinition(value: unknown, subject: string, known: ReadonlySet<string>): ResultDefinition {
+  const item = record(value, subject);
+  const packageId = nonempty(item.packageId, `${subject}.packageId`);
+  requireValue(known.has(packageId), `${subject}.packageId`, "Result is not declared by a package of this condition.");
+  return {
+    packageId,
+    modulePath: path(item.modulePath, `${subject}.modulePath`),
+    typeName: nonempty(item.typeName, `${subject}.typeName`),
+  };
+}
+
+function typeScriptCondition(value: unknown, subject: string): TypeScriptCondition {
+  const item = record(value, subject);
+  requireValue(item.module === "esnext", `${subject}.module`, "Unsupported module kind.");
+  requireValue(item.moduleResolution === "bundler", `${subject}.moduleResolution`, "Unsupported module resolution.");
+  requireValue(item.target === "esnext", `${subject}.target`, "Unsupported language target.");
+  requireValue(item.strict === true, `${subject}.strict`, "Expected a project that type checks strictly.");
+  const packages = typeScriptPackages(item.packages, `${subject}.packages`);
+  return {
+    compilerApiVersion: nonempty(item.compilerApiVersion, `${subject}.compilerApiVersion`),
+    module: item.module,
+    moduleResolution: item.moduleResolution,
+    target: item.target,
+    resolutionConditions: array(item.resolutionConditions, `${subject}.resolutionConditions`).map((name, index) =>
+      nonempty(name, `${subject}.resolutionConditions.${index}`),
+    ),
+    strict: item.strict,
+    packages,
+    resultDefinition: resultDefinition(
+      item.resultDefinition,
+      `${subject}.resultDefinition`,
+      new Set(packages.map((entry) => entry.packageId)),
+    ),
+  };
+}
+
 function operationTarget(value: unknown, subject: string): OperationTarget {
   const item = record(value, subject);
   return {
@@ -129,15 +221,35 @@ function tools(value: unknown, subject: string, ordered: boolean): ToolVersion[]
   return items.sort((a, b) => scalarCompare(a.name, b.name));
 }
 
-function base(value: unknown, subject: string, ordered: boolean) {
+type BaseValues = {
+  readonly item: Record<string, unknown>;
+  readonly target: OperationTarget;
+  readonly settings: { readonly [key: string]: JsonValue };
+  readonly toolchain: readonly ToolVersion[];
+} & (
+  | { readonly language: "rust"; readonly cargoCondition: CargoCondition }
+  | { readonly language: "typescript"; readonly typeScriptCondition: TypeScriptCondition }
+);
+
+function base(value: unknown, subject: string, ordered: boolean): BaseValues {
   const item = record(jsonCopy(value, subject), subject);
-  requireValue(item.language === "rust", `${subject}.language`, "Unknown language.");
-  return {
+  const body = {
     item,
-    cargoCondition: cargoCondition(item.cargoCondition, `${subject}.cargoCondition`),
     target: operationTarget(item.target, `${subject}.target`),
     settings: record(item.settings, `${subject}.settings`) as { readonly [key: string]: JsonValue },
     toolchain: tools(item.toolchain, `${subject}.toolchain`, ordered),
+  };
+  if (item.language === "rust")
+    return {
+      ...body,
+      language: "rust",
+      cargoCondition: cargoCondition(item.cargoCondition, `${subject}.cargoCondition`),
+    };
+  requireValue(item.language === "typescript", `${subject}.language`, "Unknown language.");
+  return {
+    ...body,
+    language: "typescript",
+    typeScriptCondition: typeScriptCondition(item.typeScriptCondition, `${subject}.typeScriptCondition`),
   };
 }
 
@@ -175,8 +287,30 @@ function validateSourceTargets(
   );
 }
 
-function identify(fields: Omit<InspectionRequest, "requestIdentity">): InspectionRequest {
-  return { ...fields, requestIdentity: digest(canonicalJson(fields as unknown as JsonValue)) };
+type RequestFields =
+  | Omit<RustInspectionRequest, "requestIdentity">
+  | Omit<TypeScriptInspectionRequest, "requestIdentity">;
+
+/**
+ * The one place a request states its fields, so the identity a preparation issues
+ * and the identity a validation recomputes can never be taken over different sets.
+ */
+function requestFields(values: BaseValues, sources: readonly SourceSnapshot[]): RequestFields {
+  const body = {
+    schemaVersion: SCHEMA_VERSION,
+    target: values.target,
+    sources,
+    settings: values.settings,
+    toolchain: values.toolchain,
+  };
+  return values.language === "rust"
+    ? { ...body, language: values.language, cargoCondition: values.cargoCondition }
+    : { ...body, language: values.language, typeScriptCondition: values.typeScriptCondition };
+}
+
+function identify(fields: RequestFields): InspectionRequest {
+  const requestIdentity: RequestIdentity = digest(canonicalJson(fields as unknown as JsonValue));
+  return { ...fields, requestIdentity };
 }
 
 export function prepareErrorContractRequest(input: unknown): RequestPreparation {
@@ -190,18 +324,7 @@ export function prepareErrorContractRequest(input: unknown): RequestPreparation 
     });
     validateSourceTargets(sources, values.target, "input", false);
     sources.sort((a, b) => scalarCompare(a.path, b.path));
-    return {
-      kind: "prepared",
-      request: identify({
-        schemaVersion: SCHEMA_VERSION,
-        language: "rust",
-        cargoCondition: values.cargoCondition,
-        target: values.target,
-        sources,
-        settings: values.settings,
-        toolchain: values.toolchain,
-      }),
-    };
+    return { kind: "prepared", request: identify(requestFields(values, sources)) };
   } catch (error) {
     if (error instanceof ContractError) return { kind: "input-rejected", issues: [error.issue] };
     throw error;
@@ -237,15 +360,7 @@ export function validateRequest(request: unknown): InspectionRequest {
     validateSnapshot(entry, `request.sources.${index}`),
   );
   validateSourceTargets(sources, values.target, "request", true);
-  const expected = identify({
-    schemaVersion: SCHEMA_VERSION,
-    language: "rust",
-    cargoCondition: values.cargoCondition,
-    target: values.target,
-    sources,
-    settings: values.settings,
-    toolchain: values.toolchain,
-  });
+  const expected = identify(requestFields(values, sources));
   requireValue(
     expected.requestIdentity === values.item.requestIdentity,
     "request.requestIdentity",
