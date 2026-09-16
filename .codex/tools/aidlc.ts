@@ -116,6 +116,7 @@ type Alias = {
 };
 
 export const TOOLS = {
+  attest: "aidlc-attest.ts",
   audit: "aidlc-audit.ts",
   bolt: "aidlc-bolt.ts",
   graph: "aidlc-graph.ts",
@@ -644,6 +645,35 @@ export const ROUTES: readonly Route[] = [
     targets: { fork: "audit-fork", merge: "audit-merge" },
   },
   {
+    // Commit provenance. `resolve` is read-only attribution and `anchor` appends
+    // a SOURCE_COMMITTED audit event, so the route mutates the project at most.
+    // It is a public noun (`aidlc attest resolve`, no engine prefix) because it
+    // is invoked by people and pipelines outside a workflow turn, but hidden
+    // from the capped top-level help like the other non-`top` public nouns.
+    // Never pinned: `attest` is not a PINNED_TOP_LEVEL_ROUTE, and the launcher
+    // drift guard compares the two.
+    id: "attest",
+    group: "attest",
+    kind: "noun-passthrough",
+    classification: "passthrough",
+    verbs: ["resolve", "anchor"],
+    tool: TOOLS.attest,
+    namespace: "public",
+    visibility: "hidden",
+    projectRequirement: "required",
+    pinPolicy: "active",
+    networkPolicy: "forbidden",
+    mutationScope: "project",
+    outputModes: ["human", "json"],
+    human: [
+      { command: "attest <verb>", summary: "resolve commits/diffs to reviewed units; anchor commits" },
+    ],
+    all: [
+      "resolve [commit|--commit <rev>] [--diff <base>..<head>] [--record-ref <ref>] [--require-trust <level>] [--fail-on <statuses>]",
+      "anchor [--commit <rev>] [--reconcile]",
+    ],
+  },
+  {
     id: "graph",
     group: "graph",
     kind: "noun-passthrough",
@@ -760,11 +790,23 @@ export const ROUTES: readonly Route[] = [
     group: "intent",
     kind: "custom",
     classification: "translation",
-    verbs: ["list", "switch", "<name>", "create"],
+    verbs: ["list", "switch", "<name>", "create", "archive", "unarchive"],
     custom: "workspace",
     ...PUBLIC_ENGINE,
-    human: [{ command: "intent [list|switch|create]", summary: "list, switch, or create intent context" }],
-    all: ["list [--json]", "switch <name>", "<name>", "create [args]"],
+    human: [
+      {
+        command: "intent [list|switch|create|archive|unarchive]",
+        summary: "list, switch, create, archive, or unarchive intent context",
+      },
+    ],
+    all: [
+      "list [--json] [--all]",
+      "switch <name>",
+      "<name>",
+      "create [args]",
+      "archive <name> [--reason <text>]",
+      "unarchive <name>",
+    ],
   },
   {
     id: "space",
@@ -812,7 +854,7 @@ export const ROUTES: readonly Route[] = [
     group: "config",
     kind: "custom",
     classification: "translation",
-    verbs: ["set depth", "set test-strategy", "set review", "set change-control", "get", "list"],
+    verbs: ["set depth", "set test-strategy", "set review", "set change-control", "set sensors", "set learnings", "set summary-confirmation", "get", "list"],
     custom: "config",
     ...PUBLIC_ENGINE,
     visibility: "hidden",
@@ -820,7 +862,10 @@ export const ROUTES: readonly Route[] = [
       "set depth": "config-change",
       "set test-strategy": "config-change",
       "set review": "config-change",
-      "set change-control": "change-control",
+      "set change-control": "config-change",
+      "set sensors": "config-change",
+      "set learnings": "config-change",
+      "set summary-confirmation": "config-change",
       get: "config-get",
       list: "config-list",
     },
@@ -829,7 +874,7 @@ export const ROUTES: readonly Route[] = [
       { command: "config set <key> <value>", summary: "change supported project configuration" },
       { command: "config list", summary: "list supported project configuration" },
     ],
-    all: ["set depth <value>", "set test-strategy <value>", "set review <value>", "set change-control <strict|relaxed>", "get <key>", "list"],
+    all: ["set depth <value>", "set test-strategy <value>", "set review <value>", "set change-control <strict|relaxed>", "set sensors <on|off>", "set learnings <on|off>", "set summary-confirmation <on|off>", "get <key>", "list"],
   },
   {
     id: "plugin",
@@ -982,10 +1027,16 @@ export const ROUTES: readonly Route[] = [
     group: "orchestrate",
     kind: "noun-passthrough",
     classification: "passthrough",
-    verbs: ["next", "continue", "report", "park"],
+    verbs: ["next", "continue", "report", "park", "wait"],
     tool: TOOLS.orchestrate,
     ...HIDDEN_ENGINE,
-    all: ["next [args]", "continue <token>", "report [args]", "park [args]"],
+    all: [
+      "next [args]",
+      "continue <token>",
+      "report [args]",
+      "park [args]",
+      "wait --stage <slug> --for collaborators|artifacts|review [--unit <unit>] [--review-file <path>] [--timeout <seconds>]",
+    ],
   },
   {
     id: "engine-orchestrate-help",
@@ -1499,27 +1550,11 @@ function handleConfig(route: Route, argv: string[]): Action {
 
   const key = argv[2];
   const value = argv[3];
-  if (key === "depth") {
-    const missing = requireValue("config", "set depth", value);
+  const target = route.targets?.[`set ${key}`];
+  if (target) {
+    const missing = requireValue("config", `set ${key}`, value);
     if (missing) return missing;
-    return { type: "delegate", tool: TOOLS.utility, args: ["config-change", "--depth", value, ...argv.slice(4)] };
-  }
-  if (key === "test-strategy") {
-    const missing = requireValue("config", "set test-strategy", value);
-    if (missing) return missing;
-    return { type: "delegate", tool: TOOLS.utility, args: ["config-change", "--test-strategy", value, ...argv.slice(4)] };
-  }
-  if (key === "review") {
-    const missing = requireValue("config", "set review", value);
-    if (missing) return missing;
-    return { type: "delegate", tool: TOOLS.utility, args: ["config-change", "--review", value, ...argv.slice(4)] };
-  }
-  if (key === "change-control") {
-    // The per-intent Change Control flip is its own utility verb (it rewrites
-    // the state line and logs CHANGE_CONTROL_SET), not a config-change field.
-    const missing = requireValue("config", "set change-control", value);
-    if (missing) return missing;
-    return { type: "delegate", tool: TOOLS.utility, args: ["change-control", value, ...argv.slice(4)] };
+    return { type: "delegate", tool: TOOLS.utility, args: [target, `--${key}`, value, ...argv.slice(4)] };
   }
   return nounError("config", key ? `set ${key}` : "set");
 }
@@ -1969,6 +2004,8 @@ type DelegateModule = {
 
 async function loadDelegate(tool: string): Promise<DelegateModule | null> {
   switch (tool) {
+    case TOOLS.attest:
+      return import("./aidlc-attest.ts");
     case TOOLS.audit:
       return import("./aidlc-audit.ts");
     case TOOLS.bolt:

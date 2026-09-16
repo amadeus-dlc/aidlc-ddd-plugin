@@ -352,6 +352,21 @@ crateName.expect.locations = [
   { rule: "domain-packaging.technical-name", file: MAP },
 ];
 PACKAGING_CASES.push(crateName);
+// A crate whose business name ends in a reserved word is compared as a whole name, the way a module
+// segment is, so it is not refused for containing the word. Both the Cargo.toml name and the mapping
+// declaration go through that comparison.
+const businessCrateName = rust(
+  "clean-packaging-crate-word-substring",
+  "pub struct Invoice;\n",
+  [{ ...ROOT_PACKAGE, crate: "invoice-entities-domain" }],
+  [],
+);
+businessCrateName.workspace = {
+  ...businessCrateName.workspace,
+  "packages/domain/billing-domain/Cargo.toml":
+    '[package]\nname = "invoice-entities-domain"\nversion = "0.1.0"\nedition = "2021"\n',
+};
+PACKAGING_CASES.push(businessCrateName);
 
 const pathReplay = rust(
   "clean-packaging-path-replay",

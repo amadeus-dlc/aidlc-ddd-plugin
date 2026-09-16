@@ -13,12 +13,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Pin the AI-DLC runtime. aidlc-plugin-{dev,bugfix,refactor}.md declare 2.8.2
+  # Pin the AI-DLC runtime. aidlc-plugin-{dev,bugfix,refactor}.md declare 2.9.0
   # as the supported baseline, and ddd/scripts/verify-development-scopes.ts
   # runs the real binary. Bump this together with those scope files.
-  AIDLC_VERSION: "2.8.2"
-  # sha256 of install.sh in the v2.8.2 release (from its checksums.txt).
-  AIDLC_INSTALLER_SHA256: "c20d3b094c1b4e81dc4aa2adcda74c7117334b3f010d691db5b194a8cec859ea"
+  AIDLC_VERSION: "2.9.0"
+  # sha256 of install.sh in the v2.9.0 release (from its checksums.txt).
+  AIDLC_INSTALLER_SHA256: "a3f09746af9be430a6ea623f6aa297e2e1331707fdf2c0b066830669e2ffea76"
 
 jobs:
   check:

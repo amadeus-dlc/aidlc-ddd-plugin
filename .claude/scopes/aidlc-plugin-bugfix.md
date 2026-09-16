@@ -15,7 +15,7 @@ change_control: relaxed
 
 ## Framework Compatibility
 
-- **aidlc-workflows対応基準**: `2.8.2`
+- **aidlc-workflows対応基準**: `2.9.0`
 - **基準確認日**: `2026-09-13`
 - **確認範囲**: スコープ設定の点検。Unit生成を含まない構成であり、全工程の実行は個別の修正で確認する。
 - **確認コマンド**: `aidlc --version`、`ddd/`から`bun run test:development-scopes`。

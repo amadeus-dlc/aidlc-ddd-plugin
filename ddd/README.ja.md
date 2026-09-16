@@ -41,7 +41,7 @@ Rust検査は構文と名前に基づき、型推論・実行を行いません�
 
 ## 開発時の検証
 
-前提はBun、PATH上の`aidlc`、`../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.8.2。
+前提はBun、PATH上の`aidlc`、`../.codex/tools/` のAI-DLC開発ツールです。調査基準はBun 1.3.13、AI-DLC 2.9.0。
 
 ```sh
 cd ddd

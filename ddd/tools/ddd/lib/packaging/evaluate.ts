@@ -3,7 +3,7 @@ import type { InspectionContext, InspectionTarget } from "../rules/types.ts";
 import { finding, relPath } from "../sensors/common.ts";
 import { readModel } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
-import { checkPackageDeclarations, crateParts, moduleParts, packageKey, technicalName } from "./declarations.ts";
+import { checkPackageDeclarations, moduleParts, packageKey, packageWord, technicalName } from "./declarations.ts";
 import { inspectModules } from "./rust-modules.ts";
 
 export function evaluateDomainPackaging(target: InspectionTarget, context: InspectionContext): FindingInput[] {
@@ -13,7 +13,7 @@ export function evaluateDomainPackaging(target: InspectionTarget, context: Inspe
   const inventory =
     context.program.moduleInventories.get(crate.crate_name) ??
     inspectModules(context.analyzer, context.workspace.root_path, crate);
-  const crateName = technicalName(crateParts(crate.crate_name));
+  const crateName = technicalName([packageWord(crate.crate_name)]);
   if (crateName || crate.crate_name === "domain")
     findings.push(
       finding(

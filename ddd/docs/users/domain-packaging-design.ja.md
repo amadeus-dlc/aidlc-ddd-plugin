@@ -60,7 +60,7 @@ aggregate aggregates impl impls implementation implementations
 vo vos entity entities value_object value_objects valueobject valueobjects
 ```
 
-大小文字とRustの `r#` 接頭辞を正規化し、要素単位で照合する。部分文字列では判定しないため、identityやinvoice_entitiesを一律には拒否しない。common/shared/utils等の適切さは意味のレビューに残す。
+大小文字とRustの `r#` 接頭辞を正規化したうえで、名前の全体で照合する。crate名・パッケージ名は1つの名前として、モジュール経路は要素ごとに照合する。部分文字列でも、名前に含まれる一語でも判定しないため、identityやinvoice_entitiesを一律には拒否しない。common/shared/utils等の適切さは意味のレビューに残す。
 
 | 対象 | 扱い |
 |---|---|

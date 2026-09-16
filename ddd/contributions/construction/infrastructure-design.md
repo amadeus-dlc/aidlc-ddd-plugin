@@ -60,4 +60,4 @@ layer_structures:
 Every crate that appears in the side lists needs a `crate_dependencies` row, and
 every Aggregate in the context needs a `full-constructor` restoration path.
 
-For standalone execution, explicitly run `ddd-layer-structure` and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's cicd-pipeline before reporting completion. The blocking layer-structure check must return `result: passed` in its final JSON. Standard 2.8.2 standalone completion does not perform these checks for you.
+For standalone execution, explicitly run `ddd-layer-structure` and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's cicd-pipeline before reporting completion. The blocking layer-structure check must return `result: passed` in its final JSON. Standard 2.9.0 standalone completion does not perform these checks for you.

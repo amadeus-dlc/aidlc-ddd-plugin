@@ -6,7 +6,7 @@
  * never test a language by name.
  */
 
-import { crateParts, technicalName } from "../packaging/declarations.ts";
+import { packageWord, technicalName } from "../packaging/declarations.ts";
 import type { MappingLanguage } from "./contract.ts";
 
 /** The two kinds of model operation a mapping binds to a method. */
@@ -47,9 +47,8 @@ const PACKAGE_SCOPE = /^@[^/]+\//;
  * not the business, and is refused like the other classifications.
  */
 function technicalPackageName(name: string): string | undefined {
-  // crateParts spells the whole name first, then the words it is made of.
-  const [whole, ...words] = crateParts(name);
-  return technicalName([whole]) ?? (words.every((word) => word === "domain") ? "domain" : undefined);
+  const whole = packageWord(name);
+  return technicalName([whole]) ?? (whole === "domain" ? "domain" : undefined);
 }
 
 const RUST: LanguageSpelling = {

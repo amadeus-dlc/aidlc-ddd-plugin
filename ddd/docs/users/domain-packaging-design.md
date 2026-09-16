@@ -60,7 +60,7 @@ aggregate aggregates impl impls implementation implementations
 vo vos entity entities value_object value_objects valueobject valueobjects
 ```
 
-Normalize case and Rust's `r#` prefix and compare complete components. Substrings do not trigger violations, so identity and invoice_entities are not automatically rejected. Review the suitability of common/shared/utils and similar terms.
+Normalize case and Rust's `r#` prefix, then compare the whole name: a crate or package name as one name, and a module path one segment at a time. Neither a substring nor a single word inside the name triggers a violation, so identity and invoice_entities are not automatically rejected. Review the suitability of common/shared/utils and similar terms.
 
 | Name or construct | Treatment |
 |---|---|

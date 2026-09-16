@@ -36,6 +36,16 @@ export function crateParts(crate: string): string[] {
   return [business.replace(/-/g, "_"), ...business.split(/[-_]/)];
 }
 
+/**
+ * The one name a crate or package is compared against: lowercased, with the `-domain` layer marker
+ * removed and its word separators normalized. A reserved name has to be the whole name, the way a
+ * module segment is compared: `value-objects` is the classification, while `invoice-entities` names
+ * invoices and only ends in the word.
+ */
+export function packageWord(crate: string): string {
+  return crateParts(crate)[0];
+}
+
 export function packageKey(crate: string, parts: readonly string[]): string {
   return `${crate}:${parts.join("::")}`;
 }
@@ -78,7 +88,7 @@ export function checkPackageDeclarations(
           entry.line,
         ),
       );
-    const banned = technicalName([...crateParts(entry.crate), ...parts]);
+    const banned = technicalName([packageWord(entry.crate), ...parts]);
     if (banned || entry.crate === "domain")
       findings.push(
         finding(

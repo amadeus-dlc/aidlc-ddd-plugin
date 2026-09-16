@@ -4,6 +4,12 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — 予約パッケージ名を名前の全体で照合する
+
+- crate名・パッケージ名と技術分類の予約名の照合を、語ごとではなく名前の全体で行うようにした。モジュール要素の照合と同じ扱いになる。**これまで拒否していた名前が読み込めるようになる。** `invoice-entities` や `invoice_entities` のように予約語で終わるだけの業務名は、`domain-packaging.technical-name` と `schema_version: 2` の写像読込のどちらでも受理する。
+- `value-objects`、`ValueObjects`、`@acme/value-objects-domain`、`entities-domain`、`domain` だけの名前は引き続き拒否する。これらは名前そのものが技術分類である。
+- これは[パッケージ設計](docs/users/domain-packaging-design.ja.md)が当初から記載していた挙動（部分文字列でも、名前に含まれる一語でも判定しない）であり、crate名・パッケージ名の検査がその記載に反していた。
+
 ## 未リリース — 言語共通の実装写像
 
 - `ddd-aggregate-mapping.md` の `schema_version: 2` を追加。業務ID・業務語彙・実行モデル・永続化方式は各エントリの第1階層に残し、言語・パッケージ・モジュールの位置・型・ポート・リポジトリは `code` の下へ移す。各集約は、コマンドと生成操作をメソッドとエラー型へ、業務エラーをケースへ対応付ける。
