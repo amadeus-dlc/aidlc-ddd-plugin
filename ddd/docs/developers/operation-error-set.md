@@ -135,6 +135,7 @@ The checks across a change run on each of the three paths.
 ## Limits
 
 - The spelling of the mapping's `code.error_type` is not compared with the name of the resolved error type declaration. `error-contract/1` returns the error type only as a `symbolId` whose internal form is not relied on. Comparing them needs `error-contract/1` to publish the declaration name; this is recorded on the parent issue as prerequisite work for T-10/T-11.
+- Whether a TypeScript observation names the file of the mapped `module` is not checked. The mapping does not define the source root a TypeScript module sits under, so only the verification path, which places the module at `<packageRoot>/src/<module>.ts`, binds the file to the module. An observation prepared elsewhere that names another module's file with the same package, type and method is accepted. Checking this in the comparator needs the mapping or the observation to state that placement.
 - Whether two operations share one error type is not checked. A union that includes another operation's errors is found case by case as `foreign-error`.
 - The production sensors and the approval gate are not connected.
 - Whether a compiler accepts the scenario modules is not measured. Several modules are written not to compile.
