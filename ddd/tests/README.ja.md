@@ -28,6 +28,8 @@
 | error-contract-rust | 両モジュール配置での対応書式のネイティブ解決、限界ケース、パッケージ識別、ビルド条件の変更 |
 | error-contract-project | 境界でのTypeScriptプロジェクト条件解決、継承したコンパイラ設定、プロジェクトを変更しないこと |
 | error-contract-typescript | 両モジュール配置・両コード表現での対応書式のCompiler API解決、限界ケース、シンボル識別、プロジェクト条件の変更 |
+| operation-error-set-contract | 手書きの業務エラー契約の応答を使った操作エラー集合の照合。要求識別、拒否する入力、不足・余分・別操作所属のケース、結果契約の所見、未解決の事実、変更後に古い観測を使わないこと、照合器に言語固有のimportがないこと |
+| operation-error-set-languages | Rust・TypeScript class・TypeScriptコンパニオンの3経路で共通シナリオを解決し、同じ照合で判定すること。写像・モデル・スナップショットを変えたとき、古い観測から判定しないこと |
 
 ## 配布物の検査
 

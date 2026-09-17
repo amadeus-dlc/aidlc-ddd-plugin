@@ -1,0 +1,6 @@
+# Error-set comparison scenario: one workspace-owned crate, one build condition.
+# No dependencies at all, so `cargo metadata` resolves with a frozen lockfile and
+# without a registry.
+[workspace]
+resolver = "3"
+members = ["billing-domain"]

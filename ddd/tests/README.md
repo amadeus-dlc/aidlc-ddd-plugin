@@ -28,6 +28,8 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | error-contract-rust | Native resolution of supported reference forms in both module layouts, bounded cases, package identity, and a build condition change. |
 | error-contract-project | TypeScript project condition resolution at the boundary, inherited compiler options, and the project left untouched. |
 | error-contract-typescript | Compiler API resolution of supported reference forms in both module layouts and code representations, bounded cases, symbol identity, and a project condition change. |
+| operation-error-set-contract | Operation error-set comparison from hand-written error-contract answers: request identity, refused input, missing, unexpected and foreign cases, result contract findings, unresolved facts, earlier observations after a change, and no language-specific import in the comparator. |
+| operation-error-set-languages | One shared scenario resolved by the Rust, TypeScript class and TypeScript companion paths and judged by the same comparison, and a changed mapping, model or snapshot never judged from an earlier observation. |
 
 ## Distribution checks
 
