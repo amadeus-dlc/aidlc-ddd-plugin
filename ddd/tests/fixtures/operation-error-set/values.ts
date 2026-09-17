@@ -290,6 +290,8 @@ const TYPESCRIPT_PACKAGE_ID = "path:billing-domain#billing-domain@0.1.0";
 /** What an observation may differ in; every field left out keeps the base value. */
 interface ObservationOptions {
   readonly type?: string;
+  /** The Rust module path the declaration is observed in; TypeScript names its module by the file. */
+  readonly module?: readonly string[];
   readonly packageName?: string;
   readonly content?: string;
   readonly otherCondition?: boolean;
@@ -318,7 +320,7 @@ function rustInput(method: string, options: ObservationOptions): InspectionInput
       packageId: RUST_PACKAGE_ID,
       targetName: "billing_domain",
       file,
-      declarationPath: ["invoice", options.type ?? "Invoice"],
+      declarationPath: [...(options.module ?? ["invoice"]), options.type ?? "Invoice"],
       operation: method,
     },
     sources: [{ path: file, content: options.content ?? SOURCE }],
@@ -446,6 +448,21 @@ function reason(code: ReasonCode): Issue {
   return { code, subject: "Invoice", message: "This fact cannot be established.", location: null };
 }
 
+/**
+ * Where the source spells the observed operation: its signature, its result type and its error
+ * type. The source declares only `issue` and `open`; any other method an observation names stands
+ * in for `issue` and is located there.
+ */
+function spellingOf(request: InspectionRequest) {
+  return request.target.operation === "open"
+    ? { operation: "pub fn open()", result: "Result<Self, OpenInvoiceError>", errorType: "OpenInvoiceError" }
+    : {
+        operation: "pub fn issue(&mut self)",
+        result: "Result<(), IssueInvoiceError>",
+        errorType: "IssueInvoiceError",
+      };
+}
+
 export function standardResult(request: InspectionRequest, errorType: "nominal" | "unit" = "nominal") {
   return {
     status: "resolved",
@@ -457,7 +474,7 @@ export function standardResult(request: InspectionRequest, errorType: "nominal" 
           ? { kind: "unit" }
           : { kind: "nominal", symbolId: `${SYMBOL}::${request.target.operation}::Error` },
     },
-    evidence: [span(request, "Result")],
+    evidence: [span(request, spellingOf(request).result)],
   };
 }
 
@@ -465,12 +482,13 @@ export function nonStandardResult(request: InspectionRequest) {
   return {
     status: "resolved",
     value: { standardResult: false, resultType: { kind: "nominal", symbolId: `${SYMBOL}::Invoice` } },
-    evidence: [span(request, "Invoice")],
+    evidence: [span(request, "pub struct Invoice;")],
   };
 }
 
+/** An operation that declares no result is evidenced by its own signature. */
 export function absentFact(request: InspectionRequest) {
-  return { status: "absent", evidence: [span(request, "Invoice")] };
+  return { status: "absent", evidence: [span(request, spellingOf(request).operation)] };
 }
 
 export function unresolvedFact(code: ReasonCode) {
@@ -485,7 +503,7 @@ function caseSet(request: InspectionRequest, names: readonly string[], reasons: 
       items: names.map((name) => ({ name, location: span(request, name) })),
       reasons,
     },
-    evidence: [span(request, "IssueInvoiceError")],
+    evidence: [span(request, spellingOf(request).errorType)],
   };
 }
 
@@ -503,6 +521,7 @@ interface Facts {
 }
 
 export function resolvedOperation(request: InspectionRequest, facts: Facts) {
+  const spelled = spellingOf(request);
   return {
     operationStatus: "resolved",
     operation: {
@@ -511,11 +530,11 @@ export function resolvedOperation(request: InspectionRequest, facts: Facts) {
       declarationPath: [...request.target.declarationPath],
       operation: request.target.operation,
     },
-    operationEvidence: [span(request, "Invoice")],
+    operationEvidence: [span(request, spelled.operation)],
     resultContract: facts.resultContract,
     errorCases: facts.errorCases,
     resolutionPath: [
-      { kind: "direct", reference: "Result", resolved: `${SYMBOL}::Result`, location: span(request, "Result") },
+      { kind: "direct", reference: "Result", resolved: `${SYMBOL}::Result`, location: span(request, spelled.result) },
     ],
   };
 }

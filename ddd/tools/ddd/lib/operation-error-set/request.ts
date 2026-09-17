@@ -8,6 +8,7 @@
  * error-contract identity check rather than judged again.
  */
 
+import { SPELLINGS } from "../aggregate-mapping/language.ts";
 import type { InspectionRequest, JsonValue, Language } from "../error-contract/contract.ts";
 import { isDigest, validateRequest as validateObservation } from "../error-contract/request.ts";
 import { OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
@@ -21,7 +22,13 @@ import {
   record,
   requireValue,
 } from "../state-exposure/canonical.ts";
-import type { ComparedOperation, ComparisonRequest, MappedError, RequestPreparation } from "./contract.ts";
+import type {
+  ComparedOperation,
+  ComparisonRequest,
+  MappedError,
+  OperationCode,
+  RequestPreparation,
+} from "./contract.ts";
 import { RULE_ID, SCHEMA_VERSION } from "./contract.ts";
 import { type Expectation, expectedOperations } from "./expected.ts";
 
@@ -57,9 +64,25 @@ function snapshotOf(request: InspectionRequest): string {
 }
 
 /**
+ * Whether the observation names its type in the mapped module, where the language states the module
+ * in the declaration path. A Rust declaration path is the module path from the crate root followed by
+ * the type, whichever file layout the project uses, so every mapped segment is compared as the
+ * language identifies it. A TypeScript module is a file, and the mapping fixes no source root to place
+ * it under, so the file stays with the verification path.
+ */
+function observesMappedModule(observation: InspectionRequest, code: OperationCode): boolean {
+  if (observation.language !== "rust") return true;
+  const observed = observation.target.declarationPath.slice(0, -1);
+  const identity = SPELLINGS.rust.segmentIdentity;
+  return (
+    observed.length === code.module.length &&
+    observed.every((segment, index) => identity(segment) === identity(code.module[index]))
+  );
+}
+
+/**
  * The invariants a request holds however it was produced. An observation is compared with the
- * mapping only through what every language states alike — the language, the method, the last
- * declaration of its path and the name of its package — so module placement stays with each path.
+ * mapping through the language, the method, the declaration it names and the name of its package.
  */
 function checkOperations(language: Language, operations: readonly ComparedOperation[], subject: string): void {
   requireValue(operations.length > 0, subject, "The aggregate has no operation to compare.");
@@ -91,6 +114,11 @@ function checkOperations(language: Language, operations: readonly ComparedOperat
       observation.target.declarationPath.at(-1) === code.type,
       `${field}.observation.target.declarationPath`,
       "Observes another declaration than the mapped type.",
+    );
+    requireValue(
+      observesMappedModule(observation, code),
+      `${field}.observation.target.declarationPath`,
+      "Observes the mapped type in another module than the mapped one.",
     );
     requireValue(
       packageName(observation) === code.package,

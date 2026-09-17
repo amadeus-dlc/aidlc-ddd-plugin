@@ -236,6 +236,12 @@ describe("the prepared request", () => {
     expect(prepare(rewritten).requestIdentity).toBe(prepare(value).requestIdentity);
   });
 
+  // `r#invoice` and `invoice` name one Rust module; the raw prefix only lets a keyword be spelled.
+  test("accepts a Rust observation that spells a mapped module segment raw", () => {
+    const value = withObservation(world("rust"), ISSUE, observationRequest("rust", "issue", { module: ["r#invoice"] }));
+    expect(prepareOperationErrorSetRequest(value).kind).toBe("prepared");
+  });
+
   const CHANGES: [string, (value: World) => World][] = [
     [
       "the mapped method",
@@ -251,7 +257,17 @@ describe("the prepared request", () => {
       "the mapped error type",
       (value) => ({ ...value, mapping: withErrorType(value.mapping, ISSUE, "InvoiceIssueError") }),
     ],
-    ["the mapped module", (value) => ({ ...value, mapping: atModule(value.mapping, "billing") })],
+    [
+      "the mapped module",
+      (value) => ({
+        model: value.model,
+        mapping: atModule(value.mapping, "billing"),
+        observations: [
+          { operationRef: ISSUE, request: observationRequest("rust", "issue", { module: ["billing"] }) },
+          { operationRef: OPEN, request: observationRequest("rust", "open", { module: ["billing"] }) },
+        ],
+      }),
+    ],
     [
       "the mapped type",
       (value) => ({
@@ -489,6 +505,15 @@ describe("preparation refuses input it cannot compare", () => {
     [
       "an observation of another declaration than the mapped type",
       () => withObservation(world("typescript"), ISSUE, observationRequest("typescript", "issue", { type: "Bill" })),
+    ],
+    [
+      "a Rust observation of the mapped type declared in another module",
+      () => withObservation(world("rust"), ISSUE, observationRequest("rust", "issue", { module: ["billing"] })),
+    ],
+    [
+      "a Rust observation of the mapped type declared below the mapped module",
+      () =>
+        withObservation(world("rust"), ISSUE, observationRequest("rust", "issue", { module: ["invoice", "draft"] })),
     ],
     [
       "observations in a package with another name than the mapped one",
@@ -774,6 +799,43 @@ describe("the result contract is judged before the case set", () => {
       ),
     );
     expect(judgement(result, ISSUE)).toEqual(judged("violation", [contract(ISSUE, "no-case-set")]));
+  });
+});
+
+// Each operation is answered from its own declaration, so a finding about `open` never points at the
+// signature or the error type of `issue`. The source declares `issue` on line 5 with its error type on
+// line 1, and `open` on line 6 with its error type on line 2.
+describe("a finding carries the evidence of the operation it is about", () => {
+  function evidenceLines(result: EvaluatedResult, operationRef: string): number[] {
+    return operationOf(result, operationRef).findings.flatMap((finding) =>
+      finding.evidence.map((location) => location.line),
+    );
+  }
+  function inspectEach(value: World, execution: (request: InspectionRequest) => unknown): EvaluatedResult {
+    return evaluate(
+      prepare(value),
+      matchingExecutions(value).map(({ operationRef }) => ({
+        operationRef,
+        execution: execution(observationOf(value, operationRef)),
+      })),
+    );
+  }
+
+  test("an absent result contract points at the operation's own signature", () => {
+    const result = inspectEach(world("rust"), (request) =>
+      completed(
+        request,
+        resolvedOperation(request, { resultContract: absentFact(request), errorCases: absentFact(request) }),
+      ),
+    );
+    expect(evidenceLines(result, ISSUE)).toEqual([5]);
+    expect(evidenceLines(result, OPEN)).toEqual([6]);
+  });
+
+  test("a missing error points at the operation's own error type", () => {
+    const result = inspectEach(world("rust"), (request) => closedSet(request, []));
+    expect(new Set(evidenceLines(result, ISSUE))).toEqual(new Set([1]));
+    expect(new Set(evidenceLines(result, OPEN))).toEqual(new Set([2]));
   });
 });
 

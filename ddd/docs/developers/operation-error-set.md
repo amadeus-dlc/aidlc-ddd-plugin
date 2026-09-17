@@ -40,10 +40,11 @@ Input matching any row below is refused as `input-rejected` without being compar
 | The mapping leaves an error of an operation out, lists one error twice, or maps two errors of one operation to one case | A case would not name one error |
 | An observation is not a valid `error-contract/1` request, including an edited identity | The observation cannot be trusted |
 | An observation's language, `target.operation`, last `target.declarationPath` entry, or the name of the package `target.packageId` names differs from the mapped language, method, type or package | It observes another target |
+| The entries of a Rust observation's `target.declarationPath` before the type differ from the mapped `module`, reading `r#name` and `name` as one segment | It observes a type of the same name in another module |
 | Two observations differ in their sources, analysis condition, settings or tool versions | Different analysis snapshots are never mixed |
 | An observation is missing, an operation is observed twice, or an observation names an operation the mapping does not name | Operations and observations cannot be paired one to one |
 
-Module placement differs between languages, so the comparator does not compare the mapped `module` with an observation's file or the leading entries of its declaration path. Each language's verification path decides the placement.
+A Rust declaration path is the module path from the crate root followed by the type, whichever file layout the project uses, so the comparator compares its leading entries with the mapped `module`. A TypeScript module is a file, and the mapping fixes no source root to place it under, so the comparator does not compare a TypeScript observation's file with the mapped `module`; the TypeScript verification path decides the placement.
 
 ## Request identity
 
