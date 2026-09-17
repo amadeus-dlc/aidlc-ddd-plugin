@@ -1,0 +1,9 @@
+[package]
+name = "billing-domain"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "billing_domain"
+path = "src/lib.rs"

@@ -40,3 +40,4 @@ Run `bun scripts/report-sensor-coverage.ts --write` from `ddd/` to regenerate bo
 - [Shared state exposure contract](state-exposure-inspection.md)
 - [Language extraction and verification](state-exposure-verification.md)
 - [Business-error contract resolution](error-contract-resolution.md)
+- [Operation error-set comparison](operation-error-set.md)

@@ -1,0 +1,961 @@
+{
+  "contract": "operation-error-set/1",
+  "error_contract": "error-contract/1",
+  "platform": "darwin-arm64",
+  "versions": {
+    "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+    "bun": "1.3.13",
+    "typescript": "6.0.3",
+    "syn": "3.0.5"
+  },
+  "projects": [
+    {
+      "name": "rust",
+      "language": "rust"
+    },
+    {
+      "name": "typescript-class",
+      "language": "typescript"
+    },
+    {
+      "name": "typescript-companion",
+      "language": "typescript"
+    }
+  ],
+  "scenarios": [
+    {
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      }
+    },
+    {
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.open.missing-customer"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.open.missing-customer"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.open.missing-customer"
+              }
+            ],
+            "reasons": []
+          }
+        }
+      }
+    },
+    {
+      "module": "extra",
+      "description": "a case no operation maps",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": []
+          }
+        }
+      }
+    },
+    {
+      "module": "foreign",
+      "description": "a case the other operation maps",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.open.negative-amount",
+                "owner": "factory.invoice.open"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.issue.already-issued",
+                "owner": "command.invoice.issue"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.open.negative-amount",
+                "owner": "factory.invoice.open"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.issue.already-issued",
+                "owner": "command.invoice.issue"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.open.negative-amount",
+                "owner": "factory.invoice.open"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.issue.already-issued",
+                "owner": "command.invoice.issue"
+              }
+            ],
+            "reasons": []
+          }
+        }
+      }
+    },
+    {
+      "module": "contract",
+      "description": "no result contract, and a result that is not the standard result",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "absent"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "non-standard"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "absent"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "non-standard"
+              }
+            ],
+            "reasons": []
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "absent"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "non-standard"
+              }
+            ],
+            "reasons": []
+          }
+        }
+      }
+    },
+    {
+      "module": "shadowed",
+      "description": "an application type named Result",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "non-standard"
+              }
+            ],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [
+              {
+                "code": "result-contract",
+                "detail": "non-standard"
+              }
+            ],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "shadowed-result-identity"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "module": "widened",
+      "description": "an error set left open",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "incomplete-case-set"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "incomplete-case-set"
+            ]
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "open-error-type"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "open-error-type"
+            ]
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "open-error-type"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "open-error-type"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "module": "unreferenced",
+      "description": "error types imported from a module the snapshot lacks",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "missing-referent"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "module": "inferred",
+      "description": "return types only the bodies state",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "expression-inference-required"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "module": "undeclared",
+      "description": "a mapped type without the mapped operations",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          }
+        },
+        "typescript-class": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          }
+        },
+        "typescript-companion": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "module": "open_extra",
+      "description": "an open enum that also lists cases outside its own mapping",
+      "results": {
+        "rust": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [
+              {
+                "code": "unexpected-case"
+              }
+            ],
+            "reasons": [
+              "incomplete-case-set"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [
+              {
+                "code": "foreign-error",
+                "error": "error.invoice.issue.already-issued",
+                "owner": "command.invoice.issue"
+              }
+            ],
+            "reasons": [
+              "incomplete-case-set"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "changes": [
+    {
+      "project": "rust",
+      "request_identity": "sha256:d91e440019e6250b82998cdd210071abc7f1c97d2b4215400f1f3d4c9b6d8add",
+      "mapped_method": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_content": {
+        "identity_changed": true,
+        "result": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.locked"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_version_1": "input-rejected",
+      "snapshot": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          }
+        }
+      },
+      "mixed_snapshots": "input-rejected",
+      "observations_for_the_other_language": "input-rejected"
+    },
+    {
+      "project": "typescript-class",
+      "request_identity": "sha256:97e13285157f074916e8beb0a99635b409bd86c1a4c2f30df0f5c2a0cb854a10",
+      "mapped_method": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_content": {
+        "identity_changed": true,
+        "result": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.locked"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_version_1": "input-rejected",
+      "snapshot": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          }
+        }
+      },
+      "mixed_snapshots": "input-rejected",
+      "observations_for_the_other_language": "input-rejected"
+    },
+    {
+      "project": "typescript-companion",
+      "request_identity": "sha256:08e8bf33bdd291930be37660801d485bff637c68332a65e314bcbbed4743aa65",
+      "mapped_method": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "target-missing"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_content": {
+        "identity_changed": true,
+        "result": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.locked"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        }
+      },
+      "model_version_1": "input-rejected",
+      "snapshot": {
+        "identity_changed": true,
+        "fresh": {
+          "issue": {
+            "rule_result": "violation",
+            "findings": [
+              {
+                "code": "missing-error",
+                "error": "error.invoice.issue.empty-lines"
+              }
+            ],
+            "reasons": []
+          },
+          "open": {
+            "rule_result": "pass",
+            "findings": [],
+            "reasons": []
+          }
+        },
+        "earlier_observation": {
+          "issue": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          },
+          "open": {
+            "rule_result": "unresolved",
+            "findings": [],
+            "reasons": [
+              "identity-mismatch"
+            ]
+          }
+        }
+      },
+      "mixed_snapshots": "input-rejected",
+      "observations_for_the_other_language": "input-rejected"
+    }
+  ],
+  "unverified": [
+    "matching the mapped error type spelling against the resolved declaration name",
+    "compiler acceptance of the scenario modules",
+    "the Rust mod-rs layout and the TypeScript index-file layout",
+    "production sensor and approval gate integration",
+    "error paths, state preservation and invariants of a running application"
+  ]
+}

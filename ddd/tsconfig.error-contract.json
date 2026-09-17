@@ -5,9 +5,13 @@
     "tools/ddd/lib/error-contract-verification/**/*.ts",
     "tools/ddd/lib/rust/error-contract/**/*.ts",
     "tools/ddd/lib/typescript/error-contract/**/*.ts",
+    "tools/ddd/lib/operation-error-set/**/*.ts",
+    "tools/ddd/lib/operation-error-set-verification/**/*.ts",
     "scripts/prepare-error-contract.ts",
     "scripts/verify-error-contract.ts",
     "scripts/verify-error-contract-typescript.ts",
-    "tests/error-contract-*.test.ts"
+    "scripts/verify-operation-error-set.ts",
+    "tests/error-contract-*.test.ts",
+    "tests/operation-error-set-*.test.ts"
   ]
 }
