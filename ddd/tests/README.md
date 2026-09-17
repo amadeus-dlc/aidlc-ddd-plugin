@@ -16,6 +16,7 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
 | domain-model-operations / domain-model-migration | Operation-owned errors in the canonical model, and preview/apply migration of one model artifact. |
 | aggregate-mapping-contract / aggregate-mapping-migration | Reading and refusing the language-neutral aggregate mapping for Rust and TypeScript, and preview/apply migration of one crate/module mapping with a supplement, including the production gate left on version 1. |
+| layer-declaration-contract / layer-declaration-migration | Reading, refusing and inspecting the language-neutral layer declaration for Rust and TypeScript, and preview/apply migration of the one YAML block below the DDD section marker of `cicd-pipeline.md`, including the surrounding prose and CI fence left byte-for-byte alone, the production gate left on version 1, and the use-case declarations left untouched. |
 | u2-rust-analysis-foundation | Cargo layer classification and Rust syntax analysis. |
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |

@@ -13,7 +13,8 @@
 import { moduleParts } from "../packaging/declarations.ts";
 import { parseDeclaration } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
-import { isRecord, MAPPING_RULES, MAPPING_SCHEMA_VERSION, MappingReport, own } from "./contract.ts";
+import { isRecord, own } from "../shared/yaml-read.ts";
+import { MAPPING_RULES, MAPPING_SCHEMA_VERSION, MappingReport } from "./contract.ts";
 import type { MappingDocument } from "./document.ts";
 
 const LEGACY_KEYS = {

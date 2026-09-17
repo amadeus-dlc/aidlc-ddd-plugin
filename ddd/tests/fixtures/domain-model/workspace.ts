@@ -81,10 +81,11 @@ export function documentWithUnclosedYamlBlock(yaml: string): string {
 /**
  * Everything outside the one labelled YAML block, split at the same boundary readYamlBlock
  * picks. Comparing this before and after an apply proves the fence delimiters, the prose and the
- * nested non-YAML fence are untouched.
+ * nested non-YAML fence are untouched. A document whose block is authoritative only inside one
+ * section names that section, so the fences outside it stay part of the envelope.
  */
-export function envelopeOf(markdown: string): { head: string; tail: string } {
-  const block = readYamlBlock(markdown);
+export function envelopeOf(markdown: string, heading?: string | readonly string[]): { head: string; tail: string } {
+  const block = readYamlBlock(markdown, heading);
   const lines = markdown.split(/\r?\n/);
   const start = block.startLine - 1;
   const bodyLines = block.yaml.split("\n").length;

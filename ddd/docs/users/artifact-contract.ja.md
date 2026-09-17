@@ -14,7 +14,7 @@
 | functional-design | functional-spec（既存） | `functional-spec.md` 内の `## DDD Use-case Declarations` にYAMLブロック1つ |
 | infrastructure-design | cicd-pipeline（既存） | `cicd-pipeline.md` 内の `## DDD Layer Structure` にYAMLブロック1つ |
 
-`model_ref` はレコード相対の `inception/ddd-domain-modeling/ddd-domain-model-yaml.md` を使う。生成とすべての承認ゲートはYAMLデータスキーマのversion 1のままで、Markdownは運搬形式である。各操作が自身の業務エラーを持つversion 2は、読込と明示的な移行で利用できるが、どのゲートもまだ受理しない。[操作ごとのエラー](domain-model-operation-errors.ja.md)を参照。言語共通の写像である `ddd-aggregate-mapping.md` のversion 2も同様である。[実装写像](implementation-mapping.ja.md)を参照。説明文書とのID・不変条件本文の対応は引き続き検査する。
+`model_ref` はレコード相対の `inception/ddd-domain-modeling/ddd-domain-model-yaml.md` を使う。生成とすべての承認ゲートはYAMLデータスキーマのversion 1のままで、Markdownは運搬形式である。各操作が自身の業務エラーを持つversion 2は、読込と明示的な移行で利用できるが、どのゲートもまだ受理しない。[操作ごとのエラー](domain-model-operation-errors.ja.md)を参照。言語共通の写像である `ddd-aggregate-mapping.md` のversion 2も同様である。[実装写像](implementation-mapping.ja.md)を参照。依存規約を言語共通のパッケージ識別で述べる `cicd-pipeline.md` の `## DDD Layer Structure` 節のversion 2も同様である。[レイヤー宣言](layer-declaration.ja.md)を参照。説明文書とのID・不変条件本文の対応は引き続き検査する。
 
 旧 `domain-model.yaml` と `domain-model.md` は自動探索しない。既存成果物を移す場合は、YAMLを新しいデータファイルのコードブロックへ包み、説明を新名へ移し、すべての `model_ref` を更新して再検査する。下位のローダーAPIは生YAMLも読めるが、通常ステージの生成先に旧名を使う根拠にはしない。
 
