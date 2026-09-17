@@ -86,5 +86,5 @@ export function readLayerDocument(path: string): DocumentRead {
 
 /** Replace only the YAML body of the declaration block; everything outside it keeps its bytes. */
 export function writeLayerDocument(document: LayerDocument, yaml: string): WriteOutcome {
-  return writeYamlBlockDocument(document.path, document.text, document.block, yaml);
+  return writeYamlBlockDocument(document, yaml);
 }

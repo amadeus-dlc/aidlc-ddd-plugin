@@ -155,7 +155,7 @@ For Claude Code, use `.claude/tools/`. Without `--apply` the command only report
 | `applied` | 0 | The YAML block was replaced with `declaration` |
 | `rejected` | 1 | `findings` carry the refusal; a defect is reported ahead of anything still missing |
 | `write-failed` | 3 | Validation held but the file could not be written |
-| `invalid-arguments` | 2 | `detail` repeats the usage |
+| `invalid-arguments` | 2 | An unknown command or option, a missing value, or `--declaration` given more than once; `detail` repeats the usage |
 
 Only the registered artifact inside an intent record is accepted. The record is the directory that contains `construction/<unit>/infrastructure-design/cicd-pipeline.md`, and `model_ref` resolves against it. A `functional-spec.md` and a copy of the pipeline document kept anywhere else are refused with `layer-declaration.document` and left as they are.
 
@@ -190,7 +190,7 @@ Anything the production reader would silently coerce or drop is refused instead:
 
 Applying replaces the body of the one labelled YAML block below the section marker and nothing else. The pipeline prose, the CI configuration fence in the build section, the fence delimiters, the section marker in either language, and every neighbouring file keep their bytes. `.github/workflows/ci.yml`, the canonical model, `functional-spec.md`, the infrastructure specification, notes and `.ddd.toml` are never touched.
 
-Applying re-reads and re-validates the document, so an earlier successful preview never authorises a later change. Running the command again on an applied document reports `already-migrated` and leaves the bytes as they are. A write that fails reports `write-failed` and leaves the document as it was: the new document is written to an entry of the command's own beside it and renamed over it, so the registered path holds either the bytes it had or the whole new document, never a half-written one, and a failure leaves no entry of its own behind. A declaration document that is a symbolic link is refused with `write-failed`, so the link and the file it names keep their bytes; replace it with a regular file first. Applying rebuilds the whole block from what it read, so do not run a migration while another process is writing the same file — the other process's change would be lost.
+Applying re-reads and re-validates the document, so an earlier successful preview never authorises a later change. Running the command again on an applied document reports `already-migrated` and leaves the bytes as they are. A write that fails reports `write-failed` and leaves the document as it was: the new document is written to an entry of the command's own beside it and renamed over it, so the registered path holds either the bytes it had or the whole new document, never a half-written one, and a failure leaves no entry of its own behind. A declaration document that is a symbolic link is refused with `write-failed`, so the link and the file it names keep their bytes; replace it with a regular file first. A directory between the record and the document, such as `infrastructure-design`, that is a symbolic link is refused with `write-failed` too, and the file it leads to keeps its bytes; replace it with a regular directory first. Applying rebuilds the whole block from what it read, so do not run a migration while another process is writing the same file — the other process's change would be lost.
 
 ## The use-case declaration is already language-neutral
 

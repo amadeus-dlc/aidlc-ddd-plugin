@@ -9,7 +9,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { chmodSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   applyMappingMigration,
@@ -718,6 +718,41 @@ test("a mapping document that is a symbolic link is refused, and neither the lin
     expect(snapshotBytes(root)).toEqual(before);
   });
 });
+
+// A directory between the record and the document that is a symbolic link carries the registered
+// path to a directory kept somewhere else, so renaming into place there would rewrite a file
+// outside the record. Every such directory is held to that, whichever one is the link, while the
+// document it leads to still reads as a candidate.
+for (const [label, depth] of [
+  ["stage", 1],
+  ["phase", 2],
+] as const)
+  test(`a mapping reached through a symbolic-linked ${label} directory is refused, and the file it leads to is not written`, () => {
+    withWorkspace(legacyWorkspace(), (root) => {
+      const path = mappingPathOf(root);
+      const linkedInRecord = MAPPING_IN_RECORD.split("/").slice(0, -depth).join("/");
+      const linked = join(root, linkedInRecord);
+      const outside = join(root, "elsewhere", label);
+      mkdirSync(dirname(outside), { recursive: true });
+      renameSync(linked, outside);
+      symlinkSync(outside, linked);
+      const before = snapshotBytes(root);
+      expect(before[linkedInRecord]).toBe(`symlink:${outside}`);
+      expect(previewMappingMigration(path, supplementPathOf(root)).kind).toBe("candidate");
+
+      const { exitCode, report } = run([
+        "migrate",
+        "--mapping",
+        path,
+        "--supplement",
+        supplementPathOf(root),
+        "--apply",
+      ]);
+      expect(exitCode).toBe(3);
+      expect(report.outcome).toBe("write-failed");
+      expect(snapshotBytes(root)).toEqual(before);
+    });
+  });
 
 // Creating an entry beside the document needs write permission on its directory, which a superuser
 // has regardless, so the test either observes the failure or does not run at all.

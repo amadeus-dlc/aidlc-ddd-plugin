@@ -85,7 +85,7 @@ Commands keep `schema.command-no-error`, and every other rule keeps its existing
 
 ## What this format is for today
 
-The migrated document is read by the migration command on this page, by the reading entry point below, by the [implementation mapping](implementation-mapping.md) loader and migration, and by the [layer declaration](layer-declaration.md) loader and migration, which accept only this format. **The production sensors do not accept `schema_version: 2`.** Every path that loads the canonical model during a gate asks for version 1, and reports a load failure against a migrated document under its own rule:
+The migrated document is read by the migration command on this page, by the reading entry point below, by the [implementation mapping](implementation-mapping.md) loader and migration, and by the [layer declaration](layer-declaration.md) loader and migration. The implementation mapping and layer declaration sides accept only this format for the canonical model they reference, whether or not their own document is already migrated. **The production sensors do not accept `schema_version: 2`.** Every path that loads the canonical model during a gate asks for version 1, and reports a load failure against a migrated document under its own rule:
 
 | Path that loads the canonical model | Sensor | Load failure |
 |---|---|---|

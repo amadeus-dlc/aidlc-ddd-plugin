@@ -41,6 +41,10 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     if (value === undefined || value.startsWith("--"))
       return { kind: "invalid-arguments", detail: `${option} needs a value; ${USAGE}` };
     index++;
+    // Two paths leave the command line as the only record of which document was meant, and taking
+    // either one would let a slip rewrite a document nobody asked to change.
+    if (declaration !== null)
+      return { kind: "invalid-arguments", detail: `${DECLARATION_OPTION} may be given only once; ${USAGE}` };
     declaration = value;
   }
   if (declaration === null) return { kind: "invalid-arguments", detail: `${DECLARATION_OPTION} is required; ${USAGE}` };

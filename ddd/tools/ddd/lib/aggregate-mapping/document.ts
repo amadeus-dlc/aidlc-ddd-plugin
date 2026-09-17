@@ -70,5 +70,5 @@ export function readMappingDocument(path: string): DocumentRead {
 
 /** Replace only the YAML body of the mapping document; everything outside it keeps its bytes. */
 export function writeMappingDocument(document: MappingDocument, yaml: string): WriteOutcome {
-  return writeYamlBlockDocument(document.path, document.text, document.block, yaml);
+  return writeYamlBlockDocument(document, yaml);
 }
