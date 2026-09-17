@@ -4,6 +4,16 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Language-neutral layer declaration
+
+- Add `schema_version: 2` of the `## DDD Layer Structure` section of `cicd-pipeline.md`: the three crate lists become one `packages` list whose entries carry a `role` of `command`, `query` or `rmu`, `crate_dependencies` becomes `dependencies` over the same package identities, and each package is identified by the language that spells it together with its name. The context reference, the cqrs flag, the ports, the repositories, the restoration paths and the persistence backend are unchanged.
+- Add a reader for one declaration document that refuses unknown keys including every crate-fixed one, a package named without its language, a name the language does not accept, broken or foreign model references, duplicate structures, packages, dependency rows, repositories and restoration paths, and a dependency row for a package the context never declares, while a dependency on a package outside the context is kept as written. It reads only a `schema_version: 2` canonical model and never reads a version 1 declaration as the new format.
+- Add a structural inspection that can be run on its own against a declaration that loaded: required items, a dependency row per package, a query side for a cqrs context, the command/query boundary with the read-model updater exempt, a query-side dependency on a domain-layer package name in either language's spelling, and a full-constructor restoration path per aggregate.
+- Add `ddd-layer-declaration.ts migrate --declaration <path> [--apply]`, which converts the one YAML block below the section marker, keeps every crate name, dependency edge, port, repository, restoration path and persistence backend in the language it is written in, leaves the pipeline prose and the CI configuration fence beside it byte-for-byte alone, and reports the values the crate format supplied on its own — `cqrs`, a port's kind and verbs, a repository's io unit, verbs and store semantics, and a restoration route — as `missing-information` until the document states them.
+- Keep the production sensors and the generation instructions on version 1; a migrated declaration is reported as `layer-structure.item`.
+- Leave the use-case declarations of `functional-spec.md` as they are: they carry no name a language spells, so there is no format version to convert them to.
+- Document the format, the checks, the inspection, the command and the current scope in [layer declaration](docs/users/layer-declaration.md).
+
 ## Unreleased — Reserved package names are compared as whole names
 
 - Compare a crate or package name against the reserved technical classifications as one whole name instead of word by word, the way a module segment is already compared. **A name the gate used to refuse now loads**: a business name that merely ends in a reserved word, such as `invoice-entities` or `invoice_entities`, is accepted by `domain-packaging.technical-name` and by the `schema_version: 2` mapping reader alike.

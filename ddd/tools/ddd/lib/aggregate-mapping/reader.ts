@@ -9,19 +9,28 @@
 
 import type { FindingInput } from "../shared/findings.ts";
 import {
+  ABSENT,
+  allDefined,
+  isRecord,
+  type OptionalValue,
+  own,
+  readChoice,
+  readNodes,
+  readOptionalText,
+  readText,
+  readTextList,
+} from "../shared/yaml-read.ts";
+import {
   type AggregateMappingDraft,
   type CodeLocation,
   type DomainPackageMapping,
   type ErrorCaseMapping,
-  isRecord,
   MAPPING_LANGUAGES,
-  MAPPING_RULES,
   MAPPING_SCHEMA_VERSION,
   type MappingDraft,
   type MappingLanguage,
   MappingReport,
   type OperationMapping,
-  own,
   PERSISTENCE_METHODS,
   PROGRAMMING_MODELS,
   type ReplayMethodMapping,
@@ -50,17 +59,8 @@ const KEYS = {
   packageCode: ["language", "package", "module"],
 } as const;
 
-/** An optional value as read: absent, or present with its value. A refused value reads as undefined. */
-export type OptionalValue<T> = { readonly present: false } | { readonly present: true; readonly value: T };
-
-const ABSENT = { present: false } as const;
-
-function allDefined<T>(values: readonly (T | undefined)[]): values is T[] {
-  return values.every((value) => value !== undefined);
-}
-
 function structure(report: MappingReport, message: string): undefined {
-  report.add(MAPPING_RULES.structure, message);
+  report.structure(message);
   return undefined;
 }
 
@@ -71,28 +71,6 @@ function spellingOf(language: MappingLanguage | undefined): LanguageSpelling | u
 // ---------------------------------------------------------------------------
 // Values
 // ---------------------------------------------------------------------------
-
-function readText(
-  report: MappingReport,
-  node: Readonly<Record<string, unknown>>,
-  key: string,
-  where: string,
-): string | undefined {
-  const value = own(node, key);
-  if (typeof value === "string" && value.length > 0) return value;
-  return structure(report, `${where}: "${key}" must be a non-empty string`);
-}
-
-function readOptionalText(
-  report: MappingReport,
-  node: Readonly<Record<string, unknown>>,
-  key: string,
-  where: string,
-): OptionalValue<string> | undefined {
-  if (own(node, key) === undefined) return ABSENT;
-  const value = readText(report, node, key, where);
-  return value === undefined ? undefined : { present: true, value };
-}
 
 /** Business wording: a term or a rationale says something only when it is more than blanks. */
 function readBusinessText(
@@ -132,66 +110,6 @@ function readOptionalName(
   if (own(node, key) === undefined) return ABSENT;
   const value = readName(report, node, key, where, accepts);
   return value === undefined ? undefined : { present: true, value };
-}
-
-function readChoice<T extends string>(
-  report: MappingReport,
-  node: Readonly<Record<string, unknown>>,
-  key: string,
-  choices: readonly T[],
-  where: string,
-): T | undefined {
-  const value = own(node, key);
-  const chosen = choices.find((choice) => choice === value);
-  if (chosen !== undefined) return chosen;
-  return structure(report, `${where}: "${key}" must be one of ${choices.join(", ")}`);
-}
-
-interface ListRule {
-  readonly required: boolean;
-  readonly minimum: number;
-  readonly accepts?: NameTest;
-}
-
-function readTextList(
-  report: MappingReport,
-  node: Readonly<Record<string, unknown>>,
-  key: string,
-  where: string,
-  rule: ListRule,
-): string[] | undefined {
-  const value = own(node, key);
-  if (value === undefined && !rule.required) return [];
-  if (!Array.isArray(value)) return structure(report, `${where}: "${key}" must be a list`);
-  const entries = value.map((entry, index) => {
-    if (typeof entry !== "string" || entry.length === 0)
-      return structure(report, `${where}: "${key}[${index}]" must be a non-empty string`);
-    if (rule.accepts !== undefined && !rule.accepts(entry))
-      return structure(
-        report,
-        `${where}: "${key}[${index}]" ${JSON.stringify(entry)} is not a valid name in this language`,
-      );
-    return entry;
-  });
-  if (entries.length < rule.minimum)
-    return structure(report, `${where}: "${key}" needs at least ${rule.minimum} entry`);
-  return allDefined(entries) ? entries : undefined;
-}
-
-function readNodes(
-  report: MappingReport,
-  node: Readonly<Record<string, unknown>>,
-  key: string,
-  where: string,
-  required: boolean,
-): Record<string, unknown>[] | undefined {
-  const value = own(node, key);
-  if (value === undefined && !required) return [];
-  if (!Array.isArray(value)) return structure(report, `${where}: "${key}" must be a list`);
-  const entries = value.map((entry, index) =>
-    isRecord(entry) ? entry : structure(report, `${where}: "${key}[${index}]" must be a mapping`),
-  );
-  return allDefined(entries) ? entries : undefined;
 }
 
 /** A `code` mapping holding exactly the keys its owner may spell. */

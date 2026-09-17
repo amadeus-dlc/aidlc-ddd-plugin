@@ -106,15 +106,6 @@ export interface MappingDraft extends Omit<ImplementationMapping, "aggregate_map
   readonly aggregate_mappings: readonly AggregateMappingDraft[];
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Reads only own keys, so an inherited property can never stand in for a declared value. */
-export function own(node: Readonly<Record<string, unknown>>, key: string): unknown {
-  return Object.hasOwn(node, key) ? node[key] : undefined;
-}
-
 /** Collects findings against one file: the mapping document, or the supplement a migration reads. */
 export class MappingReport {
   readonly findings: FindingInput[] = [];
@@ -123,6 +114,11 @@ export class MappingReport {
 
   add(rule: MappingRule, message: string): void {
     this.findings.push({ rule_id: rule, file: this.file, message });
+  }
+
+  /** The shape rule of this artifact, which is what the shared value readers report against. */
+  structure(message: string): void {
+    this.add(MAPPING_RULES.structure, message);
   }
 
   unknownKeys(node: Readonly<Record<string, unknown>>, allowed: readonly string[], where: string): void {

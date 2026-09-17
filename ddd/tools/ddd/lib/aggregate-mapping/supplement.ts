@@ -21,17 +21,16 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import type { FindingInput } from "../shared/findings.ts";
+import { errorMessage } from "../shared/markdown-document.ts";
+import { isRecord, type OptionalValue, own } from "../shared/yaml-read.ts";
 import {
   type AggregateMappingDraft,
-  isRecord,
   MAPPING_RULES,
   type MappingDraft,
   MappingReport,
   type OperationMapping,
-  own,
 } from "./contract.ts";
-import { errorMessage } from "./document.ts";
-import { type OptionalValue, readOperations, readTypeName } from "./reader.ts";
+import { readOperations, readTypeName } from "./reader.ts";
 
 const KEYS = {
   root: ["aggregate_mappings"],

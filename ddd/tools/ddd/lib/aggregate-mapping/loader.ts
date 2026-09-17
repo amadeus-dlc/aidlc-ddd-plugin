@@ -11,12 +11,12 @@ import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loade
 import type { DomainModel } from "../schema/model.ts";
 import { resolveModelPath } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
+import { own } from "../shared/yaml-read.ts";
 import {
   type ImplementationMapping,
   LEGACY_MAPPING_SCHEMA_VERSION,
   MAPPING_RULES,
   MAPPING_SCHEMA_VERSION,
-  own,
 } from "./contract.ts";
 import { type MappingDocument, readMappingDocument } from "./document.ts";
 import { readMappingDraft } from "./reader.ts";

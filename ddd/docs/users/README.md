@@ -11,6 +11,7 @@ For users applying the DDD plugin to an application project. Start with the inst
 | Close business errors over the command or factory rule that declares them, and migrate a model | [Operation-owned errors](domain-model-operation-errors.md) |
 | Name domain packages using ubiquitous language | [Domain packaging contract](domain-packaging-design.md) |
 | Map aggregates, packages, operations and error cases to Rust or TypeScript code, and migrate a crate/module mapping | [Implementation mapping](implementation-mapping.md) |
+| State a context's dependency regime over packages instead of crates, and migrate a crate-fixed layer declaration | [Layer declaration](layer-declaration.md) |
 | Understand Rust type matching, replay declarations, and unexamined code | [Rust sensor contract](rust-sensor-contract.md) |
 | Declare the languages in use and migrate the legacy Rust configuration | [Project settings](project-settings.md) |
 

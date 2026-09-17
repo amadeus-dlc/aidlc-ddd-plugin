@@ -16,6 +16,7 @@
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
 | domain-model-operations / domain-model-migration | 正規モデルの操作ごとのエラー、モデル成果物1件のpreview・適用による移行 |
 | aggregate-mapping-contract / aggregate-mapping-migration | Rust/TypeScriptの言語共通の集約写像の読込と拒否、補足入力を使ったcrate/module形式の写像1件のpreview・適用による移行、version 1のまま残る本番ゲート |
+| layer-declaration-contract / layer-declaration-migration | Rust/TypeScriptの言語共通のレイヤー宣言の読込・拒否・構造検査、`cicd-pipeline.md` のDDD節の見出しの下のYAMLブロック1つのpreview・適用による移行、バイト単位で保たれる周囲の本文とCI設定のフェンス、version 1のまま残る本番ゲート、変更されないユースケース宣言 |
 | u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |

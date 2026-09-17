@@ -4,6 +4,16 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — 言語共通のレイヤー宣言
+
+- `cicd-pipeline.md` の `## DDD Layer Structure` 節の `schema_version: 2` を追加。3つのcrateリストを、`command`・`query`・`rmu` の `role` を持つ1つの `packages` リストへ統合し、`crate_dependencies` を同じパッケージ識別上の `dependencies` へ移す。パッケージは、その名前を綴る言語と名前の組で識別する。文脈参照、cqrs、ポート、リポジトリ、復元経路、永続化基盤は変更しない。
+- 宣言文書1件の読込処理を追加。crate固定のものを含む未知のキー、言語のないパッケージ識別、その言語で使えない名前、壊れた・他所属のモデル参照、structure・パッケージ・依存行・リポジトリ・復元経路の重複、文脈が宣言していないパッケージの依存行を拒否する。文脈の外のパッケージへの依存は書かれたとおりに保持する。正規モデルは `schema_version: 2` だけを読み、version 1の宣言を新形式として読むことはない。
+- 読み込めた宣言に対して単独で実行できる構造検査を追加。必須項目、パッケージごとの依存行、cqrsの文脈におけるクエリ側、読み取りモデル更新を除いたcommand/query境界、両言語の綴りで判定するドメイン層パッケージへのクエリ側依存、集約ごとのfull-constructor復元経路を検査する。
+- `ddd-layer-declaration.ts migrate --declaration <path> [--apply]` を追加。節の見出しの下のYAMLブロック1つを変換し、crate名、依存辺、ポート、リポジトリ、復元経路、永続化基盤をその記述言語のまま保持する。パイプラインの本文と隣のCI設定のフェンスはバイト単位でそのまま残す。crate形式が自動で補っていた値（`cqrs`、ポートの種別とverbs、リポジトリの入出力単位・verbs・保存意味、復元経路）は、文書が述べるまで `missing-information` として報告する。
+- 本番センサーと生成指示はversion 1のまま。移行後の宣言は `layer-structure.item` として報告される。
+- `functional-spec.md` のユースケース宣言はそのままにする。言語が綴る名前を持たないため、変換すべき形式版がない。
+- 形式、検査、構造検査、コマンド、現在の適用範囲を[レイヤー宣言](docs/users/layer-declaration.ja.md)に記載。
+
 ## 未リリース — 予約パッケージ名を名前の全体で照合する
 
 - crate名・パッケージ名と技術分類の予約名の照合を、語ごとではなく名前の全体で行うようにした。モジュール要素の照合と同じ扱いになる。**これまで拒否していた名前が読み込めるようになる。** `invoice-entities` や `invoice_entities` のように予約語で終わるだけの業務名は、`domain-packaging.technical-name` と `schema_version: 2` の写像読込のどちらでも受理する。

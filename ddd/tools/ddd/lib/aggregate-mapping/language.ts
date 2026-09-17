@@ -7,6 +7,7 @@
  */
 
 import { packageWord, technicalName } from "../packaging/declarations.ts";
+import { barePackageName, isPackageName } from "../shared/package-name.ts";
 import type { MappingLanguage } from "./contract.ts";
 
 /** The two kinds of model operation a mapping binds to a method. */
@@ -29,15 +30,12 @@ export interface LanguageSpelling {
   readonly methodNamespace: (kind: OperationKind) => string;
 }
 
-const RUST_PACKAGE = /^[A-Za-z][A-Za-z0-9_-]*$/;
 const RUST_MODULE_SEGMENT = /^(?:r#)?[A-Za-z_][A-Za-z0-9_]*$/;
 const RUST_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RAW_IDENTIFIER_PREFIX = /^r#/;
 
-const TYPESCRIPT_PACKAGE = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
 const TYPESCRIPT_MODULE_SEGMENT = /^[A-Za-z_$][A-Za-z0-9_$-]*$/;
 const TYPESCRIPT_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const PACKAGE_SCOPE = /^@[^/]+\//;
 
 /**
  * The technical classification a package name stands on, with its `-domain` suffix removed. The
@@ -52,7 +50,7 @@ function technicalPackageName(name: string): string | undefined {
 }
 
 const RUST: LanguageSpelling = {
-  isPackage: (name) => RUST_PACKAGE.test(name),
+  isPackage: (name) => isPackageName("rust", name),
   isModuleSegment: (segment) => RUST_MODULE_SEGMENT.test(segment),
   isIdentifier: (name) => RUST_IDENTIFIER.test(name),
   isErrorCase: (name) => RUST_IDENTIFIER.test(name),
@@ -65,13 +63,13 @@ const RUST: LanguageSpelling = {
 };
 
 const TYPESCRIPT: LanguageSpelling = {
-  isPackage: (name) => TYPESCRIPT_PACKAGE.test(name),
+  isPackage: (name) => isPackageName("typescript", name),
   isModuleSegment: (segment) => TYPESCRIPT_MODULE_SEGMENT.test(segment),
   isIdentifier: (name) => TYPESCRIPT_IDENTIFIER.test(name),
   isErrorCase: (name) => name.length > 0,
   segmentIdentity: (segment) => segment,
   // The scope names the publisher, not the package; `.` separates words like `-` and `_` do.
-  technicalPackage: (name) => technicalPackageName(name.replace(PACKAGE_SCOPE, "").replace(/\./g, "-")),
+  technicalPackage: (name) => technicalPackageName(barePackageName("typescript", name).replace(/\./g, "-")),
   technicalSegment: (segment) => technicalName([segment.replace(/-/g, "_")]),
   // A factory rule is a static member and a command an instance member, so they never collide.
   methodNamespace: (kind) => (kind === "factory" ? "static" : "instance"),
