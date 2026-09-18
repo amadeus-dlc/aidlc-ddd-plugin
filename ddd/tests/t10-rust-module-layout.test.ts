@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { MODULE_LAYOUT_CASES } from "./golden/module-layout/cases.ts";
+import { layoutConfig, MODULE_LAYOUT_CASES } from "./golden/module-layout/cases.ts";
 import { runGoldenCase } from "./golden/runner.ts";
 
 for (const entry of MODULE_LAYOUT_CASES) {
@@ -48,14 +48,14 @@ for (const scenario of ["no-project", "no-targets", "invalid-project", "symlink"
       if (scenario === "no-project") {
         expect(checkModuleLayout(runtime, root)).toEqual({ findings: [], crates: 0, files: 0 });
       } else if (scenario === "no-targets") {
-        writeFileSync(join(root, ".ddd.toml"), 'schema_version=1\n[rust]\nmodule_layout="file"\n');
+        writeFileSync(join(root, ".ddd.toml"), layoutConfig());
         writeFileSync(join(root, "Cargo.toml"), '[package]\nname="empty"\n');
         expect(
           checkModuleLayout(runtime, root).findings.some((entry) => entry.rule_id === "module-layout.unresolved"),
         ).toBe(true);
       } else if (scenario === "symlink") {
         const { symlinkSync } = await import("node:fs");
-        writeFileSync(join(root, ".ddd.toml"), 'schema_version=1\n[rust]\nmodule_layout="file"\n');
+        writeFileSync(join(root, ".ddd.toml"), layoutConfig());
         symlinkSync(root, join(root, "recursive"));
         expect(
           checkModuleLayout(runtime, root).findings.some((entry) => entry.rule_id === "module-layout.unresolved"),
@@ -113,6 +113,46 @@ for (const layer of ["domain", "use-case", "interface-adapter", "rmu"] as const)
   });
 }
 
+/** Settings of a project that names TypeScript as its only language. */
+const TYPESCRIPT_ONLY_SETTINGS =
+  'schema_version = 2\nlanguages = ["typescript"]\n\n[typescript]\nmodule_layout = "named-file"\ncode_representation = "class"\n';
+
+async function checkProject(files: Record<string, string>) {
+  const root = mkdtempSync(join(tmpdir(), "ddd-layout-languages-"));
+  try {
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), text);
+    }
+    const { initAnalyzer } = await import("../tools/ddd/lib/rust/analyzer.ts");
+    const { checkModuleLayout } = await import("../tools/ddd/lib/module-layout/check.ts");
+    return checkModuleLayout(await initAnalyzer(), root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test("a project whose settings name no Rust and that holds no Rust has nothing to check", async () => {
+  const result = await checkProject({
+    ".ddd.toml": TYPESCRIPT_ONLY_SETTINGS,
+    "package.json": '{ "name": "billing" }\n',
+    "src/invoice.ts": "export class Invoice {}\n",
+  });
+  expect(result).toEqual({ findings: [], crates: 0, files: 0 });
+});
+
+for (const [label, files] of [
+  ["a Cargo manifest", { "Cargo.toml": '[package]\nname = "billing"\nversion = "0.1.0"\nedition = "2021"\n' }],
+  ["a Rust source", { "tools/generate.rs": "fn main() {}\n" }],
+] as const)
+  test(`a project whose settings name no Rust but that holds ${label} is refused for its settings`, async () => {
+    const result = await checkProject({ ".ddd.toml": TYPESCRIPT_ONLY_SETTINGS, ...files });
+    expect(result.mode).toBeUndefined();
+    expect(result.findings.map((entry) => [entry.rule_id, entry.file])).toEqual([
+      ["module-layout.configuration", ".ddd.toml"],
+    ]);
+  });
+
 // Dropping read permission does nothing for a superuser, whose listing succeeds regardless, so the
 // test either observes the finding or does not run at all.
 const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
@@ -124,7 +164,7 @@ test.skipIf(RUNNING_AS_SUPERUSER)("a directory the walk cannot list is reported 
     const { initAnalyzer } = await import("../tools/ddd/lib/rust/analyzer.ts");
     const { checkModuleLayout } = await import("../tools/ddd/lib/module-layout/check.ts");
     const { chmodSync } = await import("node:fs");
-    writeFileSync(join(root, ".ddd.toml"), 'schema_version=1\n[rust]\nmodule_layout="file"\n');
+    writeFileSync(join(root, ".ddd.toml"), layoutConfig());
     mkdirSync(sealed, { recursive: true });
     chmodSync(sealed, 0o000);
     const runtime = await initAnalyzer();

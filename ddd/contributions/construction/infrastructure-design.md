@@ -18,9 +18,12 @@ fragments:
 
 Add these question topics, and follow the conventions while designing:
 
-- **Layer structure.** Which crates form the command side, the query side and
-  the RMUs, and which crate depends on which. The allowed directions are fixed
-  by the layer rules; the command and query sides must not depend on each other.
+- **Layer structure.** Which packages form the command side, the query side and
+  the RMUs, and which package depends on which. A package is named by the
+  language that spells it together with its name, and Rust is the only language
+  generated and inspected today, so every package identity states
+  `language: rust`. The allowed directions are fixed by the layer rules; the
+  command and query sides must not depend on each other.
 - **Port conventions.** Classify each port as `repository`, `external-client`
   or `es-infrastructure` and name its verbs (`find_by_id`, `store`,
   `delete_by_id` for repositories).
@@ -38,26 +41,38 @@ Add these question topics, and follow the conventions while designing:
 Add exactly one `## DDD Layer Structure` section to the existing required review artifact `cicd-pipeline.md`. In one labelled YAML block, declare the boundaries of components that the pipeline verifies and distributes. Do not generate a separate declaration file. Inherit the artifact's Unit kinds (service / ui / packaging / library); spec does not require it. If this Unit has no domain layer structure, declare `layer_structures: []` and explain why. Artifact prose follows the project's output-language policy; the section heading is a parser marker.
 
 ```yaml
-schema_version: 1
+schema_version: 2
 model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 layer_structures:
-  - context_ref: bc.<slug>
-    cqrs: <true | false>
-    command_side_crates: [<crate>, ...]
-    query_side_crates: [<crate>, ...]
-    rmu_crates: [<crate>, ...]
-    crate_dependencies:
-      - { crate: <crate>, depends_on: [<crate>, ...] }
+  - context_ref: bc.billing
+    cqrs: true
+    packages:
+      - { role: command, code: { language: rust, package: billing-domain } }
+      - { role: query, code: { language: rust, package: billing-query } }
+      - { role: rmu, code: { language: rust, package: billing-rmu } }
+    dependencies:
+      - { code: { language: rust, package: billing-domain }, depends_on: [] }
+      - { code: { language: rust, package: billing-query }, depends_on: [] }
+      - code: { language: rust, package: billing-rmu }
+        depends_on:
+          - { language: rust, package: billing-domain }
+          - { language: rust, package: billing-query }
     ports:
-      - { name: <Port>, kind: <repository | external-client | es-infrastructure>, verbs: [<verb>, ...] }
+      - { name: InvoiceRepository, kind: repository, verbs: [find_by_id, store, delete_by_id] }
     repositories:
-      - { name: <Aggregate>Repository, aggregate_ref: aggregate.<slug>, io_unit: <single | collection | partial>, verbs: [find_by_id, store, delete_by_id], store_semantics: <upsert | insert-only | unknown> }
+      - { name: InvoiceRepository, aggregate_ref: aggregate.invoice, io_unit: single, verbs: [find_by_id, store, delete_by_id], store_semantics: upsert }
     restoration_paths:
-      - { aggregate_ref: aggregate.<slug>, via: <full-constructor | other> }
-    persistence_backend: <backend>
+      - { aggregate_ref: aggregate.invoice, via: full-constructor }
+    persistence_backend: <the store behind the repositories>
 ```
 
-Every crate that appears in the side lists needs a `crate_dependencies` row, and
-every Aggregate in the context needs a `full-constructor` restoration path.
+The values above are shapes, not content: replace every id and package with the
+ones this context actually uses. `role` is `command`, `query` or `rmu`; `kind`
+is `repository`, `external-client` or `es-infrastructure`; `io_unit` is
+`single`, `collection` or `partial`; `store_semantics` is `upsert`,
+`insert-only` or `unknown`; `via` is `full-constructor` or `other`.
+
+Every package listed under `packages` needs a `dependencies` row, and every
+Aggregate in the context needs a `full-constructor` restoration path.
 
 For standalone execution, explicitly run `ddd-layer-structure` and `ddd-design-advisories` with `aidlc engine sensor fire` against this attempt's cicd-pipeline before reporting completion. The blocking layer-structure check must return `result: passed` in its final JSON. Standard 2.9.0 standalone completion does not perform these checks for you.

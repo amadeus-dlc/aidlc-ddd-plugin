@@ -185,7 +185,7 @@ test("a write that cannot be performed is not reported as success and leaves not
   );
 });
 
-test("the current production layout entry point still does not accept the migrated document", () => {
+test("the production layout entry point refuses the legacy document and reads the migrated one", () => {
   const verdict = (root: string): { mode?: string; findings?: { rule_id: string }[] } => {
     const spawned = Bun.spawnSync([process.execPath, LAYOUT_ENTRY_POINT, "--project", root], {
       stdout: "pipe",
@@ -194,11 +194,15 @@ test("the current production layout entry point still does not accept the migrat
     return JSON.parse(spawned.stdout.toString());
   };
   withWorkspace({ ".ddd.toml": legacyDocument(), ...untouchableUserFiles() }, (root) => {
-    expect(verdict(root).mode).toBe("file");
+    const legacy = verdict(root);
+    expect(legacy.mode).toBeUndefined();
+    expect((legacy.findings ?? []).map((entry) => entry.rule_id)).toContain("module-layout.configuration");
+
     expect(applyMigration(root, NOT_REQUESTED).kind).toBe("applied");
+
     const migrated = verdict(root);
-    expect(migrated.mode).toBeUndefined();
-    expect((migrated.findings ?? []).map((entry) => entry.rule_id)).toContain("module-layout.configuration");
+    expect(migrated.mode).toBe("file");
+    expect((migrated.findings ?? []).map((entry) => entry.rule_id)).not.toContain("module-layout.configuration");
   });
 });
 

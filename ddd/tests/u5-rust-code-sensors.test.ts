@@ -7,7 +7,7 @@ import { fixtureMapping } from "./golden/package-fixture.ts";
 
 const toolsDir = join(import.meta.dir, "..", "tools");
 
-const MODEL = `schema_version: 1
+const MODEL = `schema_version: 2
 bounded_contexts:
   - element_id: bc.billing
     name: Billing
@@ -29,7 +29,7 @@ bounded_contexts:
             state_effect: transitions
             transitions: [transition.invoice.issue]
             domain_errors:
-              - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, command: command.invoice.issue, condition: not draft }
+              - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, operation: command.invoice.issue, condition: not draft }
             events: [event.invoice.issued]
             idempotency: { strategy: none }
         events:

@@ -2,7 +2,7 @@
 
 English | [Japanese](project-settings.ja.md) | [User documentation](README.md)
 
-Declare the languages a project uses, and each language's choices, in `.ddd.toml` at the application project root, alongside the `aidlc/` directory. This is a separate version of that file from the [Rust module layout contract](rust-module-layout.md): nothing is inferred from existing sources, and a missing or invalid document is rejected rather than completed.
+Declare the languages a project uses, and each language's choices, in `.ddd.toml` at the application project root, alongside the `aidlc/` directory. This page owns that document's format; the [Rust module layout contract](rust-module-layout.md) describes what its `rust.module_layout` axis means for Rust source. Nothing is inferred from existing sources, and a missing or invalid document is rejected rather than completed.
 
 ```toml
 schema_version = 2
@@ -26,9 +26,13 @@ List a language in `languages` only when the project uses it, and declare every 
 
 The aggregate execution model and persistence method stay in `ddd-aggregate-mapping.md`. Writing `programming_model` or `persistence_method` here is rejected, and the `class` execution model of an aggregate is unrelated to the `class` code representation of TypeScript code.
 
-## What this format is for today
+## What the checks do with each format
 
-The migrated document is read by the settings API and the migration command on this page, and by the limited common state-exposure inspection they feed. **The current Rust module layout check does not accept `schema_version = 2`**: its production entry points, `ddd-check-rust-module-layout.ts` and the `ddd-rust-module-layout` gate sensor, report `module-layout.configuration` for it. Keep that check on `schema_version = 1` until a later release switches it over, and decide whether you can pause it before you apply a migration.
+The Rust module layout check reads this format through both of its entry points, `ddd-check-rust-module-layout.ts` and the `ddd-rust-module-layout` gate sensor. A document still in `schema_version = 1`, which named the Rust layout and nothing else, is reported as `module-layout.configuration` with a pointer to the migration.
+
+Which languages the project names decides what the layout check has to do. A project that does not name `rust` and holds no Cargo manifest and no `.rs` file has no Rust layout to check, and the check reports nothing. A project that does not name `rust` but holds either is reported as `module-layout.configuration`: it holds Rust its settings do not account for.
+
+Convert the whole project in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts these settings together with the canonical model, the implementation mapping and the layer declarations of one record.
 
 ## Read and validate
 

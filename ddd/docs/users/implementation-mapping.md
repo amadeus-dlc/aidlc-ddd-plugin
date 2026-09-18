@@ -4,7 +4,7 @@ English | [Japanese](implementation-mapping.ja.md) | [User documentation](README
 
 `schema_version: 2` of `ddd-aggregate-mapping.md` records where the model is implemented without tying the record to one language. Business identity — model ids, business vocabulary, the execution model and the persistence method — stays at the top of every entry. Everything a language spells — the package, the module path, the type, the method and the error case — sits under `code`, together with the language it is written in. The same mapping also binds each command and factory rule to its method and each business error to its case.
 
-Version 1, the Rust-only crate/module format, is still the one every production sensor reads. Nothing switches over automatically; see [what this format is for today](#what-this-format-is-for-today).
+Every gate reads this format. Version 1, the Rust-only crate/module format, is a format a record has to be migrated from: see [what the gates do with each format](#what-the-gates-do-with-each-format).
 
 ## What changes
 
@@ -120,20 +120,23 @@ A reserved name has to be the whole name, not a substring of it and not one word
 
 The loader checks the mapping against the canonical model only. Whether the named package, type, method and case exist in the source is a later inspection's job.
 
-## What this format is for today
+## What the gates do with each format
 
-The migrated document is read by the reading entry point and the migration command on this page. **The production sensors do not accept `schema_version: 2` of the mapping.** Every path that reads the mapping during a gate asks for version 1, and treats a migrated mapping as unreadable:
+Every path that reads the mapping during a gate reads `schema_version: 2`, and a document still in version 1 is refused rather than read as the format it is not:
 
-| Path that reads the mapping | Sensor | Against a migrated mapping |
+| Path that reads the mapping | Sensor | Against a version 1 mapping |
 |---|---|---|
-| Declaration reader at domain-design | `ddd-mapping-declarations` | `mapping-declarations.document` |
-| Declaration reader at domain-design | `ddd-reference-ids` | `reference-ids.document` |
-| Process Manager requirement at functional-design | `ddd-mapping-declarations` | Not evaluated; the verdict notes that the mapping is absent |
-| Restoration path check | `ddd-layer-structure` | No aggregate crates are read, so every aggregate of the context is checked |
+| Mapping check at domain-design | `ddd-mapping-declarations` | `mapping-declarations.document` |
+| Reference resolution at domain-design | `ddd-reference-ids` | `reference-ids.document` |
+| Process Manager requirement at functional-design | `ddd-mapping-declarations` | `mapping-declarations.document`, reported against the mapping |
 | Domain package check | `ddd-rust-domain` | `domain-packaging.declaration` |
 | Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
 
-The generation instructions in `domain-design` still produce version 1. This format also needs the canonical model in version 2, which the production sensors do not accept either. Apply a migration only where you are prepared for those gates to report against the artifacts, and keep the artifacts your approval gates read on version 1 until a later release switches them over.
+A mapping that is absent is a different fact from one that cannot be read. At functional-design an absent mapping leaves the Process Manager requirement unevaluated and says so in the verdict's note; a mapping that is there and unreadable blocks. `ddd-layer-structure` no longer reads the mapping at all: where an aggregate's code lives does not decide whether its context has to rebuild it.
+
+This format needs the canonical model in version 2, and every gate reads that version too. Convert the whole record in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts the settings, the model, the mapping and the layer declarations together and checks them against each other before writing anything.
+
+The findings the gates report come from this format's reader, transcribed onto the rule ids the approval contract declares. A defect the reader names — a missing axis, an unknown key, a duplicate, an uncovered operation — is reported as `mapping-declarations.document` with the reader's own rule id at the front of the message; a canonical model that did not load is `mapping-declarations.model`, and a technical classification used as a package name is `domain-packaging.technical-name`.
 
 ## Read a mapping
 

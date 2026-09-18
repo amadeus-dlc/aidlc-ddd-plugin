@@ -15,8 +15,11 @@
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
 | domain-model-operations / domain-model-migration | 正規モデルの操作ごとのエラー、モデル成果物1件のpreview・適用による移行 |
-| aggregate-mapping-contract / aggregate-mapping-migration | Rust/TypeScriptの言語共通の集約写像の読込と拒否、補足入力を使ったcrate/module形式の写像1件のpreview・適用による移行、version 1のまま残る本番ゲート |
-| layer-declaration-contract / layer-declaration-migration | Rust/TypeScriptの言語共通のレイヤー宣言の読込・拒否・構造検査、`cicd-pipeline.md` のDDD節の見出しの下のYAMLブロック1つのpreview・適用による移行、バイト単位で保たれる周囲の本文とCI設定のフェンス、version 1のまま残る本番ゲート、変更されないユースケース宣言 |
+| aggregate-mapping-contract / aggregate-mapping-migration | Rust/TypeScriptの言語共通の集約写像の読込と拒否、補足入力を使ったcrate/module形式の写像1件のpreview・適用による移行、移行前は写像を拒否し移行後は受理する本番ゲート |
+| layer-declaration-contract / layer-declaration-migration | Rust/TypeScriptの言語共通のレイヤー宣言の読込・拒否・構造検査（Unit配下とステージ直下の両方）、`cicd-pipeline.md` のDDD節の見出しの下のYAMLブロック1つのpreview・適用による移行、バイト単位で保たれる周囲の本文とCI設定のフェンス、移行前は宣言を拒否し移行後は受理する本番ゲート、変更されないユースケース宣言 |
+| artifact-set-migration | プロジェクト1件の成果物一式のpreview・適用・再実行・書込の途中失敗、移行前に記録を拒否していたゲートとCIコマンドが移行後に受理すること |
+| rust-mapping-view | 言語共通の写像を、Rustソースセンサーが照合するcrate名・モジュール列・replayメソッドへ投影し、他言語を渡さないこと |
+| generation-instructions | 実行用指示ディレクトリの全YAML/TOML例を、ゲートと同じ読込処理で読むこと、およびそれらのディレクトリを英語に保つこと |
 | u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
@@ -39,9 +42,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-配布物の検査は各327ケースを実行します。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
+配布物の検査は各376ケースを実行します。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
 
-`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各327件の配布物検査、通常承認の統合検査を順に実行します。規則表から選んだ153入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持します。
+`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各376件の配布物検査、通常承認の統合検査を順に実行します。規則表から選んだ142入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持します。
 
 ## 回帰で確認した範囲と残る検証
 

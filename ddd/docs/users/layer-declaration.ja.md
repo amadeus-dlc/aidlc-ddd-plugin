@@ -4,7 +4,7 @@
 
 `cicd-pipeline.md` の `## DDD Layer Structure` 節の `schema_version: 2` は、文脈の依存規約を、特定の言語に縛られない形で記録します。どのパッケージが CQRS のどちら側か、どのパッケージが何に依存するか、文脈が経由するポート、集約を復元するリポジトリ、その背後の永続化基盤は業務上の事実であり、そのまま残ります。言語で書く名前はパッケージの識別だけで、パッケージはその名前を綴る言語と名前の組で識別します。
 
-version 1（Rust 専用の crate 形式）は、引き続きすべての本番センサーが読む形式です。自動で切り替わることはありません。[この形式が今どこまで使われるか](#この形式が今どこまで使われるか)を参照してください。
+すべてのゲートがこの形式を読みます。version 1（Rust 専用の crate 形式）は、記録を移行する元の形式です。[各形式をゲートがどう扱うか](#各形式をゲートがどう扱うか)を参照してください。
 
 ## 何が変わるか
 
@@ -87,7 +87,7 @@ layer_structures:
 
 | 規則 | 拒否する内容 |
 |---|---|
-| `layer-declaration.document` | `<record>/construction/<unit>/infrastructure-design/cicd-pipeline.md` 以外のパス、存在しない・読めないファイル、`## DDD Layer Structure` 節がない・2つ以上ある（英日の見出しは合わせて数える）、その節の中にラベル付き YAML ブロックがない・2つ以上ある・閉じていない、YAML として解析できない、ブロックがマッピングでない |
+| `layer-declaration.document` | `<record>/construction/[<unit>/]infrastructure-design/cicd-pipeline.md` 以外のパス、存在しない・読めないファイル、`## DDD Layer Structure` 節がない・2つ以上ある（英日の見出しは合わせて数える）、その節の中にラベル付き YAML ブロックがない・2つ以上ある・閉じていない、YAML として解析できない、ブロックがマッピングでない |
 | `layer-declaration.version` | 数値の `2` 以外の `schema_version`。version 1 の文書をこの形式として読むことはなく、所見は移行を案内する |
 | `layer-declaration.unknown-key` | 形式にないキー。`command_side_crates`、`query_side_crates`、`rmu_crates`、`crate_dependencies`、パッケージの役割と同じ階層の `crate`、パッケージ識別の中のモジュールの位置やバージョンを含む |
 | `layer-declaration.structure` | 値の欠落や型の違い、真偽値でない `cqrs`、集合の外にある役割・ポート種別・入出力単位・保存意味・復元経路、名前だけで書いた、または言語のないパッケージ識別、その言語で使えない名前、文書がまったく述べていない値 |
@@ -111,13 +111,22 @@ layer_structures:
 | `layer-declaration.query-domain-dependency` | ドメイン層の標識（末尾の `-domain` または `_domain`）を持つ名前のパッケージに依存するクエリ側のパッケージ。TypeScript のスコープを外してから読むため、`@acme/shared-domain` は該当し、`@acme/shared-read-models` は該当しない |
 | `layer-declaration.restoration-path` | `full-constructor` の復元経路がない、その文脈の集約 |
 
-`role: rmu` のパッケージは、両側を見ることが役割そのものなので、その依存行には `layer-declaration.side-dependency` も `layer-declaration.query-domain-dependency` も適用しません。残る4つの規則は、他のパッケージと同じように適用します。リポジトリの命名規則（`layer-structure.m-name`、`layer-structure.m-media`）は移していません。1つの言語の綴り規約であり、この形式のリポジトリは言語を持たないためです。
+`role: rmu` のパッケージは、両側を見ることが役割そのものなので、その依存行には `layer-declaration.side-dependency` も `layer-declaration.query-domain-dependency` も適用しません。残る4つの規則は、他のパッケージと同じように適用します。リポジトリの命名規則（`layer-structure.m-name`、`layer-structure.m-media`）は移しておらず、ゲートからも削除しました。1つの言語の綴り規約であり、この形式のリポジトリは言語を持たないためです。Rust ソース側のリポジトリ命名は、`ddd-rust-interface-adapter` の規則 `m` が引き続き検査します。
 
-## この形式が今どこまで使われるか
+## 各形式をゲートがどう扱うか
 
-移行後の文書を読むのは、このページの読込入口、構造検査、移行コマンドです。**本番センサーはレイヤー宣言の `schema_version: 2` に対応していません。** `ddd-layer-structure` は version 1 を要求し、移行後の宣言を `layer-structure.item` として報告します。`ddd-design-advisories` も同じ version 1 の節を読みます。`infrastructure-design` の生成指示も引き続き version 1 を生成します。またこの形式は正規モデルの version 2 を必要としますが、こちらも本番センサーは受け付けません。
+宣言を読む2つのゲートはいずれも `schema_version: 2` を読みます。version 1 のままの文書は、別の形式として読み替えることなく拒否します。
 
-移行の適用は、これらのゲートが成果物に対して所見を出す状態を受け入れられる場所に限ってください。承認ゲートが読む成果物は、後のリリースで切り替わるまで version 1 のままにしてください。
+| ゲート | 読む対象 | version 1 の宣言に対する結果 |
+|---|---|---|
+| `ddd-layer-structure` | 宣言と上記の層規則 | `layer-structure.item`（メッセージ先頭に読込処理の規則ID） |
+| `ddd-design-advisories` | 同じ宣言（助言のため） | `design-advisories.document` |
+
+`ddd-layer-structure` は、各層規則を承認契約が宣言する規則IDへ転記します。`required-items` は `layer-structure.item`、`dependency-row` は `layer-structure.dependencies-incomplete`、`cqrs-sides` は `layer-structure.cqrs-sides`、`side-dependency` は `layer-structure.k`、`query-domain-dependency` は `layer-structure.l`、`restoration-path` は `layer-structure.n` です。正規モデルを読めなかった場合は `layer-structure.model` になります。
+
+この宣言は、デリバリー計画が Unit を作った場合は Unit の下に、作らなかった場合はステージ直下に書かれます。どちらも登録された場所であり、どちらも読みます。それ以外の場所にある `cicd-pipeline.md` は宣言ではありません。
+
+この形式は version 2 の正規モデルを必要とし、ゲートもその版を読みます。設定・モデル・写像・記録内のすべてのレイヤー宣言をまとめて変換し、書き込む前に相互の整合を検査する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、記録一式を一度に移行してください。
 
 ## 宣言を読んで検査する
 
@@ -157,7 +166,7 @@ Claude Code では `.claude/tools/` を使います。`--apply` がなければ�
 | `write-failed` | 3 | 検証は通ったが、ファイルを書けなかった |
 | `invalid-arguments` | 2 | 不明なコマンドやオプション、値の欠落、`--declaration` の重複指定。`detail` が使い方を示す |
 
-受け付けるのは intent レコード内の登録済み成果物だけです。レコードは `construction/<unit>/infrastructure-design/cicd-pipeline.md` を含むディレクトリで、`model_ref` はそこを基準に解決します。`functional-spec.md` や、別の場所に置いた pipeline 文書の写しは `layer-declaration.document` で拒否し、そのまま残します。
+受け付けるのは intent レコード内の登録済み成果物だけです。レコードは `construction/[<unit>/]infrastructure-design/cicd-pipeline.md`（Unit の下、またはデリバリー計画が Unit を作らなかった場合はステージ直下）を含むディレクトリで、`model_ref` はそこを基準に解決します。`functional-spec.md` や、別の場所に置いた pipeline 文書の写しは `layer-declaration.document` で拒否し、そのまま残します。
 
 ### version 1 が自動で補っていた値を述べる
 

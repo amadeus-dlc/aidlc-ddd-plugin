@@ -52,14 +52,19 @@ Each aggregate mapping may contain `replay_methods`; omission in an existing row
 aggregate_ref: aggregate.invoice
 programming_model: class
 persistence_method: event-sourcing
-crate: billing-domain
-module: crate
 replay_methods:
-  - method: apply_event
-    event_ref: event.invoice.issued
+  - event_ref: event.invoice.issued
+    code: { method: apply_event }
+code:
+  language: rust
+  package: billing-domain
+  module: []
+  type: Invoice
 ```
 
-For rule b to permit replay, the aggregate mapping must be unique, its persistence mode must be event-sourcing, and crate/module must match the type's location. The method declaration must also be unique.
+Only the entries whose `code.language` is `rust` reach this sensor; an aggregate placed in another language is not compared against Rust source.
+
+For rule b to permit replay, the aggregate mapping must be unique, its persistence mode must be event-sourcing, and `code.package` and `code.module` must match the type's location. The method declaration must also be unique.
 
 Require one domain-event parameter and an event_ref resolving to an event owned by that aggregate. Event code types must be uniquely identifiable by name within the crate. Numeric parameters, unknown events, other crates/modules, and duplicate declarations do not qualify.
 

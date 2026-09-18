@@ -136,7 +136,7 @@ TypeScriptのResult実装は言語拡張用のinfrastructureに置きます。�
 
 ディレクトリ方式では、子を持つモジュールを入口ファイルに置き、末端は名前付きファイルにします。生成指示とセンサーで選択を一貫して適用します。ファイル配置とAPI公開は別に検査します。index.ts方式を選んでも、任意の内部ファイルへのimportを許可することにはなりません。コード表現・集約の実行モデル・永続化・ファイル配置は別の選択軸です。
 
-現在提供しているRust設定は、`.ddd.toml` の `schema_version = 1` と `[rust] module_layout = "file" | "mod-rs"` です。共通設定の最終スキーマとTypeScriptのキー名は、実装設計で定義します。今回の合意によって、現在のインストーラでTypeScript設定が使えるようになったわけではありません。[現行Rust契約](../users/rust-module-layout.ja.md)も参照してください。
+現在提供している設定は、`.ddd.toml` の `schema_version = 2`、`languages`、および使用する言語ごとの表です（`[rust] module_layout = "file" | "mod-rs"` と、同じ文書が定めるTypeScriptのキー）。Rustの配置形式だけを指定していた `schema_version = 1` のままの文書は、移行するまで拒否されます。この文書でTypeScriptを宣言しても、TypeScriptが生成・検査の対象になるわけではありません。形式は[プロジェクト設定](../users/project-settings.ja.md)を、Rust軸の意味は[現行Rust契約](../users/rust-module-layout.ja.md)を参照してください。
 
 ## 8. 検査不能を承認の停止条件にする
 
@@ -168,12 +168,14 @@ Compiler APIのオブジェクトはTypeScript固有の実装内で扱い、共�
 
 スキーマのバージョン、フィールド名、写像の構文、移行コマンドの引数と検証の詳細は、実装設計で決めます。この合意のうち最初の部分はT-09-05で実装しました。各操作が自身の業務エラーを持つ正規モデルの `schema_version: 2` と、その成果物1種類を対象とする `ddd-domain-model.ts migrate` です。集約写像・レイヤー宣言・プロジェクト設定は対象外で、新形式を読む本番ゲートはまだありません。[操作ごとのエラー](../users/domain-model-operation-errors.ja.md)を参照してください。集約写像の部分はT-09-06で実装しました。業務上の識別と、言語ごとのパッケージ・モジュールの位置・型・メソッド・エラーケースを分け、コマンド・生成操作・業務エラーをコードへ対応付ける `ddd-aggregate-mapping.md` の `schema_version: 2` と、その成果物1種類を対象とする `ddd-aggregate-mapping.ts migrate` です。レイヤー宣言・プロジェクト設定は引き続き対象外で、新しい写像を読む本番ゲートもまだありません。[実装写像](../users/implementation-mapping.ja.md)を参照してください。レイヤー宣言の部分はT-09-07で実装しました。CQRSの側、依存辺、ポート、リポジトリ、復元経路といった依存規約を、名前を綴る言語を含むパッケージ識別の上で述べる `cicd-pipeline.md` の `## DDD Layer Structure` 節の `schema_version: 2`、単独で実行できる構造検査、その1節を対象とする `ddd-layer-declaration.ts migrate` です。`functional-spec.md` のユースケース宣言はすでに言語共通であり、変更していません。プロジェクト設定は引き続き対象外で、新しい宣言を読む本番ゲートもまだありません。[レイヤー宣言](../users/layer-declaration.ja.md)を参照してください。新しい正規モデルと集約写像を読む最初の検査は、T-09-08で実装した `operation-error-set/1` です。両言語の解決済み情報を使い、コマンドと生成メソッドのエラーの不足・余分・別操作所属を共通の判定処理で検出します。本番ゲートではなく検証用経路から実行します。[操作エラー集合の照合](operation-error-set.ja.md)を参照してください。
 
+T-09-09では、これら4つの形式を、該当成果物をすでに読んでいる経路へ接続しました。正規モデル・集約写像・レイヤー宣言の `schema_version: 2` と、プロジェクト設定の `schema_version = 2` を、すべての本番ゲートが読みます。生成指示・センサーマニフェスト・fixturesも同じ形式を示します。移行前の形式のままの記録は、別の形式として読み替えることなく拒否します。`ddd-artifact-set migrate` は、プロジェクトの設定・モデル・写像・レイヤー宣言を1回で変換し、書き込む前に相互の整合を検査します。[成果物一式の移行](../users/artifact-migration.ja.md)を参照してください。Rustソースセンサーの検査範囲は従来どおりです。写像のうちRustに置かれた項目を、これらのセンサーが照合するcrate名とモジュール列へ投影して渡すため、他言語に置かれた項目は届きません。TypeScriptは引き続き生成・検査の対象外です。
+
 ## 10. Rustの現状と共通仕様の差分を確認する
 
 | 論点 | Rustの現状と根拠 | 共通仕様に向けた作業 |
 |---|---|---|
 | 規則と実行コンテキスト | [規則定義](../../tools/ddd/lib/rules/definitions.ts)と[コンテキスト型](../../tools/ddd/lib/rules/types.ts)にはCargo/Rustの構造が残る。 | 共通要件と、言語固有の抽出・解決・評価を分け、両言語で検証する。 |
-| 実装写像 | 形式の側はT-09-06で解消。[集約写像の読込](../../tools/ddd/lib/aggregate-mapping/index.ts)が、言語ごとの位置を `code` の下に記録する `schema_version: 2` を読み、crate/module形式の文書を明示的に移行する。本番の[宣言](../../tools/ddd/lib/sensors/declaration.ts)と[パッケージ検証](../../tools/ddd/lib/packaging/declarations.ts)には、引き続きcrate、`::`、ルートの`crate`表記が組み込まれている。 | 本番センサー・生成指示・ナレッジを新しい写像へ切り替え、その名前を解決済みのコードシンボルと照合する。 |
+| 実装写像 | T-09-06とT-09-09で解消。[集約写像の読込](../../tools/ddd/lib/aggregate-mapping/index.ts)が、言語ごとの位置を `code` の下に記録する `schema_version: 2` を読み、crate/module形式の文書を明示的に移行する。すべての本番ゲートがこの読込処理を通して写像を読み、[Rust向けの投影](../../tools/ddd/lib/rules/rust/mapping.ts)が、Rustに置かれた項目をRust規則の照合するcrate名とモジュール列へ変換する。crate固定の[宣言読込](../../tools/ddd/lib/sensors/declaration.ts)は移行元としてのみ使う。 | 写像の名前を解決済みのコードシンボルと照合する。 |
 | メソッド固有のエラー | 共通の照合はT-09-08で実装。[操作エラー集合の照合](../../tools/ddd/lib/operation-error-set/index.ts)が、両言語の解決済みのケース集合を各操作の写像したエラーと照合し、不足・余分・別操作所属を同じ意味で報告する。検証用経路から実行するだけで、本番の[ドメインセンサー](../../tools/ddd-sensor-rust-domain.ts)は引き続き、Resultのエラー型・variant集合とメソッドのエラーを照合しない。 | 照合を本番センサーへ接続する。 |
 | エラー所属の整合 | T-09-05で解消。実在する別コマンドを名指しした `DomainError.command` が受理される状態を再現したうえで、[ローダー](../../tools/ddd/lib/schema/loader.ts)が宣言された所属と包含元の操作を両バージョンで比較するようにした。 | 正規モデルについては完了。コード側の宣言エラーと戻り値エラーの照合は、T-09-08で検証用経路に実装した。照合器も、モデル・写像上の包含元と所属の不一致を拒否する。本番センサーへの接続が残る。 |
 | 生成時のエラー | 正規モデル側はT-09-05で解消。[FactoryRule](../../tools/ddd/lib/schema/model.ts)は `schema_version: 2` で自身のエラー集合を持ち、ローダーがその所属を検査する。成果物上のメソッド写像はT-09-06で解消。[集約写像の読込](../../tools/ddd/lib/aggregate-mapping/index.ts)が、生成操作をそのメソッドとエラー型へ対応付ける。生成メソッドのエラー集合と解決済みのケース集合との照合は、T-09-08で検証用経路に実装した。写像したエラー型の名前と、解決済みの宣言名との照合は未実装。 | 写像したエラー型の名前を解決済みの宣言名と照合する検査を追加し、照合を本番センサーへ接続する。 |

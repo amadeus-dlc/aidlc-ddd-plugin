@@ -5,29 +5,72 @@ import { RUST_CASES } from "../rust/cases.ts";
 const MAP = "inception/domain-design/ddd-aggregate-mapping.md";
 export const MODEL = "inception/ddd-domain-modeling/ddd-domain-model-yaml.md";
 export const DOMAIN = "packages/domain/billing-domain/src/lib.rs";
-export const ROOT_PACKAGE = {
-  crate: "billing-domain",
-  module: "crate",
+
+interface PackageCode {
+  readonly language: string;
+  readonly package: string;
+  readonly module: readonly string[];
+}
+
+interface PackageDeclaration {
+  readonly term: string;
+  readonly model_refs: readonly string[];
+  readonly rationale: string;
+  readonly code: PackageCode;
+}
+
+export const ROOT_PACKAGE: PackageDeclaration = {
   term: "請求",
   model_refs: ["bc.billing"],
   rationale: "請求のドメインを所有する",
+  code: { language: "rust", package: "billing-domain", module: [] },
 };
 
-export function mapping(packages: unknown): string {
+/** The root declaration moved to another package name. */
+function rootOf(packageName: string): PackageDeclaration {
+  return { ...ROOT_PACKAGE, code: { ...ROOT_PACKAGE.code, package: packageName } };
+}
+
+const ISSUE = {
+  operation_ref: "command.invoice.issue",
+  code: { method: "issue", error_type: "IssueInvoiceError" },
+  errors: [{ error_ref: "error.invoice.issue.already-issued", code: { case: "AlreadyIssued" } }],
+};
+const OPEN = {
+  operation_ref: "factory.invoice.open",
+  code: { method: "open", error_type: "OpenInvoiceError" },
+  errors: [{ error_ref: "error.invoice.open.negative-amount", code: { case: "NegativeAmount" } }],
+};
+
+interface MappingOptions {
+  /** Every operation of the model the case runs against; the design model also has a factory rule. */
+  readonly operations: readonly object[];
+  /** Where the aggregate's code lives; the root package by default. */
+  readonly aggregateAt?: PackageCode;
+  /** An event-sourced aggregate with this one replay method. */
+  readonly replay?: { readonly method: string; readonly event_ref: string };
+}
+
+export function mapping(packages: unknown, options: MappingOptions): string {
+  const replay = options.replay;
   return `# 集約写像\n\n\`\`\`yaml\n${JSON.stringify(
     {
-      schema_version: 1,
+      schema_version: 2,
       model_ref: MODEL,
       aggregate_mappings: [
         {
           aggregate_ref: "aggregate.invoice",
           programming_model: "class",
-          persistence_method: "state-sourcing",
-          crate: "billing-domain",
-          module: "crate",
-          ports: [],
-          repository: "InvoiceRepository",
+          persistence_method: replay ? "event-sourcing" : "state-sourcing",
           reference_ids: ["entity.invoice"],
+          ...(replay ? { replay_methods: [{ event_ref: replay.event_ref, code: { method: replay.method } }] } : {}),
+          code: {
+            ...(options.aggregateAt ?? ROOT_PACKAGE.code),
+            type: "Invoice",
+            ports: [],
+            repository: "InvoiceRepository",
+          },
+          operations: options.operations,
         },
       ],
       ...(packages === undefined ? {} : { domain_packages: packages }),
@@ -45,26 +88,42 @@ function design(name: string, packages: unknown, rules: string[]): GoldenCase {
   return {
     ...structuredClone(base),
     name,
-    files: { ...base.files, [MAP]: mapping(packages) },
+    files: { ...base.files, [MAP]: mapping(packages, { operations: [ISSUE, OPEN] }) },
     expect: { pass: rules.length === 0, rules },
   };
 }
 
-function rust(name: string, source: string, packages: unknown, rules: string[]): GoldenCase {
+function rust(
+  name: string,
+  source: string,
+  packages: unknown,
+  rules: string[],
+  options: Omit<MappingOptions, "operations"> = {},
+): GoldenCase {
   const base = RUST_CASES.find((entry) => entry.name === "clean-domain");
   if (!base?.workspace) throw new Error("Rust fixture missing");
   const entry = structuredClone(base);
   entry.name = name;
   entry.workspace = { ...base.workspace, [DOMAIN]: source };
-  entry.files[MAP] = mapping(packages);
+  entry.files[MAP] = mapping(packages, { ...options, operations: [ISSUE] });
   entry.expect = { pass: rules.length === 0, rules, files: Object.fromEntries(rules.map((rule) => [rule, DOMAIN])) };
   return entry;
+}
+
+/** A declaration below the root package; `path` spells the module path with `::` between segments. */
+function pkg(path: string): PackageDeclaration {
+  return {
+    ...ROOT_PACKAGE,
+    term: "請求書",
+    model_refs: ["aggregate.invoice"],
+    code: { ...ROOT_PACKAGE.code, module: path.split("::") },
+  };
 }
 
 export const PACKAGING_CASES: GoldenCase[] = [
   design(
     "violation-packaging-technical-name",
-    [ROOT_PACKAGE, { ...ROOT_PACKAGE, module: "vo" }],
+    [ROOT_PACKAGE, { ...ROOT_PACKAGE, code: { ...ROOT_PACKAGE.code, module: ["vo"] } }],
     ["domain-packaging.technical-name"],
   ),
   rust(
@@ -75,7 +134,6 @@ export const PACKAGING_CASES: GoldenCase[] = [
   ),
 ];
 
-const pkg = (module: string) => ({ ...ROOT_PACKAGE, module, term: "請求書", model_refs: ["aggregate.invoice"] });
 const names = ["aggregate", "aggregates", "impl", "vo", "entities", "entity", "value_objects"];
 for (const name of names) {
   PACKAGING_CASES.push(
@@ -93,25 +151,27 @@ for (const name of names) {
 }
 PACKAGING_CASES.push(
   design("clean-packaging-declarations", [ROOT_PACKAGE, pkg("invoice"), pkg("invoice::number")], []),
-  design("violation-packaging-missing-declarations", undefined, ["domain-packaging.declaration"]),
-  design("violation-packaging-empty-declarations", [], ["domain-packaging.coverage"]),
-  design("violation-packaging-missing-term", [{ ...ROOT_PACKAGE, term: " " }], ["domain-packaging.declaration"]),
+  // The mapping reader refuses each of these before the gate looks at packages, so the gate reports
+  // the document it could not read.
+  design("violation-packaging-missing-declarations", undefined, ["mapping-declarations.document"]),
+  design("violation-packaging-empty-declarations", [], ["mapping-declarations.document"]),
+  design("violation-packaging-missing-term", [{ ...ROOT_PACKAGE, term: " " }], ["mapping-declarations.document"]),
   design(
     "violation-packaging-missing-rationale",
     [{ ...ROOT_PACKAGE, rationale: " " }],
-    ["domain-packaging.declaration"],
+    ["mapping-declarations.document"],
   ),
   design(
     "violation-packaging-missing-reference",
     [{ ...ROOT_PACKAGE, model_refs: [] }],
-    ["domain-packaging.declaration"],
+    ["mapping-declarations.document"],
   ),
+  design("violation-packaging-duplicate", [ROOT_PACKAGE, { ...ROOT_PACKAGE }], ["mapping-declarations.document"]),
   design(
-    "violation-packaging-duplicate",
-    [ROOT_PACKAGE, { ...ROOT_PACKAGE, module: "crate" }],
-    ["domain-packaging.duplicate"],
+    "violation-packaging-missing-parent",
+    [ROOT_PACKAGE, pkg("invoice::number")],
+    ["mapping-declarations.document"],
   ),
-  design("violation-packaging-missing-parent", [ROOT_PACKAGE, pkg("invoice::number")], ["domain-packaging.coverage"]),
   design("violation-packaging-shape", "not a list", ["mapping-declarations.document"]),
   rust(
     "clean-packaging-inline",
@@ -266,28 +326,33 @@ const missingMapping = rust(
 delete missingMapping.files[MAP];
 missingMapping.expect.files = { "domain-packaging.declaration": MAP };
 PACKAGING_CASES.push(missingMapping);
+// A mapping the reader refuses — an unknown model reference, a package declared twice — is reported
+// against the mapping as a declaration the code gate cannot use.
 const codeRef = rust(
   "violation-packaging-code-reference",
   "pub struct Invoice;\n",
   [{ ...ROOT_PACKAGE, model_refs: ["aggregate.unknown"] }],
-  ["domain-packaging.reference"],
+  ["domain-packaging.declaration"],
 );
-codeRef.expect.files = { "domain-packaging.reference": MAP };
+codeRef.expect.files = { "domain-packaging.declaration": MAP };
 PACKAGING_CASES.push(codeRef);
 
 const duplicateCode = rust(
   "violation-packaging-code-duplicate",
   "pub struct Invoice;\n",
   [ROOT_PACKAGE, ROOT_PACKAGE],
-  ["domain-packaging.duplicate"],
+  ["domain-packaging.declaration"],
 );
-duplicateCode.expect.files = { "domain-packaging.duplicate": MAP };
+duplicateCode.expect.files = { "domain-packaging.declaration": MAP };
 PACKAGING_CASES.push(duplicateCode);
+// A mapping the reader accepts can still leave the inspected crate without a root declaration: here
+// the aggregate and the only declared root belong to another crate.
 const rootCoverage = rust(
   "violation-packaging-code-root-coverage",
   "pub struct Invoice;\n",
-  [],
+  [rootOf("other-domain")],
   ["domain-packaging.coverage"],
+  { aggregateAt: rootOf("other-domain").code },
 );
 rootCoverage.expect.files = { "domain-packaging.coverage": MAP };
 PACKAGING_CASES.push(rootCoverage);
@@ -339,8 +404,9 @@ PACKAGING_CASES.push(auxiliary);
 const crateName = rust(
   "violation-packaging-crate-classification",
   "pub struct Invoice;\n",
-  [{ ...ROOT_PACKAGE, crate: "entities-domain" }],
+  [rootOf("entities-domain")],
   ["domain-packaging.technical-name"],
+  { aggregateAt: rootOf("entities-domain").code },
 );
 crateName.workspace = {
   ...crateName.workspace,
@@ -358,8 +424,9 @@ PACKAGING_CASES.push(crateName);
 const businessCrateName = rust(
   "clean-packaging-crate-word-substring",
   "pub struct Invoice;\n",
-  [{ ...ROOT_PACKAGE, crate: "invoice-entities-domain" }],
+  [rootOf("invoice-entities-domain")],
   [],
+  { aggregateAt: rootOf("invoice-entities-domain").code },
 );
 businessCrateName.workspace = {
   ...businessCrateName.workspace,
@@ -373,6 +440,10 @@ const pathReplay = rust(
   '#[path = "billing.rs"] mod invoice;\n',
   [ROOT_PACKAGE, pkg("invoice")],
   [],
+  {
+    aggregateAt: pkg("invoice").code,
+    replay: { method: "apply_event", event_ref: "event.invoice.issued" },
+  },
 );
 const replaySource = "packages/domain/billing-domain/src/billing.rs";
 pathReplay.workspace = {
@@ -380,13 +451,6 @@ pathReplay.workspace = {
   [replaySource]:
     "pub struct Invoice { amount: i64 }\npub struct Issued { amount: i64 }\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n",
 };
-pathReplay.files[MAP] = pathReplay.files[MAP]
-  .replace('"module": "crate"', '"module": "invoice"')
-  .replace('"persistence_method": "state-sourcing"', '"persistence_method": "event-sourcing"')
-  .replace(
-    '"reference_ids": [',
-    '"replay_methods": [{"method": "apply_event", "event_ref": "event.invoice.issued"}], "reference_ids": [',
-  );
 pathReplay.files["construction/u1/code-generation/source-manifest.json"] = JSON.stringify({
   stage: "code-generation",
   unit: "u1",

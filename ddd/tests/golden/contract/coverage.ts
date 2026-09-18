@@ -141,14 +141,6 @@ cover(
   "Both ID grammar and segment count are validated.",
   "IDの文法とセグメント数の両方を検証する。",
 );
-cover(
-  ref,
-  ["reference-ids.missing"],
-  "clean-mapping",
-  "clean-single-reference",
-  "Exactly one mapping reference satisfies the minimum; zero references are rejected.",
-  "集約写像の参照1件が最小の正常値で、0件は拒否する。",
-);
 const mapping = "ddd-mapping-declarations";
 cover(
   mapping,
@@ -165,14 +157,6 @@ cover(
   "violation-document",
   "Malformed declaration stops before model loading.",
   "壊れた宣言はモデル読込み前に拒否する。",
-);
-cover(
-  mapping,
-  ["mapping-declarations.aggregate-unmapped", "mapping-declarations.axes", "mapping-declarations.duplicate"],
-  "clean-mapping",
-  "clean-multi-aggregate-mapping",
-  "A valid multi-aggregate actor mapping contrasts with the single class mapping.",
-  "複数actor集約の正常な写像と、単一class集約の写像を確認する。",
 );
 cover(
   mapping,
@@ -233,14 +217,6 @@ cover(
 );
 cover(
   layer,
-  ["layer-structure.m-name", "layer-structure.m-media"],
-  "clean",
-  "violation-m-media",
-  "A medium-bearing port name violates both exact naming and medium rules.",
-  "媒体名入りのポートは正式名と媒体名禁止の両方で違反になる。",
-);
-cover(
-  layer,
   ["layer-structure.n"],
   "clean",
   "clean-collection-repository",
@@ -274,41 +250,32 @@ cover(
 );
 for (const sensor of [mapping, "ddd-rust-domain"]) {
   const code = sensor === "ddd-rust-domain";
-  const normal = code ? "clean-packaging-inline" : "clean-packaging-declarations";
-  cover(
-    sensor,
-    ["domain-packaging.declaration"],
-    normal,
-    code ? "violation-packaging-no-mapping" : "violation-packaging-empty-declarations",
-    "Distinguish missing declarations, explicit empty lists, and populated packages.",
-    "宣言欠落、明示的な空一覧、パッケージ宣言ありを区別する。",
-  );
   cover(
     sensor,
     ["domain-packaging.technical-name"],
-    normal,
+    code ? "clean-packaging-inline" : "clean-packaging-declarations",
     code ? "clean-packaging-word-substring" : "violation-package-reserved-VO",
     "Match whole normalized names, including case and raw identifiers, not substrings.",
     "大小文字・raw識別子を正規化して要素全体で照合し、部分文字列では判定しない。",
   );
-  cover(
-    sensor,
-    ["domain-packaging.duplicate"],
-    normal,
-    code ? "clean-packaging-planned-module" : "violation-packaging-duplicate",
-    "Future distinct packages may be declared; duplicate identities are rejected.",
-    "異なる将来パッケージは先行宣言可能だが、同じ識別子の重複は拒否する。",
-  );
-  cover(
-    sensor,
-    ["domain-packaging.coverage"],
-    normal,
-    code ? "clean-packaging-planned-module" : "violation-packaging-missing-parent",
-    "Require roots and ancestors without requiring future modules to exist now.",
-    "rootと親階層を必須にし、将来のモジュールの即時実装は要求しない。",
-  );
 }
 const domain = "ddd-rust-domain";
+cover(
+  domain,
+  ["domain-packaging.declaration"],
+  "clean-packaging-inline",
+  "violation-packaging-no-mapping",
+  "Distinguish an absent or unreadable mapping from one that declares the packages.",
+  "写像の欠落・読込不能と、パッケージを宣言した写像を区別する。",
+);
+cover(
+  domain,
+  ["domain-packaging.coverage"],
+  "clean-packaging-inline",
+  "clean-packaging-planned-module",
+  "Require roots and ancestors without requiring future modules to exist now.",
+  "rootと親階層を必須にし、将来のモジュールの即時実装は要求しない。",
+);
 cover(
   domain,
   ["domain-packaging.reference"],

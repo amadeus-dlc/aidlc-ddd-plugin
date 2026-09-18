@@ -6,9 +6,9 @@
 import type { SensorRunContext, SourceClaim } from "../runtime/context.ts";
 import type { AnalyzerRuntime, SyntaxTree } from "../rust/analyzer.ts";
 import type { ElementIndex } from "../schema/index-builder.ts";
-import type { DeclarationResult } from "../sensors/declaration.ts";
 import type { CargoWorkspace, CrateLayerAssignment, FileClassification, Layer } from "../workspace/resolver.ts";
 import type { ExternalCrateRule } from "./lists.ts";
+import type { RustMappingLoad } from "./rust/mapping.ts";
 import type { RustProgram } from "./rust/program.ts";
 
 export interface InspectionTarget {
@@ -70,7 +70,8 @@ export interface DependencyEdge {
 
 export interface InspectionContext {
   analyzer: AnalyzerRuntime;
-  aggregateMapping?: DeclarationResult;
+  /** The implementation mapping of the record, projected onto what the Rust rules compare. */
+  rustMapping: RustMappingLoad;
   run: SensorRunContext;
   workspace: CargoWorkspace;
   assignments: CrateLayerAssignment[];

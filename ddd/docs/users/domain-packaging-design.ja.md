@@ -26,30 +26,27 @@ billing-domain/src/
 
 ```yaml
 domain_packages:
-  - crate: billing-domain
-    module: crate
-    term: 請求
+  - term: 請求
     model_refs: [bc.billing]
     rationale: 請求のドメインを所有する
-  - crate: billing-domain
-    module: invoice
-    term: 請求書
+    code: { language: rust, package: billing-domain, module: [] }
+  - term: 請求書
     model_refs: [aggregate.invoice]
     rationale: 請求書の状態と操作、その構成要素をまとめる
-  - crate: billing-domain
-    module: invoice::number
-    term: 請求書番号
+    code: { language: rust, package: billing-domain, module: [invoice] }
+  - term: 請求書番号
     model_refs: [primitive.invoice-number]
     rationale: 請求書番号の表現と検証を所有する
+    code: { language: rust, package: billing-domain, module: [invoice, number] }
 ```
 
-例のIDは利用先の正規モデルに定義する。各行のcrate、module、term、model_refs、rationaleは必須で、model_refsは1件以上。クレートのrootは `module: crate`、内部はクレート相対の `::` 区切りで表す。同じクレート・モジュールの重複、rootや親階層の欠落、aggregate_mappings.moduleの宣言漏れを拒否する。
+例のIDは利用先の正規モデルに定義する。各行のterm、model_refs、rationale、および記述言語・パッケージ・モジュール位置を示す `code` は必須で、model_refsは1件以上。モジュール位置はパッケージrootからの要素リストで表し、root自体は `module: []` とする。同じ言語・パッケージ・モジュールの重複、rootや親階層の欠落、`aggregate_mappings` のコード配置に対する宣言漏れを拒否する。
 
 日本語の用語とコード名の文字列一致は要求しない。関連するモデルIDを参照し、グルーピング語の定義と配置理由を説明する。パッケージを作るためだけに架空の集約やEntityを増やさない。
 
 未実装のパッケージは計画として宣言できる。コード検査は「実モジュールが宣言されているか」を調べ、将来のUnit向けに宣言した全パッケージの実装を現在のUnitへ要求しない。既存成果物も宣言を補う必要があり、旧形式を自動免除しない。
 
-この例はゲートが読むcrate/module形式（`schema_version: 1`）である。言語共通の `schema_version: 2` はterm、model_refs、rationaleを保ち、パッケージとモジュールの位置を記述言語とともに `code` の下へ要素のリストで書く（rootは `module: []`）。同じ予約名をRustとTypeScriptの名前に適用する。[実装写像](implementation-mapping.ja.md)を参照。
+この例はゲートが読む言語共通の `schema_version: 2` である。crate/module形式（`schema_version: 1`）のままの文書は、移行するまで拒否される。旧形式では同じ行が `crate` と `::` 区切りのモジュール位置を持っていたため、`crate: billing-domain` と `module: invoice::number` は `code: { language: rust, package: billing-domain, module: [invoice, number] }` に、`module: crate` は `module: []` になる。同じ予約名をRustとTypeScriptの名前に適用する。形式の全体は[実装写像](implementation-mapping.ja.md)を、旧形式のままの記録の変換は[成果物一式の移行](artifact-migration.ja.md)を参照。
 
 ## 技術分類名の機械検査
 

@@ -47,7 +47,7 @@ Type inference, associated types, and trait implementation selection are outside
 
 ## Domain packaging
 
-Follow the [shared packaging convention](../aidlc-shared/ddd-domain-packaging.md) and name crates and modules using ubiquitous language. Match domain_packages declarations to the actual layout. Distinguish Rust impl syntax from prohibited technical-classification packages.
+Follow the [shared packaging convention](../aidlc-shared/ddd-domain-packaging.md) and name crates and modules using ubiquitous language. Match the domain_packages declarations placed in Rust to the actual layout: a declaration states its package name and the module path below that package root. Distinguish Rust impl syntax from prohibited technical-classification packages.
 
 ## Getter results as repository arguments
 

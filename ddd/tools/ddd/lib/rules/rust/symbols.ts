@@ -1,9 +1,9 @@
 /** Domain summaries joined across explicitly resolved Rust declarations and impls. */
 import type { MethodDecl } from "../../rust/analyzer.ts";
 import type { Aggregate } from "../../schema/model.ts";
-import type { AggregateMapping } from "../../sensors/declaration.ts";
 import { POST_INIT, snakeToKebab, toKebab, toPascal } from "../lists.ts";
 import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability, MutatorSymbol } from "../types.ts";
+import type { RustAggregateMapping } from "./mapping.ts";
 import type { LocatedMethod, RustProgram, RustType } from "./program.ts";
 
 function isConstructor(method: MethodDecl, typeName: string): boolean {
@@ -19,19 +19,15 @@ function isConstructor(method: MethodDecl, typeName: string): boolean {
   );
 }
 
-function matchesLocation(type: RustType, mapping: AggregateMapping): boolean {
-  const module = mapping.module
-    .replace(/^crate(?:::|$)/, "")
-    .split("::")
-    .filter(Boolean);
-  return mapping.crate.replace(/-/g, "_") === type.crate && module.join("::") === type.module.join("::");
+function matchesLocation(type: RustType, mapping: RustAggregateMapping): boolean {
+  return mapping.crate.replace(/-/g, "_") === type.crate && mapping.module.join("::") === type.module.join("::");
 }
 
 function aggregateFor(
   type: RustType,
   program: RustProgram,
   model: ModelAvailability,
-  mappings: readonly AggregateMapping[],
+  mappings: readonly RustAggregateMapping[],
 ): { aggregate?: string; ambiguous: boolean } {
   if (!model.index) return { ambiguous: false };
   const matches = model.index.elements("aggregate").filter((entry) => {
@@ -55,7 +51,7 @@ function aggregateFor(
 export function buildSymbolTable(
   program: RustProgram,
   model: ModelAvailability,
-  mappings: readonly AggregateMapping[] = [],
+  mappings: readonly RustAggregateMapping[],
 ): DomainSymbolTable {
   const types: DomainTypeSymbol[] = [];
   const getterNames = new Set<string>();
@@ -128,7 +124,7 @@ function isReplay(
   aggregate: string | undefined,
   model: ModelAvailability,
   program: RustProgram,
-  mappings: readonly AggregateMapping[],
+  mappings: readonly RustAggregateMapping[],
 ): boolean {
   if (!aggregate || !model.index || entry.method.params.length !== 1) return false;
   const declarations = mappings.filter((mapping) => mapping.aggregate_ref === aggregate);

@@ -289,10 +289,48 @@ for (const [label, markdown] of [
     });
   });
 
+/**
+ * Where the infrastructure-design stage writes its review artifact when the workflow has no Units:
+ * straight under the stage, with no unit directory between the phase and the stage.
+ */
+const STAGE_DECLARATION_IN_RECORD = `${RECORD_DIR}/construction/infrastructure-design/cicd-pipeline.md`;
+
+test("a declaration written straight under the stage of a workflow without Units loads with the record's model", () => {
+  const files = recordFiles(declarationDocument(VALID_YAML()));
+  delete files[DECLARATION_IN_RECORD];
+  files[STAGE_DECLARATION_IN_RECORD] = declarationDocument(VALID_YAML());
+  withWorkspace(files, (root) => {
+    const outcome = loadLayerDeclaration(join(root, STAGE_DECLARATION_IN_RECORD));
+    // model_ref resolves against the record only when the record is the directory above the phase.
+    expect(declarationOf(outcome)).toEqual(layerSource("rust") as unknown as LoadedDeclaration);
+  });
+});
+
+test("a declaration written straight under the stage is refused for its content like any other", () => {
+  const files = recordFiles(declarationDocument(VALID_YAML()));
+  files[STAGE_DECLARATION_IN_RECORD] = declarationDocument(legacyLayerYaml());
+  withWorkspace(files, (root) => {
+    expect(rulesOf(loadLayerDeclaration(join(root, STAGE_DECLARATION_IN_RECORD)))).toEqual([RULE.version]);
+  });
+});
+
 for (const [label, relative] of [
   ["a record with no pipeline document", null],
   ["a pipeline-named file at the record root", `${RECORD_DIR}/cicd-pipeline.md`],
   ["a pipeline-named file under another stage", `${RECORD_DIR}/construction/u1/functional-design/cicd-pipeline.md`],
+  [
+    "a pipeline-named file under another stage of a workflow without Units",
+    `${RECORD_DIR}/construction/functional-design/cicd-pipeline.md`,
+  ],
+  ["a pipeline-named file directly in the construction phase", `${RECORD_DIR}/construction/cicd-pipeline.md`],
+  [
+    "a pipeline-named file two directories below the construction phase",
+    `${RECORD_DIR}/construction/u1/u2/infrastructure-design/cicd-pipeline.md`,
+  ],
+  [
+    "a pipeline-named file in a directory below the stage",
+    `${RECORD_DIR}/construction/infrastructure-design/u1/cicd-pipeline.md`,
+  ],
   [
     "a pipeline-named file outside the construction phase",
     `${RECORD_DIR}/inception/infrastructure-design/cicd-pipeline.md`,

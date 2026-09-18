@@ -101,11 +101,10 @@ export function entryOf(table: Record<string, unknown>, key: string): unknown {
 /**
  * The legacy Rust-only document: the version plus exactly one Rust module layout, and nothing else.
  *
- * Owned here because two entry points decide the same acceptance: the Rust module layout check reads
- * it to pick a mode, and the migration reads it as its source. If they disagreed, a document one
- * accepts would be refused by the other, and the layout meaning would not survive the migration.
- * Returns the accepted layout, or null when the document is not this contract; the reason a caller
- * reports for a refusal stays with that caller.
+ * It is read only as a migration source — the settings a project is converted from — so that what
+ * this shape meant survives into the language-neutral document. Returns the accepted layout, or
+ * null when the document is not this contract; the reason a caller reports for a refusal stays
+ * with that caller.
  */
 export function legacyRustModuleLayout(document: Record<string, unknown>): RustModuleLayout | null {
   if (entryOf(document, VERSION_KEY) !== LEGACY_SCHEMA_VERSION) return null;

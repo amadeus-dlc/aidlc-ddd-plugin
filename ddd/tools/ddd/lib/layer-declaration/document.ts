@@ -8,8 +8,8 @@
  * now stands.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import type { FindingInput } from "../shared/findings.ts";
 import { errorMessage, type WriteOutcome, writeYamlBlockDocument } from "../shared/markdown-document.ts";
 import { readYamlBlock, type YamlBlock } from "../shared/markdown-yaml.ts";
@@ -19,8 +19,12 @@ import { LAYER_RULES } from "./contract.ts";
 const DECLARATION_FILE = "cicd-pipeline.md";
 const DECLARATION_STAGE = "infrastructure-design";
 const CONSTRUCTION_PHASE = "construction";
-/** Where the infrastructure-design stage writes the review artifact that holds the DDD section. */
-const DECLARATION_LOCATION = `<record>/${CONSTRUCTION_PHASE}/<unit>/${DECLARATION_STAGE}/${DECLARATION_FILE}`;
+/**
+ * Where the infrastructure-design stage writes the review artifact that holds the DDD section. A
+ * workflow whose delivery plan produced Units writes it below the Unit; one without Units writes it
+ * straight under the stage, and both are the stage's own registered output.
+ */
+const DECLARATION_LOCATION = `<record>/${CONSTRUCTION_PHASE}/[<unit>/]${DECLARATION_STAGE}/${DECLARATION_FILE}`;
 
 /** The section markers the team may write the declaration under; exactly one of them, exactly once. */
 const LAYER_HEADINGS: readonly string[] = ["DDD Layer Structure", "DDD 層構造宣言"];
@@ -44,9 +48,10 @@ function refused(path: string, message: string): DocumentRead {
 }
 
 /**
- * The record directory `path` sits in when it is the registered pipeline document of some unit.
- * The unit directory carries a name the delivery plan chose, so any one name stands there; every
- * other segment is fixed. A copy elsewhere is not a declaration this code may read or rewrite.
+ * The record directory `path` sits in when it is the registered pipeline document of the stage.
+ * The phase and the stage are fixed; between them stands either nothing, for a workflow without
+ * Units, or exactly one Unit directory, whose name the delivery plan chose. Anything else — a
+ * second directory, another stage, the phase itself — is a copy this code may not read or rewrite.
  */
 function recordDirOf(path: string): string | undefined {
   let current = resolve(path);
@@ -54,11 +59,30 @@ function recordDirOf(path: string): string | undefined {
     if (basename(current) !== segment) return undefined;
     current = dirname(current);
   }
+  if (basename(current) === CONSTRUCTION_PHASE) return dirname(current);
   // The unit directory: named by the delivery plan, so only its presence is fixed.
   if (basename(current).length === 0) return undefined;
   current = dirname(current);
   if (basename(current) !== CONSTRUCTION_PHASE) return undefined;
   return dirname(current);
+}
+
+/**
+ * Every registered layer declaration `recordDir` holds, in path order: the one a workflow without
+ * Units writes straight under the stage, and one per Unit. The registered locations are spelled
+ * here rather than by each caller, so a location this module refuses to read is never looked for.
+ */
+export function layerDeclarationPaths(recordDir: string): string[] {
+  const phase = join(recordDir, CONSTRUCTION_PHASE);
+  if (!existsSync(phase)) return [];
+  const candidates = readdirSync(phase, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) =>
+      entry.name === DECLARATION_STAGE
+        ? join(phase, DECLARATION_STAGE, DECLARATION_FILE)
+        : join(phase, entry.name, DECLARATION_STAGE, DECLARATION_FILE),
+    );
+  return candidates.filter((path) => existsSync(path)).sort();
 }
 
 export function readLayerDocument(path: string): DocumentRead {

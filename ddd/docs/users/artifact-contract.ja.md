@@ -14,7 +14,15 @@
 | functional-design | functional-spec（既存） | `functional-spec.md` 内の `## DDD Use-case Declarations` にYAMLブロック1つ |
 | infrastructure-design | cicd-pipeline（既存） | `cicd-pipeline.md` 内の `## DDD Layer Structure` にYAMLブロック1つ |
 
-`model_ref` はレコード相対の `inception/ddd-domain-modeling/ddd-domain-model-yaml.md` を使う。生成とすべての承認ゲートはYAMLデータスキーマのversion 1のままで、Markdownは運搬形式である。各操作が自身の業務エラーを持つversion 2は、読込と明示的な移行で利用できるが、どのゲートもまだ受理しない。[操作ごとのエラー](domain-model-operation-errors.ja.md)を参照。言語共通の写像である `ddd-aggregate-mapping.md` のversion 2も同様である。[実装写像](implementation-mapping.ja.md)を参照。依存規約を言語共通のパッケージ識別で述べる `cicd-pipeline.md` の `## DDD Layer Structure` 節のversion 2も同様である。[レイヤー宣言](layer-declaration.ja.md)を参照。説明文書とのID・不変条件本文の対応は引き続き検査する。
+`model_ref` はレコード相対の `inception/ddd-domain-modeling/ddd-domain-model-yaml.md` を使う。Markdownは YAML データの運搬形式である。生成とすべての承認ゲートは、次の3つの成果物についてYAMLデータスキーマのversion 2を読む。
+
+| 成果物 | version 2の内容 | 参照 |
+|---|---|---|
+| `ddd-domain-model-yaml.md` | 各操作が自身の業務エラーを持つ | [操作ごとのエラー](domain-model-operation-errors.ja.md) |
+| `ddd-aggregate-mapping.md` | 言語共通の実装写像 | [実装写像](implementation-mapping.ja.md) |
+| `cicd-pipeline.md` の `## DDD Layer Structure` | 言語共通のパッケージ識別で述べる依存規約 | [レイヤー宣言](layer-declaration.ja.md) |
+
+`functional-spec.md` の `## DDD Use-case Declarations` 節は version 1 のままである。パッケージ・型・メソッドを一切名指ししないため、言語共通の形式が変えるものがなかった。上記3つのいずれかが version 1 のままの記録は、それを読むゲートが拒否する。変換には[`ddd-artifact-set migrate`](artifact-migration.ja.md)を使う。説明文書とのID・不変条件本文の対応は引き続き検査する。
 
 旧 `domain-model.yaml` と `domain-model.md` は自動探索しない。既存成果物を移す場合は、YAMLを新しいデータファイルのコードブロックへ包み、説明を新名へ移し、すべての `model_ref` を更新して再検査する。下位のローダーAPIは生YAMLも読めるが、通常ステージの生成先に旧名を使う根拠にはしない。
 
@@ -35,9 +43,7 @@
 
 ## 集約写像にパッケージ宣言を含める
 
-T-07で `ddd-aggregate-mapping.md` のYAMLに `domain_packages` を必須項目として追加した。各パッケージのcrate、module、term、model_refs、rationaleを記録し、root・親階層・集約配置も宣言する。既存成果物も追記して再検査する。モデル設計をSKIPしたことだけを理由に、コード側のパッケージ宣言を免除しない。形式と検査範囲は [パッケージング契約](domain-packaging-design.ja.md)を参照。
-
-以上はゲートが読むversion 1の説明である。version 2でも同じ宣言がterm、model_refs、rationaleを保ち、パッケージとモジュールの位置は記述言語とともに `code` の下に記録する。version 1の文書は `ddd-aggregate-mapping.ts migrate` で明示的に変換する。[実装写像](implementation-mapping.ja.md)を参照。
+T-07で `ddd-aggregate-mapping.md` のYAMLに `domain_packages` を必須項目として追加した。各パッケージの term、model_refs、rationale を記録し、置き場所は `code` の下に、記述言語・パッケージ名・パッケージ root 以下のモジュール列として記録する。root・親階層・集約配置も宣言する。既存成果物も追記して再検査する。モデル設計をSKIPしたことだけを理由に、コード側のパッケージ宣言を免除しない。形式と検査範囲は[パッケージング契約](domain-packaging-design.ja.md)と[実装写像](implementation-mapping.ja.md)を参照。
 
 ## 通常の承認開始で欠落を検出する
 

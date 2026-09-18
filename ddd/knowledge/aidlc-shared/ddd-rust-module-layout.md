@@ -2,11 +2,17 @@
 
 Choose one reviewable layout per project in the project-root `.ddd.toml` before Rust code generation. The same setting drives generation, gate sensors, and CI. Do not infer it from existing files, select per-crate overrides, or use mixed mode.
 
+The settings document names the languages the project uses and states each language's choices. A project that uses no Rust declares no Rust layout, and a project that holds Rust has to name it.
+
 ```toml
-schema_version = 1
+schema_version = 2
+languages = ["rust"]
+
 [rust]
 module_layout = "file"
 ```
+
+A project still holding `schema_version = 1`, which named the Rust layout and nothing else, is refused until it is converted: run `ddd-artifact-set migrate` for the whole project, or `ddd-project-settings migrate` for this document alone.
 
 - `file`: every external module uses its module name as the filename, such as `invoice.rs`; children go under `invoice/`. Do not generate `mod.rs`.
 - `mod-rs`: an external module with child modules uses `invoice/mod.rs`; a leaf uses `line.rs`. Inline child declarations also make their containing external module a parent. Target roots such as lib.rs/main.rs and explicitly configured Cargo roots retain their target names.

@@ -1090,18 +1090,45 @@ function validateLineage(report: Report, index: ElementIndex, lineage: ElementLi
 // ---------------------------------------------------------------------------
 
 /**
+ * A document that is still in the legacy format is not a defect of its own wording, so the refusal
+ * names the two commands that convert it: the whole record at once, or this document alone.
+ */
+function versionMessage(required: SchemaVersion, declared: unknown): string {
+  const refusal = `schema_version must be ${required}, got ${JSON.stringify(declared)}`;
+  if (required !== OPERATION_OWNED_SCHEMA_VERSION || declared !== LEGACY_SCHEMA_VERSION) return refusal;
+  return `${refusal}; convert the whole record with \`ddd-artifact-set migrate\`, or this document alone with \`ddd-domain-model migrate\``;
+}
+
+/**
  * The format is chosen by the caller, never guessed from the document: leaving it to the document
  * would let the production sensors start accepting the new format the moment one appeared.
  */
 export function loadDomainModel(path: string, version: SchemaVersion = LEGACY_SCHEMA_VERSION): LoadResult {
-  const report = new Report(path);
   if (!existsSync(path)) {
+    const report = new Report(path);
     report.add("schema.yaml-parse", `domain model not found: ${path}`);
     return { ok: false, findings: report.findings };
   }
+  let text: string;
+  try {
+    text = readFileSync(path, "utf-8");
+  } catch (error) {
+    const report = new Report(path);
+    report.add("schema.yaml-parse", `failed to parse ${path}: ${errorMessage(error)}`);
+    return { ok: false, findings: report.findings };
+  }
+  return loadDomainModelSource(text, path, version);
+}
+
+/**
+ * The same read against a document held in memory, so a candidate a migration is about to write can
+ * be proven readable in `version` before the file it replaces is touched. `path` names the document
+ * the findings report against and decides whether the text is Markdown carrying one YAML block.
+ */
+export function loadDomainModelSource(text: string, path: string, version: SchemaVersion): LoadResult {
+  const report = new Report(path);
   let raw: unknown;
   try {
-    const text = readFileSync(path, "utf-8");
     raw = Bun.YAML.parse(extname(path) === ".md" ? modelYaml(text) : text);
   } catch (error) {
     report.add("schema.yaml-parse", `failed to parse ${path}: ${errorMessage(error)}`);
@@ -1115,7 +1142,7 @@ export function loadDomainModel(path: string, version: SchemaVersion = LEGACY_SC
 
   const schemaVersion = raw.schema_version;
   if (schemaVersion !== version) {
-    report.add("schema.structure", `schema_version must be ${version}, got ${JSON.stringify(schemaVersion)}`);
+    report.add("schema.structure", versionMessage(version, schemaVersion));
   }
   const boundedContexts = readObjectArray(report, raw, "bounded_contexts", "domain-model", true).map((node, index) =>
     readBoundedContext(report, node, `bounded_contexts[${index}]`, version),

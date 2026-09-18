@@ -786,14 +786,16 @@ test.skipIf(RUNNING_AS_SUPERUSER)(
 );
 
 // ---------------------------------------------------------------------------
-// Production sensors keep reading the legacy format
+// The production gate reads the migrated format
 // ---------------------------------------------------------------------------
 
-test("the production mapping gate reads the legacy format and does not accept the migrated one", () => {
+test("the production mapping gate refuses the legacy format and accepts the mapping once it is migrated", () => {
   withWorkspace(legacyWorkspace({ modelVersion: 1 }), (root) => {
     const path = mappingPathOf(root);
     const supplement = supplementPathOf(root);
-    expect(verdictOf(path).pass).toBe(true);
+    const legacy = verdictOf(path);
+    expect(legacy.pass).toBe(false);
+    expect(legacy.findings.map((entry) => entry.rule_id)).toContain("mapping-declarations.document");
 
     // The team migrates the canonical model first; only then can the mapping follow.
     expect(previewMappingMigration(path, supplement).kind).toBe("rejected");
@@ -801,8 +803,8 @@ test("the production mapping gate reads the legacy format and does not accept th
     expect(applyMappingMigration(path, supplement).kind).toBe("applied");
 
     const migrated = verdictOf(path);
-    expect(migrated.pass).toBe(false);
-    expect(migrated.findings.map((entry) => entry.rule_id)).toContain("mapping-declarations.document");
+    expect(migrated.findings).toEqual([]);
+    expect(migrated.pass).toBe(true);
   });
 });
 
@@ -890,7 +892,7 @@ for (const [label, argv] of [
     });
   });
 
-test("the shipped entry point runs on its own, with no production sensor switched over", () => {
+test("the shipped entry point runs on its own", () => {
   withWorkspace(legacyWorkspace(), (root) => {
     const before = snapshotBytes(root);
     const spawned = Bun.spawnSync(

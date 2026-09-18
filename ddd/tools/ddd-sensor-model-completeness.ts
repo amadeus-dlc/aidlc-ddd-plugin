@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { MODEL_DATA_FILE, MODEL_VIEW_FILE } from "./ddd/lib/schema/artifacts.ts";
 import { checkCompleteness } from "./ddd/lib/schema/completeness.ts";
-import { loadDomainModel } from "./ddd/lib/schema/loader.ts";
+import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "./ddd/lib/schema/loader.ts";
 import { collectUnresolved, finding, readText, relPath } from "./ddd/lib/sensors/common.ts";
 import type { FindingInput } from "./ddd/lib/shared/findings.ts";
 
@@ -27,7 +27,7 @@ process.exit(
     evaluate: (context) => {
       const yamlPath = join(dirname(context.output_path), MODEL_DATA_FILE);
       const file = relPath(context, yamlPath);
-      const loaded = loadDomainModel(yamlPath);
+      const loaded = loadDomainModel(yamlPath, OPERATION_OWNED_SCHEMA_VERSION);
       if (!loaded.ok) {
         return loaded.findings.map((entry) => finding("model-completeness.schema", file, entry.message, entry.line));
       }

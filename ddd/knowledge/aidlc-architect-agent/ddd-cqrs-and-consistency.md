@@ -11,10 +11,10 @@ Conventions for DDD design and code generation. A check name does not imply that
 | Rule ID | Convention | Current coverage |
 |---|---|---|
 | K.cqrs-and-consistency.1 | Do not allow mutual dependencies between CQRS command and query sides. | Declaration and Rust rule k. Approval integration and coverage have limits. |
-| K.cqrs-and-consistency.2 | Declare a programming model and persistence method for every aggregate. | mapping-declarations.axes |
+| K.cqrs-and-consistency.2 | Declare a programming model and persistence method for every aggregate. | mapping-declarations.document |
 | K.cqrs-and-consistency.3 | Provide read models suited to their queries. | Design convention. |
-| K.cqrs-and-consistency.4 | Declare programming_model as actor or class. | mapping-declarations.axes |
-| K.cqrs-and-consistency.5 | Declare persistence_method as state-sourcing or event-sourcing. | mapping-declarations.axes. This does not guarantee code shape. |
+| K.cqrs-and-consistency.4 | Declare programming_model as actor or class. | mapping-declarations.document |
+| K.cqrs-and-consistency.5 | Declare persistence_method as state-sourcing or event-sourcing. | mapping-declarations.document. This does not guarantee code shape. |
 | K.cqrs-and-consistency.6 | Do not consult query-side read models to make update decisions. | k checks dependencies. Review assesses actual consistency. |
 | K.cqrs-and-consistency.7 | Do not reference update-domain types or repositories from the query side. | l checks syntax and declarations. |
 | K.cqrs-and-consistency.8 | Make the RMU an independent component connecting the two sides. | Design convention. Edges originating from the RMU are exceptions. |

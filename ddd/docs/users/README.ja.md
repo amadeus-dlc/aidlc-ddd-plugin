@@ -14,6 +14,7 @@
 | 文脈の依存規約をcrateではなくパッケージで宣言し、crate固定のレイヤー宣言を移行 | [レイヤー宣言](layer-declaration.ja.md) |
 | Rustの型照合、replay宣言、未検査範囲の確認 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
 | 使用言語の宣言と旧Rust設定の移行 | [プロジェクト設定](project-settings.ja.md) |
+| プロジェクトの設定・モデル・写像・レイヤー宣言を一度に変換 | [成果物一式の移行](artifact-migration.ja.md) |
 
 | Rustモジュールの配置をプロジェクト全体で統一 | [モジュール配置契約](rust-module-layout.ja.md) |
 

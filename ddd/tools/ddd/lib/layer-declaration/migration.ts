@@ -12,10 +12,17 @@
  */
 
 import type { FindingInput } from "../shared/findings.ts";
+import type { WriteOutcome } from "../shared/markdown-document.ts";
 import { LAYER_SCHEMA_VERSION, type LayerDeclaration, LEGACY_LAYER_SCHEMA_VERSION } from "./contract.ts";
 import { type LayerDocument, readLayerDocument, writeLayerDocument } from "./document.ts";
 import { convertLegacyDeclaration } from "./legacy.ts";
-import { declaredVersion, loadLayerDocument, loadReferencedModel, versionFinding } from "./loader.ts";
+import {
+  declaredVersion,
+  loadLayerDocument,
+  loadReferencedModel,
+  type ReferencedModelResolver,
+  versionFinding,
+} from "./loader.ts";
 import { completeDeclaration, readLayerDraft } from "./reader.ts";
 import { renderLayerYaml } from "./render.ts";
 import { validateLayerDraft } from "./validation.ts";
@@ -28,20 +35,26 @@ export type LayerMigrationOutcome =
   | { readonly kind: "rejected"; readonly findings: readonly FindingInput[] }
   | { readonly kind: "write-failed"; readonly detail: string };
 
-type Assessment =
-  | { readonly kind: "candidate"; readonly declaration: LayerDeclaration; readonly document: LayerDocument }
+export interface LayerCandidate {
+  readonly kind: "candidate";
+  readonly declaration: LayerDeclaration;
+  readonly document: LayerDocument;
+}
+
+export type LayerAssessment =
+  | LayerCandidate
   | Extract<LayerMigrationOutcome, { kind: "already-migrated" | "missing-information" | "rejected" }>;
 
-function rejected(findings: readonly FindingInput[]): Assessment {
+function rejected(findings: readonly FindingInput[]): LayerAssessment {
   return { kind: "rejected", findings };
 }
 
-function assessLegacy(document: LayerDocument): Assessment {
+function assessLegacy(document: LayerDocument, resolveModel: ReferencedModelResolver): LayerAssessment {
   const converted = convertLegacyDeclaration(document);
   if (converted.kind === "rejected") return rejected(converted.findings);
   const read = readLayerDraft(converted.root, document.path);
   if (read.kind === "rejected") return rejected(read.findings);
-  const model = loadReferencedModel(document, read.draft.model_ref);
+  const model = resolveModel(document, read.draft.model_ref);
   if (!model.ok) return rejected(model.findings);
   const defects = validateLayerDraft(read.draft, model.index, document.path);
   if (defects.length > 0) return rejected(defects);
@@ -50,29 +63,39 @@ function assessLegacy(document: LayerDocument): Assessment {
   return { kind: "candidate", declaration: completion.declaration, document };
 }
 
-function assess(declarationPath: string): Assessment {
+/**
+ * What converting `declarationPath` would do, without writing anything. `resolveModel` supplies the
+ * canonical model the declaration names, so a set migration can check it against the model it is
+ * about to write rather than against the one still on disk.
+ */
+export function assessLayerMigration(declarationPath: string, resolveModel: ReferencedModelResolver): LayerAssessment {
   const read = readLayerDocument(declarationPath);
   if (read.kind === "rejected") return rejected(read.findings);
   const { document } = read;
   const version = declaredVersion(document);
   // An already migrated document is only done when it still reads as one.
   if (version === LAYER_SCHEMA_VERSION) {
-    const loaded = loadLayerDocument(document);
+    const loaded = loadLayerDocument(document, resolveModel);
     return loaded.ok ? { kind: "already-migrated", declaration: loaded.declaration } : rejected(loaded.findings);
   }
   if (version !== LEGACY_LAYER_SCHEMA_VERSION) return rejected([versionFinding(document)]);
-  return assessLegacy(document);
+  return assessLegacy(document, resolveModel);
+}
+
+/** Replaces the declaration block with the candidate; the only write this module performs. */
+export function writeLayerCandidate(candidate: LayerCandidate): WriteOutcome {
+  return writeLayerDocument(candidate.document, renderLayerYaml(candidate.declaration));
 }
 
 export function previewLayerMigration(declarationPath: string): LayerMigrationOutcome {
-  const assessment = assess(declarationPath);
+  const assessment = assessLayerMigration(declarationPath, loadReferencedModel);
   return assessment.kind === "candidate" ? { kind: "candidate", declaration: assessment.declaration } : assessment;
 }
 
 export function applyLayerMigration(declarationPath: string): LayerMigrationOutcome {
-  const assessment = assess(declarationPath);
+  const assessment = assessLayerMigration(declarationPath, loadReferencedModel);
   if (assessment.kind !== "candidate") return assessment;
-  const written = writeLayerDocument(assessment.document, renderLayerYaml(assessment.declaration));
+  const written = writeLayerCandidate(assessment);
   if (written.kind === "write-failed") return { kind: "write-failed", detail: written.detail };
   return { kind: "applied", declaration: assessment.declaration };
 }

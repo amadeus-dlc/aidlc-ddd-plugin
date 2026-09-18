@@ -1,10 +1,26 @@
+/**
+ * Domain packaging for the Rust code gate: every module the inspected crate reaches has a business
+ * package declared for it, and no name below it is a technical classification.
+ *
+ * Whether the mapping itself is sound is the mapping reader's decision, not this one's. A mapping
+ * the reader refuses yields no packages at all, and its findings are reported here under the rule
+ * ids this gate already declares, so the same defect is never judged twice by two checks.
+ */
+
 import { join } from "node:path";
+import { mappingPathOf } from "../rules/rust/mapping.ts";
 import type { InspectionContext, InspectionTarget } from "../rules/types.ts";
 import { finding, relPath } from "../sensors/common.ts";
-import { readModel } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
-import { checkPackageDeclarations, moduleParts, packageKey, packageWord, technicalName } from "./declarations.ts";
+import { packageKey, packageWord, technicalName } from "./declarations.ts";
 import { inspectModules } from "./rust-modules.ts";
+
+/** Which rule of this gate reports a refusal the mapping reader made. */
+function transcribedRule(ruleId: string): string {
+  if (ruleId === "aggregate-mapping.model") return "domain-packaging.reference";
+  if (ruleId === "aggregate-mapping.technical-name") return "domain-packaging.technical-name";
+  return "domain-packaging.declaration";
+}
 
 export function evaluateDomainPackaging(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   const crate = context.assignments.find((entry) => entry.crate_name === target.crate_name);
@@ -48,29 +64,41 @@ export function evaluateDomainPackaging(target: InspectionTarget, context: Inspe
         ),
       );
   }
-  const path = join(context.run.record_dir, "inception/domain-design/ddd-aggregate-mapping.md");
-  const file = relPath(context.run, path);
-  const mapping = context.aggregateMapping;
-  if (!mapping?.ok)
+  const file = relPath(context.run, mappingPathOf(context.run.record_dir));
+  const mapping = context.rustMapping;
+  if (mapping.kind === "absent")
     return [
       ...findings,
       finding("domain-packaging.declaration", file, "a readable aggregate mapping with domain_packages is required"),
     ];
-  const loaded = readModel(context.run.record_dir, mapping.document.model_ref);
-  if (!loaded.ok)
-    return [...findings, finding("domain-packaging.reference", file, "domain_packages model_ref could not be loaded")];
-  const invalid = checkPackageDeclarations(mapping.document, file, loaded.index, new Set([crate.crate_name]));
-  if (invalid.length > 0) return [...findings, ...invalid];
+  if (mapping.kind === "invalid")
+    return [
+      ...findings,
+      ...mapping.findings.map((entry) =>
+        finding(transcribedRule(entry.rule_id), file, `${entry.rule_id}: ${entry.message}`),
+      ),
+    ];
+  // The raw prefix only lets a keyword be spelled, so it never distinguishes two modules here.
   const declared = new Set(
-    (mapping.document.domain_packages ?? []).map((entry) => packageKey(entry.crate, moduleParts(entry.module) ?? [])),
+    mapping.view.packages.map((entry) =>
+      packageKey(
+        entry.crate,
+        entry.module.map((segment) => segment.replace(/^r#/, "")),
+      ),
+    ),
   );
+  if (!declared.has(packageKey(crate.crate_name, [])))
+    findings.push(
+      finding("domain-packaging.coverage", file, `crate ${crate.crate_name} needs a root package declaration`),
+    );
   for (const module of validModules) {
+    if (module.parts.length === 0) continue;
     if (!declared.has(packageKey(crate.crate_name, module.parts)))
       findings.push(
         finding(
           "domain-packaging.coverage",
           module.file,
-          `domain package ${crate.crate_name}/${module.parts.join("::") || "crate"} has no term/model declaration`,
+          `domain package ${crate.crate_name}/${module.parts.join("::")} has no term/model declaration`,
           module.line,
         ),
       );

@@ -23,12 +23,24 @@ import { readMappingDraft } from "./reader.ts";
 import { validateMapping } from "./validation.ts";
 
 export type MappingLoadResult =
-  | { readonly ok: true; readonly mapping: ImplementationMapping; readonly index: ElementIndex }
+  | {
+      readonly ok: true;
+      readonly mapping: ImplementationMapping;
+      /** The canonical model the mapping names, so a caller never re-reads it to check the same thing. */
+      readonly model: DomainModel;
+      readonly index: ElementIndex;
+    }
   | { readonly ok: false; readonly findings: readonly FindingInput[] };
 
-type ModelLoad =
+export type ModelLoad =
   | { readonly ok: true; readonly model: DomainModel; readonly index: ElementIndex }
   | { readonly ok: false; readonly findings: readonly FindingInput[] };
+
+/**
+ * How the canonical model a mapping names is obtained. The gates read it from disk; a migration that
+ * converts a whole set hands over the model of that set, which is not on disk in this format yet.
+ */
+export type ReferencedModelResolver = (document: MappingDocument, modelRef: string) => ModelLoad;
 
 export function declaredVersion(document: MappingDocument): unknown {
   return own(document.root, "schema_version");
@@ -38,7 +50,7 @@ export function versionFinding(document: MappingDocument): FindingInput {
   const version = declaredVersion(document);
   const message =
     version === LEGACY_MAPPING_SCHEMA_VERSION
-      ? `schema_version ${LEGACY_MAPPING_SCHEMA_VERSION} is the Rust-only crate/module format; convert it with \`ddd-aggregate-mapping migrate\``
+      ? `schema_version ${LEGACY_MAPPING_SCHEMA_VERSION} is the Rust-only crate/module format; convert the whole record with \`ddd-artifact-set migrate\`, or this document alone with \`ddd-aggregate-mapping migrate\``
       : version === undefined
         ? `schema_version ${MAPPING_SCHEMA_VERSION} is required`
         : `schema_version must be ${MAPPING_SCHEMA_VERSION}, got ${JSON.stringify(version)}`;
@@ -65,11 +77,14 @@ export function loadReferencedModel(document: MappingDocument, modelRef: string)
 }
 
 /** The schema_version 2 read of a document already opened, shared with the migration's re-run check. */
-export function loadMappingDocument(document: MappingDocument): MappingLoadResult {
+export function loadMappingDocument(
+  document: MappingDocument,
+  resolveModel: ReferencedModelResolver,
+): MappingLoadResult {
   if (declaredVersion(document) !== MAPPING_SCHEMA_VERSION) return { ok: false, findings: [versionFinding(document)] };
   const read = readMappingDraft(document.root, document.path);
   if (read.kind === "rejected") return { ok: false, findings: read.findings };
-  const model = loadReferencedModel(document, read.draft.model_ref);
+  const model = resolveModel(document, read.draft.model_ref);
   if (!model.ok) return model;
   const validation = validateMapping(read.draft, model.model, model.index, {
     document: document.path,
@@ -84,11 +99,11 @@ export function loadMappingDocument(document: MappingDocument): MappingLoadResul
     return { ok: false, findings: [...validation.findings, ...gaps] };
   }
   if (validation.findings.length > 0) return { ok: false, findings: validation.findings };
-  return { ok: true, mapping: validation.mapping, index: model.index };
+  return { ok: true, mapping: validation.mapping, model: model.model, index: model.index };
 }
 
 export function loadAggregateMapping(path: string): MappingLoadResult {
   const read = readMappingDocument(path);
   if (read.kind === "rejected") return { ok: false, findings: read.findings };
-  return loadMappingDocument(read.document);
+  return loadMappingDocument(read.document, loadReferencedModel);
 }

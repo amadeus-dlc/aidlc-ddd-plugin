@@ -9,13 +9,13 @@ import { readSourceClaims, readStageStatus, type SensorRunContext } from "../run
 import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import { parse } from "../rust/analyzer.ts";
 import { MODEL_DATA_PATH } from "../schema/artifacts.ts";
-import { loadDomainModel } from "../schema/loader.ts";
+import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import { finding, relPath } from "../sensors/common.ts";
-import { parseDeclaration } from "../sensors/declaration.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { assignLayers, classifyFile, type Layer, scanWorkspace } from "../workspace/resolver.ts";
 import { IO_CRATES } from "./lists.ts";
 import { buildEdges } from "./rust/edges.ts";
+import { loadRustMapping } from "./rust/mapping.ts";
 import { buildProgram } from "./rust/program.ts";
 import { buildSymbolTable } from "./rust/symbols.ts";
 import type { InspectionContext, InspectionTarget, ModelAvailability } from "./types.ts";
@@ -105,7 +105,7 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
     };
   } else {
     const modelPath = join(run.record_dir, MODEL_DATA_PATH);
-    const loaded = loadDomainModel(modelPath);
+    const loaded = loadDomainModel(modelPath, OPERATION_OWNED_SCHEMA_VERSION);
     if (!loaded.ok) {
       model = { status: "invalid" };
       findings.push(
@@ -121,10 +121,9 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
   }
 
   const program = buildProgram(runtime, workspaceRoot, assignments);
-  const mappingPath = join(run.record_dir, "inception/domain-design/ddd-aggregate-mapping.md");
-  const mapping = existsSync(mappingPath) ? parseDeclaration(mappingPath, "aggregate-mapping") : undefined;
-  if (mapping && !mapping.ok) program.notes.add("replay.disabled: aggregate mapping is invalid");
-  const symbols = buildSymbolTable(program, model, mapping?.ok ? mapping.document.aggregate_mappings : []);
+  const rustMapping = loadRustMapping(run.record_dir);
+  if (rustMapping.kind === "invalid") program.notes.add("replay.disabled: aggregate mapping is invalid");
+  const symbols = buildSymbolTable(program, model, rustMapping.kind === "loaded" ? rustMapping.view.aggregates : []);
 
   const targets: InspectionTarget[] = [];
   const skipped: InspectionTarget[] = [];
@@ -173,7 +172,7 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
 
   const context: InspectionContext = {
     analyzer: runtime,
-    aggregateMapping: mapping,
+    rustMapping,
     run,
     workspace,
     assignments,

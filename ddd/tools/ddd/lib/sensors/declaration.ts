@@ -1,24 +1,26 @@
 /**
- * Declaration documents — read the aggregate mapping or the dedicated DDD
- * section of a registered core review artifact. Exactly one labelled YAML
- * block in that scope is authoritative; other sections are not declarations.
+ * The schema_version 1 declaration reader: the crate-fixed shape of the aggregate mapping and the
+ * layer declaration, and the use-case declarations, which are language-neutral already and whose
+ * version never changed. Exactly one labelled YAML block in the named scope is authoritative;
+ * other sections are not declarations.
+ *
+ * The two crate-fixed shapes are only read as migration sources — `aggregate-mapping/legacy.ts` and
+ * `layer-declaration/legacy.ts` are their only callers. Every gate reads those artifacts through
+ * the reader of the language-neutral format instead.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { SensorRunContext } from "../runtime/context.ts";
-import { type LoadResult, loadDomainModel } from "../schema/loader.ts";
 import { readYamlBlock } from "../shared/markdown-yaml.ts";
 
 export type DeclarationKind = "aggregate-mapping" | "use-case-declarations" | "layer-structure";
 
-export function declarationPath(context: SensorRunContext, kind: DeclarationKind): string {
-  const filename =
-    kind === "aggregate-mapping"
-      ? "ddd-aggregate-mapping.md"
-      : kind === "use-case-declarations"
-        ? "functional-spec.md"
-        : "cicd-pipeline.md";
+/** The two review artifacts a stage writes beside its own output and a gate reads from there. */
+type StageDeclaration = "use-case-declarations" | "layer-structure";
+
+export function declarationPath(context: SensorRunContext, kind: StageDeclaration): string {
+  const filename = kind === "use-case-declarations" ? "functional-spec.md" : "cicd-pipeline.md";
   return join(dirname(context.output_path), filename);
 }
 
@@ -329,8 +331,4 @@ export function parseDeclaration(path: string, kind: DeclarationKind): Declarati
 
 export function resolveModelPath(recordDir: string, modelRef: string): string {
   return isAbsolute(modelRef) ? modelRef : resolve(join(recordDir, modelRef));
-}
-
-export function readModel(recordDir: string, modelRef: string): LoadResult {
-  return loadDomainModel(resolveModelPath(recordDir, modelRef));
 }

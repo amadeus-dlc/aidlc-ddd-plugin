@@ -114,7 +114,7 @@ test("a write that cannot be performed is reported with its own status", () => {
   );
 });
 
-test("the shipped entry point runs on its own, with no production sensor switched over", () => {
+test("the shipped entry point runs on its own", () => {
   withWorkspace({ ".ddd.toml": legacyDocument("mod-rs") }, (root) => {
     const preview = Bun.spawnSync([process.execPath, ENTRY_POINT, "migrate", "--project", root], {
       stdout: "pipe",

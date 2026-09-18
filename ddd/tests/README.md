@@ -15,8 +15,11 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
 | domain-model-operations / domain-model-migration | Operation-owned errors in the canonical model, and preview/apply migration of one model artifact. |
-| aggregate-mapping-contract / aggregate-mapping-migration | Reading and refusing the language-neutral aggregate mapping for Rust and TypeScript, and preview/apply migration of one crate/module mapping with a supplement, including the production gate left on version 1. |
-| layer-declaration-contract / layer-declaration-migration | Reading, refusing and inspecting the language-neutral layer declaration for Rust and TypeScript, and preview/apply migration of the one YAML block below the DDD section marker of `cicd-pipeline.md`, including the surrounding prose and CI fence left byte-for-byte alone, the production gate left on version 1, and the use-case declarations left untouched. |
+| aggregate-mapping-contract / aggregate-mapping-migration | Reading and refusing the language-neutral aggregate mapping for Rust and TypeScript, and preview/apply migration of one crate/module mapping with a supplement, including the production gate refusing the mapping before the migration and accepting it after. |
+| layer-declaration-contract / layer-declaration-migration | Reading, refusing and inspecting the language-neutral layer declaration for Rust and TypeScript, at both the Unit and the stage-direct location, and preview/apply migration of the one YAML block below the DDD section marker of `cicd-pipeline.md`, including the surrounding prose and CI fence left byte-for-byte alone, the production gate refusing the declaration before the migration and accepting it after, and the use-case declarations left untouched. |
+| artifact-set-migration | Preview, apply, re-run and partway write failure of one project's whole artifact set, and the gates and CI command that refused the record accepting it once migrated. |
+| rust-mapping-view | Projecting the language-neutral mapping onto the crate name, module path and replay methods the Rust source sensors compare, leaving other languages out. |
+| generation-instructions | Reading every YAML/TOML example of the runtime instruction directories through the same readers the gates use, and keeping those directories in English. |
 | u2-rust-analysis-foundation | Cargo layer classification and Rust syntax analysis. |
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
@@ -39,9 +42,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 327 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 376 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 327 distribution cases per harness, and normal approval integration. It sends 153 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 376 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
 
 ## Verified regressions and remaining checks
 

@@ -10,7 +10,7 @@ Name domain crates and internal packages in ubiquitous language and group them b
 |---|---|---|
 | K.domain-packaging.1 | Connect package names to business terms and declare the term, model references, and placement rationale. | Declaration presence and ID resolution are automated; semantic fitness requires review. |
 | K.domain-packaging.2 | Do not partition by technical classifications such as aggregate/, impl/, vo/, or entities/. | domain-packaging.technical-name |
-| K.domain-packaging.3 | Record each crate root and every level of its package hierarchy in domain_packages. | domain-packaging.coverage |
+| K.domain-packaging.3 | Record each package root and every level of its module hierarchy in domain_packages. | domain-packaging.coverage |
 | K.domain-packaging.4 | Do not separate aggregates, Entities, and value objects of the same business concept solely by type category. | Design review. |
 | K.domain-packaging.5 | Place shared values by responsibilities such as money or address before inventing containers such as common/vo. | Design review. |
 | K.domain-packaging.6 | Match declarations to real modules, including empty, private, and inline modules. | domain-packaging.coverage / unresolved |
@@ -29,7 +29,19 @@ This does not require one package per aggregate. Explain the term and placement 
 
 ## Declaration
 
-Add domain_packages to the canonical YAML in `ddd-aggregate-mapping.md`. Use `module: crate` for the root and crate-relative Rust paths for internal modules. term, model_refs, and rationale are required. Renaming a reserved word alone does not resolve mixed responsibilities.
+Add domain_packages to the canonical YAML in `ddd-aggregate-mapping.md`. A package is declared at a location: the language that spells it, the package name, and the module path below that package root as a list of segments — the root itself is the empty list `[]`. Rust is the only language generated and inspected today, so every location states `language: rust`. term, model_refs, and rationale are required. Renaming a reserved word alone does not resolve mixed responsibilities.
+
+```yaml
+domain_packages:
+  - term: <business term this package stands for>
+    model_refs: [bc.billing]
+    rationale: <reason for grouping these responsibilities here>
+    code: { language: rust, package: billing-domain, module: [] }
+  - term: <business term this module stands for>
+    model_refs: [aggregate.invoice]
+    rationale: <reason for grouping these responsibilities here>
+    code: { language: rust, package: billing-domain, module: [invoice] }
+```
 
 Packages may be declared before implementation. Code checks require actual modules in affected domain crates to have declarations; they do not require a current Unit to implement every package planned for a future Unit.
 

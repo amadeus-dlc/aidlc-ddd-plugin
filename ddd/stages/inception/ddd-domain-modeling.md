@@ -106,7 +106,7 @@ Confirmation before writing the model.
 
 ### Step 5: Write the Canonical Model
 
-Write canonical data in exactly one labelled YAML code block in `ddd-domain-model-yaml.md`. Explanatory text may surround it, but do not add a second YAML block. Use the U1 format with `schema_version: 1`, Bounded Contexts, aggregates, elements, invariants, commands, errors, events, transitions, construction rules, and lineage.
+Write canonical data in exactly one labelled YAML code block in `ddd-domain-model-yaml.md`. Explanatory text may surround it, but do not add a second YAML block. Use the U1 format with `schema_version: 2`, Bounded Contexts, aggregates, elements, invariants, commands, errors, events, transitions, construction rules, and lineage. In that format every operation owns its own Domain Errors: a Domain Error names the Command or the Factory Rule it belongs to under `operation`, and a Factory Rule declares its own `domain_errors` rather than borrowing a Command's.
 Derive the human-facing `ddd-domain-model.md` from these data, with Sources, Overview, Bounded Context, Aggregate, Process Manager, Lineage, Derivation, Self-check, and Open questions sections. Update split, merge, and deletion lineage on reruns.
 
 ### Step 6: Self-check

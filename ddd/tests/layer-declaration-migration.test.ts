@@ -625,13 +625,15 @@ test("the use-case declaration is not a layer declaration, and an apply beside i
 });
 
 // ---------------------------------------------------------------------------
-// The production gate keeps reading the crate-fixed format
+// The production gate reads the migrated format
 // ---------------------------------------------------------------------------
 
-test("the production layer gate reads the crate-fixed format and does not accept the migrated one", () => {
+test("the production layer gate refuses the crate-fixed format and accepts the declaration once it is migrated", () => {
   withWorkspace(legacyWorkspace({ modelVersion: 1 }), (root) => {
     const path = declarationPathOf(root);
-    expect(verdictOf(path).pass).toBe(true);
+    const legacy = verdictOf(path);
+    expect(legacy.pass).toBe(false);
+    expect(legacy.findings.map((entry) => entry.rule_id)).toContain("layer-structure.item");
 
     // The team migrates the canonical model first; only then can the declaration follow.
     expect(previewLayerMigration(path).kind).toBe("rejected");
@@ -639,8 +641,8 @@ test("the production layer gate reads the crate-fixed format and does not accept
     expect(applyLayerMigration(path).kind).toBe("applied");
 
     const migrated = verdictOf(path);
-    expect(migrated.pass).toBe(false);
-    expect(migrated.findings.map((entry) => entry.rule_id)).toContain("layer-structure.item");
+    expect(migrated.findings).toEqual([]);
+    expect(migrated.pass).toBe(true);
   });
 });
 
@@ -743,7 +745,7 @@ test("a declaration option given twice is refused before either document is read
   });
 });
 
-test("the shipped entry point runs on its own, with no production sensor switched over", () => {
+test("the shipped entry point runs on its own", () => {
   withWorkspace(legacyWorkspace(), (root) => {
     const before = snapshotBytes(root);
     const spawned = Bun.spawnSync(

@@ -51,19 +51,27 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
   replay.files["inception/domain-design/ddd-aggregate-mapping.md"] = `# 集約写像
 
 \`\`\`yaml
-schema_version: 1
+schema_version: 2
 model_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md
 aggregate_mappings:
   - aggregate_ref: aggregate.invoice
     programming_model: class
     persistence_method: event-sourcing
-    crate: billing-domain
-    module: crate
-    ports: []
-    repository: InvoiceRepository
     reference_ids: [entity.invoice, event.invoice.issued]
     replay_methods:
-      - { method: apply_event, event_ref: event.invoice.issued }
+      - { event_ref: event.invoice.issued, code: { method: apply_event } }
+    code:
+      language: rust
+      package: billing-domain
+      module: []
+      type: Invoice
+      ports: []
+      repository: InvoiceRepository
+    operations:
+      - operation_ref: command.invoice.issue
+        code: { method: issue, error_type: IssueInvoiceError }
+        errors:
+          - { error_ref: error.invoice.issue.already-issued, code: { case: AlreadyIssued } }
 \`\`\`
 `;
   replay.expect = { pass: true, rules: [] };
@@ -150,17 +158,13 @@ aggregate_mappings:
     "use super::Invoice; impl Invoice { pub fn total(&self) -> i64 { self.amount } }\n";
   cases.push(getterSplit);
   const mapping = "inception/domain-design/ddd-aggregate-mapping.md";
+  const replayLine = "      - { event_ref: event.invoice.issued, code: { method: apply_event } }";
   for (const [name, from, to] of [
     ["state-sourcing", "persistence_method: event-sourcing", "persistence_method: state-sourcing"],
-    ["wrong-crate", "crate: billing-domain", "crate: other-domain"],
-    ["wrong-module", "module: crate", "module: other"],
-    ["unknown-event", "event_ref: event.invoice.issued", "event_ref: event.invoice.unknown"],
+    ["wrong-crate", "package: billing-domain", "package: other-domain"],
+    ["wrong-module", "module: []", "module: [other]"],
     ["unlisted-method", "method: apply_event", "method: another"],
-    [
-      "duplicate-method",
-      "      - { method: apply_event, event_ref: event.invoice.issued }",
-      "      - { method: apply_event, event_ref: event.invoice.issued }\n      - { method: apply_event, event_ref: event.invoice.issued }",
-    ],
+    ["duplicate-method", replayLine, `${replayLine}\n${replayLine}`],
   ]) {
     const entry = structuredClone(replay);
     entry.name = `violation-b-replay-${name}`;
@@ -168,6 +172,20 @@ aggregate_mappings:
     entry.expect = { pass: false, rules: ["b"], files: { b: DOMAIN } };
     cases.push(entry);
   }
+  // A replay event the model does not define makes the whole mapping unreadable: the domain packaging
+  // check reports the mapping itself, and without a mapping no replay method is exempted.
+  const unknownEvent = structuredClone(replay);
+  unknownEvent.name = "violation-b-replay-unknown-event";
+  unknownEvent.files[mapping] = unknownEvent.files[mapping].replace(
+    "event_ref: event.invoice.issued, code:",
+    "event_ref: event.invoice.unknown, code:",
+  );
+  unknownEvent.expect = {
+    pass: false,
+    rules: ["b", "domain-packaging.declaration"],
+    files: { b: DOMAIN, "domain-packaging.declaration": mapping },
+  };
+  cases.push(unknownEvent);
   const scalar = structuredClone(replay);
   scalar.name = "violation-b-replay-scalar";
   scalar.workspace[DOMAIN] = scalar.workspace[DOMAIN]

@@ -100,7 +100,7 @@ interface LegacyModelOptions {
   readonly emptyProcessSteps?: boolean;
 }
 
-/** The legacy schema_version = 1 model the production sensors read today. */
+/** The legacy schema_version = 1 model a record has to be migrated from. */
 export function legacyModelYaml(options: LegacyModelOptions = {}): string {
   const issue = JSON.stringify(options.issueCondition ?? ISSUE_CONDITION);
   const factory = options.withFactory
