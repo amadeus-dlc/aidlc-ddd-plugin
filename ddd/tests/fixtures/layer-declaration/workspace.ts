@@ -202,7 +202,7 @@ export function renderYaml(value: object): string {
 }
 
 // ---------------------------------------------------------------------------
-// The Rust-only crate format (schema_version 1) the production sensors read
+// The Rust-only crate format (schema_version 1) a record has to be migrated from
 // ---------------------------------------------------------------------------
 
 /** The same context as `layerSource("rust")`, written in the crate-fixed format. */

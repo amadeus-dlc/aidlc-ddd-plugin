@@ -14,6 +14,7 @@ For users applying the DDD plugin to an application project. Start with the inst
 | State a context's dependency regime over packages instead of crates, and migrate a crate-fixed layer declaration | [Layer declaration](layer-declaration.md) |
 | Understand Rust type matching, replay declarations, and unexamined code | [Rust sensor contract](rust-sensor-contract.md) |
 | Declare the languages in use and migrate the legacy Rust configuration | [Project settings](project-settings.md) |
+| Convert a project's settings, model, mapping and layer declarations in one step | [Artifact set migration](artifact-migration.md) |
 
 | Enforce one Rust module file layout across the project | [Rust module layout](rust-module-layout.md) |
 

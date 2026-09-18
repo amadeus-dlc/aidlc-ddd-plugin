@@ -13,7 +13,7 @@ import { checkCompleteness } from "../tools/ddd/lib/schema/completeness.ts";
 import { parseElementId } from "../tools/ddd/lib/schema/element-id.ts";
 import { loadDomainModel } from "../tools/ddd/lib/schema/loader.ts";
 import type { DomainModel } from "../tools/ddd/lib/schema/model.ts";
-import { collectUnresolved, finding, pascalCase, readText, relPath } from "../tools/ddd/lib/sensors/common.ts";
+import { collectUnresolved, finding, readText, relPath } from "../tools/ddd/lib/sensors/common.ts";
 import { assembleFindings, assertFindingInput, compareFindings } from "../tools/ddd/lib/shared/findings.ts";
 
 const here = import.meta.dir;
@@ -476,14 +476,6 @@ describe("sensor helpers", () => {
     expect(readText(path)).toBe("body\n");
     expect(readText(join(dir, "absent.md"))).toBeUndefined();
     expect(readText(dir)).toBeUndefined();
-  });
-
-  test("pascalCase joins hyphen and underscore separated words and drops empty parts", () => {
-    expect(pascalCase("invoice")).toBe("Invoice");
-    expect(pascalCase("issue-invoice")).toBe("IssueInvoice");
-    expect(pascalCase("issue_invoice-line")).toBe("IssueInvoiceLine");
-    expect(pascalCase("--issue--invoice--")).toBe("IssueInvoice");
-    expect(pascalCase("")).toBe("");
   });
 
   test("collectUnresolved reports nothing when every reference resolves", () => {

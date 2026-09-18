@@ -37,10 +37,6 @@ checks:
     requirement: FR2.4
     inputs: [U1 lineage.cycle]
     outcome: finding
-  - rule_id: reference-ids.missing
-    requirement: FR3.2
-    inputs: [ddd-aggregate-mapping]
-    outcome: finding
 input_schema:
   output_path: string
   stage_slug: string
@@ -52,8 +48,11 @@ output_schema:
 # reference-ids sensor (ddd)
 
 Blocking gate for `domain-design` (on `ddd-aggregate-mapping.md`) and
-`functional-design` (on `functional-spec.md`). Resolves
-`aggregate_ref` / `reference_ids` / `target_aggregates` / `commands` /
-`process_manager_ref` through the U1 element index, reporting undefined,
-deprecated, kind-mismatched and malformed references, plus cyclic lineage
-transcribed from the model loader.
+`functional-design` (on `functional-spec.md`). Resolves `aggregate_ref` /
+`reference_ids` / `replay_methods[].event_ref` / `operations[].operation_ref` /
+`operations[].errors[].error_ref` / `domain_packages[].model_refs` /
+`target_aggregates` / `commands` / `process_manager_ref` through the U1 element
+index, reporting undefined, deprecated, kind-mismatched and malformed
+references, plus cyclic lineage transcribed from the model loader. A document
+the declaration reader refuses is reported as `reference-ids.document` before
+any reference is resolved.

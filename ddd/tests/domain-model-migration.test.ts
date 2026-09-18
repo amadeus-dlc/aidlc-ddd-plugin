@@ -342,16 +342,18 @@ test.skipIf(RUNNING_AS_SUPERUSER)(
   },
 );
 
-test("the production model gate reads the legacy format and does not accept the migrated one", () => {
+test("the production model gate refuses the legacy format and accepts the model once it is migrated", () => {
   withWorkspace(recordFiles(modelDocument(legacyModelYaml()), viewDocument()), (root) => {
     const path = join(root, ...MODEL_IN_RECORD.split("/"));
-    expect(verdictOf(path).pass).toBe(true);
+    const legacy = verdictOf(path);
+    expect(legacy.pass).toBe(false);
+    expect(legacy.findings.map((entry) => entry.rule_id)).toContain("model-completeness.schema");
 
     expect(applyModelMigration(path).kind).toBe("applied");
 
     const migrated = verdictOf(path);
-    expect(migrated.pass).toBe(false);
-    expect(migrated.findings.map((entry) => entry.rule_id)).toContain("model-completeness.schema");
+    expect(migrated.findings).toEqual([]);
+    expect(migrated.pass).toBe(true);
   });
 });
 
@@ -424,7 +426,7 @@ test("an option left without a value never swallows the flag that follows it", (
   });
 });
 
-test("the shipped entry point runs on its own, with no production sensor switched over", () => {
+test("the shipped entry point runs on its own", () => {
   withWorkspace(legacyWorkspace(), (root) => {
     const before = snapshotBytes(root);
     const spawned = Bun.spawnSync([process.execPath, ENTRY_POINT, "migrate", "--model", modelPathOf(root)], {

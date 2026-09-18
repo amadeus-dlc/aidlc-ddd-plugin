@@ -21,7 +21,9 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 Rustコードの生成前に、プロジェクト直下の `.ddd.toml` で配置形式を選びます。
 
 ```toml
-schema_version = 1
+schema_version = 2
+languages = ["rust"]
+
 [rust]
 module_layout = "file"
 ```

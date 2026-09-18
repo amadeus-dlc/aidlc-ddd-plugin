@@ -14,7 +14,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
+import { legacySetFiles, RECORD_DIR, SUPPLEMENT_FILE } from "./fixtures/artifact-set/workspace.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { runGoldenCase } from "./golden/runner.ts";
 
@@ -135,6 +136,47 @@ for (const harness of ["claude", "codex"] as const) {
     expect(readFileSync(f.userFile, "utf8")).toBe("User-owned application data\n");
   }, 30_000);
 }
+
+for (const harness of ["claude", "codex"] as const)
+  test(`${harness}: the installed set migration reads a project that still has to migrate`, () => {
+    const f = fixture(harness);
+    const installed = f.invoke();
+    expect(installed.code, installed.output).toBe(0);
+    for (const [path, content] of Object.entries(legacySetFiles())) {
+      const file = join(f.project, path);
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, content);
+    }
+    const preview = (): string => {
+      const result = Bun.spawnSync(
+        [
+          process.execPath,
+          join(f.project, f.leaf, "tools/ddd-artifact-set.ts"),
+          "migrate",
+          "--project",
+          f.project,
+          "--record",
+          join(f.project, RECORD_DIR),
+          "--supplement",
+          join(f.project, SUPPLEMENT_FILE),
+        ],
+        { cwd: f.project, stdout: "pipe", stderr: "pipe" },
+      );
+      expect(result.exitCode, result.stderr.toString()).toBe(0);
+      return JSON.parse(result.stdout.toString()).outcome;
+    };
+    expect(preview()).toBe("candidate");
+
+    const manifest = join(f.source, "ddd/.aidlc-plugin/plugin.json");
+    const value = JSON.parse(readFileSync(manifest, "utf8"));
+    value.version = "0.1.1";
+    writeFileSync(manifest, JSON.stringify(value));
+    const knowledge = join(f.source, "ddd/knowledge/aidlc-shared/ddd-domain-packaging.md");
+    writeFileSync(knowledge, `${readFileSync(knowledge, "utf8")}\nInstallation verification revision.\n`);
+    const updated = f.invoke(["--update"]);
+    expect(updated.code, updated.output).toBe(0);
+    expect(preview()).toBe("candidate");
+  }, 60_000);
 
 for (const harness of ["claude", "codex"] as const)
   test(`${harness}: a contribution-only update is not mistaken for an unchanged install`, () => {

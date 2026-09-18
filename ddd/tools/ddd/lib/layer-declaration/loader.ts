@@ -29,9 +29,15 @@ export type LayerLoadResult =
     }
   | { readonly ok: false; readonly findings: readonly FindingInput[] };
 
-type ModelLoad =
+export type ModelLoad =
   | { readonly ok: true; readonly model: DomainModel; readonly index: ElementIndex }
   | { readonly ok: false; readonly findings: readonly FindingInput[] };
+
+/**
+ * How the canonical model a declaration names is obtained. The gates read it from disk; a migration
+ * that converts a whole set hands over the model of that set, which is not on disk in this format yet.
+ */
+export type ReferencedModelResolver = (document: LayerDocument, modelRef: string) => ModelLoad;
 
 export function declaredVersion(document: LayerDocument): unknown {
   return own(document.root, "schema_version");
@@ -41,7 +47,7 @@ export function versionFinding(document: LayerDocument): FindingInput {
   const version = declaredVersion(document);
   const message =
     version === LEGACY_LAYER_SCHEMA_VERSION
-      ? `schema_version ${LEGACY_LAYER_SCHEMA_VERSION} is the Rust-only crate format; migrate it with \`ddd-layer-declaration migrate\``
+      ? `schema_version ${LEGACY_LAYER_SCHEMA_VERSION} is the Rust-only crate format; convert the whole record with \`ddd-artifact-set migrate\`, or this document alone with \`ddd-layer-declaration migrate\``
       : version === undefined
         ? `schema_version ${LAYER_SCHEMA_VERSION} is required`
         : `schema_version must be ${LAYER_SCHEMA_VERSION}, got ${JSON.stringify(version)}`;
@@ -67,11 +73,11 @@ export function loadReferencedModel(document: LayerDocument, modelRef: string): 
 }
 
 /** The schema_version 2 read of a document already opened, shared with the migration's re-run check. */
-export function loadLayerDocument(document: LayerDocument): LayerLoadResult {
+export function loadLayerDocument(document: LayerDocument, resolveModel: ReferencedModelResolver): LayerLoadResult {
   if (declaredVersion(document) !== LAYER_SCHEMA_VERSION) return { ok: false, findings: [versionFinding(document)] };
   const read = readLayerDraft(document.root, document.path);
   if (read.kind === "rejected") return { ok: false, findings: read.findings };
-  const model = loadReferencedModel(document, read.draft.model_ref);
+  const model = resolveModel(document, read.draft.model_ref);
   if (!model.ok) return model;
   const defects = validateLayerDraft(read.draft, model.index, document.path);
   if (defects.length > 0) return { ok: false, findings: defects };
@@ -93,5 +99,5 @@ export function loadLayerDocument(document: LayerDocument): LayerLoadResult {
 export function loadLayerDeclaration(path: string): LayerLoadResult {
   const read = readLayerDocument(path);
   if (read.kind === "rejected") return { ok: false, findings: read.findings };
-  return loadLayerDocument(read.document);
+  return loadLayerDocument(read.document, loadReferencedModel);
 }

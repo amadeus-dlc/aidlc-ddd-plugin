@@ -4,7 +4,7 @@
 
 `ddd-domain-model-yaml.md` の `schema_version: 2` は、業務エラーをそれを宣言した操作に閉じます。Command が自身のエラーを持つのは従来どおりで、FactoryRule（`create` などの生成操作）も自身のエラーを持つようになります。これは正規モデルのYAMLデータスキーマであり、独自の版管理を持つ[プロジェクト設定](project-settings.ja.md) `.ddd.toml` の `schema_version` とは別物です。
 
-version 1 は引き続き有効な形式であり、現在すべての本番センサーが読むのはこちらです。自動で切り替わることはありません。[この形式が今どこまで使われるか](#この形式が今どこまで使われるか)を参照してください。
+すべてのゲートがこの形式を読みます。version 1 は、記録を移行する元の形式です。[各形式をゲートがどう扱うか](#各形式をゲートがどう扱うか)を参照してください。
 
 ## 何が変わるか
 
@@ -83,9 +83,9 @@ element_id の文法は変わりません。エラーIDは引き続き `error.<�
 
 コマンドの `schema.command-no-error` はそのままで、他の規則の意味も変わりません。
 
-## この形式が今どこまで使われるか
+## 各形式をゲートがどう扱うか
 
-移行後の文書は、このページの移行コマンド、後述の読込入口、[実装写像](implementation-mapping.ja.md)のローダーと移行、および[レイヤー宣言](layer-declaration.ja.md)のローダーと移行が読みます。実装写像とレイヤー宣言の側は、自身の文書が移行済みかどうかにかかわらず、参照する正規モデルとしてこの形式しか受け付けません。**本番センサーは `schema_version: 2` に対応していません。** 承認時に正規モデルを読み込む経路はいずれも version 1 を要求し、移行後の文書に対しては、経路ごとの規則で読込失敗を報告します。
+承認時に正規モデルを読み込む経路はいずれも `schema_version: 2` を読み込みます。version 1 のままの文書に対しては、経路ごとの規則で読込失敗を報告します。
 
 | 正規モデルを読み込む経路 | センサー | 読込失敗 |
 |---|---|---|
@@ -93,17 +93,15 @@ element_id の文法は変わりません。エラーIDは引き続き `error.<�
 | モデルの存在検査 | `ddd-model-presence` | `model-presence.invalid` |
 | 規則評価コンテキスト | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter` | `model.invalid` |
 | ドメインパッケージ検査 | `ddd-rust-domain` | `domain-packaging.reference` |
-| 宣言読込 | `ddd-mapping-declarations` | `mapping-declarations.model` |
-| 宣言読込 | `ddd-reference-ids` | `reference-ids.model` |
-| 宣言読込 | `ddd-layer-structure` | `layer-structure.model` |
+| 写像の読込 | `ddd-mapping-declarations` | `mapping-declarations.model` |
+| 参照の解決 | `ddd-reference-ids` | `reference-ids.model` |
+| 宣言の読込 | `ddd-layer-structure` | `layer-structure.model` |
 
-`ddd-domain-modeling` の生成指示も引き続き version 1 を生成します。
-
-これらのゲートが成果物に対して所見を出してよい場合にだけ移行を適用し、承認ゲートが読む成果物は、後続のリリースで切り替わるまで version 1 のまま運用してください。
+[実装写像](implementation-mapping.ja.md)と[レイヤー宣言](layer-declaration.ja.md)は、参照する正規モデルとしてこの形式しか受け付けません。モデルが version 1 のままの記録では、この2つも拒否されます。設定・モデル・写像・レイヤー宣言をまとめて変換し、書き込む前に相互の整合を検査する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、記録一式を一度に移行してください。
 
 ## どちらの形式でも読む
 
-形式は呼び出し側が指定し、文書から推測することはありません。version 2 の文書が隣に現れても本番センサーが version 1 のままでいられるのは、このためです。
+形式は呼び出し側が指定し、文書から推測することはありません。読むよう求められていない形式をゲートが黙って受理しないのは、このためです。ゲートは version 2 を要求し、移行は変換元として version 1 を要求します。
 
 ```ts
 import { loadDomainModel } from "/path/to/project/.codex/tools/ddd/lib/schema/loader.ts";

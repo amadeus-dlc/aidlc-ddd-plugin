@@ -16,7 +16,7 @@ interface ModernDocumentInput {
   readonly typescript?: { readonly moduleLayout: string; readonly codeRepresentation: string };
 }
 
-/** The legacy schema_version = 1 document that T-08 accepts today. */
+/** The legacy schema_version = 1 document a project has to migrate. */
 export function legacyDocument(moduleLayout = "file"): string {
   return `schema_version = 1\n[rust]\nmodule_layout = "${moduleLayout}"\n`;
 }

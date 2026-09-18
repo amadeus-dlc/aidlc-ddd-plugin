@@ -10,6 +10,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { FindingInput, Severity } from "../shared/findings.ts";
 
+/** The file whose presence marks a directory as an intent record. */
+export const RECORD_STATE_FILE = "aidlc-state.md";
+
 export interface SensorRunContext {
   stage: string;
   output_path: string;
@@ -69,10 +72,10 @@ function ancestors(from: string): string[] {
   return chain;
 }
 
-/** BR8.1 — nearest ancestor of output_path containing aidlc-state.md. */
+/** BR8.1 — nearest ancestor of output_path containing the record state file. */
 function findRecordDir(outputPath: string): string | undefined {
   for (const candidate of ancestors(dirname(outputPath))) {
-    if (existsSync(join(candidate, "aidlc-state.md"))) return candidate;
+    if (existsSync(join(candidate, RECORD_STATE_FILE))) return candidate;
   }
   return undefined;
 }
@@ -126,7 +129,7 @@ export function resolveContext(
 const STAGE_LINE = /^- \[(.)\] ([a-z0-9-]+) — (EXECUTE|SKIP)/;
 
 export function readStageStatus(context: SensorRunContext, stage: string): StageStatus {
-  const statePath = join(context.record_dir, "aidlc-state.md");
+  const statePath = join(context.record_dir, RECORD_STATE_FILE);
   if (!existsSync(statePath)) return { stage, execution: "absent" };
   let text: string;
   try {

@@ -14,7 +14,15 @@ Updated: 2026-09-13. T-01 uses standard AI-DLC 2.8.2 artifact naming and existin
 | functional-design | functional-spec (existing) | One YAML block under `## DDD Use-case Declarations` in `functional-spec.md`. |
 | infrastructure-design | cicd-pipeline (existing) | One YAML block under `## DDD Layer Structure` in `cicd-pipeline.md`. |
 
-Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. Generation and every approval gate stay on YAML data schema version 1; Markdown is its envelope. Version 2, in which each operation owns its own business errors, is available for reading and for an explicit migration but is not accepted by any gate yet — see [operation-owned errors](domain-model-operation-errors.md). The same holds for version 2 of `ddd-aggregate-mapping.md`, the language-neutral mapping — see [implementation mapping](implementation-mapping.md) — and for version 2 of the `## DDD Layer Structure` section of `cicd-pipeline.md`, which states the dependency regime over language-neutral package identities — see [layer declaration](layer-declaration.md). IDs and invariant statements are still checked against the explanation.
+Use the record-relative `model_ref` value `inception/ddd-domain-modeling/ddd-domain-model-yaml.md`. Markdown is the envelope of the YAML data. Generation and every approval gate read YAML data schema version 2 of three artifacts:
+
+| Artifact | Version 2 | Reference |
+|---|---|---|
+| `ddd-domain-model-yaml.md` | Each operation owns its own business errors | [operation-owned errors](domain-model-operation-errors.md) |
+| `ddd-aggregate-mapping.md` | The language-neutral implementation mapping | [implementation mapping](implementation-mapping.md) |
+| `## DDD Layer Structure` of `cicd-pipeline.md` | The dependency regime over language-neutral package identities | [layer declaration](layer-declaration.md) |
+
+The `## DDD Use-case Declarations` section of `functional-spec.md` stays on version 1: it names no package, type or method, so there was nothing for a language-neutral format to change. A record still holding version 1 of any of the three above is refused by the gates that read it, and is converted with [`ddd-artifact-set migrate`](artifact-migration.md). IDs and invariant statements are still checked against the explanation.
 
 The old `domain-model.yaml` and `domain-model.md` are not searched automatically. To migrate, wrap YAML in the new data file's code block, rename the explanation, update all model_ref values, and revalidate. The lower-level loader also accepts raw YAML, but that does not make the old name a valid generation target.
 
@@ -35,9 +43,7 @@ English section markers are used in the English generation instructions. For com
 
 ## Include package declarations in aggregate mappings
 
-T-07 makes `domain_packages` required in the YAML of `ddd-aggregate-mapping.md`. Record crate, module, term, model_refs, and rationale for each package, including roots, ancestors, and aggregate placements. Update existing artifacts and revalidate them. Skipping domain modeling alone does not exempt code from package declarations. See the [packaging contract](domain-packaging-design.md).
-
-This describes version 1, which the gates read. In version 2 the same declarations keep term, model_refs and rationale, and record the package and module path under `code` with the language they are written in; `ddd-aggregate-mapping.ts migrate` converts a version 1 document explicitly. See [implementation mapping](implementation-mapping.md).
+T-07 makes `domain_packages` required in the YAML of `ddd-aggregate-mapping.md`. Record term, model_refs and rationale for each package, and record where it lives under `code`: the language that spells it, the package name, and the module path below that package root. Declare the roots, the ancestors and every aggregate placement. Update existing artifacts and revalidate them. Skipping domain modeling alone does not exempt code from package declarations. See the [packaging contract](domain-packaging-design.md) and the [implementation mapping](implementation-mapping.md).
 
 ## Detect missing artifacts at normal approval admission
 

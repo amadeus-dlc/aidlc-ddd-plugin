@@ -21,7 +21,9 @@ Remove `--dry-run` to install. Fresh installation, updates, and failure protecti
 Before generating Rust, choose one project-wide layout in `.ddd.toml`:
 
 ```toml
-schema_version = 1
+schema_version = 2
+languages = ["rust"]
+
 [rust]
 module_layout = "file"
 ```

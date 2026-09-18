@@ -2,13 +2,17 @@
 
 [English](rust-module-layout.md) | 日本語 | [利用者向け文書](README.ja.md)
 
-アプリケーションのプロジェクト直下、`aidlc/` と同じ階層の `.ddd.toml` で配置形式を選びます。設定は、配下のCargoパッケージすべてに適用します。入れ子のプロジェクト、すべての層、テストコードも対象です。Rustプロジェクトで設定がなければ承認を止めます。既存ファイルからチームの選択を推測しません。
+アプリケーションのプロジェクト直下、`aidlc/` と同じ階層の `.ddd.toml` で配置形式を選びます。この文書の形式は[言語共通のプロジェクト設定](project-settings.ja.md)が定めており、Rustの配置形式はその軸の1つです。設定は、配下のCargoパッケージすべてに適用します。入れ子のプロジェクト、すべての層、テストコードも対象です。Rustプロジェクトで設定がなければ承認を止めます。既存ファイルからチームの選択を推測しません。
 
 ```toml
-schema_version = 1
+schema_version = 2
+languages = ["rust"]
+
 [rust]
 module_layout = "file"
 ```
+
+Rustの配置形式だけを指定していた `schema_version = 1` のままの文書は、`module-layout.configuration` として報告します。[`ddd-artifact-set migrate`](artifact-migration.ja.md) でプロジェクト全体を、またはこの文書だけを `ddd-project-settings migrate` で変換してください。
 
 指定できる値は `file` と `mod-rs` です。未知のキー、下位ディレクトリの設定ファイル、クレート別の上書き、`mixed` は拒否します。新規プロジェクトには `file` を推奨します。設定を切り替える際は、検査対象のプロジェクト全体を新しい規約へ揃えてください。
 

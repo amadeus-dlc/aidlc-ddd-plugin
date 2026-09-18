@@ -4,7 +4,7 @@ English | [Japanese](domain-model-operation-errors.ja.md) | [User documentation]
 
 `schema_version: 2` of `ddd-domain-model-yaml.md` closes each business error over the operation that declares it. A Command still owns its errors, and a FactoryRule — the `create`-style generation operation — now owns its own. This is the YAML data schema of the canonical model, and it is unrelated to the `schema_version` of `.ddd.toml`, which is a [project settings](project-settings.md) document with its own versioning.
 
-Version 1 remains a valid format and is still what every production sensor reads. Nothing switches over on its own; see [what this format is for today](#what-this-format-is-for-today).
+Every gate reads this format. Version 1 is a format a record has to be migrated from: see [what the gates do with each format](#what-the-gates-do-with-each-format).
 
 ## What changes
 
@@ -83,9 +83,9 @@ Two of these checks are new and also apply to version 1 documents, so a legacy m
 
 Commands keep `schema.command-no-error`, and every other rule keeps its existing meaning.
 
-## What this format is for today
+## What the gates do with each format
 
-The migrated document is read by the migration command on this page, by the reading entry point below, by the [implementation mapping](implementation-mapping.md) loader and migration, and by the [layer declaration](layer-declaration.md) loader and migration. The implementation mapping and layer declaration sides accept only this format for the canonical model they reference, whether or not their own document is already migrated. **The production sensors do not accept `schema_version: 2`.** Every path that loads the canonical model during a gate asks for version 1, and reports a load failure against a migrated document under its own rule:
+Every path that loads the canonical model during a gate loads `schema_version: 2`, and reports a document still in version 1 as a load failure under its own rule:
 
 | Path that loads the canonical model | Sensor | Load failure |
 |---|---|---|
@@ -93,17 +93,15 @@ The migrated document is read by the migration command on this page, by the read
 | Model presence check | `ddd-model-presence` | `model-presence.invalid` |
 | Rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter` | `model.invalid` |
 | Domain package check | `ddd-rust-domain` | `domain-packaging.reference` |
-| Declaration reader | `ddd-mapping-declarations` | `mapping-declarations.model` |
-| Declaration reader | `ddd-reference-ids` | `reference-ids.model` |
+| Mapping reader | `ddd-mapping-declarations` | `mapping-declarations.model` |
+| Reference resolution | `ddd-reference-ids` | `reference-ids.model` |
 | Declaration reader | `ddd-layer-structure` | `layer-structure.model` |
 
-The generation instructions in `ddd-domain-modeling` still produce version 1.
-
-Apply a migration only where you are prepared for those gates to report against the artifact, and keep the artifact your approval gates read on version 1 until a later release switches them over.
+The [implementation mapping](implementation-mapping.md) and the [layer declaration](layer-declaration.md) accept only this format for the canonical model they reference, so a record whose model is still in version 1 also refuses those two. Convert the whole record in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts the settings, the model, the mapping and the layer declarations together and checks them against each other before writing anything.
 
 ## Read a document in either format
 
-The format is chosen by the caller, never guessed from the document — which is what keeps the production sensors on version 1 even when a version 2 document appears next to them.
+The format is chosen by the caller, never guessed from the document — which is what keeps a gate from quietly accepting a format it was not asked to read. The gates ask for version 2; a migration asks for version 1 because that is the format it converts from.
 
 ```ts
 import { loadDomainModel } from "/path/to/project/.codex/tools/ddd/lib/schema/loader.ts";

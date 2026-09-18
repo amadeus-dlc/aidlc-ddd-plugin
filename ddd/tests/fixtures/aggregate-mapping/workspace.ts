@@ -196,7 +196,7 @@ export const LEGACY_INVOICE_TERM = "請求書（crate::invoice）";
 export const LEGACY_INVOICE_RATIONALE = "module: crate の字面を含むが、これは業務の説明である";
 
 /**
- * The schema_version = 1 mapping the production sensors read today. Its module spellings cover a
+ * The schema_version = 1 mapping a record has to be migrated from. Its module spellings cover a
  * crate root, a `crate::` prefix, a nested path and a raw identifier, and its business wording is
  * Japanese with values that spell the legacy keys.
  */

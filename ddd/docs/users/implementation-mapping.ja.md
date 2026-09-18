@@ -4,7 +4,7 @@
 
 `ddd-aggregate-mapping.md` の `schema_version: 2` は、モデルの実装場所を、特定の言語に縛られない形で記録します。業務上の識別（モデルID、業務語彙、実行モデル、永続化方式）は各エントリの第1階層に置きます。言語で書く名前（パッケージ、モジュールの位置、型、メソッド、エラーケース）は、その記述言語とともに `code` の下に置きます。同じ写像で、コマンド・生成操作をメソッドへ、業務エラーをケースへ対応付けます。
 
-version 1（Rust 専用の crate/module 形式）は、引き続きすべての本番センサーが読む形式です。自動で切り替わることはありません。[この形式が今どこまで使われるか](#この形式が今どこまで使われるか)を参照してください。
+すべてのゲートがこの形式を読みます。version 1（Rust 専用の crate/module 形式）は、記録を移行する元の形式です。[各形式をゲートがどう扱うか](#各形式をゲートがどう扱うか)を参照してください。
 
 ## 何が変わるか
 
@@ -120,20 +120,23 @@ domain_packages:
 
 ローダーが照合する相手は正規モデルだけです。名指しされたパッケージ・型・メソッド・ケースがソースに実在するかは、後続の検査で確認します。
 
-## この形式が今どこまで使われるか
+## 各形式をゲートがどう扱うか
 
-移行後の文書を読むのは、このページの読込入口と移行コマンドです。**本番センサーは写像の `schema_version: 2` に対応していません。** 承認時に写像を読む経路はいずれも version 1 を要求し、移行後の写像を読めないものとして扱います。
+承認時に写像を読む経路はいずれも `schema_version: 2` を読みます。version 1 のままの文書は、別の形式として読み替えることなく拒否します。
 
-| 写像を読む経路 | センサー | 移行後の写像に対する結果 |
+| 写像を読む経路 | センサー | version 1 の写像に対する結果 |
 |---|---|---|
-| domain-design の宣言読込 | `ddd-mapping-declarations` | `mapping-declarations.document` |
-| domain-design の宣言読込 | `ddd-reference-ids` | `reference-ids.document` |
-| functional-design の Process Manager 要否の判定 | `ddd-mapping-declarations` | 評価せず、写像がない旨を判定結果に注記する |
-| 復元経路の検査 | `ddd-layer-structure` | 集約の crate を読まないため、コンテキストのすべての集約を検査する |
+| domain-design の写像検査 | `ddd-mapping-declarations` | `mapping-declarations.document` |
+| domain-design の参照解決 | `ddd-reference-ids` | `reference-ids.document` |
+| functional-design の Process Manager 要否の判定 | `ddd-mapping-declarations` | 写像を対象とする `mapping-declarations.document` |
 | ドメインパッケージ検査 | `ddd-rust-domain` | `domain-packaging.declaration` |
 | 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
 
-`domain-design` の生成指示も引き続き version 1 を生成します。また、この形式は version 2 の正規モデルを必要としますが、本番センサーはそちらにも対応していません。これらのゲートが成果物に対して所見を出してよい場合にだけ移行を適用し、承認ゲートが読む成果物は、後続のリリースで切り替わるまで version 1 のまま運用してください。
+写像が存在しないことと、存在するが読めないことは別の事実です。functional-design では、写像が存在しなければ Process Manager の要否を評価せずその旨を判定結果に注記しますが、存在して読めない写像はブロック要因になります。`ddd-layer-structure` は写像を読みません。集約のコードの置き場所は、そのコンテキストが集約を復元すべきかどうかを決めないためです。
+
+この形式は version 2 の正規モデルを必要とし、ゲートもその版を読みます。設定・モデル・写像・レイヤー宣言をまとめて変換し、書き込む前に相互の整合を検査する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、記録一式を一度に移行してください。
+
+ゲートが報告する所見は、この形式の読込処理の所見を、承認契約が宣言する規則IDへ転記したものです。読込処理が名指しした欠陥（軸の欠落、未知のキー、重複、未写像の操作など）は、読込処理の規則IDをメッセージ先頭に付けた `mapping-declarations.document` として報告します。正規モデルを読めなかった場合は `mapping-declarations.model`、パッケージ名が技術分類になっている場合は `domain-packaging.technical-name` です。
 
 ## 写像を読む
 

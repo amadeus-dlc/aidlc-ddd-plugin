@@ -87,16 +87,9 @@ const strategy = derive(
   "violation-process-manager-required",
   "clean-actor-process-manager",
   (entry) => {
+    // The source case already models and maps both actor aggregates; only the Process Manager is new.
     editYaml(entry, MODEL, (doc) => {
       const context = doc.bounded_contexts[0];
-      context.aggregates.push(
-        JSON.parse(
-          JSON.stringify(context.aggregates[0])
-            .replaceAll("invoice", "other")
-            .replaceAll("Invoice", "Other")
-            .replaceAll("primitive.money", "primitive.credit"),
-        ),
-      );
       context.process_managers = [
         {
           element_id: "pm.invoice",
@@ -142,30 +135,35 @@ for (const sensor of ["ddd-layer-structure", "ddd-design-advisories"]) {
     });
   });
 }
+const rustPackage = (name: string) => ({ language: "rust", package: name });
 derive("ddd-layer-structure", "clean", "clean-non-cqrs", (entry) => {
   editYaml(entry, entry.output, (doc) => {
     const layer = doc.layer_structures[0];
     layer.cqrs = false;
-    layer.query_side_crates = [];
-    layer.crate_dependencies = layer.crate_dependencies.slice(0, 1);
+    layer.packages = layer.packages.filter((item: { role: string }) => item.role === "command");
+    layer.dependencies = layer.dependencies.slice(0, 1);
   });
 });
 derive("ddd-layer-structure", "clean", "clean-rmu-cross-side", (entry) => {
   editYaml(entry, entry.output, (doc) => {
     const layer = doc.layer_structures[0];
-    layer.rmu_crates = ["billing-rmu"];
-    layer.crate_dependencies.push({ crate: "billing-rmu", depends_on: ["billing-domain", "billing-query"] });
+    layer.packages.push({ role: "rmu", code: rustPackage("billing-rmu") });
+    layer.dependencies.push({
+      code: rustPackage("billing-rmu"),
+      depends_on: [rustPackage("billing-domain"), rustPackage("billing-query")],
+    });
   });
 });
 derive("ddd-layer-structure", "clean", "violation-k-reverse", (entry) => {
   editYaml(entry, entry.output, (doc) => {
-    doc.layer_structures[0].crate_dependencies[1].depends_on = ["billing-domain"];
+    doc.layer_structures[0].dependencies[1].depends_on = [rustPackage("billing-domain")];
   });
   entry.expect = { pass: false, rules: ["layer-structure.k", "layer-structure.l"] };
 });
+// A model still in the legacy format neither loads for the code rules nor backs the mapping's references.
 derive("ddd-rust-domain", "clean-domain", "violation-model-invalid", (entry) => {
   editYaml(entry, MODEL, (doc) => {
-    doc.schema_version = 2;
+    doc.schema_version = 1;
   });
   entry.expect = {
     pass: false,
@@ -234,7 +232,7 @@ for (const name of [
     `violation-package-reserved-${name}`,
     (entry) => {
       editYaml(entry, MAP, (doc) => {
-        doc.domain_packages[1].module = name;
+        doc.domain_packages[1].code.module = [name];
       });
     },
   );

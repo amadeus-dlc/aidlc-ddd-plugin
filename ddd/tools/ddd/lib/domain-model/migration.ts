@@ -8,15 +8,18 @@
  * later invalid document.
  */
 
-import {
-  LEGACY_SCHEMA_VERSION,
-  loadDomainModel,
-  OPERATION_OWNED_SCHEMA_VERSION,
-  type SchemaVersion,
-} from "../schema/loader.ts";
+import type { ElementIndex } from "../schema/index-builder.ts";
+import { LEGACY_SCHEMA_VERSION, loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import type { DomainModel } from "../schema/model.ts";
 import type { FindingInput } from "../shared/findings.ts";
-import { type ModelDocument, readModelDocument, writeMigratedDocument } from "./document.ts";
+import {
+  type ModelDocument,
+  migratedDocumentText,
+  readModelDocument,
+  type WriteOutcome,
+  writeMigratedDocument,
+  writeMigratedDocumentInRecord,
+} from "./document.ts";
 import { renderModelYaml } from "./render.ts";
 
 export type ModelMigrationOutcome =
@@ -27,18 +30,32 @@ export type ModelMigrationOutcome =
   | { readonly kind: "rejected"; readonly findings: readonly FindingInput[] }
   | { readonly kind: "write-failed"; readonly detail: string };
 
-type Assessment =
-  | { readonly kind: "candidate"; readonly model: DomainModel; readonly document: ModelDocument }
-  | Extract<ModelMigrationOutcome, { kind: "already-migrated" | "missing-information" | "rejected" }>;
-
-function refuse(path: string, message: string): Assessment {
-  return { kind: "rejected", findings: [{ rule_id: "schema.structure", file: path, message }] };
+export interface ModelCandidate {
+  readonly kind: "candidate";
+  readonly model: DomainModel;
+  readonly index: ElementIndex;
+  readonly document: ModelDocument;
 }
 
-/** Loads through the same entry point the tests and sensors use, so one validator decides. */
-function loadAs(path: string, version: SchemaVersion): { model: DomainModel } | { findings: FindingInput[] } {
-  const loaded = loadDomainModel(path, version);
-  return loaded.ok ? { model: loaded.model } : { findings: loaded.findings };
+/**
+ * What converting one document would do. It carries the element index of the model it read, so a
+ * caller converting a whole set can check the artifacts that name this model against it without
+ * reading the document a second time. The ids the legacy format registers are the ids the
+ * operation-owned format registers, so one index answers for both.
+ */
+export type ModelAssessment =
+  | ModelCandidate
+  | { readonly kind: "already-migrated"; readonly model: DomainModel; readonly index: ElementIndex }
+  | {
+      readonly kind: "missing-information";
+      readonly missing: readonly string[];
+      readonly model: DomainModel;
+      readonly index: ElementIndex;
+    }
+  | { readonly kind: "rejected"; readonly findings: readonly FindingInput[] };
+
+function refuse(path: string, message: string): ModelAssessment {
+  return { kind: "rejected", findings: [{ rule_id: "schema.structure", file: path, message }] };
 }
 
 /** Business definitions the legacy format has no place to record, named by where they belong. */
@@ -54,15 +71,15 @@ function missingDefinitions(model: DomainModel): string[] {
   return missing;
 }
 
-function assess(path: string): Assessment {
+export function assessModelMigration(path: string): ModelAssessment {
   const read = readModelDocument(path);
   if (read.kind === "rejected") return { kind: "rejected", findings: read.findings };
   const document = read.document;
 
   if (document.declaredVersion === OPERATION_OWNED_SCHEMA_VERSION) {
-    const loaded = loadAs(path, OPERATION_OWNED_SCHEMA_VERSION);
-    if ("findings" in loaded) return { kind: "rejected", findings: loaded.findings };
-    return { kind: "already-migrated", model: loaded.model };
+    const loaded = loadDomainModel(path, OPERATION_OWNED_SCHEMA_VERSION);
+    if (!loaded.ok) return { kind: "rejected", findings: loaded.findings };
+    return { kind: "already-migrated", model: loaded.model, index: loaded.index };
   }
   if (document.declaredVersion !== LEGACY_SCHEMA_VERSION)
     return refuse(
@@ -70,23 +87,60 @@ function assess(path: string): Assessment {
       `schema_version must be ${LEGACY_SCHEMA_VERSION} to migrate or ${OPERATION_OWNED_SCHEMA_VERSION} to be already migrated, got ${JSON.stringify(document.declaredVersion)}`,
     );
 
-  const loaded = loadAs(path, LEGACY_SCHEMA_VERSION);
-  if ("findings" in loaded) return { kind: "rejected", findings: loaded.findings };
+  const loaded = loadDomainModel(path, LEGACY_SCHEMA_VERSION);
+  if (!loaded.ok) return { kind: "rejected", findings: loaded.findings };
   const missing = missingDefinitions(loaded.model);
-  if (missing.length > 0) return { kind: "missing-information", missing };
+  if (missing.length > 0) return { kind: "missing-information", missing, model: loaded.model, index: loaded.index };
   // The loader normalises the legacy ownership key, so the candidate differs only by its version.
-  return { kind: "candidate", model: { ...loaded.model, schema_version: OPERATION_OWNED_SCHEMA_VERSION }, document };
+  return {
+    kind: "candidate",
+    model: { ...loaded.model, schema_version: OPERATION_OWNED_SCHEMA_VERSION },
+    index: loaded.index,
+    document,
+  };
+}
+
+/** The document as the candidate would be written; the text a caller may read back before writing. */
+export function renderModelCandidate(candidate: ModelCandidate): string {
+  return migratedDocumentText(candidate.document, renderModelYaml(candidate.model));
+}
+
+/** Replaces the document's YAML body with the candidate, wherever the single-document command was pointed. */
+function writeModelCandidate(candidate: ModelCandidate): WriteOutcome {
+  return writeMigratedDocument(candidate.document, renderModelYaml(candidate.model));
+}
+
+/**
+ * The same replacement for a candidate read from its registered location in `recordDir`, which a
+ * caller converting a whole record has proven and a path given on its own never states. This module
+ * keeps owning the write of its own document, as the mapping and the declaration modules do.
+ */
+export function writeModelCandidateInRecord(candidate: ModelCandidate, recordDir: string): WriteOutcome {
+  return writeMigratedDocumentInRecord(candidate.document, recordDir, renderModelYaml(candidate.model));
+}
+
+/** The assessment as the command reports it: the index it carried is an internal aid, not a result. */
+function reported(assessment: ModelAssessment): ModelMigrationOutcome {
+  switch (assessment.kind) {
+    case "candidate":
+      return { kind: "candidate", model: assessment.model };
+    case "already-migrated":
+      return { kind: "already-migrated", model: assessment.model };
+    case "missing-information":
+      return { kind: "missing-information", missing: assessment.missing };
+    case "rejected":
+      return assessment;
+  }
 }
 
 export function previewModelMigration(path: string): ModelMigrationOutcome {
-  const assessment = assess(path);
-  return assessment.kind === "candidate" ? { kind: "candidate", model: assessment.model } : assessment;
+  return reported(assessModelMigration(path));
 }
 
 export function applyModelMigration(path: string): ModelMigrationOutcome {
-  const assessment = assess(path);
-  if (assessment.kind !== "candidate") return assessment;
-  const written = writeMigratedDocument(assessment.document, renderModelYaml(assessment.model));
+  const assessment = assessModelMigration(path);
+  if (assessment.kind !== "candidate") return reported(assessment);
+  const written = writeModelCandidate(assessment);
   if (written.kind === "write-failed") return { kind: "write-failed", detail: written.detail };
   return { kind: "applied", model: assessment.model };
 }

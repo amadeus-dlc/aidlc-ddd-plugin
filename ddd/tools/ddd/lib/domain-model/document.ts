@@ -8,6 +8,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { MODEL_DATA_FILE } from "../schema/artifacts.ts";
 import type { FindingInput } from "../shared/findings.ts";
+import { writeYamlBlockDocument } from "../shared/markdown-document.ts";
 import { readYamlBlock, replaceYamlBlock, type YamlBlock } from "../shared/markdown-yaml.ts";
 
 export interface ModelDocument {
@@ -57,14 +58,33 @@ export function readModelDocument(path: string): DocumentOutcome {
   return { kind: "loaded", document: { path, text, block, declaredVersion } };
 }
 
-type WriteOutcome = { readonly kind: "written" } | { readonly kind: "write-failed"; readonly detail: string };
+export type WriteOutcome = { readonly kind: "written" } | { readonly kind: "write-failed"; readonly detail: string };
 
-/** Replace only the YAML body; the prose, the fence delimiters and every other fence keep their bytes. */
+/**
+ * The document as a migration would write it: only the YAML body replaced, with the prose, the
+ * fence delimiters and every other fence keeping their bytes. Available on its own so a candidate
+ * can be proven readable in the format it claims before the file it replaces is touched.
+ */
+export function migratedDocumentText(document: ModelDocument, yaml: string): string {
+  return replaceYamlBlock(document.text, document.block, yaml);
+}
+
 export function writeMigratedDocument(document: ModelDocument, yaml: string): WriteOutcome {
   try {
-    writeFileSync(document.path, replaceYamlBlock(document.text, document.block, yaml));
+    writeFileSync(document.path, migratedDocumentText(document, yaml));
     return { kind: "written" };
   } catch (error) {
     return { kind: "write-failed", detail: errorMessage(error) };
   }
+}
+
+/**
+ * The same replacement for a document the caller has proven to stand at its registered location
+ * inside `recordDir`. Reading a model proves only its file name, so the record it belongs to cannot
+ * be derived here; a caller that knows it hands it over, and the shared writer then holds the
+ * registered path to being a real file inside that record and makes the replacement visible in one
+ * step — as every other registered artifact of a record is written.
+ */
+export function writeMigratedDocumentInRecord(document: ModelDocument, recordDir: string, yaml: string): WriteOutcome {
+  return writeYamlBlockDocument({ path: document.path, recordDir, text: document.text, block: document.block }, yaml);
 }

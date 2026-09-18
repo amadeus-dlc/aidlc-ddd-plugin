@@ -16,8 +16,15 @@ import { artifactFilename } from "../../.codex/tools/aidlc-artifact-vocabulary.t
 import type { GraphStage } from "../../.codex/tools/aidlc-graph.ts";
 import { filterProducesByKind } from "../../.codex/tools/aidlc-lib.ts";
 import { runPluginCompose } from "../../.codex/tools/aidlc-plugin-test.ts";
+import {
+  legacyProjectFiles,
+  legacyRecordFiles,
+  STATE_FILE,
+  SUPPLEMENT_FILE,
+} from "./fixtures/artifact-set/workspace.ts";
 import { gateCases } from "./golden/contract/coverage.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
+import { layoutConfig } from "./golden/module-layout/cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
 
 const repository = resolve(import.meta.dir, "../..");
@@ -221,10 +228,12 @@ for (const harness of ["claude", "codex"] as const) {
       test(`${slug}: an absent declaration list is not treated as an empty list`, () => {
         const f = fixture(harness);
         f.state(slug, "construction");
-        const heading = slug === "functional-design" ? "DDD Use-case Declarations" : "DDD Layer Structure";
+        // The use-case declaration keeps its own version; the layer declaration has the language-neutral one.
+        const [heading, version] =
+          slug === "functional-design" ? ["DDD Use-case Declarations", 1] : ["DDD Layer Structure", 2];
         write(
           join(f.record, `construction/${slug}/${artifact}`),
-          `# 設計\n\n## ${heading}\n\n\`\`\`yaml\nschema_version: 1\nmodel_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md\n\`\`\`\n`,
+          `# 設計\n\n## ${heading}\n\n\`\`\`yaml\nschema_version: ${version}\nmodel_ref: inception/ddd-domain-modeling/ddd-domain-model-yaml.md\n\`\`\`\n`,
         );
         expectRejected(openGate(f, slug), sensor);
       });
@@ -278,7 +287,7 @@ for (const harness of ["claude", "codex"] as const) {
         const entry = PACKAGING_CASES.find((candidate) => candidate.name === name);
         if (!entry) throw new Error(`package fixture missing: ${name}`);
         const f = fixture(harness);
-        write(join(f.root, ".ddd.toml"), 'schema_version = 1\n[rust]\nmodule_layout = "file"\n');
+        write(join(f.root, ".ddd.toml"), layoutConfig("file"));
         f.state(
           stage,
           stage === "code-generation" ? "construction" : "inception",
@@ -290,6 +299,85 @@ for (const harness of ["claude", "codex"] as const) {
         if (allowed) expect(result.output).toContain("Recorded awaiting-approval");
         else expectRejected(result, sensor);
       });
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// A project whose artifacts are still in the format it has to be migrated from
+// ---------------------------------------------------------------------------
+
+/**
+ * A composed project holding the settings, the canonical model, the implementation mapping and the
+ * layer declaration of a record, all in the format the project has to be migrated from. The record
+ * is written without Units, so its layer declaration sits straight under the stage.
+ */
+function legacyGateFixture(harness: "claude" | "codex", sensor: string, stage: string, phase: string, scope: string) {
+  const f = fixture(harness, sensor);
+  const graphStage = f.graph.find((candidate) => candidate.slug === stage);
+  expect(graphStage?.sensors_applicable.some((entry) => entry.id === sensor)).toBe(true);
+  const unit = stage === "code-generation" ? "u1/" : "";
+  f.state(stage, phase, scope);
+  if (stage !== "ddd-domain-modeling")
+    appendFileSync(join(f.record, STATE_FILE), "- [x] ddd-domain-modeling — EXECUTE\n");
+  for (const [path, content] of Object.entries(legacyProjectFiles())) write(join(f.root, path), content);
+  for (const [path, content] of Object.entries(legacyRecordFiles({ unitLayer: null })))
+    if (path !== STATE_FILE) write(join(f.record, path), content);
+  // Registered outputs the record does not already hold, so an absent artifact never stands in for
+  // what the sensor under test has to say about the ones it does.
+  for (const artifact of graphStage?.produces ?? []) {
+    const path = join(f.record, `${phase}/${unit}${stage}/${artifactFilename(artifact)}`);
+    if (!existsSync(path)) write(path, "# Supporting artifact\n");
+  }
+  return f;
+}
+
+/** The set migration as the installed project runs it, from the tools the plugin ships. */
+function migrateSet(f: ReturnType<typeof fixture>, harness: "claude" | "codex") {
+  const result = Bun.spawnSync(
+    [
+      process.execPath,
+      join(f.root, `.${harness}`, "tools/ddd-artifact-set.ts"),
+      "migrate",
+      "--project",
+      f.root,
+      "--record",
+      f.record,
+      "--supplement",
+      join(f.root, SUPPLEMENT_FILE),
+      "--apply",
+    ],
+    { cwd: f.root, stdout: "pipe", stderr: "pipe" },
+  );
+  return { code: result.exitCode, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
+}
+
+// Composing a project, refusing a gate, migrating a whole set and reopening the gate is more work
+// than one default timeout allows.
+const LEGACY_GATE_TIMEOUT_MS = 90_000;
+
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: artifacts the project has to migrate`, () => {
+    for (const [sensor, stage, phase, scope] of [
+      ["ddd-model-completeness", "ddd-domain-modeling", "inception", "refactor"],
+      ["ddd-mapping-declarations", "domain-design", "inception", "refactor"],
+      ["ddd-layer-structure", "infrastructure-design", "construction", "refactor"],
+      ["ddd-rust-module-layout", "code-generation", "construction", "feature"],
+    ] as const) {
+      test(
+        `${stage}: the gate refuses them, and opens on the same record once the set is migrated`,
+        () => {
+          const f = legacyGateFixture(harness, sensor, stage, phase, scope);
+          expectRejected(openGate(f, stage), sensor);
+
+          const migration = migrateSet(f, harness);
+          expect(migration.code, migration.stderr || migration.stdout).toBe(0);
+          expect(JSON.parse(migration.stdout).outcome).toBe("applied");
+
+          expect(openGate(f, stage).output).toContain("Recorded awaiting-approval");
+        },
+        LEGACY_GATE_TIMEOUT_MS,
+      );
     }
   });
 }

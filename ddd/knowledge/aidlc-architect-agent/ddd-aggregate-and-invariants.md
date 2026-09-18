@@ -16,7 +16,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.aggregate-and-invariants.4 | Use named states and transitions for transitioning operations; declare none for non-transitioning operations. | Loader and model-completeness.ii |
 | K.aggregate-and-invariants.5 | Reconsider an aggregate boundary if it cannot own an invariant. | i checks existence; review assesses the boundary's meaning. |
 | K.aggregate-and-invariants.6 | Declare effect and state_effect for each command. | Loader. |
-| K.aggregate-and-invariants.7 | Under the current schema, declare at least one Domain Error for each command. | schema.command-no-error |
+| K.aggregate-and-invariants.7 | Under the current schema, declare at least one Domain Error for each Command and each Factory Rule; each error names the operation it belongs to under `operation`. | schema.command-no-error |
 | K.aggregate-and-invariants.8 | Reference other aggregates by ID. | Review. Rule b does not check embedded aggregate objects. |
 | K.aggregate-and-invariants.9 | Limit Domain Services to decisions that aggregates cannot own. | Design convention. |
 | K.aggregate-and-invariants.10 | Discover business events from stories and derive aggregate candidates and invariants. | Design procedure. Sensors do not enforce the derivation order. |

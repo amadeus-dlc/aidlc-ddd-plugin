@@ -1,6 +1,7 @@
 import type { GoldenCase } from "../runner.ts";
 
-export const layoutConfig = (mode = "file") => `schema_version = 1\n[rust]\nmodule_layout = "${mode}"\n`;
+export const layoutConfig = (mode = "file") =>
+  `schema_version = 2\nlanguages = ["rust"]\n\n[rust]\nmodule_layout = "${mode}"\n`;
 const manifest = '[package]\nname = "billing"\nversion = "0.1.0"\nedition = "2021"\n';
 const output = "construction/code-generation/code-summary.md";
 function specimen(
@@ -69,13 +70,20 @@ const cases: ReturnType<typeof specimen>[] = [
   specimen(
     "violation-config-version",
     "file",
-    { ".ddd.toml": 'schema_version=2\n[rust]\nmodule_layout="file"\n' },
+    { ".ddd.toml": 'schema_version=3\nlanguages=["rust"]\n[rust]\nmodule_layout="file"\n' },
+    invalid,
+  ),
+  // The Rust-only settings a project has to migrate are not read as the current settings.
+  specimen(
+    "violation-config-legacy",
+    "file",
+    { ".ddd.toml": 'schema_version=1\n[rust]\nmodule_layout="file"\n' },
     invalid,
   ),
   specimen(
     "violation-config-array",
     "file",
-    { ".ddd.toml": 'schema_version=1\n[rust]\nmodule_layout=["file"]\n' },
+    { ".ddd.toml": 'schema_version=2\nlanguages=["rust"]\n[rust]\nmodule_layout=["file"]\n' },
     invalid,
   ),
   specimen(

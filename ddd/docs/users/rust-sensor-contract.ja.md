@@ -52,14 +52,19 @@ repo.remove(invoice.id() + 1); // 引数内でも計算は違反
 aggregate_ref: aggregate.invoice
 programming_model: class
 persistence_method: event-sourcing
-crate: billing-domain
-module: crate
 replay_methods:
-  - method: apply_event
-    event_ref: event.invoice.issued
+  - event_ref: event.invoice.issued
+    code: { method: apply_event }
+code:
+  language: rust
+  package: billing-domain
+  module: []
+  type: Invoice
 ```
 
-規則bがreplayとして許すには、対象集約の写像が一意で、保存方式がevent-sourcingであり、crate/moduleが型の配置と一致する必要がある。該当メソッドの宣言も一意でなければならない。
+このセンサーへ渡るのは `code.language` が `rust` の行だけである。別の言語に置かれた集約は、Rustソースと照合しない。
+
+規則bがreplayとして許すには、対象集約の写像が一意で、保存方式がevent-sourcingであり、`code.package` と `code.module` が型の配置と一致する必要がある。該当メソッドの宣言も一意でなければならない。
 
 さらに、引数が単一のドメインイベント型であり、event_refがその集約に所属するイベントへ解決されることを確認する。イベントのコード型は同じクレート内で一意に識別できる名前にする。数値引数、未知イベント、別クレート・別モジュール、重複した宣言では例外にしない。
 

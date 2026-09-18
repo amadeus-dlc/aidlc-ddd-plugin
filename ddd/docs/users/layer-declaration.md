@@ -4,7 +4,7 @@ English | [Japanese](layer-declaration.ja.md) | [User documentation](README.md)
 
 `schema_version: 2` of the `## DDD Layer Structure` section of `cicd-pipeline.md` records a bounded context's dependency regime without tying it to one language. Which side of CQRS a package is on, which package depends on which, the ports the context talks through, the repositories its aggregates are restored from and the backend behind them are business facts and stay as they are. The only thing a language spells is the identity of a package, and a package is the language that spells it together with its name.
 
-Version 1, the Rust-only crate format, is still the one every production sensor reads. Nothing switches over automatically; see [what this format is for today](#what-this-format-is-for-today).
+Every gate reads this format. Version 1, the Rust-only crate format, is a format a record has to be migrated from: see [what the gates do with each format](#what-the-gates-do-with-each-format).
 
 ## What changes
 
@@ -87,7 +87,7 @@ The loader stops at the first stage that fails: the document, its version, its s
 
 | Rule | Refused |
 |---|---|
-| `layer-declaration.document` | A path other than `<record>/construction/<unit>/infrastructure-design/cicd-pipeline.md`, a missing or unreadable file, no `## DDD Layer Structure` section or more than one — English and Japanese markers count together — no labelled YAML block inside that section, more than one, an unclosed block, YAML that does not parse, or a block that is not a mapping |
+| `layer-declaration.document` | A path other than `<record>/construction/[<unit>/]infrastructure-design/cicd-pipeline.md`, a missing or unreadable file, no `## DDD Layer Structure` section or more than one — English and Japanese markers count together — no labelled YAML block inside that section, more than one, an unclosed block, YAML that does not parse, or a block that is not a mapping |
 | `layer-declaration.version` | A `schema_version` other than the number `2`. A version 1 document is not read as this format; the finding points to the migration |
 | `layer-declaration.unknown-key` | Any key outside the format, including `command_side_crates`, `query_side_crates`, `rmu_crates`, `crate_dependencies`, a `crate` beside a package's role, and a module path or version inside a package identity |
 | `layer-declaration.structure` | A missing or mistyped value, a `cqrs` flag that is not a boolean, a role, port kind, io unit, store semantics or restoration route outside its set, a package identity written as a bare name or without its language, a name the language does not accept, and a value the document does not state at all |
@@ -111,13 +111,22 @@ Reading a declaration and judging its layering are separate entry points, so a d
 | `layer-declaration.query-domain-dependency` | A query-side package depends on a package whose name carries the domain layer marker — a trailing `-domain` or `_domain`, read after a TypeScript scope is set aside, so `@acme/shared-domain` counts and `@acme/shared-read-models` does not |
 | `layer-declaration.restoration-path` | An aggregate of the context has no `full-constructor` restoration path |
 
-A `role: rmu` package is the one package meant to see both sides, so neither `layer-declaration.side-dependency` nor `layer-declaration.query-domain-dependency` is applied to its dependency rows. The other four rules apply to it like any other package. The repository naming rules (`layer-structure.m-name`, `layer-structure.m-media`) are not carried over: they are a spelling convention of one language, and a repository in this format has no language.
+A `role: rmu` package is the one package meant to see both sides, so neither `layer-declaration.side-dependency` nor `layer-declaration.query-domain-dependency` is applied to its dependency rows. The other four rules apply to it like any other package. The repository naming rules (`layer-structure.m-name`, `layer-structure.m-media`) are not carried over and no longer exist on the gate: they are a spelling convention of one language, and a repository in this format has no language. Repository naming in Rust source is still checked, by the `m` rule of `ddd-rust-interface-adapter`.
 
-## What this format is for today
+## What the gates do with each format
 
-The migrated document is read by the reading entry point, the inspection and the migration command on this page. **The production sensors do not accept `schema_version: 2` of the layer declaration.** `ddd-layer-structure` asks for version 1 and reports a migrated declaration as `layer-structure.item`, and `ddd-design-advisories` reads the same version 1 section. The generation instructions in `infrastructure-design` still produce version 1, and this format also needs the canonical model in version 2, which the production sensors do not accept either.
+Both gates that read the declaration read `schema_version: 2`, and a document still in version 1 is refused rather than read as the format it is not:
 
-Apply a migration only where you are prepared for those gates to report against the artifact, and keep the artifacts your approval gates read on version 1 until a later release switches them over.
+| Gate | Reads | Against a version 1 declaration |
+|---|---|---|
+| `ddd-layer-structure` | The declaration and the layer rules above | `layer-structure.item`, with the reader's rule id at the front of the message |
+| `ddd-design-advisories` | The same declaration, for its advisories | `design-advisories.document` |
+
+`ddd-layer-structure` transcribes each layer rule onto the rule id the approval contract declares: `required-items` as `layer-structure.item`, `dependency-row` as `layer-structure.dependencies-incomplete`, `cqrs-sides` as `layer-structure.cqrs-sides`, `side-dependency` as `layer-structure.k`, `query-domain-dependency` as `layer-structure.l` and `restoration-path` as `layer-structure.n`. A canonical model that did not load is `layer-structure.model`.
+
+The stage writes this declaration below a Unit when the delivery plan produced Units, and straight under the stage when it did not; both are registered locations and both are read. A `cicd-pipeline.md` anywhere else is not a declaration.
+
+This format needs the canonical model in version 2, and every gate reads that version too. Convert the whole record in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts the settings, the model, the mapping and every layer declaration of the record together and checks them against each other before writing anything.
 
 ## Read and inspect a declaration
 
@@ -157,7 +166,7 @@ For Claude Code, use `.claude/tools/`. Without `--apply` the command only report
 | `write-failed` | 3 | Validation held but the file could not be written |
 | `invalid-arguments` | 2 | An unknown command or option, a missing value, or `--declaration` given more than once; `detail` repeats the usage |
 
-Only the registered artifact inside an intent record is accepted. The record is the directory that contains `construction/<unit>/infrastructure-design/cicd-pipeline.md`, and `model_ref` resolves against it. A `functional-spec.md` and a copy of the pipeline document kept anywhere else are refused with `layer-declaration.document` and left as they are.
+Only the registered artifact inside an intent record is accepted. The record is the directory that contains `construction/[<unit>/]infrastructure-design/cicd-pipeline.md` — below a Unit, or straight under the stage when the delivery plan produced no Units — and `model_ref` resolves against it. A `functional-spec.md` and a copy of the pipeline document kept anywhere else are refused with `layer-declaration.document` and left as they are.
 
 ### State what version 1 supplied on its own
 

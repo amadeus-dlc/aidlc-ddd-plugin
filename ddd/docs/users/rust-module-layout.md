@@ -2,13 +2,17 @@
 
 English | [Japanese](rust-module-layout.ja.md) | [User documentation](README.md)
 
-Select one layout in `.ddd.toml` at the application project root, alongside the `aidlc/` directory. The setting applies to every owned Cargo package, including nested projects, all layers, and test code. Missing configuration blocks Rust approval; the checker never infers the team's choice from existing files.
+Select one layout in `.ddd.toml` at the application project root, alongside the `aidlc/` directory. The [language-neutral project settings](project-settings.md) own that document's format; the Rust layout is one axis of it. The setting applies to every owned Cargo package, including nested projects, all layers, and test code. Missing configuration blocks Rust approval; the checker never infers the team's choice from existing files.
 
 ```toml
-schema_version = 1
+schema_version = 2
+languages = ["rust"]
+
 [rust]
 module_layout = "file"
 ```
+
+A document still in `schema_version = 1`, which named the Rust layout and nothing else, is reported as `module-layout.configuration`. Convert it with [`ddd-artifact-set migrate`](artifact-migration.md), or with `ddd-project-settings migrate` for that document alone.
 
 Use `file` or `mod-rs`. Unknown keys, nested configuration files, per-crate overrides, and `mixed` are rejected. Recommend `file` for a new project; changing the setting requires bringing the whole inspected project into compliance.
 

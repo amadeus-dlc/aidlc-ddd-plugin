@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { readStageStatus } from "./ddd/lib/runtime/context.ts";
 import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { MODEL_DATA_PATH } from "./ddd/lib/schema/artifacts.ts";
-import { loadDomainModel } from "./ddd/lib/schema/loader.ts";
+import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "./ddd/lib/schema/loader.ts";
 import { collectUnresolved, finding, relPath } from "./ddd/lib/sensors/common.ts";
 
 process.exit(
@@ -27,7 +27,7 @@ process.exit(
       if (!existsSync(modelPath)) {
         return [finding("model-presence.missing", file, "domain-modeling ran but ddd-domain-model-yaml.md is missing")];
       }
-      const loaded = loadDomainModel(modelPath);
+      const loaded = loadDomainModel(modelPath, OPERATION_OWNED_SCHEMA_VERSION);
       if (!loaded.ok) {
         return loaded.findings.map((entry) => finding("model-presence.invalid", file, entry.message, entry.line));
       }

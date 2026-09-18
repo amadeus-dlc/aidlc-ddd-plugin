@@ -26,30 +26,27 @@ The registered `ddd-aggregate-mapping.md` artifact now requires domain_packages 
 
 ```yaml
 domain_packages:
-  - crate: billing-domain
-    module: crate
-    term: Billing
+  - term: Billing
     model_refs: [bc.billing]
     rationale: Owns the billing domain
-  - crate: billing-domain
-    module: invoice
-    term: Invoice
+    code: { language: rust, package: billing-domain, module: [] }
+  - term: Invoice
     model_refs: [aggregate.invoice]
     rationale: Groups invoice state, operations, and components
-  - crate: billing-domain
-    module: invoice::number
-    term: Invoice number
+    code: { language: rust, package: billing-domain, module: [invoice] }
+  - term: Invoice number
     model_refs: [primitive.invoice-number]
     rationale: Owns invoice number representation and validation
+    code: { language: rust, package: billing-domain, module: [invoice, number] }
 ```
 
-Define the example IDs in the destination model. Every row requires crate, module, term, model_refs, and rationale; model_refs contains at least one ID. Use `module: crate` for the root and crate-relative `::` paths internally. Reject duplicate crate/module pairs, missing roots or parents, and aggregate_mappings.module values without declarations.
+Define the example IDs in the destination model. Every row requires term, model_refs, rationale, and a `code` entry naming the language, the package and the module path; model_refs contains at least one ID. The module path is a segment list below the package root, so the root itself is `module: []`. Reject duplicate language/package/module identities, missing roots or parents, and `aggregate_mappings` code placements without declarations.
 
 Natural-language terms and code identifiers need not match literally. Reference related model IDs and explain grouping terms and placement. Do not invent aggregates or Entities solely to justify packages.
 
 Future packages may be declared before implementation. Code checks ask whether actual modules are declared; they do not require the current Unit to implement every future package. Existing artifacts must gain declarations; the old format is not automatically exempt.
 
-This example is the crate/module format, `schema_version: 1`, which the gates read. The language-neutral `schema_version: 2` keeps term, model_refs and rationale, writes the package and the module path as a segment list under `code` with its language (`module: []` for the root), and applies the same reserved names to Rust and TypeScript names; see [implementation mapping](implementation-mapping.md).
+This example is the language-neutral `schema_version: 2` the gates read. A document still in the crate/module format, `schema_version: 1`, is refused until it is migrated: there, the same rows carried `crate` and a `::` module path, so `crate: billing-domain` with `module: invoice::number` becomes `code: { language: rust, package: billing-domain, module: [invoice, number] }` and `module: crate` becomes `module: []`. The same reserved names apply to Rust and TypeScript names. See [implementation mapping](implementation-mapping.md) for the whole format, and [artifact set migration](artifact-migration.md) for converting a record that still holds the old one.
 
 ## Automated technical-name checks
 

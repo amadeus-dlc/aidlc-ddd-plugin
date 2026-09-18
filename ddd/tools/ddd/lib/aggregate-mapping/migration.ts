@@ -11,10 +11,17 @@
  */
 
 import type { FindingInput } from "../shared/findings.ts";
+import type { WriteOutcome } from "../shared/markdown-document.ts";
 import { type ImplementationMapping, LEGACY_MAPPING_SCHEMA_VERSION, MAPPING_SCHEMA_VERSION } from "./contract.ts";
 import { type MappingDocument, readMappingDocument, writeMappingDocument } from "./document.ts";
 import { convertLegacyMapping } from "./legacy.ts";
-import { declaredVersion, loadMappingDocument, loadReferencedModel, versionFinding } from "./loader.ts";
+import {
+  declaredVersion,
+  loadMappingDocument,
+  loadReferencedModel,
+  type ReferencedModelResolver,
+  versionFinding,
+} from "./loader.ts";
 import { readMappingDraft } from "./reader.ts";
 import { renderMappingYaml } from "./render.ts";
 import { readSupplement, withSuppliedNames } from "./supplement.ts";
@@ -28,24 +35,30 @@ export type MappingMigrationOutcome =
   | { readonly kind: "rejected"; readonly findings: readonly FindingInput[] }
   | { readonly kind: "write-failed"; readonly detail: string };
 
-type Assessment =
-  | {
-      readonly kind: "candidate";
-      readonly mapping: ImplementationMapping;
-      readonly document: MappingDocument;
-    }
+export interface MappingCandidate {
+  readonly kind: "candidate";
+  readonly mapping: ImplementationMapping;
+  readonly document: MappingDocument;
+}
+
+export type MappingAssessment =
+  | MappingCandidate
   | Extract<MappingMigrationOutcome, { kind: "already-migrated" | "missing-information" | "rejected" }>;
 
-function rejected(findings: readonly FindingInput[]): Assessment {
+function rejected(findings: readonly FindingInput[]): MappingAssessment {
   return { kind: "rejected", findings };
 }
 
-function assessLegacy(document: MappingDocument, supplementPath: string | null): Assessment {
+function assessLegacy(
+  document: MappingDocument,
+  supplementPath: string | null,
+  resolveModel: ReferencedModelResolver,
+): MappingAssessment {
   const converted = convertLegacyMapping(document);
   if (converted.kind === "rejected") return rejected(converted.findings);
   const read = readMappingDraft(converted.root, document.path);
   if (read.kind === "rejected") return rejected(read.findings);
-  const model = loadReferencedModel(document, read.draft.model_ref);
+  const model = resolveModel(document, read.draft.model_ref);
   if (!model.ok) return rejected(model.findings);
   const supplement = readSupplement(supplementPath, read.draft);
   if (supplement.kind === "rejected") return rejected(supplement.findings);
@@ -61,29 +74,43 @@ function assessLegacy(document: MappingDocument, supplementPath: string | null):
   return { kind: "candidate", mapping: validation.mapping, document };
 }
 
-function assess(mappingPath: string, supplementPath: string | null): Assessment {
+/**
+ * What converting `mappingPath` would do, without writing anything. `resolveModel` supplies the
+ * canonical model the document names, so a set migration can check the mapping against the model it
+ * is about to write rather than against the one still on disk.
+ */
+export function assessMappingMigration(
+  mappingPath: string,
+  supplementPath: string | null,
+  resolveModel: ReferencedModelResolver,
+): MappingAssessment {
   const read = readMappingDocument(mappingPath);
   if (read.kind === "rejected") return rejected(read.findings);
   const { document } = read;
   const version = declaredVersion(document);
   // A migrated document needs no supplement, so the one given is not even read.
   if (version === MAPPING_SCHEMA_VERSION) {
-    const loaded = loadMappingDocument(document);
+    const loaded = loadMappingDocument(document, resolveModel);
     return loaded.ok ? { kind: "already-migrated", mapping: loaded.mapping } : rejected(loaded.findings);
   }
   if (version !== LEGACY_MAPPING_SCHEMA_VERSION) return rejected([versionFinding(document)]);
-  return assessLegacy(document, supplementPath);
+  return assessLegacy(document, supplementPath, resolveModel);
+}
+
+/** Replaces the document's YAML body with the candidate; the only write this module performs. */
+export function writeMappingCandidate(candidate: MappingCandidate): WriteOutcome {
+  return writeMappingDocument(candidate.document, renderMappingYaml(candidate.mapping));
 }
 
 export function previewMappingMigration(mappingPath: string, supplementPath: string | null): MappingMigrationOutcome {
-  const assessment = assess(mappingPath, supplementPath);
+  const assessment = assessMappingMigration(mappingPath, supplementPath, loadReferencedModel);
   return assessment.kind === "candidate" ? { kind: "candidate", mapping: assessment.mapping } : assessment;
 }
 
 export function applyMappingMigration(mappingPath: string, supplementPath: string | null): MappingMigrationOutcome {
-  const assessment = assess(mappingPath, supplementPath);
+  const assessment = assessMappingMigration(mappingPath, supplementPath, loadReferencedModel);
   if (assessment.kind !== "candidate") return assessment;
-  const written = writeMappingDocument(assessment.document, renderMappingYaml(assessment.mapping));
+  const written = writeMappingCandidate(assessment);
   if (written.kind === "write-failed") return { kind: "write-failed", detail: written.detail };
   return { kind: "applied", mapping: assessment.mapping };
 }

@@ -25,14 +25,14 @@ Before planning, read the naming and placement conventions and carry them into
 the plan:
 
 - **Rust module layout.** Read `ddd-rust-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Establish one explicit layout before generating Rust. Follow it across all packages; do not infer it from edition or introduce `mod.rs` when `file` is selected.
-- **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included.
+- **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Every declaration states the language that spells the package, its name, and the module path below its root; only the ones placed in Rust reach the Rust code checks. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included. TypeScript is not generated or inspected yet, so a mapping that places code there has nothing to match against here.
 - **Naming and placement.** Crate suffixes (`-domain`, `-use-case`,
   `-interface-adapter`, `-infrastructure`), the `packages/<layer>/` or
   `modules/<layer>/` placement, the command / query / rmu segments, and the
   composition-root markers. Derive layers from the crate, not from a config file.
 - **Domain layer.** No public fields; no mutating method that is not a declared
   Command; construct aggregates only through a full constructor.
-  Match Rust replay to `replay_methods` in the aggregate mapping: event-sourcing mode, aggregate crate and module, target event ID, and a single event parameter type must agree. Names such as `apply` alone do not exempt mutation methods.
+  Match Rust replay to `replay_methods` in the aggregate mapping, where each entry states the event it applies under `event_ref` and the method that applies it under `code.method`: event-sourcing mode, the aggregate's package and module path, the target event ID, and a single event parameter type must agree. Names such as `apply` alone do not exempt mutation methods.
 - **Use-case layer.** `execute` takes IDs and value objects, never an aggregate;
   a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations. See the getter argument contract in `ddd-rust-domain-conventions.md`.
 - **Interface Adapter layer.** The command side and query side do not depend on

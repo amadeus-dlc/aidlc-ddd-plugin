@@ -4,13 +4,27 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — ゲートが言語共通の成果物を読む
+
+- 正規モデル・実装写像・レイヤー宣言の `schema_version: 2` と、プロジェクト設定の `schema_version = 2` を、ゲートが通るすべての経路で読むようにした。**移行が必要な形式のままの記録は拒否する**。モデルは `model-completeness.schema`、`model-presence.invalid`、`model.invalid`、`mapping-declarations.model`、`reference-ids.model`、`layer-structure.model`、`domain-packaging.reference` のいずれかとして、写像は `mapping-declarations.document`、`reference-ids.document`、`domain-packaging.declaration` のいずれかとして、宣言は `layer-structure.item` または `design-advisories.document` として、設定は `module-layout.configuration` として報告する。どの拒否も、変換するコマンドを併せて示す。
+- `ddd-artifact-set.ts migrate --project <root> --record <record> [--supplement <path>] [--apply]` を追加。プロジェクトの設定と、記録1件のモデル・写像・レイヤー宣言をまとめて変換する。写像と宣言は、これから書き込むモデルに対して検査する。一式全体が準備できていなければ何も書かない。書込が途中で失敗した場合は、書き込んだもの、失敗したもの、残っているもの、完了させる方法を報告する。[成果物一式の移行](docs/users/artifact-migration.ja.md)を参照。
+- Unitを持たないワークフローがステージ直下（`<record>/construction/infrastructure-design/cicd-pipeline.md`）に書くレイヤー宣言も、Unitが書くものと同様に読むようにした。それ以外の場所にある `cicd-pipeline.md` は、引き続き宣言として扱わない。
+- Rustソースセンサーには、写像のRust項目を、それらのセンサーが照合するcrate名とモジュール列へ投影して渡すようにした。別の言語に置かれた集約・パッケージはセンサーへ渡らない。replay照合・集約束縛・パッケージ照合の検査範囲は従来どおり。
+- **設計ゲートの所見を、より少ない規則IDで報告するようにした。** 写像の読込処理が拒否した内容は、`mapping-declarations.document`（または `mapping-declarations.model`、`domain-packaging.technical-name`）として、メッセージの先頭に読込処理自身の規則IDを付けて報告する。これに伴い、`mapping-declarations.duplicate`、`mapping-declarations.axes`、`mapping-declarations.aggregate-unmapped`、`reference-ids.missing`、および `ddd-mapping-declarations` の `domain-packaging.declaration`・`domain-packaging.duplicate`・`domain-packaging.coverage` は存在しなくなった。`ddd-rust-domain` からも `domain-packaging.duplicate` を削除した。
+- **レイヤー宣言に対するリポジトリ命名規則の検査を廃止した**。`layer-structure.m-name` と `layer-structure.m-media` を削除する。宣言は言語を名指ししないため、特定言語の綴りの規約を宣言に対する規則としない。Rustソースのリポジトリ命名は、引き続き `ddd-rust-interface-adapter` の `m` 規則が検査する。
+- **読み込めない写像が隣にある機能設計をブロックするようにした。** 写像が存在するのに現行形式で読めない場合、Process Manager要否を未評価のままにせず、その写像を対象として `mapping-declarations.document` を報告する。写像が存在しない場合は、従来どおり不在を注記するだけとする。
+- **`ddd-layer-structure` が写像を読むのをやめた。** 集約のコードがどこにあるかは、その文脈が復元を担うかどうかを決めないため、文脈のすべての集約に復元経路が必要となる。
+- Rustのモジュール配置検査の要否を、設定が名指しする言語から決めるようにした。Rustを名指しせず、Cargoマニフェストも `.rs` ファイルも持たないプロジェクトは検査対象がない。Rustを名指ししないのにいずれかを持つ場合は `module-layout.configuration` として報告する。
+- 生成指示、センサーマニフェスト、ナレッジ、フィクスチャを同じ形式へ移行し、現時点で生成・検査の対象となる言語はRustだけであることを明記した。`functional-spec.md` のユースケース宣言はversion 1のまま。言語が綴る名前を持たないため。
+- ファクトリ規則の業務エラーがまだないモデルは、それらを `missing-information` として報告し、変換しない。補ってから再実行すること。補われるまで、写像はその業務エラーを持たないモデルに対して検査されるため、その実行で `candidate` だった写像が、モデル補完後の再実行では写像自身のエラーケース不足を `missing-information` として報告することがある。移行後の記録は、それを拒否していたゲートが読む。
+
 ## 未リリース — 言語共通のレイヤー宣言
 
 - `cicd-pipeline.md` の `## DDD Layer Structure` 節の `schema_version: 2` を追加。3つのcrateリストを、`command`・`query`・`rmu` の `role` を持つ1つの `packages` リストへ統合し、`crate_dependencies` を同じパッケージ識別上の `dependencies` へ移す。パッケージは、その名前を綴る言語と名前の組で識別する。文脈参照、cqrs、ポート、リポジトリ、復元経路、永続化基盤は変更しない。
 - 宣言文書1件の読込処理を追加。crate固定のものを含む未知のキー、言語のないパッケージ識別、その言語で使えない名前、壊れた・他所属のモデル参照、structure・パッケージ・依存行・リポジトリ・復元経路の重複、文脈が宣言していないパッケージの依存行を拒否する。文脈の外のパッケージへの依存は書かれたとおりに保持する。正規モデルは `schema_version: 2` だけを読み、version 1の宣言を新形式として読むことはない。
 - 読み込めた宣言に対して単独で実行できる構造検査を追加。必須項目、パッケージごとの依存行、cqrsの文脈におけるクエリ側、読み取りモデル更新を除いたcommand/query境界、両言語の綴りで判定するドメイン層パッケージへのクエリ側依存、集約ごとのfull-constructor復元経路を検査する。
 - `ddd-layer-declaration.ts migrate --declaration <path> [--apply]` を追加。節の見出しの下のYAMLブロック1つを変換し、crate名、依存辺、ポート、リポジトリ、復元経路、永続化基盤をその記述言語のまま保持する。パイプラインの本文と隣のCI設定のフェンスはバイト単位でそのまま残す。crate形式が自動で補っていた値（`cqrs`、ポートの種別とverbs、リポジトリの入出力単位・verbs・保存意味、復元経路）は、文書が述べるまで `missing-information` として報告する。
-- 本番センサーと生成指示はversion 1のまま。移行後の宣言は `layer-structure.item` として報告される。
+- この段階では本番センサーと生成指示はversion 1のままとし、移行後の宣言は `layer-structure.item` として報告されていた。上記「ゲートが言語共通の成果物を読む」でversion 2を読むようになった。
 - `functional-spec.md` のユースケース宣言はそのままにする。言語が綴る名前を持たないため、変換すべき形式版がない。
 - 形式、検査、構造検査、コマンド、現在の適用範囲を[レイヤー宣言](docs/users/layer-declaration.ja.md)に記載。
 
@@ -25,14 +39,14 @@ dddプラグインの主な変更を記録します。形式は[Keep a Changelog
 - `ddd-aggregate-mapping.md` の `schema_version: 2` を追加。業務ID・業務語彙・実行モデル・永続化方式は各エントリの第1階層に残し、言語・パッケージ・モジュールの位置・型・ポート・リポジトリは `code` の下へ移す。各集約は、コマンドと生成操作をメソッドとエラー型へ、業務エラーをケースへ対応付ける。
 - 写像文書1件の読込処理を追加。未知のキー、コンパイラID・ソース位置、その言語で使えない名前、壊れた・他所属のモデル参照、パッケージ・型・操作・エラーの写像の不足と重複、技術分類による業務パッケージ名を、RustとTypeScriptの両方で拒否する。正規モデルは `schema_version: 2` だけを読み、version 1の写像を新形式として読むことはない。
 - `ddd-aggregate-mapping.ts migrate --mapping <path> [--supplement <path>] [--apply]` を追加。crate/module形式の写像1件を変換し、crate、モジュールの綴り、業務語彙、replayメソッド、実行モデル、永続化方式とその記述言語をすべて保持する。元の情報がない型・操作・エラーケースの名前は、補足入力のファイルで与えるまで `missing-information` として報告する。
-- 本番センサーと生成指示はversion 1のまま。移行後の写像は `mapping-declarations.document` として報告される。
+- この段階では本番センサーと生成指示はversion 1のままとし、移行後の写像は `mapping-declarations.document` として報告されていた。上記「ゲートが言語共通の成果物を読む」でversion 2を読むようになった。
 - 形式、検査、コマンド、現在の適用範囲を[実装写像](docs/users/implementation-mapping.ja.md)に記載。
 
 ## 未リリース — 正規モデルの操作ごとのエラー
 
 - `ddd-domain-model-yaml.md` の `schema_version: 2` を追加。DomainErrorは所属を `operation` で名指しし、FactoryRuleは1件以上の `domain_errors` を自身で宣言する。
 - 宣言された所属が包含元の操作であることを、コマンドと生成操作の両方で検査。生成操作のエラーを要素索引へ登録し、重複と壊れた参照も索引側で検出する。**新しい所属検査のうち2つは `schema_version: 1` にも適用する。** DomainError の `command` キーが包含元以外の操作を名指ししている場合（直し方: 包含元のコマンドを名指しする）と、生成操作のIDが包含元とは別の集約名を持つ場合（直し方: IDを `factory.<集約>.<操作>` へ直す）は、これまで読み込めていた旧形式のモデルが読込失敗になる。
-- 形式は文書からの推測ではなく読込入口で指定する方式にした。本番センサーは引き続きversion 1を読み、移行後の文書は拒否する。
+- 形式は文書からの推測ではなく読込入口で指定する方式にした。この段階では本番センサーは引き続きversion 1を読み、移行後の文書を拒否していた。上記「ゲートが言語共通の成果物を読む」で、同じ読込入口がversion 2を指定するようになった。
 - `ddd-domain-model.ts migrate --model <path> [--apply]` を追加。モデル成果物1件を変換し、業務ID・参照・条件本文とその言語をすべて保持する。生成操作のエラーが無い場合は捏造せず `missing-information` として報告する。
 - 形式、検査、コマンド、現在の適用範囲を[操作ごとのエラー](docs/users/domain-model-operation-errors.ja.md)に記載。
 

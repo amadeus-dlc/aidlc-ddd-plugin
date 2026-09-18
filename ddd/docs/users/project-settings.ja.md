@@ -2,7 +2,7 @@
 
 [English](project-settings.md) | 日本語 | [利用者向け文書](README.ja.md)
 
-プロジェクトが使う言語と、言語ごとの選択を、アプリケーションプロジェクト直下（`aidlc/` と同じ階層）の `.ddd.toml` に宣言します。これは[モジュール配置契約](rust-module-layout.ja.md)とは別の版です。既存ソースから選択を推測することはなく、設定が無い場合や不正な場合は補完せず拒否します。
+プロジェクトが使う言語と、言語ごとの選択を、アプリケーションプロジェクト直下（`aidlc/` と同じ階層）の `.ddd.toml` に宣言します。この文書の形式はこのページが定めます。[モジュール配置契約](rust-module-layout.ja.md)は、その `rust.module_layout` 軸がRustソースに対して何を意味するかを説明します。既存ソースから選択を推測することはなく、設定が無い場合や不正な場合は補完せず拒否します。
 
 ```toml
 schema_version = 2
@@ -26,9 +26,13 @@ code_representation = "class"
 
 集約の実行モデルと永続化方式は `ddd-aggregate-mapping.md` が持ち続けます。ここに `programming_model` や `persistence_method` を書くと拒否されます。集約の実行モデルとしての `class` と、TypeScript のコード表現としての `class` は別物です。
 
-## この形式が今どこまで使われるか
+## 各形式を検査がどう扱うか
 
-移行後の文書は、このページの設定 API と移行コマンド、およびそれらが渡す限定共通検査（state-exposure）が読みます。**現行の Rust モジュール配置検査は `schema_version = 2` に対応していません**。本番入口である `ddd-check-rust-module-layout.ts` と `ddd-rust-module-layout` ゲートセンサーは、この形式に対して `module-layout.configuration` を報告します。後続のリリースで切り替わるまで同検査は `schema_version = 1` のまま運用し、移行を適用する前に同検査を止められるかを判断してください。
+Rust モジュール配置検査は、`ddd-check-rust-module-layout.ts` と `ddd-rust-module-layout` ゲートセンサーの両方の入口でこの形式を読みます。Rust の配置だけを書いていた `schema_version = 1` のままの文書は、移行の案内を添えた `module-layout.configuration` として報告します。
+
+プロジェクトが名指しした言語が、配置検査のすべきことを決めます。`rust` を名指しせず、Cargo マニフェストも `.rs` ファイルも持たないプロジェクトには検査すべき Rust の配置がなく、検査は何も報告しません。`rust` を名指ししていないのにそのどちらかを持つプロジェクトは `module-layout.configuration` になります。設定が説明していない Rust を持っているためです。
+
+1つの記録の正規モデル・実装写像・レイヤー宣言とあわせて設定を変換する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、プロジェクト一式を一度に移行してください。
 
 ## 読込と検証
 

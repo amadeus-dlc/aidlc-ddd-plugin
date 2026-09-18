@@ -42,9 +42,10 @@ export type MigrationOutcome =
   | { readonly kind: "applied"; readonly selection: ProjectSelection }
   | { readonly kind: "write-failed"; readonly detail: string };
 
-type Assessment = Exclude<MigrationOutcome, { kind: "applied" } | { kind: "write-failed" }>;
+/** What reading the settings decides, before any write: the outcomes an apply is built on. */
+export type SettingsAssessment = Exclude<MigrationOutcome, { kind: "applied" } | { kind: "write-failed" }>;
 
-function candidateFor(layout: RustModuleLayout, supplement: TypeScriptSupplement, file: string): Assessment {
+function candidateFor(layout: RustModuleLayout, supplement: TypeScriptSupplement, file: string): SettingsAssessment {
   if (supplement.kind === "not-requested")
     return { kind: "candidate", candidate: { languages: ["rust"], rust: { moduleLayout: layout }, typescript: null } };
   const missing: string[] = [];
@@ -83,7 +84,7 @@ function candidateFor(layout: RustModuleLayout, supplement: TypeScriptSupplement
   };
 }
 
-function assess(root: string, supplement: TypeScriptSupplement): Assessment {
+function assess(root: string, supplement: TypeScriptSupplement): SettingsAssessment {
   const document = loadRootDocument(root);
   if (document.kind === "rejected") return { kind: "rejected", rejection: document.rejection };
   const version = entryOf(document.table, VERSION_KEY);
@@ -104,7 +105,7 @@ function assess(root: string, supplement: TypeScriptSupplement): Assessment {
   };
 }
 
-export function previewMigration(root: string, supplement: TypeScriptSupplement): MigrationOutcome {
+export function previewMigration(root: string, supplement: TypeScriptSupplement): SettingsAssessment {
   return assess(root, supplement);
 }
 

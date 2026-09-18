@@ -11,7 +11,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | Rule ID | Convention | Current coverage |
 |---|---|---|
 | K.interface-adapter-conventions.1 | Name ports by responsibility rather than technology. | General naming requires review; repository naming uses m checks. |
-| K.interface-adapter-conventions.2 | Name repository ports after their aggregates. | Declaration check m-name. |
+| K.interface-adapter-conventions.2 | Name repository ports after their aggregates. | Not checked on the declaration, which names no language; m checks repository naming in Rust source. |
 | K.interface-adapter-conventions.3 | Start with an in-memory implementation. | Design convention. |
 | K.interface-adapter-conventions.4 | Classify ports as repository, external-client, or es-infrastructure. | layer-structure.item |
 | K.interface-adapter-conventions.5 | Use `<Aggregate>Repository` for repository ports, without storage-medium names. | m checks. Medium prefixes on implementation structs are allowed. |
@@ -20,7 +20,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.interface-adapter-conventions.8 | Use DAOs and DTOs on the query side; do not reuse update-domain types. | l checks some reference shapes. |
 | K.interface-adapter-conventions.9 | Put DB/RPC clients in the Interface Adapter layer, not in infrastructure intended for language extensions. | Design convention. g alone does not guarantee placement of every client. |
 | K.interface-adapter-conventions.10 | State whether an external model is adopted directly or translated at the boundary. | Review. |
-| K.interface-adapter-conventions.11 | Declare context, CQRS, crates, dependencies, ports, restoration, and storage in the layer declaration. | layer-structure.item and related checks. Normal approval is connected; standalone completion has limits. |
+| K.interface-adapter-conventions.11 | Declare context, CQRS, packages with their roles, dependencies, ports, restoration, and storage in the layer declaration; each package is named by its language and its name. | layer-structure.item and related checks. Normal approval is connected; standalone completion has limits. |
 
 ## Rationale
 

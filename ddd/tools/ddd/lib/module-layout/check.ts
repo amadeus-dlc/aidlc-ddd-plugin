@@ -2,7 +2,8 @@ import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { inspectModules } from "../packaging/rust-modules.ts";
-import { legacyRustModuleLayout } from "../project-settings/contract.ts";
+import { DOCUMENT_NAME, type ProjectSelection } from "../project-settings/contract.ts";
+import { validateProjectSettings } from "../project-settings/settings.ts";
 import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import { finding } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
@@ -20,6 +21,29 @@ export interface LayoutResult {
   crates: number;
   files: number;
   mode?: ModuleLayout;
+}
+
+/**
+ * The project settings of the document at `configPath`, or why they cannot be read. Only the root
+ * document is validated here: the walk above already reports every nested one, and reading them a
+ * second time would report the same defect under two rules.
+ */
+function readSelection(configPath: string): ProjectSelection | { readonly detail: string } {
+  let table: unknown;
+  try {
+    table = Bun.TOML.parse(readFileSync(configPath, "utf8"));
+  } catch (error) {
+    return { detail: error instanceof Error ? error.message : String(error) };
+  }
+  const outcome = validateProjectSettings(table as Record<string, unknown>, configPath);
+  if (outcome.kind === "validated") return outcome.selection;
+  const { rejection } = outcome;
+  // A document still in the Rust-only format is not a defect of its own wording; it has to be converted.
+  const guidance =
+    rejection.reason === "legacy-modern-mixed"
+      ? "; convert the whole project with `ddd-artifact-set migrate`, or this document alone with `ddd-project-settings migrate`"
+      : "";
+  return { detail: `${rejection.reason}: ${rejection.detail}${guidance}` };
 }
 
 /** Whole-project check: no source claims, model, layer assignment, or edition-based style inference. */
@@ -52,7 +76,7 @@ export function checkModuleLayout(
       return;
     }
     for (const entry of entries) {
-      if (entry.name === ".ddd.toml" && directory !== root)
+      if (entry.name === DOCUMENT_NAME && directory !== root)
         report(
           "configuration",
           join(directory, entry.name),
@@ -70,24 +94,26 @@ export function checkModuleLayout(
     }
   }
   discover(root);
-  const configPath = join(root, ".ddd.toml");
-  if (manifests.length === 0 && sources.length === 0 && !existsSync(configPath)) return result;
-  try {
-    const config = Bun.TOML.parse(readFileSync(configPath, "utf8")) as Record<string, unknown>;
-    const layout = legacyRustModuleLayout(config);
-    if (layout === null)
-      throw new Error(
-        'expected schema_version = 1 and [rust] module_layout = "file" or "mod-rs"; no overrides or mixed mode',
-      );
-    result.mode = layout;
-  } catch (error) {
+  const configPath = join(root, DOCUMENT_NAME);
+  const holdsRust = manifests.length > 0 || sources.length > 0;
+  if (!holdsRust && !existsSync(configPath)) return result;
+  const selection = readSelection(configPath);
+  if ("detail" in selection) {
+    report("configuration", configPath, `Choose one project-wide layout in ${DOCUMENT_NAME}: ${selection.detail}`);
+    return result;
+  }
+  if (selection.rust === null) {
+    // Nothing to inspect, and nothing that says how it would be inspected: a project that uses no
+    // Rust states no Rust layout, so holding Rust anyway is a settings defect rather than a layout one.
+    if (!holdsRust) return result;
     report(
       "configuration",
       configPath,
-      `Choose one project-wide layout in .ddd.toml: ${error instanceof Error ? error.message : String(error)}`,
+      `this project holds Rust but ${DOCUMENT_NAME} does not name rust among its languages`,
     );
     return result;
   }
+  result.mode = selection.rust.moduleLayout;
   const covered = new Set<string>();
   const crates = new Set<string>();
   for (const manifest of manifests.sort()) {
