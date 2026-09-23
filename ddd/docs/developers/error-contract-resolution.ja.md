@@ -163,6 +163,6 @@ pub fn issue(&mut self) -> impl core::fmt::Debug {
 
 ## 本契約の対象外
 
-全Cargo設定・全Rust構文の保証、任意の型・ライフタイム・const引数の解決、trait solving、マクロ展開、`rustc-private`・rust-analyzer統合、正規エラーとの集合比較、本番センサーの移行、ネイティブ実行ファイルの配布。
+全Cargo設定・全Rust構文の保証、任意の型・ライフタイム・const引数の解決、trait solving、マクロ展開、`rustc-private`・rust-analyzer統合、正規エラーとの集合比較、本番センサーの移行。ネイティブ実行ファイルの構築・設置・検証は[ネイティブ抽出器の配布](native-extractor-distribution.ja.md)が扱う。
 
 TypeScript側: 全TypeScript規則の保証、任意のmonorepo構成、条件付き入口とパターン入口、透明な型別名と閉じたリテラルunionを超える型機能、`neverthrow`・Effect・fp-ts統合、Next.js・Workers・Edge統合、任意の参照漏出・業務不変条件の証明、公開境界違反の全ルール化。

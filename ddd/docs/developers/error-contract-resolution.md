@@ -163,6 +163,6 @@ Resolving any of these needs a semantic provider verified for the same snapshot.
 
 ## Out of scope here
 
-Whole-Cargo-configuration and whole-Rust-syntax guarantees, arbitrary type, lifetime and const argument resolution, trait solving, macro expansion, `rustc-private` and rust-analyzer integration, comparing the case set with canonical errors, migrating the production sensors, and shipping the native executable.
+Whole-Cargo-configuration and whole-Rust-syntax guarantees, arbitrary type, lifetime and const argument resolution, trait solving, macro expansion, `rustc-private` and rust-analyzer integration, comparing the case set with canonical errors, and migrating the production sensors. How the native executable is built, installed and verified is covered by [native extractor distribution](native-extractor-distribution.md).
 
 On the TypeScript side: whole-TypeScript-rule guarantees, arbitrary monorepo layouts, conditional and pattern entry points, type features beyond transparent aliases and closed literal unions, `neverthrow`, Effect and fp-ts integration, Next.js, Workers and Edge integration, arbitrary reference leak and business invariant proofs, and the full rule set for public boundary violations.
