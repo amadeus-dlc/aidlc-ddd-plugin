@@ -18,11 +18,11 @@ cargo fetch --locked --manifest-path experiments/rust-syn/Cargo.toml
 続いて準備済みの依存だけからビルドし、固定位置へ配置します。
 
 ```sh
-bun run prepare:state-exposure
+bun run prepare:native
 bun run verify:state-exposure --case all
 ```
 
-準備は `rustc -vV` の host を `cargo build --target` に渡し、`--locked --offline --release` で生成します。配置先は `experiments/rust-syn/target/state-exposure/ddd-rust-syn-spike` です。ビルド準備の子コマンド上限は120秒で、途中失敗ではコピーしません。同一内容なら再コピーせず、固定位置の版プローブで起動確認します（最大180秒）。初回ビルドや OS の新規実行ファイル確認に時間がかかって失敗した場合は、診断を確認して準備を再実行してください。ソース・ロック変更後も明示的に再準備します。C2 の検証中は取得・ビルド・コピー・自動再試行を行いません。
+準備は `rustc -vV` の host を `cargo build --target` に渡し、`--locked --offline --release` で生成します。設置先は製品パス `tools/ddd/bin/<platform-key>/ddd-rust-syn-spike` で、両言語の入口がここを起動します。ビルド準備の子コマンド上限は120秒で、途中失敗では設置しません。同一内容なら再コピーせず、その設置先で両方の protocol の版プローブにより起動確認します（最大180秒）。初回ビルドや OS の新規実行ファイル確認に時間がかかって失敗した場合は、診断を確認して準備を再実行してください。ソース・ロック変更後も明示的に再準備します。C2 の検証中は取得・ビルド・コピー・自動再試行を行いません。対応プラットフォームと、抽出器を起動できないときの応答は[ネイティブ抽出器の配布](native-extractor-distribution.ja.md)を参照してください。
 
 ```sh
 bun run test:state-exposure

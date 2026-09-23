@@ -6,7 +6,7 @@
  * scenario; a scenario is reached by pointing the mapping at its module.
  *
  * Every expectation below is written from the scenario, not copied from a run. The Rust
- * path needs the native extractor that `bun run prepare:error-contract` installs.
+ * path needs the native extractor that `bun run prepare:native` installs.
  */
 
 import { describe, expect, test } from "bun:test";

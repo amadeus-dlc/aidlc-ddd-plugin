@@ -14,22 +14,20 @@ import { freezeInput } from "../error-contract-verification/input.ts";
 import { projectSettingsPayload } from "../project-settings/payload.ts";
 import { resolveCargoCondition } from "../rust/error-contract/cargo-condition.ts";
 import { extractRust, RUST_TOOLCHAIN } from "../rust/error-contract/index.ts";
+import { NATIVE_BIN_DIR, PLATFORM_KEY, resolvePlatform } from "../rust/native/manifest.ts";
 import { type ObservedOperations, PROJECT_ROOTS } from "./scenario.ts";
-
-function hostTriple(): string {
-  const probe = Bun.spawnSync(["rustc", "-vV"], { stdout: "pipe", stderr: "pipe" });
-  const host = /^host: (.+)$/m.exec(probe.stdout.toString())?.[1];
-  if (!host) throw new Error("rustc host target unavailable");
-  return host;
-}
 
 export async function observeRustOperations(
   mapping: AggregateMapping,
   sources: readonly SourceInput[],
 ): Promise<ObservedOperations> {
+  // The triple comes from the distribution record of the extractor that will resolve these
+  // operations, so this path needs no `rustc` of its own.
+  const platform = resolvePlatform(NATIVE_BIN_DIR, PLATFORM_KEY);
+  if (!platform) throw new Error(`this distribution records no native extractor for ${PLATFORM_KEY}`);
   const resolution = await resolveCargoCondition({
     manifestPath: join(PROJECT_ROOTS.rust, "Cargo.toml"),
-    targetTriple: hostTriple(),
+    targetTriple: platform.target,
     features: [],
   });
   if (resolution.kind !== "resolved")

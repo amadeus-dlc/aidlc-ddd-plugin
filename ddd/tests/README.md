@@ -62,4 +62,4 @@ Define rule/case correspondence in `golden/contract/coverage.ts` and additional 
 
 ## Shared state exposure verification
 
-Run `bun run prepare:state-exposure`, then `bun run test:state-exposure` and `bun run verify:state-exposure`. The ordinary `bun test tests/` suite also includes real language extraction, so it requires the prepared fixed-path binary. See [prerequisites, commands and supported shapes](../docs/developers/state-exposure-verification.md).
+Run `bun run prepare:native`, then `bun run test:state-exposure` and `bun run verify:state-exposure`. The ordinary `bun test tests/` suite also includes real language extraction, so it requires the prepared binary at its product path. See [prerequisites, commands and supported shapes](../docs/developers/state-exposure-verification.md).

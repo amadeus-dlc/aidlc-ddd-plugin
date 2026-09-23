@@ -62,4 +62,4 @@ bun scripts/verify-dist.ts claude codex
 
 ## 状態公開の共通検査
 
-`bun run prepare:state-exposure` の後に `bun run test:state-exposure` と `bun run verify:state-exposure` を実行します。通常の `bun test tests/` にも両言語の実抽出試験を含むため、準備済みの固定バイナリが必要です。[必要ツール・全コマンド・対応範囲](../docs/developers/state-exposure-verification.ja.md)を参照してください。
+`bun run prepare:native` の後に `bun run test:state-exposure` と `bun run verify:state-exposure` を実行します。通常の `bun test tests/` にも両言語の実抽出試験を含むため、製品パスに準備済みのバイナリが必要です。[必要ツール・全コマンド・対応範囲](../docs/developers/state-exposure-verification.ja.md)を参照してください。

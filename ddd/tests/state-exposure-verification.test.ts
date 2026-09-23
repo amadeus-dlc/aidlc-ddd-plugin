@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { FIXTURES, loadCases, type VerificationCase } from "../tools/ddd/lib/state-exposure-verification/cases.ts";
 import { parseOptions } from "../tools/ddd/lib/state-exposure-verification/options.ts";
 import { DEFAULT_LIMITS, issue, observeProcess } from "../tools/ddd/lib/state-exposure-verification/process.ts";
@@ -219,12 +219,17 @@ function isolatedCli() {
   for (const path of [
     "tools/ddd/lib/state-exposure",
     "tools/ddd/lib/state-exposure-verification",
+    "tools/ddd/lib/rust/native",
     "tools/ddd/lib/rust/state-evidence",
     "tools/ddd/lib/typescript/state-evidence",
     "tools/ddd/lib/project-settings",
     "tests/fixtures/state-exposure-languages",
   ])
     cpSync(resolve(root, path), resolve(sandbox, path), { recursive: true });
+  // The manifest records this platform, so the sandbox distinguishes a recorded platform whose
+  // extractor is absent from a platform the distribution never covered.
+  mkdirSync(resolve(sandbox, "tools/ddd/bin"), { recursive: true });
+  cpSync(resolve(root, "tools/ddd/bin/manifest.json"), resolve(sandbox, "tools/ddd/bin/manifest.json"));
   mkdirSync(resolve(sandbox, "scripts"));
   cpSync(resolve(root, "scripts/verify-state-exposure.ts"), resolve(sandbox, "scripts/verify-state-exposure.ts"));
   symlinkSync(resolve(root, "node_modules"), resolve(sandbox, "node_modules"));
@@ -259,8 +264,8 @@ test("CLI exit3 on missing real binary and no fabricated tool version", async ()
 test("CLI distinguishes an unstarted controlled failure from the intended failure branch", async () => {
   const sandbox = isolatedCli();
   try {
-    const binary = "experiments/rust-syn/target/state-exposure/ddd-rust-syn-spike";
-    mkdirSync(resolve(sandbox, "experiments/rust-syn/target/state-exposure"), { recursive: true });
+    const binary = `tools/ddd/bin/${process.platform}-${process.arch}/ddd-rust-syn-spike`;
+    mkdirSync(dirname(resolve(sandbox, binary)), { recursive: true });
     symlinkSync(resolve(import.meta.dir, "..", binary), resolve(sandbox, binary));
     writeFileSync(
       resolve(sandbox, "tests/fixtures/state-exposure-languages/child.ts"),

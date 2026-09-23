@@ -2,12 +2,13 @@
   "extends": "./tsconfig.json",
   "include": [
     "tools/ddd/lib/state-exposure/**/*.ts",
+    "tools/ddd/lib/rust/native/**/*.ts",
     "tools/ddd/lib/rust/state-evidence/**/*.ts",
     "tools/ddd/lib/typescript/state-evidence/**/*.ts",
     "tools/ddd/lib/state-exposure-verification/**/*.ts",
     "tools/ddd/lib/project-settings/**/*.ts",
     "tools/ddd-project-settings.ts",
-    "scripts/prepare-state-exposure.ts",
+    "scripts/prepare-native-extractor.ts",
     "scripts/verify-state-exposure.ts",
     "tests/state-exposure-*.test.ts",
     "tests/project-settings-*.test.ts"
