@@ -2,11 +2,11 @@
 
 [English](native-extractor-distribution.md) | [検査契約の設計](inspection-contract-design.ja.md)
 
-Rust + syn のネイティブ抽出器は、`error-contract/1` と `state-exposure/1` の両方の抽出プロトコルに応答する1つの実行ファイルです。この文書は、設置先、この配布が対応するプラットフォーム、導入先へ届く経路、起動できないときの応答、ゲート実行時に Rust ツールチェーンを要求するかどうかを記録します。
+Rust + syn のネイティブ抽出器は、`error-contract/1`・`state-exposure/1`・`domain-facts/1` の抽出プロトコルに応答する1つの実行ファイルです。この文書は、設置先、この配布が対応するプラットフォーム、導入先へ届く経路、起動できないときの応答、ゲート実行時に Rust ツールチェーンを要求するかどうかを記録します。
 
 ## 設置先
 
-1つのビルドを1か所に設置し、2つの入口がそれを起動します。
+1つのビルドを1か所に設置し、各入口がそれを起動します。
 
 ```
 tools/ddd/bin/manifest.json                        # この配布が対応するプラットフォーム
@@ -15,7 +15,13 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 
 `<platform-key>` は `${process.platform}-${process.arch}` です（例: `darwin-arm64`）。[`manifest.ts`](../../tools/ddd/lib/rust/native/manifest.ts) は自身からの相対でこのパスを解決するため、ソースツリー、`dist/<harness>/`、導入先プロジェクトのいずれでも同じ相対位置になります。
 
-[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts) と [`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts) は、どちらも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2）。manifest はどちらも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
+[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts)、[`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts)、[`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) は、いずれも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2、domain-facts は 4）。manifest はいずれも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
+
+| protocol | 版フラグ | `protocol_version` | 読む側 |
+|---|---|---|---|
+| `error-contract/1` | `--error-contract-version` | 3 | 操作エラー集合の照合 |
+| `state-exposure/1` | `--state-exposure-version` | 2 | 状態公開の検査 |
+| `domain-facts/1` | `--domain-facts-version` | 4 | `ddd-rust-domain` と `ddd-rust-use-case` の規則 `a`・`d` |
 
 呼び出し側は `extractRust` に明示的な command を渡せます。これは制御された検証シナリオで観測する対象プロセスを指すため、渡されたまま起動し、設置済み抽出器の解決も検証も行いません。
 
@@ -27,7 +33,7 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 
 ビルドは対象プラットフォーム上でしか生成できないため、manifest にはこの配布を準備したプラットフォームを記録します。それ以外の環境（Linux、Windows、および x86_64 全般）は**対象外**であり、対応済みとは表示しません。manifest に行がないプラットフォームは、設置されたことのないパスを指すのではなく `unsupported-platform` として解決されます。プラットフォームを追加するには、そのプラットフォーム上で下記のビルドを実行し、生成されたバイナリと manifest の行をコミットします。
 
-センサーがこの抽出器へ接続されるまで、対象外の環境で失われるゲートはありません。現時点でこの抽出器を呼ぶセンサーは存在しません。
+`ddd-rust-domain` と `ddd-rust-use-case` は規則 `a`・`d` をこの抽出器で判定するため、対象外の環境では、これらの規則が判定する申告ファイルを持つ実行が合格せず検査不能として停止します。これらの規則が判定するファイルを申告しない実行は、従来どおり verdict を報告します。`ddd-rust-interface-adapter` はどちらの規則も持たないため、この抽出器を起動しません。
 
 ## ビルドとプラットフォームの記録
 
@@ -37,7 +43,7 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 bun run prepare:native
 ```
 
-[`prepare-native-extractor.ts`](../../scripts/prepare-native-extractor.ts) は `rustc -vV` からホストトリプルを読み、`cargo build --locked --offline --release` に明示的な `--target` を渡してビルドし、結果を製品パスへ設置し、実行権限を付与し、**両方**の protocol を照会し、ホストの platform key に対する `{ target, sha256 }` を manifest へ記録します。内容が同一なら再コピーしません。ビルド準備の子コマンド上限は120秒、版プローブの上限は180秒で、失敗したビルドは設置しません。他プラットフォームの既存の行は保持します。
+[`prepare-native-extractor.ts`](../../scripts/prepare-native-extractor.ts) は `rustc -vV` からホストトリプルを読み、`cargo build --locked --offline --release` に明示的な `--target` を渡してビルドし、結果を製品パスへ設置し、実行権限を付与し、**3つすべて**の protocol を照会し、ホストの platform key に対する `{ target, sha256 }` を manifest へ記録します。内容が同一なら再コピーしません。ビルド準備の子コマンド上限は120秒、版プローブの上限は180秒で、失敗したビルドは設置しません。他プラットフォームの既存の行は保持します。
 
 ## 導入先へ届く経路
 
@@ -60,7 +66,7 @@ bun run prepare:native
 
 各条件は固有の subject を持つため、報告が2つを混同することはありません。複数が同時に成立する場合は、順序が先のものだけを報告します。ダイジェストの検査は起動より前に行うため、改変されたバイトが実行されることはありません。完了しなかった照会は、観測が与えた reason code をそのまま保ちます。起動の失敗、タイムアウト、出力量の超過は、protocol の不一致として言い換えられることなく、それぞれのまま報告されます。
 
-いずれも合格になりません。抽出は `completed` 以外の実行状態を返し、その reasons が該当の報告を運びます。共通の検査規則により `executionState` は `unavailable`、`ruleResult` は `unresolved` となり、未解決理由に該当の報告が載ります。実行できない検査は承認しません。
+いずれも合格になりません。2つの検査契約では、抽出は `completed` 以外の実行状態を返し、その reasons が該当の報告を運びます。`domain-facts/1` を読む2つのゲートでは、規則 `a`・`d` が判定する申告ファイルを持つ実行に限り、同じ報告がセンサー実行時の tool-unavailable の終端になります。ゲートは終了コード 127 を返し、verdict を出力しないため、実行されなかった検査で承認が進むことはありません。そのようなファイルを申告しない実行では、どちらの規則も評価されないため、この分類はその実行の verdict を変えず、ゲートは従来どおり verdict を報告します。共通の検査規則により `executionState` は `unavailable`、`ruleResult` は `unresolved` となり、未解決理由に該当の報告が載ります。実行できない検査は承認しません。
 
 ## ゲート実行時の Rust ツールチェーン
 
@@ -72,4 +78,4 @@ bun run prepare:native
 
 ## 対象外
 
-センサーからこの抽出器への接続、センサーの判定基盤の差し替え、TypeScript 側抽出器の配布、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。
+残る Rust 規則のこの抽出器への移行、TypeScript 側抽出器の配布、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、それ以外の規則は今も tree-sitter で判定します。

@@ -43,7 +43,7 @@ export interface GoldenCase {
 export interface SensorVerdict {
   pass: boolean;
   findings_count: number;
-  findings: { rule_id: string; file: string; line?: number }[];
+  findings: { rule_id: string; file: string; line?: number; message: string }[];
   note?: string;
 }
 
@@ -63,7 +63,12 @@ export function isViolation(testCase: GoldenCase): boolean {
   return testCase.name.startsWith("violation-");
 }
 
-function materialize(testCase: GoldenCase): string {
+/**
+ * Writes a case into a fresh temp project and returns its root plus the sensor's `--output-path`,
+ * so a test that observes something other than the verdict (an exit status, an empty stdout) runs
+ * the same fixture layout as `runGoldenCase`. The caller owns `root` and removes it.
+ */
+export function materializeCase(testCase: GoldenCase): { root: string; outputPath: string } {
   const root = mkdtempSync(join(tmpdir(), "ddd-golden-"));
   const record = join(root, "aidlc", "spaces", "default", "intents", "i1");
   mkdirSync(record, { recursive: true });
@@ -82,15 +87,13 @@ function materialize(testCase: GoldenCase): string {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content);
   }
-  return root;
+  return { root, outputPath: join(record, testCase.output) };
 }
 
 export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {
   const problems: string[] = [];
-  const root = materialize(testCase);
+  const { root, outputPath } = materializeCase(testCase);
   try {
-    const record = join(root, "aidlc", "spaces", "default", "intents", "i1");
-    const outputPath = join(record, testCase.output);
     const proc = Bun.spawnSync(
       ["bun", join(toolsDir, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
       {

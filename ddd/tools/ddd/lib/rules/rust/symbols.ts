@@ -54,17 +54,21 @@ export function buildSymbolTable(
   mappings: readonly RustAggregateMapping[],
 ): DomainSymbolTable {
   const types: DomainTypeSymbol[] = [];
-  const getterNames = new Set<string>();
+  const readsFacts = program.domainFacts !== null;
+  const getterNames = readsFacts ? new Set<string>() : null;
   const typeNames = new Set<string>();
   const constructorsByType = new Map<string, Set<string>>();
   for (const type of program.types) {
-    if (type.layer !== "domain" || type.kind === "trait") continue;
+    if (type.layer !== "domain") continue;
+    // Rule (d) reads this table for any domain receiver, so a domain declaration the native facts
+    // do not cover leaves the table unable to answer rather than answering "not a getter".
+    if (readsFacts && type.methods.some((entry) => entry.returns_field_only === null)) {
+      throw new Error(`the native domain facts carry no method record for ${type.key} in ${type.file}`);
+    }
+    if (type.kind === "trait") continue;
     const binding = aggregateFor(type, program, model, mappings);
     const aggregate = binding.aggregate;
     const inherent = type.methods.filter((entry) => !entry.trait);
-    const getters = inherent
-      .filter((entry) => entry.method.body_shape === "returns-field-only")
-      .map((entry) => entry.method.name);
     const constructors = inherent
       .filter((entry) => isConstructor(entry.method, type.name))
       .map((entry) => entry.method.name);
@@ -91,7 +95,6 @@ export function buildSymbolTable(
       kind: type.kind,
       aggregate_slug: aggregate?.slice("aggregate.".length) ?? toKebab(type.name),
       aggregate_ref: aggregate,
-      getters,
       constructors,
       mutators,
       has_default: defaults.length > 0,
@@ -101,7 +104,9 @@ export function buildSymbolTable(
         .map((field) => field.span.start_line),
       field_type_texts: type.fields.map((field) => field.type_text),
     });
-    for (const getter of getters) getterNames.add(getter);
+    if (getterNames) {
+      for (const entry of inherent) if (entry.returns_field_only) getterNames.add(entry.method.name);
+    }
     typeNames.add(type.name);
     const known = constructorsByType.get(type.name) ?? new Set<string>();
     for (const factory of constructors) known.add(factory);

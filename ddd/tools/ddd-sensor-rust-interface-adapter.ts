@@ -21,6 +21,8 @@ process.exit(
           sensor_id: "ddd-rust-interface-adapter",
           target_layers: ["interface-adapter", "rmu"],
           includes_query_side: true,
+          // This gate declares neither rule (a) nor rule (d), so it never launches their extractor.
+          domain_facts: null,
         },
         ["k", "l", "m", "n", "g"],
         api,

@@ -2,7 +2,7 @@
 
 English | [Japanese](README.ja.md)
 
-Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/developers/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
+Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/developers/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
 
 ## Test responsibilities
 
@@ -24,6 +24,7 @@ Updated: 2026-09-13. Run `bun test tests/` from the plugin root. The [contract m
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
+| t10-rust-domain-facts / t10-domain-facts-contract | Rules (a) and (d) decided on the native extractor: reported member names, ordinals and declaration lines, what each gate does when the extractor cannot be launched, and the answers the adapter refuses rather than reading as an empty fact set. |
 | install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
 | framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
 | error-contract-contract | Business-error contract vocabulary, request identity including the Cargo and the TypeScript condition, and response validation. |
@@ -42,9 +43,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 376 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 386 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 376 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 386 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
 
 ## Verified regressions and remaining checks
 

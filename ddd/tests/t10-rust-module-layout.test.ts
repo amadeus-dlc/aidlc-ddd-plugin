@@ -89,21 +89,24 @@ for (const layer of ["domain", "use-case", "interface-adapter", "rmu"] as const)
       writeFileSync(join(root, "src/storage/invoice.rs"), "pub struct Invoice;\n");
       writeFileSync(join(root, "src/orphan.rs"), "pub struct Orphan;\n");
       const { initAnalyzer } = await import("../tools/ddd/lib/rust/analyzer.ts");
-      const { buildProgram } = await import("../tools/ddd/lib/rules/rust/program.ts");
+      const { buildProgram, collectRustSources } = await import("../tools/ddd/lib/rules/rust/program.ts");
       const runtime = await initAnalyzer();
-      const program = buildProgram(runtime, root, [
+      const assignments = [
         {
           crate_name: "billing",
           path: ".",
           layer,
-          layer_source: "suffix",
-          cqrs_side: "none",
-          cqrs_source: "none",
+          layer_source: "suffix" as const,
+          cqrs_side: "none" as const,
+          cqrs_source: "none" as const,
           is_composition_root: false,
           diagnostics: [],
-          targets: [{ kind: "lib", name: "billing", src_path: "src/lib.rs" }],
+          targets: [{ kind: "lib" as const, name: "billing", src_path: "src/lib.rs" }],
         },
-      ]);
+      ];
+      // Module resolution is decided by the crate's own declarations, so this case reads the
+      // program without the native facts rules (a) and (d) add.
+      const program = buildProgram(runtime, collectRustSources(runtime, root, assignments), null);
       expect(program.resolveType("src/lib.rs", [], "crate::invoice::Invoice")?.key).toBe("billing::invoice::Invoice");
       expect(program.types.some((entry) => entry.name === "Orphan")).toBe(false);
       expect([...program.notes]).toEqual([]);

@@ -25,6 +25,7 @@ const CHECK_STEPS = [
   "bun run prepare:native",
   "bun run test",
   "bun run test:state-exposure:native",
+  "bun run test:domain-facts:native",
   "bun run experiment:rust-syn",
   "bun run verify:state-exposure",
   "bun run verify:error-contract",

@@ -40,7 +40,6 @@ export interface DomainTypeSymbol {
   kind: "struct" | "enum";
   aggregate_slug: string;
   aggregate_ref?: string;
-  getters: string[];
   constructors: string[];
   mutators: MutatorSymbol[];
   has_default: boolean;
@@ -52,7 +51,12 @@ export interface DomainTypeSymbol {
 export interface DomainSymbolTable {
   crates: string[];
   types: DomainTypeSymbol[];
-  getter_names: Set<string>;
+  /**
+   * The inherent methods of domain types whose body only hands back a member of `self`, as the
+   * native extractor reported them. `null` when the inspection was assembled without those facts,
+   * which happens only for a sensor that declares neither rule (a) nor rule (d).
+   */
+  getter_names: ReadonlySet<string> | null;
   type_names: Set<string>;
   /** method name -> owning type names, for the constructor lookup in (n). */
   constructors_by_type: Map<string, Set<string>>;

@@ -16,13 +16,23 @@ import {
   typeAliases,
   uses,
 } from "../../rust/analyzer.ts";
+import { type DomainFactSet, methodKey } from "../../rust/domain-facts/index.ts";
 import type { CrateLayerAssignment, Layer } from "../../workspace/resolver.ts";
+
+/** The layers whose crates make up the program the Rust rules read. */
+const PROGRAM_LAYERS: readonly Layer[] = ["domain", "use-case", "interface-adapter", "rmu"];
 
 export interface LocatedMethod {
   file: string;
   module: string[];
   method: MethodDecl;
   trait?: string;
+  /**
+   * The native fact rule (d) decides on. `null` means no fact was joined onto this declaration:
+   * either this inspection does not read the native facts at all, or they do not cover the file.
+   * Either way it is not a decision, and a consumer that needs one refuses instead of assuming.
+   */
+  returns_field_only: boolean | null;
 }
 export interface RustType {
   key: string;
@@ -56,8 +66,48 @@ export interface RustProgram {
   files: Map<string, RustFile>;
   types: RustType[];
   notes: Set<string>;
+  /** The native facts this program was built with, or `null` when it was built without them. */
+  domainFacts: DomainFactSet | null;
   resolveType(file: string, module: string[], text: string): RustType | undefined;
   receiver(file: string, call: CallSite): RustType | undefined;
+}
+
+/** One crate of the program, with the module walk that found its sources. */
+export interface RustCrateSources {
+  assignment: CrateLayerAssignment;
+  inventory: ModuleInventory;
+}
+
+export interface RustSourceInventory {
+  crates: RustCrateSources[];
+  /** Every crate the workspace assigns a layer to; a path starting with one is crate-qualified. */
+  workspaceCrates: Set<string>;
+  /** Workspace-relative file -> its bytes, read once for both the parse and the native batch. */
+  contents: Map<string, Uint8Array>;
+}
+
+/**
+ * Walks each program crate's modules and reads the sources it finds. Discovery is separate from
+ * `buildProgram` because the native facts that program is built with are gathered over exactly
+ * these files, and the batch has to be sent before the declarations can be joined onto it.
+ */
+export function collectRustSources(
+  runtime: AnalyzerRuntime,
+  root: string,
+  assignments: readonly CrateLayerAssignment[],
+): RustSourceInventory {
+  const crates: RustCrateSources[] = [];
+  const contents = new Map<string, Uint8Array>();
+  for (const assignment of assignments) {
+    if (!PROGRAM_LAYERS.includes(assignment.layer)) continue;
+    const inventory = inspectModules(runtime, root, assignment);
+    crates.push({ assignment, inventory });
+    for (const entry of inventory.sources) {
+      if (!contents.has(entry.file)) contents.set(entry.file, readFileSync(entry.path));
+    }
+  }
+  const workspaceCrates = new Set(assignments.map((entry) => entry.crate_name.replace(/-/g, "_")));
+  return { crates, workspaceCrates, contents };
 }
 
 export function within(inner: Span, outer: Span): boolean {
@@ -102,33 +152,32 @@ function bareType(text: string): string {
 
 export function buildProgram(
   runtime: AnalyzerRuntime,
-  root: string,
-  assignments: readonly CrateLayerAssignment[],
+  sources: RustSourceInventory,
+  domainFacts: DomainFactSet | null,
 ): RustProgram {
   const files = new Map<string, RustFile>();
   const types: RustType[] = [];
   const aliases: Alias[] = [];
   const notes = new Set<string>();
   const moduleInventories = new Map<string, ModuleInventory>();
-  for (const assignment of assignments) {
-    if (!["domain", "use-case", "interface-adapter", "rmu"].includes(assignment.layer)) continue;
+  for (const { assignment, inventory } of sources.crates) {
     const crate = assignment.crate_name.replace(/-/g, "_");
-    const inventory = inspectModules(runtime, root, assignment);
     moduleInventories.set(assignment.crate_name, inventory);
     for (const issue of inventory.problems) notes.add(`syntax.unresolved: ${issue.file}:${issue.line} ${issue.reason}`);
-    const sources = inventory.sources;
-    for (const entry of sources) {
-      const { path, file } = entry;
+    for (const entry of inventory.sources) {
+      const { file } = entry;
       if (files.has(file)) continue;
       const namespaces = new Set(
-        sources.filter((candidate) => candidate.file === file).map((candidate) => candidate.parts.join("::")),
+        inventory.sources.filter((candidate) => candidate.file === file).map((candidate) => candidate.parts.join("::")),
       );
       if (namespaces.size > 1) {
         notes.add(`syntax.unresolved: ${file} is used in multiple module namespaces`);
         continue;
       }
       const module = entry.parts;
-      const tree = parse(runtime, file, readFileSync(path));
+      const content = sources.contents.get(file);
+      if (!content) throw new Error(`the collected sources carry no content for ${file}`);
+      const tree = parse(runtime, file, content);
       const imports = uses(tree);
       files.set(file, {
         tree,
@@ -192,7 +241,7 @@ export function buildProgram(
       }
     }
   }
-  const crates = new Set(assignments.map((entry) => entry.crate_name.replace(/-/g, "_")));
+  const crates = sources.workspaceCrates;
   function lookup(file: string, module: string[], raw: string, seen: Set<string>): RustType | undefined {
     const owner = files.get(file);
     if (!owner || owner.tree.has_parse_error || owner.localImports) return undefined;
@@ -252,7 +301,15 @@ export function buildProgram(
         notes.add(`syntax.unresolved: ${file}:${block.span.start_line} impl ${block.target_type_text}`);
         continue;
       }
-      for (const method of block.methods) type.methods.push({ file, module, method, trait: block.trait_text });
+      for (const method of block.methods) {
+        type.methods.push({
+          file,
+          module,
+          method,
+          trait: block.trait_text,
+          returns_field_only: fieldReturn(domainFacts, file, block, method),
+        });
+      }
     }
   }
   function receiver(file: string, call: CallSite): RustType | undefined {
@@ -272,5 +329,15 @@ export function buildProgram(
     }
     return type;
   }
-  return { files, types, notes, moduleInventories, resolveType, receiver };
+  return { files, types, notes, moduleInventories, domainFacts, resolveType, receiver };
+}
+
+/**
+ * The native fact for one impl method, or `null` when the answer carries none for it — a file the
+ * extractor could not parse, or a method only its own extractor saw.
+ */
+function fieldReturn(facts: DomainFactSet | null, file: string, block: ImplBlock, method: MethodDecl): boolean | null {
+  if (!facts) return null;
+  const key = methodKey(file, block.module_path, block.target_type_text, block.trait_text ?? null, method.name);
+  return facts.fieldReturns.get(key) ?? null;
 }
