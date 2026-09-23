@@ -13,7 +13,7 @@
 ## コマンド
 
 ```sh
-bun run prepare:error-contract              # ネイティブ抽出器（protocol version 3）の構築と設置
+bun run prepare:native                      # ネイティブ抽出器（protocol version 3）の構築と設置
 bun run verify:error-contract               # 固定Rustシナリオの検証と証跡の出力
 bun run verify:error-contract:typescript    # 固定TypeScriptシナリオの検証と証跡の出力
 bun run check                               # 上記すべてを含む全体検査

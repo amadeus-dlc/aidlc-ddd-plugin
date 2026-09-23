@@ -766,6 +766,17 @@ if (import.meta.main) {
     env: composeEnv,
   });
 
+  // Projection and composition write payload bytes without a mode, so the native extractor arrives
+  // without its execute bit. Placement is this installer's responsibility: grant it inside the
+  // candidate tree, before the candidate is read, so the destination is still guarded by the
+  // collision and commit checks below.
+  const candidateBinDir = join(candidateDir, target.harnessLeaf, "tools", "ddd", "bin");
+  if (existsSync(candidateBinDir))
+    for (const rel of walkFiles(candidateBinDir)) {
+      // `bin/<platform-key>/<extractor>` holds the executables; `bin/manifest.json` is data beside them.
+      if (rel.split(sep).length === 2) chmodSync(join(candidateBinDir, rel), 0o755);
+    }
+
   // ---- verify -----------------------------------------------------------------
 
   const sentinel = join(projectDir, target.harnessLeaf, "sensors", "aidlc-ddd-model-completeness.md");

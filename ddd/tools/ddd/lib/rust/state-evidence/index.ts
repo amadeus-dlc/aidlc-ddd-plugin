@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import type { EvidenceResponse, Issue, MemberEvidence, ReasonCode, StateEvidence } from "../../state-exposure/index.ts";
 import { byteLocation, type FrozenTask, verifyTask } from "../../state-exposure-verification/input.ts";
 import {
@@ -8,12 +7,11 @@ import {
   type Observation,
   observeProcess,
 } from "../../state-exposure-verification/process.ts";
+// Aliased: this module already names its own conversion of a native reason code `nativeIssue`.
+import { classifyNativeExtractor, nativeIssue as launchIssue } from "../native/launch.ts";
+import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-export const RUST_BINARY = resolve(
-  import.meta.dir,
-  "../../../../..",
-  "experiments/rust-syn/target/state-exposure/ddd-rust-syn-spike",
-);
+const PROTOCOL = { flag: "--state-exposure-version", version: 2 };
 export const RUST_TOOLCHAIN = [
   { name: "ddd-rust-syn-spike", version: "0.0.0" },
   { name: "syn", version: "3.0.5" },
@@ -115,18 +113,20 @@ export function convertRustResponse(value: unknown, task: FrozenTask): EvidenceR
     return "invalid-native-response";
   }
 }
-export async function rustVersions(binary = RUST_BINARY): Promise<typeof RUST_TOOLCHAIN> {
-  const observed = await observeProcess([binary, "--state-exposure-version"], "", DEFAULT_LIMITS);
-  if (observed.execution.status !== "completed") throw new Error("Rust binary unavailable; run prepare:state-exposure");
-  const raw = object(observed.execution.response);
-  if (raw.protocol_version !== 2 || raw.extractor !== "0.0.0" || raw.syn !== "3.0.5")
-    throw new Error("Rust binary version mismatch; run prepare:state-exposure");
+export async function rustVersions(): Promise<typeof RUST_TOOLCHAIN> {
+  const outcome = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, PROTOCOL);
+  if (outcome.kind !== "ready") {
+    const reported = launchIssue(outcome);
+    throw new Error(`${reported.subject}: ${reported.message}; run prepare:native`);
+  }
+  if (outcome.version.extractor !== "0.0.0" || outcome.version.syn !== "3.0.5")
+    throw new Error("Rust binary version mismatch; run prepare:native");
   return RUST_TOOLCHAIN;
 }
 export async function extractRust(
   task: FrozenTask,
   limits: Limits = DEFAULT_LIMITS,
-  command: readonly string[] = [RUST_BINARY],
+  command?: readonly string[],
 ): Promise<Observation> {
   verifyTask(task);
   if (
@@ -137,8 +137,17 @@ export async function extractRust(
     )
   )
     throw new Error("Rust toolchain identity mismatch");
+  // A caller-supplied command names the process to observe for a verification scenario, so it is
+  // launched as given; the installed extractor is the one this classification resolves and verifies.
+  let launch = command;
+  if (!launch) {
+    const outcome = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, PROTOCOL);
+    if (outcome.kind !== "ready")
+      return { execution: { status: "unavailable", reasons: [launchIssue(outcome)] }, stdout: "", diagnostic: "" };
+    launch = [outcome.binaryPath];
+  }
   const observed = await observeProcess(
-    command,
+    launch,
     JSON.stringify({
       protocol_version: 2,
       request_identity: task.request.requestIdentity,

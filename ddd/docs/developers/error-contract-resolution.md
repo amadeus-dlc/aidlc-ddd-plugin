@@ -13,7 +13,7 @@ This contract reports resolution only. It emits no pass or violation verdict: co
 ## Commands
 
 ```sh
-bun run prepare:error-contract              # build and install the native extractor (protocol version 3)
+bun run prepare:native                      # build and install the native extractor (protocol version 3)
 bun run verify:error-contract               # run the fixed Rust scenario and print its evidence record
 bun run verify:error-contract:typescript    # run the fixed TypeScript scenario and print its evidence record
 bun run check                               # the whole gate, including all of the above

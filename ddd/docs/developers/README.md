@@ -30,6 +30,7 @@ The layer designs define conventions for generated applications and the plugin. 
 | Positive, negative, and boundary evidence per sensor | [Sensor coverage matrix](sensor-coverage.md) |
 | Native Rust parsing, comparison results, and semantic/distribution limits | [Rust + syn experiment](rust-syn-spike.md) |
 | Fresh installation, updates, and failure behavior | [Installation verification](installation-verification.md) |
+| Installed path, covered platforms, and launch failures of the native extractor | [Native extractor distribution](native-extractor-distribution.md) |
 | Provenance of earlier Codex host results | [Historical host verification](codex-host-verification.md) |
 | Machine-readable execution records | [Evidence](evidence/) |
 

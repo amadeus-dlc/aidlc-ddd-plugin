@@ -18,7 +18,7 @@ cargo fetch --locked --manifest-path experiments/rust-syn/Cargo.toml
 Build from the prepared cache, then verify:
 
 ```sh
-bun run prepare:state-exposure
+bun run prepare:native
 bun run verify:state-exposure --case all
 bun run test:state-exposure
 bun run test:state-exposure:native
@@ -27,7 +27,7 @@ bun run experiment:rust-syn
 bun run check
 ```
 
-Preparation reads the host from `rustc -vV`, builds with explicit `--target`, `--locked --offline --release`, and copies the binary to `experiments/rust-syn/target/state-exposure/ddd-rust-syn-spike`. Build preparation has a 120-second subprocess limit; failed builds are not copied. Identical bytes are not recopied. A version probe at the fixed path verifies readiness with a separate 180-second bound. A cold dependency build or OS executable initialization may exceed that limit. Inspect the diagnostic and rerun preparation explicitly. Reprepare after source or lockfile changes. C2 never fetches, builds, copies, or retries implicitly.
+Preparation reads the host from `rustc -vV`, builds with explicit `--target`, `--locked --offline --release`, and installs the binary at the product path `tools/ddd/bin/<platform-key>/ddd-rust-syn-spike`, which both language entries launch. Build preparation has a 120-second subprocess limit; failed builds are not installed. Identical bytes are not recopied. Version probes for both protocols verify readiness at that path with a separate 180-second bound. A cold dependency build or OS executable initialization may exceed that limit. Inspect the diagnostic and rerun preparation explicitly. Reprepare after source or lockfile changes. C2 never fetches, builds, copies, or retries implicitly. See [native extractor distribution](native-extractor-distribution.md) for the covered platforms and for what is reported when the extractor cannot be launched.
 
 `check` preserves existing formatting, plugin validation and development-scope checks, and runs explicit offline preparation, the ordinary full suite, native tests, the v1 comparison, C2 and scoped strict typechecking as separate steps. U1's own tests need neither parser. The full suite now includes real extraction and requires the prepared binary.
 

@@ -19,7 +19,7 @@ Resolving the operation, its result contract and its error case set belongs to [
 ## Commands
 
 ```sh
-bun run prepare:error-contract       # build and install the native extractor (protocol version 3), used by the Rust path
+bun run prepare:native               # build and install the native extractor (protocol version 3), used by the Rust path
 bun run verify:operation-error-set   # verify the shared scenario through the Rust, TypeScript class and TypeScript companion paths, and print the evidence
 bun run check                        # the full check, including the above
 ```
@@ -97,7 +97,7 @@ Each path turns the mapping into `error-contract/1` targets, runs the extractor,
 
 | Path | Entry point | How the target is decided |
 |---|---|---|
-| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | Runs `resolveCargoCondition` for the host target triple with no features. Places the mapped module as `<module>.rs` beside the library crate root. The declaration path is `[...module, type]` and the module layout is `file` |
+| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | Runs `resolveCargoCondition` with no features for the target triple the [distribution manifest](native-extractor-distribution.md) records for this platform, so the path needs no `rustc` of its own. Places the mapped module as `<module>.rs` beside the library crate root. The declaration path is `[...module, type]` and the module layout is `file` |
 | TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | Runs `resolveTypeScriptCondition` for the project. Places the mapped module as `<packageRoot>/src/<module>.ts`. The declaration path is `[type]`, the module layout is `named-file`, and the code representation is `class` or `companion` |
 
 [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) reads the model and the mappings through the production loaders.

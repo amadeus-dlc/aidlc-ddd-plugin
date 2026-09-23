@@ -19,7 +19,7 @@
 ## コマンド
 
 ```sh
-bun run prepare:error-contract       # ネイティブ抽出器（protocol version 3）の構築と設置。Rust経路が使う
+bun run prepare:native               # ネイティブ抽出器（protocol version 3）の構築と設置。Rust経路が使う
 bun run verify:operation-error-set   # 共通シナリオをRust・TypeScript class・TypeScriptコンパニオンの3経路で検証し、証跡を出力する
 bun run check                        # 上記を含む全体検査
 ```
@@ -97,7 +97,7 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 
 | 経路 | 入口 | 対象の決め方 |
 |---|---|---|
-| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | ホストのターゲットトリプルとfeatureなしで `resolveCargoCondition` を実行する。写像のモジュールを、ライブラリcrateルートと同じディレクトリの `<module>.rs` に置く。宣言パスは `[...module, type]`、モジュール配置は `file` |
+| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | [配布 manifest](native-extractor-distribution.ja.md) がこのプラットフォームに記録したターゲットトリプルと、featureなしで `resolveCargoCondition` を実行する。この経路自体は `rustc` を必要としない。写像のモジュールを、ライブラリcrateルートと同じディレクトリの `<module>.rs` に置く。宣言パスは `[...module, type]`、モジュール配置は `file` |
 | TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを `<packageRoot>/src/<module>.ts` に置く。宣言パスは `[type]`、モジュール配置は `named-file`、コード表現は `class` または `companion` |
 
 モデルと写像は [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) が本番のローダーで読みます。

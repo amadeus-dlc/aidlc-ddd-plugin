@@ -4,7 +4,6 @@
  * module is what validates them.
  */
 
-import { resolve } from "node:path";
 import type {
   ContractEvidence,
   ContractResponse,
@@ -27,12 +26,10 @@ import {
   type Observation,
   observeProcess,
 } from "../../state-exposure-verification/process.ts";
+import { classifyNativeExtractor, nativeIssue } from "../native/launch.ts";
+import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-export const RUST_BINARY = resolve(
-  import.meta.dir,
-  "../../../../..",
-  "experiments/rust-syn/target/error-contract/ddd-rust-syn-spike",
-);
+const PROTOCOL = { flag: "--error-contract-version", version: PROTOCOL_VERSION };
 export const RUST_TOOLCHAIN = [
   { name: "ddd-rust-syn-spike", version: "0.0.0" },
   { name: "syn", version: "3.0.5" },
@@ -181,19 +178,21 @@ export function convertRustResponse(value: unknown, task: FrozenTask): ContractR
   }
 }
 
-export async function rustVersions(binary = RUST_BINARY): Promise<typeof RUST_TOOLCHAIN> {
-  const observed = await observeProcess([binary, "--error-contract-version"], "", DEFAULT_LIMITS);
-  if (observed.execution.status !== "completed") throw new Error("Rust binary unavailable; run prepare:error-contract");
-  const raw = object(observed.execution.response);
-  if (raw.protocol_version !== PROTOCOL_VERSION || raw.extractor !== "0.0.0" || raw.syn !== "3.0.5")
-    throw new Error("Rust binary version mismatch; run prepare:error-contract");
+export async function rustVersions(): Promise<typeof RUST_TOOLCHAIN> {
+  const outcome = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, PROTOCOL);
+  if (outcome.kind !== "ready") {
+    const reported = nativeIssue(outcome);
+    throw new Error(`${reported.subject}: ${reported.message}; run prepare:native`);
+  }
+  if (outcome.version.extractor !== "0.0.0" || outcome.version.syn !== "3.0.5")
+    throw new Error("Rust binary version mismatch; run prepare:native");
   return RUST_TOOLCHAIN;
 }
 
 export async function extractRust(
   task: FrozenTask,
   limits: Limits = DEFAULT_LIMITS,
-  command: readonly string[] = [RUST_BINARY],
+  command?: readonly string[],
 ): Promise<Observation> {
   // The claimed parser is checked before the frozen snapshot: a request that names
   // another extractor is never sent to this binary.
@@ -205,8 +204,17 @@ export async function extractRust(
   )
     throw new Error("Rust toolchain identity mismatch");
   verifyTask(task);
+  // A caller-supplied command names the process to observe for a verification scenario, so it is
+  // launched as given; the installed extractor is the one this classification resolves and verifies.
+  let launch = command;
+  if (!launch) {
+    const outcome = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, PROTOCOL);
+    if (outcome.kind !== "ready")
+      return { execution: { status: "unavailable", reasons: [nativeIssue(outcome)] }, stdout: "", diagnostic: "" };
+    launch = [outcome.binaryPath];
+  }
   const observed = await observeProcess(
-    command,
+    launch,
     JSON.stringify({
       protocol_version: PROTOCOL_VERSION,
       request_identity: task.request.requestIdentity,

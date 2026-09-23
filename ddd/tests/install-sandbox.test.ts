@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -88,7 +89,11 @@ function snapshot(root: string): Record<string, string> {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) visit(path);
       else if (entry.isSymbolicLink()) files[path.slice(root.length + 1)] = `link:${readlinkSync(path)}`;
-      else files[path.slice(root.length + 1)] = createHash("sha256").update(readFileSync(path)).digest("hex");
+      // The mode is part of what an installation publishes: an executable payload that lands without
+      // its execute bit, or a destination file whose mode is changed in place, must both be visible.
+      else
+        files[path.slice(root.length + 1)] =
+          `${(lstatSync(path).mode & 0o777).toString(8)}:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
     }
   }
   visit(root);
@@ -136,6 +141,54 @@ for (const harness of ["claude", "codex"] as const) {
     expect(readFileSync(f.userFile, "utf8")).toBe("User-owned application data\n");
   }, 30_000);
 }
+
+const PLATFORM_KEY = `${process.platform}-${process.arch}`;
+const EXTRACTOR_PAYLOAD = `tools/ddd/bin/${PLATFORM_KEY}/ddd-rust-syn-spike`;
+const MANIFEST_PAYLOAD = "tools/ddd/bin/manifest.json";
+
+function protocolOf(binary: string, flag: string): unknown {
+  const result = Bun.spawnSync([binary, flag], { stdout: "pipe", stderr: "pipe" });
+  expect(result.exitCode, result.stderr.toString()).toBe(0);
+  return JSON.parse(result.stdout.toString()).protocol_version;
+}
+
+for (const harness of ["claude", "codex"] as const)
+  test(`${harness}: the native extractor is installed, launches, and still launches after an update`, () => {
+    const f = fixture(harness);
+    const first = f.invoke();
+    expect(first.code, first.output).toBe(0);
+    const receiptPath = join(f.project, f.leaf, "tools/data/ddd-install.json");
+    const installed = join(f.project, f.leaf, EXTRACTOR_PAYLOAD);
+    const owned = Object.keys(JSON.parse(readFileSync(receiptPath, "utf8")).owned_files);
+    expect(owned).toContain(EXTRACTOR_PAYLOAD);
+    expect(owned).toContain(MANIFEST_PAYLOAD);
+    expect(protocolOf(installed, "--error-contract-version")).toBe(3);
+    expect(protocolOf(installed, "--state-exposure-version")).toBe(2);
+
+    const manifest = join(f.source, "ddd/.aidlc-plugin/plugin.json");
+    const value = JSON.parse(readFileSync(manifest, "utf8"));
+    value.version = "0.1.1";
+    writeFileSync(manifest, JSON.stringify(value));
+    const updated = f.invoke(["--update"]);
+    expect(updated.code, updated.output).toBe(0);
+    expect(JSON.parse(readFileSync(receiptPath, "utf8")).version).toBe("0.1.1");
+    expect(existsSync(installed)).toBe(true);
+    expect(protocolOf(installed, "--error-contract-version")).toBe(3);
+    expect(protocolOf(installed, "--state-exposure-version")).toBe(2);
+  }, 60_000);
+
+for (const harness of ["claude", "codex"] as const)
+  test(`${harness}: a user file at the native extractor path is refused without touching the destination`, () => {
+    const f = fixture(harness);
+    const path = join(f.project, f.leaf, EXTRACTOR_PAYLOAD);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "// User-owned file; do not replace.\n");
+    const before = snapshot(f.project);
+    const result = f.invoke();
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("collision");
+    expect(snapshot(f.project)).toEqual(before);
+  }, 30_000);
 
 for (const harness of ["claude", "codex"] as const)
   test(`${harness}: the installed set migration reads a project that still has to migrate`, () => {
