@@ -5,7 +5,7 @@
  * identity, the one batch this inspection sends, and the strict conversion of native spellings into
  * the records the rule layer reads. Native spellings never leave it.
  *
- * Every condition that would leave a requested file without facts — a batch too large to send, a
+ * Every condition that would leave a requested file without facts — a file too large to send, a
  * run that did not finish, an answer that is not this protocol — is reported as one unavailable
  * result. An empty fact set is never produced as a stand-in, because "this file declares nothing"
  * is exactly the answer an uninspected file must not give.
@@ -399,24 +399,44 @@ function convert(response: unknown, requested: readonly RustSourceFile[]): Domai
   return { files, notes: [...notes].sort() };
 }
 
-/**
- * Runs the classified extractor once over every source of the inspected program. `binaryPath` is
- * the one the launch classification resolved and verified, so this call is the run alone.
- */
-export function readDomainFacts(binaryPath: string, sources: readonly RustSourceFile[]): DomainFactResult {
-  // The request contract needs at least one file, and a batch with none has nothing to answer for.
-  if (sources.length === 0) return { kind: "facts", facts: { files: new Map(), notes: [] } };
-  const request = JSON.stringify({
+/** One request as the extractor reads it. */
+function requestOf(sources: readonly RustSourceFile[]): string {
+  return JSON.stringify({
     protocol_version: PROTOCOL.version,
     files: sources.map((entry) => ({ path: entry.file, source: entry.source })),
   });
-  if (Buffer.byteLength(request) > MAX_REQUEST_BYTES)
-    return {
-      kind: "unavailable",
-      detail: `the inspected sources exceed the native extractor's ${MAX_REQUEST_BYTES}-byte request limit`,
-    };
+}
+
+/**
+ * The sources split into requests the extractor accepts, in the order they were given. Facts are
+ * per file, so where one request ends changes no answer. A file that does not fit even alone cannot
+ * be split, so it is named instead.
+ */
+function requestsOf(sources: readonly RustSourceFile[]): RustSourceFile[][] | { readonly oversized: string } {
+  const envelope = Buffer.byteLength(requestOf([]));
+  const requests: RustSourceFile[][] = [];
+  let current: RustSourceFile[] = [];
+  let size = envelope;
+  for (const entry of sources) {
+    // The separating comma is counted with every file, which can only overstate the size.
+    const own = Buffer.byteLength(JSON.stringify({ path: entry.file, source: entry.source })) + 1;
+    if (envelope + own > MAX_REQUEST_BYTES) return { oversized: entry.file };
+    if (current.length > 0 && size + own > MAX_REQUEST_BYTES) {
+      requests.push(current);
+      current = [];
+      size = envelope;
+    }
+    current.push(entry);
+    size += own;
+  }
+  if (current.length > 0) requests.push(current);
+  return requests;
+}
+
+/** One run of the extractor over one request. */
+function readRequest(binaryPath: string, sources: readonly RustSourceFile[]): DomainFactResult {
   const run = Bun.spawnSync([binaryPath], {
-    stdin: Buffer.from(request),
+    stdin: Buffer.from(requestOf(sources)),
     stdout: "pipe",
     stderr: "pipe",
     timeout: TIMEOUT_MS,
@@ -445,6 +465,44 @@ export function readDomainFacts(binaryPath: string, sources: readonly RustSource
 }
 
 /**
+ * Runs the classified extractor over every source of the inspected program. `binaryPath` is the one
+ * the launch classification resolved and verified, so this call is the run alone.
+ *
+ * The sources go out in as many requests as the extractor's request limit needs and the answers
+ * are joined, so the size of a project never stops an inspection by itself. `between` runs before
+ * every request after the first: a caller with a time budget checks it there, since one request is
+ * the smallest unit a run can be stopped at. Any request that is not answered leaves the whole
+ * result unavailable, as one oversized request did.
+ */
+export function readDomainFacts(
+  binaryPath: string,
+  sources: readonly RustSourceFile[],
+  between: () => void = () => {},
+): DomainFactResult {
+  // The request contract needs at least one file, and a batch with none has nothing to answer for.
+  if (sources.length === 0) return { kind: "facts", facts: { files: new Map(), notes: [] } };
+  const requests = requestsOf(sources);
+  if (!Array.isArray(requests))
+    return {
+      kind: "unavailable",
+      detail: `${requests.oversized} alone exceeds the native extractor's ${MAX_REQUEST_BYTES}-byte request limit`,
+    };
+  const files = new Map<string, RustFileFacts>();
+  const notes = new Set<string>();
+  for (const [index, request] of requests.entries()) {
+    if (index > 0) between();
+    const result = readRequest(binaryPath, request);
+    if (result.kind === "unavailable") return result;
+    for (const [file, facts] of result.facts.files) {
+      if (files.has(file)) return { kind: "unavailable", detail: `the answer covers ${file} twice` };
+      files.set(file, facts);
+    }
+    for (const note of result.facts.notes) notes.add(note);
+  }
+  return { kind: "facts", facts: { files, notes: [...notes].sort() } };
+}
+
+/**
  * The one place an extractor these facts cannot be decided from becomes a stopped inspection.
  *
  * A launch an entry classified as unusable and a run that did not answer both reach the same
@@ -453,9 +511,13 @@ export function readDomainFacts(binaryPath: string, sources: readonly RustSource
  * reason each carries from drifting apart between entries. Callers decide when they have something
  * to decide on; a run with nothing to ask about never reaches this.
  */
-export function requireDomainFacts(extractor: NativeOutcome, sources: readonly RustSourceFile[]): DomainFactSet {
+export function requireDomainFacts(
+  extractor: NativeOutcome,
+  sources: readonly RustSourceFile[],
+  between: () => void = () => {},
+): DomainFactSet {
   if (extractor.kind !== "ready") throw new ToolUnavailableError(nativeIssue(extractor).message);
-  const result = readDomainFacts(extractor.binaryPath, sources);
+  const result = readDomainFacts(extractor.binaryPath, sources, between);
   if (result.kind === "unavailable") throw new ToolUnavailableError(result.detail);
   return result.facts;
 }

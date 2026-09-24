@@ -64,7 +64,12 @@ function readSelection(configPath: string): ProjectSelection | { readonly detail
  * has not run yet. A file the extractor could not read is left out, and the walk reports it where
  * a declaration names it.
  */
-function readProjectFacts(extractor: NativeOutcome, root: string, sources: readonly string[]): DomainFactSet {
+function readProjectFacts(
+  extractor: NativeOutcome,
+  root: string,
+  sources: readonly string[],
+  checkBudget: () => void,
+): DomainFactSet {
   const batch: RustSourceFile[] = [];
   for (const path of [...sources].sort()) {
     try {
@@ -73,7 +78,7 @@ function readProjectFacts(extractor: NativeOutcome, root: string, sources: reado
       // A source that cannot be read carries no declarations to ask about; the walk reports it.
     }
   }
-  return requireDomainFacts(extractor, batch);
+  return requireDomainFacts(extractor, batch, checkBudget);
 }
 
 /** Whole-project check: no source claims, model, layer assignment, or edition-based style inference. */
@@ -144,7 +149,7 @@ export function checkModuleLayout(
     return result;
   }
   result.mode = selection.rust.moduleLayout;
-  const declarations = readProjectFacts(extractor, root, sources).files;
+  const declarations = readProjectFacts(extractor, root, sources, checkBudget).files;
   const covered = new Set<string>();
   const crates = new Set<string>();
   for (const manifest of manifests.sort()) {

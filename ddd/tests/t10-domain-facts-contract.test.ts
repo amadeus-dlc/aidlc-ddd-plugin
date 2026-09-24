@@ -314,12 +314,41 @@ test.each(REFUSED)("the batch is unavailable, not empty, when %s", (_label, answ
   expect(result.kind).toBe("unavailable");
 });
 
-test("a request larger than the extractor accepts is refused before it is sent", () => {
+// A project's sources can together exceed one request while every file fits in one. Facts are per
+// file, so the sources are sent in as many requests as they need and the answers are joined; the
+// size of a project never turns into a stopped gate by itself.
+test("sources that together exceed one request are sent in several and answered as one", async () => {
+  const outcome = await classifyDomainFactExtractor();
+  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+  if (outcome.kind !== "ready") return;
+  const filler = `// ${"x".repeat(78)}\n`.repeat(40 * 1024);
+  const sources = [0, 1, 2].map((index) => ({
+    file: `packages/domain/billing-domain/src/part${index}.rs`,
+    source: `pub struct Part${index}(pub u64);\n${filler}`,
+  }));
+  expect(Buffer.byteLength(JSON.stringify(sources))).toBeGreaterThan(8 * 1024 * 1024);
+  let between = 0;
+  const result = readDomainFacts(outcome.binaryPath, sources, () => {
+    between += 1;
+  });
+  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+  if (result.kind !== "facts") return;
+  expect([...result.facts.files.keys()].sort()).toEqual(sources.map((entry) => entry.file));
+  for (const [index, entry] of sources.entries())
+    expect(result.facts.files.get(entry.file)?.publicMembers).toEqual([
+      { typeName: `Part${index}`, name: "0", line: 1 },
+    ]);
+  // The caller's own limits are consulted between requests, never in the middle of one.
+  expect(between).toBeGreaterThan(0);
+});
+
+test("a file larger than one request is refused before anything is sent, and is named", () => {
   const oversized = [{ file: LIB, source: "a".repeat(9 * 1024 * 1024) }];
-  // The path is never launched: refusing the batch is decided from its size alone.
+  // The path is never launched: a file cannot be split, so refusing it is decided from its size alone.
   const result = readDomainFacts(join(tmpdir(), "ddd-domain-facts-absent"), oversized);
   expect(result.kind).toBe("unavailable");
   expect(result.kind === "unavailable" && result.detail).toContain("request limit");
+  expect(result.kind === "unavailable" && result.detail).toContain(LIB);
 });
 
 test("a batch with no sources is answered without launching the extractor", () => {
