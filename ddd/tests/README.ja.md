@@ -10,7 +10,7 @@
 |---|---|
 | t1-model-artifacts / t1-gate-integration | 正規成果物の直接検査、Claude/Codexの通常承認開始 |
 | t7-domain-packaging | 業務語彙による宣言と実モジュールの照合、技術分類・解析不能の検出 |
-| t10-rust-module-layout | プロジェクト設定、両配置規約、センサー直接実行、CI終了コード、共通の論理モジュール解決 |
+| t10-rust-module-layout | プロジェクト設定、両配置規約、センサー直接実行、CI終了コード、共通の論理モジュール解決、抽出器を起動できない場合のゲートとCI用入口それぞれの挙動 |
 | t9-sensor-contract | センサー×規則の網羅性、正常・異常・境界例、依存方向表、予約名全件、対応表の更新漏れ |
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
@@ -25,6 +25,7 @@
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
 | t10-rust-domain-facts / t10-domain-facts-contract | ネイティブ抽出器で判定する規則a・d。報告するメンバー名・序数・宣言行、抽出器を起動できない場合の各ゲートの挙動、空の事実集合として読まずに拒否する応答 |
+| t10-rust-domain-decision-base | ネイティブ抽出器で判定する規則b・c・gとdomain-packaging。所見が持つ行、マクロ本体・文字列・コメント内の同じ字面が何も宣言しないこと、モジュール解決の解決・未解決の対、判定元プログラムのソースを抽出器が読めない場合に空として読まずゲートを停止すること |
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
 | error-contract-contract | 業務エラー契約の語彙、Cargo条件とTypeScript条件を含む要求識別、応答検証 |

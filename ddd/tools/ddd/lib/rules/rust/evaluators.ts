@@ -5,17 +5,8 @@
  */
 
 import { evaluateDomainPackaging } from "../../packaging/evaluate.ts";
-import {
-  type CallSite,
-  calls,
-  constructions,
-  fns,
-  impls,
-  type Span,
-  structs,
-  traits,
-  uses,
-} from "../../rust/analyzer.ts";
+import { constructions, fns, impls, structs, traits, uses } from "../../rust/analyzer.ts";
+import type { CallFact, RustFileFacts, Span } from "../../rust/domain-facts/index.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
@@ -48,17 +39,22 @@ function domainTypeSymbol(symbols: InspectionContext["symbols"], typeName: strin
   return symbols.types.filter((symbol) => symbol.type_name === typeName);
 }
 
+/**
+ * What the extractor reported for one inspected file. An inspected file always has a record; its
+ * absence means the extractor could not read the file, which is not the same answer as "it
+ * declares nothing".
+ */
+function declarationsOf(context: InspectionContext, file: string): RustFileFacts {
+  const declared = context.program.facts.files.get(file);
+  if (!declared) throw new Error(`the native domain facts carry no declarations for ${file}`);
+  return declared;
+}
+
 // --- (a) public field -------------------------------------------------------
 function ruleA(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const file = target.tree.file;
-  const facts = context.program.domainFacts;
-  if (!facts) throw new Error("rule (a) was evaluated without the native domain facts");
-  const members = facts.publicMembers.get(file);
-  // An inspected file always has a record. Its absence means the extractor could not read the
-  // file, which is not the same answer as "it declares nothing public".
-  if (!members) throw new Error(`the native domain facts carry no member record for ${file}`);
-  return members.map((member) =>
+  return declarationsOf(context, file).publicMembers.map((member) =>
     finding("a", file, `public field ${member.typeName}.${member.name} in domain layer`, member.line),
   );
 }
@@ -89,14 +85,15 @@ function ruleB(target: InspectionTarget, context: InspectionContext): FindingInp
 function ruleC(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const out: FindingInput[] = [];
+  const declared = declarationsOf(context, target.tree.file);
   const inherentSpans = new Map<string, Span[]>();
-  for (const block of impls(target.tree)) {
+  for (const block of declared.impls) {
     if (block.trait_text !== undefined) continue;
     const list = inherentSpans.get(block.target_type_text) ?? [];
     list.push(block.span);
     inherentSpans.set(block.target_type_text, list);
   }
-  for (const site of constructions(target.tree)) {
+  for (const site of declared.constructions) {
     if (!context.symbols.type_names.has(site.type_text)) continue;
     if (site.kind === "struct-literal" || site.kind === "update-syntax") {
       const spans = inherentSpans.get(site.type_text) ?? [];
@@ -152,12 +149,13 @@ function ruleC(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (d) getter call --------------------------------------------------------
 function isRepositoryArgument(
-  call: CallSite,
-  callSites: CallSite[],
+  file: string,
+  call: CallFact,
+  callSites: readonly CallFact[],
   target: InspectionTarget,
   context: InspectionContext,
 ): boolean {
-  if (target.classification.effective_layer !== "use-case" || !call.forwarded_argument_calls?.length || !target.tree) {
+  if (target.classification.effective_layer !== "use-case" || !call.forwarded_argument_calls.length || !target.tree) {
     return false;
   }
   return call.forwarded_argument_calls.every((span) => {
@@ -165,32 +163,25 @@ function isRepositoryArgument(
       (candidate) => withinSpan(candidate.span, span) && withinSpan(span, candidate.span),
     );
     if (consumer?.kind !== "method-call") return false;
-    const port = context.program.receiver(call.file, consumer);
+    const port = context.program.receiver(file, consumer);
     if (!port) {
       context.program.notes.add(
-        `syntax.unresolved: ${call.file}:${consumer.span.start_line} repository receiver; rule d exception not proven`,
+        `syntax.unresolved: ${file}:${consumer.span.start_line} repository receiver; rule d exception not proven`,
       );
       return false;
     }
     if (port.kind !== "trait" || !["domain", "use-case"].includes(port.layer) || !port.name.endsWith("Repository")) {
       return false;
     }
-    const file = context.program.files.get(port.file);
-    if (!file) return false;
-    return traits(file.tree).some(
-      (decl) =>
-        [file.crate, ...file.module, ...decl.module_path, decl.name].join("::") === port.key &&
-        decl.methods.includes(consumer.callee_text),
-    );
+    return port.traitMethods.includes(consumer.callee_text);
   });
 }
 
 function ruleD(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const getterNames = context.symbols.getter_names;
-  if (!getterNames) throw new Error("rule (d) was evaluated without the native domain facts");
   const out: FindingInput[] = [];
-  const callSites = calls(target.tree);
+  const callSites = declarationsOf(context, target.tree.file).calls;
   for (const call of callSites) {
     if (call.kind !== "method-call") continue;
     const receiver = (call.receiver_text ?? "").replace(/\s+/g, " ").trim();
@@ -205,9 +196,9 @@ function ruleD(target: InspectionTarget, context: InspectionContext): FindingInp
     }
     if (
       type.layer === "domain" &&
-      type.methods.some((entry) => entry.method.name === call.callee_text && entry.returns_field_only === true)
+      type.methods.some((entry) => entry.method.name === call.callee_text && entry.method.returns_field_only)
     ) {
-      if (isRepositoryArgument(call, callSites, target, context)) continue;
+      if (isRepositoryArgument(target.tree.file, call, callSites, target, context)) continue;
       out.push(
         finding(
           "d",
@@ -250,10 +241,10 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
     if (name !== "execute") return;
     for (const param of params) {
       const stripped = stripType(param.type_text);
-      const type = context.program.resolveType(file.tree.file, [...file.module, ...module], param.type_text);
+      const type = context.program.resolveType(file.file, [...file.module, ...module], param.type_text);
       if (!type && !/^(bool|str|String|[uif](8|16|32|64|128)|[ui]size|\(\))$/.test(stripped)) {
         context.program.notes.add(
-          `syntax.unresolved: ${file.tree.file}:${line} parameter ${param.type_text}; rule h not evaluated`,
+          `syntax.unresolved: ${file.file}:${line} parameter ${param.type_text}; rule h not evaluated`,
         );
       }
       if (
@@ -282,7 +273,7 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
 function ruleI(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const out: FindingInput[] = [];
-  for (const call of calls(target.tree)) {
+  for (const call of declarationsOf(context, target.tree.file).calls) {
     if (call.callee_text !== "execute" && !call.callee_text.endsWith("::execute")) continue;
     if (["self", "Self"].includes((call.receiver_text ?? "").trim())) continue;
     const file = context.program.files.get(target.tree.file);
@@ -292,7 +283,7 @@ function ruleI(target: InspectionTarget, context: InspectionContext): FindingInp
         ? context.program.receiver(target.tree.file, call)
         : context.program.resolveType(
             target.tree.file,
-            [...file.module, ...call.module_path],
+            [...file.module, ...call.module],
             call.callee_text.slice(0, -9),
           );
     if (!type) {
@@ -304,7 +295,7 @@ function ruleI(target: InspectionTarget, context: InspectionContext): FindingInp
     const caller = file.impls.find((block) => withinSpan(call.span, block.span));
     const callerType =
       caller &&
-      context.program.resolveType(target.tree.file, [...file.module, ...caller.module_path], caller.target_type_text);
+      context.program.resolveType(target.tree.file, [...file.module, ...caller.module], caller.target_type_text);
     if (callerType?.key === type.key) continue;
     if (
       type.layer === "use-case" &&

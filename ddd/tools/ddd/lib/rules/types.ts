@@ -4,7 +4,7 @@
  */
 
 import type { SensorRunContext, SourceClaim } from "../runtime/context.ts";
-import type { AnalyzerRuntime, SyntaxTree } from "../rust/analyzer.ts";
+import type { SyntaxTree } from "../rust/analyzer.ts";
 import type { ElementIndex } from "../schema/index-builder.ts";
 import type { CargoWorkspace, CrateLayerAssignment, FileClassification, Layer } from "../workspace/resolver.ts";
 import type { ExternalCrateRule } from "./lists.ts";
@@ -53,10 +53,9 @@ export interface DomainSymbolTable {
   types: DomainTypeSymbol[];
   /**
    * The inherent methods of domain types whose body only hands back a member of `self`, as the
-   * native extractor reported them. `null` when the inspection was assembled without those facts,
-   * which happens only for a sensor that declares neither rule (a) nor rule (d).
+   * native extractor reported them.
    */
-  getter_names: ReadonlySet<string> | null;
+  getter_names: ReadonlySet<string>;
   type_names: Set<string>;
   /** method name -> owning type names, for the constructor lookup in (n). */
   constructors_by_type: Map<string, Set<string>>;
@@ -73,7 +72,6 @@ export interface DependencyEdge {
 }
 
 export interface InspectionContext {
-  analyzer: AnalyzerRuntime;
   /** The implementation mapping of the record, projected onto what the Rust rules compare. */
   rustMapping: RustMappingLoad;
   run: SensorRunContext;

@@ -15,13 +15,13 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 
 `<platform-key>` は `${process.platform}-${process.arch}` です（例: `darwin-arm64`）。[`manifest.ts`](../../tools/ddd/lib/rust/native/manifest.ts) は自身からの相対でこのパスを解決するため、ソースツリー、`dist/<harness>/`、導入先プロジェクトのいずれでも同じ相対位置になります。
 
-[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts)、[`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts)、[`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) は、いずれも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2、domain-facts は 4）。manifest はいずれも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
+[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts)、[`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts)、[`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) は、いずれも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2、domain-facts は 5）。manifest はいずれも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
 
 | protocol | 版フラグ | `protocol_version` | 読む側 |
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | 操作エラー集合の照合 |
 | `state-exposure/1` | `--state-exposure-version` | 2 | 状態公開の検査 |
-| `domain-facts/1` | `--domain-facts-version` | 4 | `ddd-rust-domain` と `ddd-rust-use-case` の規則 `a`・`d` |
+| `domain-facts/1` | `--domain-facts-version` | 5 | `ddd-rust-domain` が報告するすべての規則、および他の Rust ゲートとモジュール走査が用いるプログラム解決・モジュール解決 |
 
 呼び出し側は `extractRust` に明示的な command を渡せます。これは制御された検証シナリオで観測する対象プロセスを指すため、渡されたまま起動し、設置済み抽出器の解決も検証も行いません。
 
@@ -33,7 +33,7 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 
 ビルドは対象プラットフォーム上でしか生成できないため、manifest にはこの配布を準備したプラットフォームを記録します。それ以外の環境（Linux、Windows、および x86_64 全般）は**対象外**であり、対応済みとは表示しません。manifest に行がないプラットフォームは、設置されたことのないパスを指すのではなく `unsupported-platform` として解決されます。プラットフォームを追加するには、そのプラットフォーム上で下記のビルドを実行し、生成されたバイナリと manifest の行をコミットします。
 
-`ddd-rust-domain` と `ddd-rust-use-case` は規則 `a`・`d` をこの抽出器で判定するため、対象外の環境では、これらの規則が判定する申告ファイルを持つ実行が合格せず検査不能として停止します。これらの規則が判定するファイルを申告しない実行は、従来どおり verdict を報告します。`ddd-rust-interface-adapter` はどちらの規則も持たないため、この抽出器を起動しません。
+5つの入口がこの抽出器で判定するため、対象外の環境ではいずれも合格せず検査不能として停止します。申告ファイルを起点とする3つのゲート（`ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`）は、申告ファイルによって規則が判定する対象を持つ実行で停止し、そのようなファイルを申告しない実行では従来どおり verdict を報告します。`ddd-rust-module-layout` と CI 用入口 `ddd-check-rust-module-layout` は申告を読みません。モジュール走査は次に開くファイルをこの抽出器が報告する宣言から決めるため、すべての実行でこの抽出器を必要とします。
 
 ## ビルドとプラットフォームの記録
 
@@ -66,7 +66,16 @@ bun run prepare:native
 
 各条件は固有の subject を持つため、報告が2つを混同することはありません。複数が同時に成立する場合は、順序が先のものだけを報告します。ダイジェストの検査は起動より前に行うため、改変されたバイトが実行されることはありません。完了しなかった照会は、観測が与えた reason code をそのまま保ちます。起動の失敗、タイムアウト、出力量の超過は、protocol の不一致として言い換えられることなく、それぞれのまま報告されます。
 
-いずれも合格になりません。2つの検査契約では、抽出は `completed` 以外の実行状態を返し、その reasons が該当の報告を運びます。`domain-facts/1` を読む2つのゲートでは、規則 `a`・`d` が判定する申告ファイルを持つ実行に限り、同じ報告がセンサー実行時の tool-unavailable の終端になります。ゲートは終了コード 127 を返し、verdict を出力しないため、実行されなかった検査で承認が進むことはありません。そのようなファイルを申告しない実行では、どちらの規則も評価されないため、この分類はその実行の verdict を変えず、ゲートは従来どおり verdict を報告します。共通の検査規則により `executionState` は `unavailable`、`ruleResult` は `unresolved` となり、未解決理由に該当の報告が載ります。実行できない検査は承認しません。
+いずれも合格になりません。2つの検査契約では、抽出は `completed` 以外の実行状態を返し、その reasons が該当の報告を運びます。共通の検査規則により `executionState` は `unavailable`、`ruleResult` は `unresolved` となり、未解決理由に該当の報告が載ります。
+
+`domain-facts/1` を読む入口では、同じ報告が次の2つの終端のいずれかに届きます。終端の形が違うのは入口が違うためで、分類が入口ごとに変わるわけではありません。
+
+| 入口 | 起動が止まったときの終端 |
+|---|---|
+| `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`、`ddd-rust-module-layout` | センサー実行時の tool-unavailable の終端。終了コード 127、stdout に verdict を出さず、理由は stderr へ出す |
+| `ddd-check-rust-module-layout` | 自身の catch。終了コード 1 と stdout の `{"pass": false, "reason": …}`。走査を完了した実行が返す件数の結果はいずれも含まない |
+
+申告ファイルを起点とする3つのゲートでは、申告ファイルによって規則が判定する対象を持つ実行でこの終端に達します。そのようなファイルを申告しない実行ではどの規則も評価されないため、この分類はその実行の verdict を変えず、ゲートは従来どおり verdict を報告します。モジュール走査は申告を読まないため、その2つの入口は起動が止まった時点で終端に達します。実行できない検査は承認しません。
 
 ## ゲート実行時の Rust ツールチェーン
 
@@ -78,4 +87,4 @@ bun run prepare:native
 
 ## 対象外
 
-残る Rust 規則のこの抽出器への移行、TypeScript 側抽出器の配布、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、それ以外の規則は今も tree-sitter で判定します。
+TypeScript 側抽出器の配布と、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、T-10-03 では `ddd-rust-domain` が報告する残りの規則と、その packaging 規則が読むパッケージ解決・モジュール解決を接続しました。`ddd-rust-use-case` と `ddd-rust-interface-adapter` だけが報告する6件の規則のうち4件（`h`・`l`・`m`・`n`）は、今も宣言の列挙を tree-sitter の構文木から行い、各候補の解決はネイティブのプログラム解決で行います。`i` と `k` はすでにネイティブの呼び出し事実と `use` 事実で判定します。tree-sitter 資産自体は同梱を続けます。

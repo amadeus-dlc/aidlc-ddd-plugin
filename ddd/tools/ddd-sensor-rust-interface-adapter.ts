@@ -5,8 +5,12 @@ import { runSensor, ToolUnavailableError } from "./ddd/lib/runtime/runtime.ts";
 // interface-adapter / rmu layers and every query-side file (U5). Rules
 // k / l / m / n and g.
 import { initAnalyzer } from "./ddd/lib/rust/analyzer.ts";
+import { classifyDomainFactExtractor } from "./ddd/lib/rust/domain-facts/index.ts";
 
 const runtime = await initAnalyzer();
+// Rule (g) reads the dependency edges the native extractor's `use` facts build, so this gate
+// classifies the same one launch and is required to read it on the same condition as the others.
+const extractor = await classifyDomainFactExtractor();
 process.exit(
   runSensor({
     sensor_id: "ddd-rust-interface-adapter",
@@ -21,8 +25,7 @@ process.exit(
           sensor_id: "ddd-rust-interface-adapter",
           target_layers: ["interface-adapter", "rmu"],
           includes_query_side: true,
-          // This gate declares neither rule (a) nor rule (d), so it never launches their extractor.
-          domain_facts: null,
+          domain_facts: extractor,
         },
         ["k", "l", "m", "n", "g"],
         api,

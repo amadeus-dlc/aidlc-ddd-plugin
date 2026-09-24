@@ -1,10 +1,10 @@
 /**
- * The `domain-facts/1` adapter (T-10-02): what it accepts from the extractor and what it refuses.
+ * The `domain-facts` adapter (T-10-03): what it accepts from the extractor and what it refuses.
  *
  * The gate tests in `t10-rust-domain-facts.test.ts` observe the launch conditions at the sensor
  * boundary. This file observes the step after a launch succeeded — the run and the conversion —
  * because that is where an answer could quietly become an empty fact set, and an empty fact set
- * reads as "nothing public is declared" at every rule that consumes it.
+ * reads as "this file declares nothing" at every rule that consumes it.
  */
 
 import { afterEach, expect, test } from "bun:test";
@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   classifyDomainFactExtractor,
-  methodKey,
   type RustSourceFile,
   readDomainFacts,
 } from "../tools/ddd/lib/rust/domain-facts/index.ts";
@@ -47,23 +46,59 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
 
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
 function record(overrides: Record<string, unknown> = {}): string {
-  const body = { path: LIB, parsed: true, members: [], methods: [], unresolved: [], ...overrides };
-  return `echo '${JSON.stringify({ protocol_version: 4, files: [body] })}'`;
+  const body = {
+    path: LIB,
+    parsed: true,
+    auxiliary: false,
+    members: [],
+    unresolved: [],
+    types: [],
+    traits: [],
+    impls: [],
+    uses: [],
+    aliases: [],
+    constructions: [],
+    calls: [],
+    modules: [],
+    item_macros: [],
+    ...overrides,
+  };
+  return `echo '${JSON.stringify({ protocol_version: 5, files: [body] })}'`;
 }
 
-test("the installed extractor answers a batch with the members and method facts the rules join on", async () => {
+const SPAN = { start_line: 1, start_col: 1, end_line: 1, end_col: 2 };
+const METHOD = { name: "total", receiver: "ref-self", params: [], return_type_text: null, line: 4 };
+
+test("the installed extractor answers a batch with the declarations the rules decide on", async () => {
   const outcome = await classifyDomainFactExtractor();
   expect(outcome.kind, "run bun run prepare:native").toBe("ready");
   if (outcome.kind !== "ready") return;
   const result = readDomainFacts(outcome.binaryPath, REQUEST);
   expect(result.kind === "unavailable" ? result.detail : "").toBe("");
   if (result.kind !== "facts") return;
-  expect(result.facts.publicMembers.get(LIB)).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
-  const key = (trait: string | null, name: string, line: number) => methodKey(LIB, [], "Invoice", trait, name, line);
-  expect(result.facts.fieldReturns.get(key(null, "total", 4))).toBe(true);
-  expect(result.facts.fieldReturns.get(key(null, "doubled", 4))).toBe(false);
-  // The trait implementation is a separate entry, so rule (d) can leave it out of the getter set.
-  expect(result.facts.fieldReturns.get(key("Shown", "shown", 3))).toBe(true);
+  const declared = result.facts.files.get(LIB);
+  expect(declared).toBeDefined();
+  if (!declared) return;
+  expect(declared.publicMembers).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
+  // A tuple element is reached by position, so the type declares no field a rule resolves through.
+  expect(declared.types).toEqual([{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [] }]);
+  expect(declared.traits).toEqual([{ name: "Shown", module: [], methods: ["shown"] }]);
+  // The trait implementation is a separate block, so rule (d) can leave it out of the getter set.
+  expect(
+    declared.impls.map((block) => [
+      block.trait_text ?? null,
+      block.methods.map((method) => [method.name, method.receiver, method.returns_field_only, method.line]),
+    ]),
+  ).toEqual([
+    ["Shown", [["shown", "ref-self", true, 3]]],
+    [
+      null,
+      [
+        ["total", "ref-self", true, 4],
+        ["doubled", "ref-self", false, 4],
+      ],
+    ],
+  ]);
   expect(result.facts.notes).toEqual([]);
 });
 
@@ -83,15 +118,50 @@ test("the installed extractor reports the line of the original file, not of what
   const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
   expect(result.kind === "unavailable" ? result.detail : "").toBe("");
   if (result.kind !== "facts") return;
-  expect(result.facts.publicMembers.get(file)).toEqual([{ typeName: "Invoice", name: "amount", line: 2 }]);
+  expect(result.facts.files.get(file)?.publicMembers).toEqual([{ typeName: "Invoice", name: "amount", line: 2 }]);
   expect(result.facts.notes).toEqual([`domain-facts.unresolved: ${file}:2 conditional-compilation`]);
 });
 
-test("a file the extractor could not parse carries no member record, and says why", () => {
-  const result = answered(record({ parsed: false, unresolved: [{ reason: "syntax-error", line: 1 }] }));
+/**
+ * A text fact is the slice of source it covers rather than re-printed tokens, because the rule
+ * layer matches it against the shapes a reader writes. Re-printing would separate those tokens and
+ * stop every one of those matches.
+ */
+test("the installed extractor reports text as the source writes it, not as tokens", async () => {
+  const outcome = await classifyDomainFactExtractor();
+  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+  if (outcome.kind !== "ready") return;
+  const file = "packages/domain/billing-domain/src/text.rs";
+  const source = `use crate::billing::{Invoice, Ledger as Book};
+#[derive(Clone, serde::Serialize)]
+pub struct Batch { entries: Box<Vec<Invoice>> }
+type Alias = Option<Invoice>;
+fn build() -> Batch { Batch { entries: crate::billing::Invoice::all() } }
+`;
+  const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
+  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+  if (result.kind !== "facts") return;
+  const declared = result.facts.files.get(file);
+  expect(declared?.uses.map((entry) => entry.path_text)).toEqual(["crate::billing::{Invoice, Ledger as Book}"]);
+  expect(declared?.types[0]?.derives).toEqual(["Clone", "serde::Serialize"]);
+  expect(declared?.types[0]?.fields.map((field) => field.type_text)).toEqual(["Box<Vec<Invoice>>"]);
+  expect(declared?.aliases.map((entry) => entry.type_text)).toEqual(["Option<Invoice>"]);
+  expect(declared?.constructions.map((entry) => [entry.kind, entry.type_text])).toEqual([
+    ["struct-literal", "Batch"],
+    ["associated-call", "crate::billing::Invoice"],
+  ]);
+});
+
+test("a file the extractor could not parse carries no declarations, and says why", () => {
+  const result = answered(
+    `echo '${JSON.stringify({
+      protocol_version: 5,
+      files: [{ path: LIB, parsed: false, unresolved: [{ reason: "syntax-error", line: 1 }] }],
+    })}'`,
+  );
   expect(result.kind).toBe("facts");
   if (result.kind !== "facts") return;
-  expect(result.facts.publicMembers.has(LIB)).toBe(false);
+  expect(result.facts.files.has(LIB)).toBe(false);
   expect(result.facts.notes).toEqual([`domain-facts.unresolved: ${LIB}:1 syntax-error`]);
 });
 
@@ -118,30 +188,124 @@ const REFUSED: [string, string][] = [
   ["the answer is another protocol", `echo '${JSON.stringify({ protocol_version: 2, files: [] })}'`],
   [
     "the answer covers fewer files than were asked about",
-    `echo '${JSON.stringify({ protocol_version: 4, files: [] })}'`,
+    `echo '${JSON.stringify({ protocol_version: 5, files: [] })}'`,
   ],
   ["the answer names a file that was not asked about", record({ path: "packages/domain/billing-domain/src/other.rs" })],
+  ["the answer does not say whether the file is auxiliary", record({ auxiliary: undefined })],
   ["a member carries no line", record({ members: [{ type: "Invoice", member: "0" }] })],
   ["a member carries a line before the first", record({ members: [{ type: "Invoice", member: "0", line: 0 }] })],
+  // A line is the part of a declaration's identity that tells two declarations of one name apart, so
+  // a value that is not a line at all cannot be narrowed to one and reported.
   [
-    "a method carries no verdict",
-    record({ methods: [{ module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4 }] }),
+    "a member carries a line that is not a whole number",
+    record({ members: [{ type: "Invoice", member: "0", line: 1.5 }] }),
+  ],
+  ["a type carries no kind", record({ types: [{ name: "Invoice", module: [], fields: [], derives: [] }] })],
+  [
+    "a type carries a kind this protocol does not name",
+    record({ types: [{ name: "Invoice", kind: "union", module: [], fields: [], derives: [] }] }),
+  ],
+  [
+    "a field carries a visibility this protocol does not name",
+    record({
+      types: [
+        {
+          name: "Invoice",
+          kind: "struct",
+          module: [],
+          derives: [],
+          fields: [{ name: "id", visibility: "open", type_text: "u64", line: 1 }],
+        },
+      ],
+    }),
+  ],
+  ["a trait carries no method list", record({ traits: [{ name: "Shown", module: [] }] })],
+  [
+    "an impl carries no span, so nothing built inside it can be told from outside",
+    record({ impls: [{ module: [], target_type_text: "Invoice", trait_text: null, methods: [] }] }),
+  ],
+  [
+    "an impl span carries a column before the first",
+    record({
+      impls: [
+        {
+          module: [],
+          target_type_text: "Invoice",
+          trait_text: null,
+          methods: [],
+          span: { ...SPAN, start_col: 0 },
+        },
+      ],
+    }),
+  ],
+  [
+    "a method carries no verdict about its body",
+    record({
+      impls: [{ module: [], target_type_text: "Invoice", trait_text: null, methods: [METHOD], span: SPAN }],
+    }),
+  ],
+  [
+    "a method carries a receiver this protocol does not name",
+    record({
+      impls: [
+        {
+          module: [],
+          target_type_text: "Invoice",
+          trait_text: null,
+          span: SPAN,
+          methods: [{ ...METHOD, receiver: "borrowed", returns_field_only: true }],
+        },
+      ],
+    }),
   ],
   [
     "a method carries no line, so its declaration cannot be told from another of the same name",
     record({
-      methods: [{ module: [], owner_type_text: "Invoice", trait_text: null, name: "total", returns_field_only: true }],
-    }),
-  ],
-  [
-    "one declaration carries two different verdicts",
-    record({
-      methods: [
-        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4, returns_field_only: true },
-        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4, returns_field_only: false },
+      impls: [
+        {
+          module: [],
+          target_type_text: "Invoice",
+          trait_text: null,
+          span: SPAN,
+          methods: [{ ...METHOD, line: undefined, returns_field_only: true }],
+        },
       ],
     }),
   ],
+  [
+    "a use path does not say whether it is local to a function",
+    record({ uses: [{ module: [], path_text: "std::io", line: 1 }] }),
+  ],
+  [
+    "a type alias does not say whether it is generic",
+    record({ aliases: [{ module: [], name: "Alias", type_text: "u64", local: false }] }),
+  ],
+  [
+    "a construction carries a kind this protocol does not name",
+    record({ constructions: [{ kind: "builder-call", type_text: "Invoice", callee_text: null, span: SPAN }] }),
+  ],
+  [
+    "a call carries no forwarding list, so an unproven one reads as proven",
+    record({
+      calls: [
+        {
+          module: [],
+          kind: "method-call",
+          callee_text: "total",
+          receiver_text: "invoice",
+          receiver_binding_type: null,
+          span: SPAN,
+        },
+      ],
+    }),
+  ],
+  [
+    "a module declaration does not say whether its path resolves",
+    record({
+      modules: [{ name: "invoice", module: [], inline: false, path: null, auxiliary: false, local: false, line: 1 }],
+    }),
+  ],
+  ["an item macro carries no line", record({ item_macros: [{ auxiliary: false }] })],
   ["the parse state is neither answered nor refused", record({ parsed: "maybe" })],
 ];
 
@@ -150,36 +314,46 @@ test.each(REFUSED)("the batch is unavailable, not empty, when %s", (_label, answ
   expect(result.kind).toBe("unavailable");
 });
 
-test("a request larger than the extractor accepts is refused before it is sent", () => {
+// A project's sources can together exceed one request while every file fits in one. Facts are per
+// file, so the sources are sent in as many requests as they need and the answers are joined; the
+// size of a project never turns into a stopped gate by itself.
+test("sources that together exceed one request are sent in several and answered as one", async () => {
+  const outcome = await classifyDomainFactExtractor();
+  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+  if (outcome.kind !== "ready") return;
+  const filler = `// ${"x".repeat(78)}\n`.repeat(40 * 1024);
+  const sources = [0, 1, 2].map((index) => ({
+    file: `packages/domain/billing-domain/src/part${index}.rs`,
+    source: `pub struct Part${index}(pub u64);\n${filler}`,
+  }));
+  expect(Buffer.byteLength(JSON.stringify(sources))).toBeGreaterThan(8 * 1024 * 1024);
+  let between = 0;
+  const result = readDomainFacts(outcome.binaryPath, sources, () => {
+    between += 1;
+  });
+  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+  if (result.kind !== "facts") return;
+  expect([...result.facts.files.keys()].sort()).toEqual(sources.map((entry) => entry.file));
+  for (const [index, entry] of sources.entries())
+    expect(result.facts.files.get(entry.file)?.publicMembers).toEqual([
+      { typeName: `Part${index}`, name: "0", line: 1 },
+    ]);
+  // The caller's own limits are consulted between requests, never in the middle of one.
+  expect(between).toBeGreaterThan(0);
+});
+
+test("a file larger than one request is refused before anything is sent, and is named", () => {
   const oversized = [{ file: LIB, source: "a".repeat(9 * 1024 * 1024) }];
-  // The path is never launched: refusing the batch is decided from its size alone.
+  // The path is never launched: a file cannot be split, so refusing it is decided from its size alone.
   const result = readDomainFacts(join(tmpdir(), "ddd-domain-facts-absent"), oversized);
   expect(result.kind).toBe("unavailable");
   expect(result.kind === "unavailable" && result.detail).toContain("request limit");
+  expect(result.kind === "unavailable" && result.detail).toContain(LIB);
 });
 
 test("a batch with no sources is answered without launching the extractor", () => {
   const result = readDomainFacts(join(tmpdir(), "ddd-domain-facts-absent"), []);
   expect(result.kind).toBe("facts");
   if (result.kind !== "facts") return;
-  expect([result.facts.publicMembers.size, result.facts.fieldReturns.size, result.facts.notes.length]).toEqual([
-    0, 0, 0,
-  ]);
-});
-
-test("the join identity ignores whitespace in the type and trait, and keeps identifiers as written", () => {
-  expect(methodKey(LIB, [], "Vec < u8 >", "core :: fmt :: Debug", "total", 1)).toBe(
-    methodKey(LIB, [], "Vec<u8>", "core::fmt::Debug", "total", 1),
-  );
-  expect(methodKey(LIB, [], "Invoice", null, "r#total", 1)).not.toBe(methodKey(LIB, [], "Invoice", null, "total", 1));
-  expect(methodKey(LIB, ["a"], "Invoice", null, "total", 1)).not.toBe(
-    methodKey(LIB, ["b"], "Invoice", null, "total", 1),
-  );
-  // An inherent method and a trait method of the same name are different entries.
-  expect(methodKey(LIB, [], "Invoice", null, "shown", 1)).not.toBe(methodKey(LIB, [], "Invoice", "Shown", "shown", 1));
-  // Two declarations of one name are two entries: a function body may declare its own type, and
-  // the module path names no function, so only the line tells them apart.
-  expect(methodKey(LIB, ["tests"], "Stub", null, "total", 7)).not.toBe(
-    methodKey(LIB, ["tests"], "Stub", null, "total", 12),
-  );
+  expect([result.facts.files.size, result.facts.notes.length]).toEqual([0, 0]);
 });

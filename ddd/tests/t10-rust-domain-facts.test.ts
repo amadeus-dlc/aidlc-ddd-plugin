@@ -7,21 +7,21 @@
  */
 
 import { afterEach, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
-import { type GoldenCase, materializeCase, runGoldenCase, type SensorVerdict, scriptNameFor } from "./golden/runner.ts";
+import { join } from "node:path";
+import {
+  type InstallationOptions,
+  removeExtractorTools,
+  toolsWithExtractor,
+  toolsWithProductExtractor,
+} from "./golden/extractor-tools.ts";
+import { type GoldenCase, runGoldenCase, type SensorVerdict, spawnSensor } from "./golden/runner.ts";
 import { RUST_CASES } from "./golden/rust/cases.ts";
 import { EXPLICIT_RETURN, TUPLE_RESTRICTED } from "./golden/rust/domain-facts-cases.ts";
 
 const toolsDir = join(import.meta.dir, "..", "tools");
 const DOMAIN = "packages/domain/billing-domain/src/lib.rs";
 
-const temporary: string[] = [];
-afterEach(() => {
-  for (const root of temporary.splice(0)) rmSync(root, { recursive: true, force: true });
-});
+afterEach(removeExtractorTools);
 
 function caseNamed(name: string): GoldenCase {
   const source = RUST_CASES.find((entry) => entry.name === name);
@@ -157,89 +157,8 @@ pub fn count(ledger: &Ledger) -> i64 { ledger.total() }
 
 // --- an extractor that cannot be launched -----------------------------------
 
-const HOST_KEY = `${process.platform}-${process.arch}`;
-const EXTRACTOR_NAME = "ddd-rust-syn-spike";
-const PRODUCT_BIN_DIR = join(toolsDir, "ddd", "bin");
-/** The protocol the rule (a) / (d) decision base is read over, fixed by the inspection contract. */
-const DOMAIN_FACTS_VERSION = 4;
-
-interface InstallationOptions {
-  /** Omit the host row from the manifest, leaving this platform unrecorded. */
-  readonly recorded?: false;
-  /** Leave the installation directory without the extractor file. */
-  readonly present?: false;
-  /** Install the file without any execute bit. */
-  readonly executable?: false;
-  /** Record a digest the installed bytes do not produce. */
-  readonly digest?: "stale";
-  /** Leave the protocol probe without an answer by exiting non-zero. */
-  readonly probe?: "fails";
-  /** Answer the probe with a protocol the adapter does not accept. */
-  readonly protocol?: number;
-}
-
-function extractorStub(options: InstallationOptions): string {
-  const answer = `echo '{"protocol_version":${options.protocol ?? DOMAIN_FACTS_VERSION},"extractor":"0.0.0","syn":"3.0.5"}'`;
-  return [
-    "#!/bin/sh",
-    'case "$1" in',
-    `  --*-version) ${options.probe === "fails" ? "exit 1" : answer} ;;`,
-    "  *) exit 1 ;;",
-    "esac",
-    "",
-  ].join("\n");
-}
-
-/** A private copy of the distributed tools tree whose installed extractor meets one condition. */
-function toolsWithExtractor(options: InstallationOptions): string {
-  const root = mkdtempSync(join(tmpdir(), "ddd-domain-facts-tools-"));
-  temporary.push(root);
-  const tools = join(root, "tools");
-  cpSync(toolsDir, tools, {
-    recursive: true,
-    filter: (source) => source !== PRODUCT_BIN_DIR && !source.startsWith(`${PRODUCT_BIN_DIR}${sep}`),
-  });
-  const bin = join(tools, "ddd", "bin");
-  mkdirSync(bin, { recursive: true });
-  const body = extractorStub(options);
-  const recorded = createHash("sha256")
-    .update(options.digest === "stale" ? `${body}# recorded from other bytes\n` : body)
-    .digest("hex");
-  const rows = options.recorded === false ? {} : { [HOST_KEY]: { target: "unit-test-triple", sha256: recorded } };
-  writeFileSync(join(bin, "manifest.json"), `${JSON.stringify(rows, null, 2)}\n`);
-  if (options.present !== false) {
-    mkdirSync(join(bin, HOST_KEY), { recursive: true });
-    const binary = join(bin, HOST_KEY, EXTRACTOR_NAME);
-    writeFileSync(binary, body);
-    chmodSync(binary, options.executable === false ? 0o644 : 0o755);
-  }
-  return tools;
-}
-
-/** The same private copy, carrying the product installation unchanged. */
-function toolsWithProductExtractor(): string {
-  const root = mkdtempSync(join(tmpdir(), "ddd-domain-facts-product-"));
-  temporary.push(root);
-  const tools = join(root, "tools");
-  cpSync(toolsDir, tools, { recursive: true });
-  return tools;
-}
-
-function runGate(tools: string, testCase: GoldenCase): { exitCode: number; stdout: string; stderr: string } {
-  const { root, outputPath } = materializeCase(testCase);
-  try {
-    const proc = Bun.spawnSync(
-      ["bun", join(tools, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    return { exitCode: proc.exitCode ?? 0, stdout: proc.stdout.toString().trim(), stderr: proc.stderr.toString() };
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-}
-
 test("the private copy of the tools tree reports the product verdict while its extractor is untouched", () => {
-  const result = runGate(toolsWithProductExtractor(), domainCase("domain-facts-product-control"));
+  const result = spawnSensor(toolsWithProductExtractor(), domainCase("domain-facts-product-control"));
   expect(result.exitCode, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout).pass).toBe(true);
 });
@@ -255,7 +174,7 @@ const BLOCKED: [string, InstallationOptions][] = [
 ];
 
 test.each(BLOCKED)("the domain gate stops instead of passing when the extractor %s", (_label, options) => {
-  const result = runGate(toolsWithExtractor(options), domainCase("domain-facts-blocked"));
+  const result = spawnSensor(toolsWithExtractor(options), domainCase("domain-facts-blocked"));
   expect(result.exitCode).toBe(127);
   expect(result.stdout).toBe("");
 });
@@ -266,13 +185,13 @@ test.each(BLOCKED)("the domain gate stops instead of passing when the extractor 
 test("the domain gate stops when the extractor answers the probe but not the batch", () => {
   // The stub answers every `--*-version` probe and fails anything else, so the launch classifies
   // as ready and the batch request is the call that comes back empty-handed.
-  const result = runGate(toolsWithExtractor({}), domainCase("domain-facts-batch-unanswered"));
+  const result = spawnSensor(toolsWithExtractor({}), domainCase("domain-facts-batch-unanswered"));
   expect(result.exitCode).toBe(127);
   expect(result.stdout).toBe("");
 });
 
 test("a claimed file the extractor cannot parse stops the gate and reports why", () => {
-  const result = runGate(toolsWithProductExtractor(), domainCase("domain-facts-unparsed", "pub struct {\n"));
+  const result = spawnSensor(toolsWithProductExtractor(), domainCase("domain-facts-unparsed", "pub struct {\n"));
   expect(result.exitCode).toBe(127);
   // An unread file must not be answered as "nothing public is declared", and the reason the
   // extractor gave has to survive to the reader.
@@ -281,15 +200,18 @@ test("a claimed file the extractor cannot parse stops the gate and reports why",
 });
 
 test("the use-case gate, which decides the same rule, also stops instead of passing", () => {
-  const result = runGate(toolsWithExtractor({ present: false }), caseNamed("violation-h"));
+  const result = spawnSensor(toolsWithExtractor({ present: false }), caseNamed("violation-h"));
   expect(result.exitCode).toBe(127);
   expect(result.stdout).toBe("");
 });
 
-test("the interface-adapter gate, which decides neither rule, keeps reporting its verdict", () => {
-  const result = runGate(toolsWithExtractor({ present: false }), caseNamed("clean-repository"));
-  expect(result.exitCode, result.stderr).toBe(0);
-  expect(JSON.parse(result.stdout).pass).toBe(true);
+// The interface-adapter gate reports rule (g), whose dependency edges are built from the same
+// `use` facts, and it resolves its own types through the same program. It therefore decides on the
+// extractor like the other two, and stops on the same condition rather than answering without it.
+test("the interface-adapter gate, which decides on the same facts, also stops instead of passing", () => {
+  const result = spawnSensor(toolsWithExtractor({ present: false }), caseNamed("clean-repository"));
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
 });
 
 // The conditions above all have a file for rules (a) and (d) to decide. The two below keep the
@@ -315,12 +237,16 @@ function claiming(testCase: GoldenCase, writes: readonly string[]): GoldenCase {
   };
 }
 
-test("with no Rust source claimed, both gates that decide on the extractor report a verdict without it", () => {
+test("with no Rust source claimed, every gate that decides on the extractor reports a verdict without it", () => {
   const tools = toolsWithExtractor({ present: false });
-  // Both gates, because both declare a rule that reads the extractor and neither has a file to
-  // decide here; the domain gate declares (a) and (d), the use-case gate declares (d).
-  for (const source of [domainCase("domain-facts-no-claims"), caseNamed("violation-h")]) {
-    const result = runGate(tools, claiming(source, []));
+  // Every Rust gate decides on the extractor, and none of them has a file to decide here, so the
+  // classification of an extractor none of their rules reaches cannot change the verdict.
+  for (const source of [
+    domainCase("domain-facts-no-claims"),
+    caseNamed("violation-h"),
+    caseNamed("clean-repository"),
+  ]) {
+    const result = spawnSensor(tools, claiming(source, []));
     expect(result.exitCode, `${source.sensor}: ${result.stderr}`).toBe(0);
     const verdict: SensorVerdict = JSON.parse(result.stdout);
     expect(verdict.pass, source.sensor).toBe(true);
@@ -339,13 +265,13 @@ test("with the extractor not installed, the domain gate answers a use-case claim
     expect: { pass: true, rules: [] },
   };
 
-  const outside = runGate(tools, claiming(onDomainGate, ["packages/use-case/billing-use-case/src/lib.rs"]));
+  const outside = spawnSensor(tools, claiming(onDomainGate, ["packages/use-case/billing-use-case/src/lib.rs"]));
   expect(outside.exitCode, outside.stderr).toBe(0);
   const verdict: SensorVerdict = JSON.parse(outside.stdout);
   expect(verdict.pass).toBe(true);
   expect(verdict.findings_count).toBe(0);
 
-  const inside = runGate(tools, claiming(onDomainGate, [DOMAIN]));
+  const inside = spawnSensor(tools, claiming(onDomainGate, [DOMAIN]));
   expect(inside.exitCode).toBe(127);
   expect(inside.stdout).toBe("");
 });

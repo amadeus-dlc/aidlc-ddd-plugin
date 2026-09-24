@@ -1,38 +1,16 @@
 /** Explicit Rust declarations and bindings; no inference, macro expansion or trait solving. */
-import { readFileSync } from "node:fs";
-import { inspectModules, type ModuleInventory } from "../../packaging/rust-modules.ts";
-import {
-  type AnalyzerRuntime,
-  type CallSite,
-  type FieldDecl,
-  type ImplBlock,
-  impls,
-  type MethodDecl,
-  parse,
-  type Span,
-  type SyntaxTree,
-  structs,
-  traits,
-  typeAliases,
-  uses,
-} from "../../rust/analyzer.ts";
-import { type DomainFactSet, methodKey } from "../../rust/domain-facts/index.ts";
+import { inspectModules, isRustSource, type ModuleInventory } from "../../packaging/rust-modules.ts";
+import type { CallFact, DomainFactSet, FieldFact, ImplFact, MethodFact, Span } from "../../rust/domain-facts/index.ts";
 import type { CrateLayerAssignment, Layer } from "../../workspace/resolver.ts";
 
 /** The layers whose crates make up the program the Rust rules read. */
-const PROGRAM_LAYERS: readonly Layer[] = ["domain", "use-case", "interface-adapter", "rmu"];
+export const PROGRAM_LAYERS: readonly Layer[] = ["domain", "use-case", "interface-adapter", "rmu"];
 
 export interface LocatedMethod {
   file: string;
   module: string[];
-  method: MethodDecl;
+  method: MethodFact;
   trait?: string;
-  /**
-   * The native fact rule (d) decides on. `null` means no fact was joined onto this declaration:
-   * either this inspection does not read the native facts at all, or they do not cover the file.
-   * Either way it is not a decision, and a consumer that needs one refuses instead of assuming.
-   */
-  returns_field_only: boolean | null;
 }
 export interface RustType {
   key: string;
@@ -42,15 +20,17 @@ export interface RustType {
   file: string;
   module: string[];
   kind: "struct" | "enum" | "trait";
-  fields: FieldDecl[];
-  derives: string[];
+  fields: readonly FieldFact[];
+  derives: readonly string[];
+  /** The names a trait declares; empty for a struct or an enum, which declare none. */
+  traitMethods: readonly string[];
   methods: LocatedMethod[];
 }
 export interface RustFile {
-  tree: SyntaxTree;
+  file: string;
   crate: string;
   module: string[];
-  impls: ImplBlock[];
+  impls: readonly ImplFact[];
   localImports: boolean;
 }
 interface Alias {
@@ -66,10 +46,10 @@ export interface RustProgram {
   files: Map<string, RustFile>;
   types: RustType[];
   notes: Set<string>;
-  /** The native facts this program was built with, or `null` when it was built without them. */
-  domainFacts: DomainFactSet | null;
+  /** The native facts this program was built from, keyed by workspace-relative file. */
+  facts: DomainFactSet;
   resolveType(file: string, module: string[], text: string): RustType | undefined;
-  receiver(file: string, call: CallSite): RustType | undefined;
+  receiver(file: string, call: CallFact): RustType | undefined;
 }
 
 /** One crate of the program, with the module walk that found its sources. */
@@ -82,32 +62,31 @@ export interface RustSourceInventory {
   crates: RustCrateSources[];
   /** Every crate the workspace assigns a layer to; a path starting with one is crate-qualified. */
   workspaceCrates: Set<string>;
-  /** Workspace-relative file -> its bytes, read once for both the parse and the native batch. */
-  contents: Map<string, Uint8Array>;
 }
 
 /**
- * Walks each program crate's modules and reads the sources it finds. Discovery is separate from
- * `buildProgram` because the native facts that program is built with are gathered over exactly
- * these files, and the batch has to be sent before the declarations can be joined onto it.
+ * Walks each program crate's modules over the declarations the extractor already answered for.
+ * Discovery is separate from `buildProgram` because the walk decides which file to open next from
+ * the declarations of the one it is on, so the batch has to be answered before either can run.
  */
 export function collectRustSources(
-  runtime: AnalyzerRuntime,
+  facts: DomainFactSet,
   root: string,
   assignments: readonly CrateLayerAssignment[],
 ): RustSourceInventory {
   const crates: RustCrateSources[] = [];
-  const contents = new Map<string, Uint8Array>();
   for (const assignment of assignments) {
     if (!PROGRAM_LAYERS.includes(assignment.layer)) continue;
-    const inventory = inspectModules(runtime, root, assignment);
-    crates.push({ assignment, inventory });
-    for (const entry of inventory.sources) {
-      if (!contents.has(entry.file)) contents.set(entry.file, readFileSync(entry.path));
-    }
+    // The batch behind `facts` was gathered by `rustSourcesUnder`, so the walk is held to the same
+    // rule: a declaration naming a file that enumeration leaves out is reported where it is written
+    // rather than followed and then reported as one the extractor could not read.
+    crates.push({
+      assignment,
+      inventory: inspectModules(facts.files, root, assignment, { covers: isRustSource }),
+    });
   }
   const workspaceCrates = new Set(assignments.map((entry) => entry.crate_name.replace(/-/g, "_")));
-  return { crates, workspaceCrates, contents };
+  return { crates, workspaceCrates };
 }
 
 export function within(inner: Span, outer: Span): boolean {
@@ -150,11 +129,7 @@ function bareType(text: string): string {
     .trim();
 }
 
-export function buildProgram(
-  runtime: AnalyzerRuntime,
-  sources: RustSourceInventory,
-  domainFacts: DomainFactSet | null,
-): RustProgram {
+export function buildProgram(sources: RustSourceInventory, facts: DomainFactSet): RustProgram {
   const files = new Map<string, RustFile>();
   const types: RustType[] = [];
   const aliases: Alias[] = [];
@@ -175,50 +150,51 @@ export function buildProgram(
         continue;
       }
       const module = entry.parts;
-      const content = sources.contents.get(file);
-      if (!content) throw new Error(`the collected sources carry no content for ${file}`);
-      const tree = parse(runtime, file, content);
-      const imports = uses(tree);
+      // The batch is keyed by the file the walk read, which is not the path it reached that file by
+      // when a declaration names a symbolic link.
+      const declared = facts.files.get(entry.decidedFrom);
+      // The walk does list a source it could not read — it reports the problem and keeps the entry —
+      // so this is unreachable only because `requireDecisionBase` runs first and sends every crate
+      // source the extractor did not answer for to the tool-unavailable terminal. Reaching it means
+      // that guard and this walk disagree about which files the batch covered.
+      if (!declared) throw new Error(`the native facts carry no declarations for ${entry.decidedFrom}`);
       files.set(file, {
-        tree,
+        file,
         crate,
         module,
-        impls: impls(tree),
-        localImports: imports.some((entry) => entry.local),
+        impls: declared.impls,
+        localImports: declared.uses.some((entry) => entry.local),
       });
-      if (tree.has_parse_error) notes.add(`syntax.unresolved: ${file} has parse errors`);
-      for (const decl of structs(tree)) {
-        const scope = [...module, ...decl.module_path];
+      const located = (scope: readonly string[], name: string) => ({
+        key: [crate, ...scope, name].join("::"),
+        name,
+        crate,
+        layer: assignment.layer,
+        file,
+        module: [...scope],
+      });
+      for (const decl of declared.types) {
         types.push({
-          key: [crate, ...scope, decl.name].join("::"),
-          name: decl.name,
-          crate,
-          layer: assignment.layer,
-          file,
-          module: scope,
+          ...located([...module, ...decl.module], decl.name),
           kind: decl.kind,
           fields: decl.fields,
           derives: decl.derives,
+          traitMethods: [],
           methods: [],
         });
       }
-      for (const decl of traits(tree)) {
-        const scope = [...module, ...decl.module_path];
+      for (const decl of declared.traits) {
         types.push({
-          key: [crate, ...scope, decl.name].join("::"),
-          name: decl.name,
-          crate,
-          layer: assignment.layer,
-          file,
-          module: scope,
+          ...located([...module, ...decl.module], decl.name),
           kind: "trait",
           fields: [],
           derives: [],
+          traitMethods: decl.methods,
           methods: [],
         });
       }
-      for (const entry of imports.filter((item) => !item.local)) {
-        const scope = [...module, ...entry.module_path];
+      for (const entry of declared.uses.filter((item) => !item.local)) {
+        const scope = [...module, ...entry.module];
         for (const binding of importNames(entry.path_text)) {
           aliases.push({
             key: [crate, ...scope, binding.name].join("::"),
@@ -229,8 +205,8 @@ export function buildProgram(
           });
         }
       }
-      for (const entry of typeAliases(tree)) {
-        const scope = [...module, ...entry.module_path];
+      for (const entry of declared.aliases.filter((item) => !item.local)) {
+        const scope = [...module, ...entry.module];
         aliases.push({
           key: [crate, ...scope, entry.name].join("::"),
           file,
@@ -244,7 +220,7 @@ export function buildProgram(
   const crates = sources.workspaceCrates;
   function lookup(file: string, module: string[], raw: string, seen: Set<string>): RustType | undefined {
     const owner = files.get(file);
-    if (!owner || owner.tree.has_parse_error || owner.localImports) return undefined;
+    if (!owner || owner.localImports) return undefined;
     const text = bareType(raw);
     const wrapper = /^(?:(?:std|core|alloc)::(?:boxed|sync|rc|option|vec)::)?(Box|Arc|Rc|Option|Vec)\s*<(.+)>$/.exec(
       text,
@@ -295,7 +271,7 @@ export function buildProgram(
   const resolveType = (file: string, module: string[], text: string) => lookup(file, module, text, new Set());
   for (const [file, data] of files) {
     for (const block of data.impls) {
-      const module = [...data.module, ...block.module_path];
+      const module = [...data.module, ...block.module];
       const type = resolveType(file, module, block.target_type_text);
       if (!type) {
         notes.add(`syntax.unresolved: ${file}:${block.span.start_line} impl ${block.target_type_text}`);
@@ -306,16 +282,15 @@ export function buildProgram(
           file,
           module,
           method,
-          trait: block.trait_text,
-          returns_field_only: fieldReturn(domainFacts, file, block, method),
+          ...(block.trait_text === undefined ? {} : { trait: block.trait_text }),
         });
       }
     }
   }
-  function receiver(file: string, call: CallSite): RustType | undefined {
+  function receiver(file: string, call: CallFact): RustType | undefined {
     const data = files.get(file);
     if (!data) return undefined;
-    const scope = [...data.module, ...call.module_path];
+    const scope = [...data.module, ...call.module];
     const parts = (call.receiver_text ?? "").trim().split(".");
     let type: RustType | undefined;
     if (parts[0] === "self") {
@@ -329,22 +304,5 @@ export function buildProgram(
     }
     return type;
   }
-  return { files, types, notes, moduleInventories, domainFacts, resolveType, receiver };
-}
-
-/**
- * The native fact for one impl method, or `null` when the answer carries none for it — a file the
- * extractor could not parse, or a method only its own extractor saw.
- */
-function fieldReturn(facts: DomainFactSet | null, file: string, block: ImplBlock, method: MethodDecl): boolean | null {
-  if (!facts) return null;
-  const key = methodKey(
-    file,
-    block.module_path,
-    block.target_type_text,
-    block.trait_text ?? null,
-    method.name,
-    method.name_span.start_line,
-  );
-  return facts.fieldReturns.get(key) ?? null;
+  return { files, types, notes, moduleInventories, facts, resolveType, receiver };
 }

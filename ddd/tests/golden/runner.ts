@@ -8,7 +8,7 @@
  * a temp record directory. The runner never writes into the fixture source.
  */
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -24,6 +24,11 @@ export interface GoldenCase {
   files: Record<string, string>;
   /** project-root-relative file path -> content (the Rust sensors' workspace/). */
   workspace?: Record<string, string>;
+  /**
+   * project-root-relative link path -> the target it is written with, as `ln -s` takes it. Created
+   * after `workspace`, so a link may name a file the same case declares.
+   */
+  links?: Record<string, string>;
   /** aidlc-state.md content; defaults to a single EXECUTE line. */
   state?: string;
   expect: {
@@ -87,76 +92,97 @@ export function materializeCase(testCase: GoldenCase): { root: string; outputPat
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content);
   }
+  for (const [rel, target] of Object.entries(testCase.links ?? {})) {
+    const path = join(root, rel);
+    mkdirSync(dirname(path), { recursive: true });
+    symlinkSync(target, path);
+  }
   return { root, outputPath: join(record, testCase.output) };
 }
 
-export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {
-  const problems: string[] = [];
+export interface SensorRun {
+  /** Raw child exit status; null when the process was killed by a signal. */
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * Runs `testCase` through the real sensor entry point in `toolsDir` and returns the raw process
+ * result. The temp project is materialised and removed here, so a test that observes something other
+ * than a verdict — an exit status, an empty stdout, a reason on stderr — runs the same fixture layout
+ * as `runGoldenCase` without restating the spawn. `toolsDir` is a parameter rather than the product
+ * tree so a private copy with a different installed extractor can be run the same way.
+ */
+export function spawnSensor(toolsDir: string, testCase: GoldenCase): SensorRun {
   const { root, outputPath } = materializeCase(testCase);
   try {
     const proc = Bun.spawnSync(
       ["bun", join(toolsDir, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
-      {
-        stdout: "pipe",
-        stderr: "pipe",
-      },
+      { stdout: "pipe", stderr: "pipe" },
     );
-    if ((proc.exitCode ?? 0) !== 0) {
-      return { sensor: testCase.sensor, name: testCase.name, ok: false, problems: [`exit code ${proc.exitCode}`] };
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(proc.stdout.toString().trim());
-    } catch {
-      return {
-        sensor: testCase.sensor,
-        name: testCase.name,
-        ok: false,
-        problems: ["stdout is not a single JSON verdict"],
-      };
-    }
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as SensorVerdict).pass !== "boolean" ||
-      !Array.isArray((parsed as SensorVerdict).findings)
-    ) {
-      return {
-        sensor: testCase.sensor,
-        name: testCase.name,
-        ok: false,
-        problems: ["verdict has no boolean pass and findings array"],
-      };
-    }
-    const verdict = parsed as SensorVerdict;
-    if (verdict.pass !== testCase.expect.pass) {
-      problems.push(`pass expected ${testCase.expect.pass}, got ${verdict.pass}`);
-    }
-    if (isViolation(testCase) && testCase.expect.rules.length === 0) {
-      problems.push("violation case declares no expected rule");
-    }
-    // Full set comparison on (rule_id, file): a missing finding, an extra
-    // finding, or a wrong file all fail. Lines are optional (BR8.2).
-    const key = (rule: string, file: string) => `${rule} @ ${file}`;
-    const expected = new Set(
-      testCase.expect.locations
-        ? testCase.expect.locations.map((entry) => key(entry.rule, entry.file))
-        : testCase.expect.rules.map((rule) => key(rule, testCase.expect.files?.[rule] ?? testCase.output)),
-    );
-    const actual = new Set(verdict.findings.map((f) => key(f.rule_id, f.file)));
-    for (const entry of expected) {
-      if (!actual.has(entry)) problems.push(`missing expected finding ${entry}`);
-    }
-    for (const entry of actual) {
-      if (!expected.has(entry)) problems.push(`unexpected finding ${entry}`);
-    }
-    if (testCase.expect.note_contains && !(verdict.note ?? "").includes(testCase.expect.note_contains)) {
-      problems.push(`note does not contain "${testCase.expect.note_contains}"`);
-    }
-    return { sensor: testCase.sensor, name: testCase.name, ok: problems.length === 0, problems, verdict };
+    return { exitCode: proc.exitCode, stdout: proc.stdout.toString().trim(), stderr: proc.stderr.toString() };
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+}
+
+export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {
+  const problems: string[] = [];
+  const run = spawnSensor(toolsDir, testCase);
+  if ((run.exitCode ?? 0) !== 0) {
+    return { sensor: testCase.sensor, name: testCase.name, ok: false, problems: [`exit code ${run.exitCode}`] };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(run.stdout);
+  } catch {
+    return {
+      sensor: testCase.sensor,
+      name: testCase.name,
+      ok: false,
+      problems: ["stdout is not a single JSON verdict"],
+    };
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as SensorVerdict).pass !== "boolean" ||
+    !Array.isArray((parsed as SensorVerdict).findings)
+  ) {
+    return {
+      sensor: testCase.sensor,
+      name: testCase.name,
+      ok: false,
+      problems: ["verdict has no boolean pass and findings array"],
+    };
+  }
+  const verdict = parsed as SensorVerdict;
+  if (verdict.pass !== testCase.expect.pass) {
+    problems.push(`pass expected ${testCase.expect.pass}, got ${verdict.pass}`);
+  }
+  if (isViolation(testCase) && testCase.expect.rules.length === 0) {
+    problems.push("violation case declares no expected rule");
+  }
+  // Full set comparison on (rule_id, file): a missing finding, an extra
+  // finding, or a wrong file all fail. Lines are optional (BR8.2).
+  const key = (rule: string, file: string) => `${rule} @ ${file}`;
+  const expected = new Set(
+    testCase.expect.locations
+      ? testCase.expect.locations.map((entry) => key(entry.rule, entry.file))
+      : testCase.expect.rules.map((rule) => key(rule, testCase.expect.files?.[rule] ?? testCase.output)),
+  );
+  const actual = new Set(verdict.findings.map((f) => key(f.rule_id, f.file)));
+  for (const entry of expected) {
+    if (!actual.has(entry)) problems.push(`missing expected finding ${entry}`);
+  }
+  for (const entry of actual) {
+    if (!expected.has(entry)) problems.push(`unexpected finding ${entry}`);
+  }
+  if (testCase.expect.note_contains && !(verdict.note ?? "").includes(testCase.expect.note_contains)) {
+    problems.push(`note does not contain "${testCase.expect.note_contains}"`);
+  }
+  return { sensor: testCase.sensor, name: testCase.name, ok: problems.length === 0, problems, verdict };
 }
 
 export function runGoldenCases(toolsDir: string, cases: readonly GoldenCase[]): CaseResult[] {

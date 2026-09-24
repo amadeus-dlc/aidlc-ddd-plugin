@@ -1,12 +1,12 @@
 /** Domain summaries joined across explicitly resolved Rust declarations and impls. */
-import type { MethodDecl } from "../../rust/analyzer.ts";
+import type { MethodFact } from "../../rust/domain-facts/index.ts";
 import type { Aggregate } from "../../schema/model.ts";
 import { POST_INIT, snakeToKebab, toKebab, toPascal } from "../lists.ts";
 import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability, MutatorSymbol } from "../types.ts";
 import type { RustAggregateMapping } from "./mapping.ts";
 import type { LocatedMethod, RustProgram, RustType } from "./program.ts";
 
-function isConstructor(method: MethodDecl, typeName: string): boolean {
+function isConstructor(method: MethodFact, typeName: string): boolean {
   if (method.receiver !== "none") return false;
   const ret = method.return_type_text ?? "";
   const outer = ret.replace(/^Result<|^Option<|^Box<|^Arc<|^Rc</, "").trim();
@@ -54,17 +54,11 @@ export function buildSymbolTable(
   mappings: readonly RustAggregateMapping[],
 ): DomainSymbolTable {
   const types: DomainTypeSymbol[] = [];
-  const readsFacts = program.domainFacts !== null;
-  const getterNames = readsFacts ? new Set<string>() : null;
+  const getterNames = new Set<string>();
   const typeNames = new Set<string>();
   const constructorsByType = new Map<string, Set<string>>();
   for (const type of program.types) {
     if (type.layer !== "domain") continue;
-    // Rule (d) reads this table for any domain receiver, so a domain declaration the native facts
-    // do not cover leaves the table unable to answer rather than answering "not a getter".
-    if (readsFacts && type.methods.some((entry) => entry.returns_field_only === null)) {
-      throw new Error(`the native domain facts carry no method record for ${type.key} in ${type.file}`);
-    }
     if (type.kind === "trait") continue;
     const binding = aggregateFor(type, program, model, mappings);
     const aggregate = binding.aggregate;
@@ -85,7 +79,7 @@ export function buildSymbolTable(
       );
     const defaults = type.methods
       .filter((entry) => entry.trait === "Default" || entry.trait?.endsWith("::Default"))
-      .map((entry) => ({ file: entry.file, line: entry.method.span.start_line }));
+      .map((entry) => ({ file: entry.file, line: entry.method.line }));
     if (type.derives.includes("Default")) defaults.push({ file: type.file, line: 1 });
     types.push({
       key: type.key,
@@ -99,14 +93,10 @@ export function buildSymbolTable(
       mutators,
       has_default: defaults.length > 0,
       defaults,
-      non_private_field_lines: type.fields
-        .filter((field) => field.visibility !== "private")
-        .map((field) => field.span.start_line),
+      non_private_field_lines: type.fields.filter((field) => field.visibility !== "private").map((field) => field.line),
       field_type_texts: type.fields.map((field) => field.type_text),
     });
-    if (getterNames) {
-      for (const entry of inherent) if (entry.returns_field_only) getterNames.add(entry.method.name);
-    }
+    for (const entry of inherent) if (entry.method.returns_field_only) getterNames.add(entry.method.name);
     typeNames.add(type.name);
     const known = constructorsByType.get(type.name) ?? new Set<string>();
     for (const factory of constructors) known.add(factory);
@@ -163,7 +153,7 @@ function classifyMutator(
 ): MutatorSymbol {
   const method = entry.method;
   const command_slug = snakeToKebab(method.name);
-  const base = { method_name: method.name, command_slug, line: method.span.start_line, file: entry.file };
+  const base = { method_name: method.name, command_slug, line: method.line, file: entry.file };
   if (ambiguous) return { ...base, classification: "unknown" };
   if (replay) return { ...base, classification: "replay-exempt" };
   if (POST_INIT.has(method.name)) return { ...base, classification: "post-init" };

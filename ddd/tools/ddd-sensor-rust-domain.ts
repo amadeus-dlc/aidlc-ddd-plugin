@@ -7,9 +7,9 @@ import { initAnalyzer } from "./ddd/lib/rust/analyzer.ts";
 import { classifyDomainFactExtractor } from "./ddd/lib/rust/domain-facts/index.ts";
 
 const runtime = await initAnalyzer();
-// Rules (a) and (d) decide on the native extractor's facts, so its one launch is classified here,
-// beside the other tool this gate cannot run without. Whether an unusable one stops this run is
-// decided where the files those rules are evaluated over are known.
+// Every rule this gate reports decides on the native extractor's facts, so its one launch is
+// classified here, beside the other tool this gate cannot run without. Whether an unusable one
+// stops this run is decided where the files those rules are evaluated over are known.
 const extractor = await classifyDomainFactExtractor();
 process.exit(
   runSensor({
