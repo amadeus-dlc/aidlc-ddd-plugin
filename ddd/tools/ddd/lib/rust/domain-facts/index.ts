@@ -54,6 +54,10 @@ export type DomainFactResult =
  * The identity an impl method is joined on. The two extractors spell the same type and trait
  * differently around whitespace, so both sides are compared with it removed; everything else is
  * compared as written, which is what keeps `r#total` apart from `total`.
+ *
+ * The name's own line makes the identity one declaration rather than one name: a function body may
+ * declare its own type, and the module path names no function, so two local declarations of one
+ * name would otherwise share it. Both extractors read that line from the same source text.
  */
 export function methodKey(
   file: string,
@@ -61,11 +65,17 @@ export function methodKey(
   ownerTypeText: string,
   traitText: string | null,
   name: string,
+  nameLine: number,
 ): string {
   const compact = (text: string) => text.replace(/\s+/g, "");
-  return [file, modulePath.join("::"), compact(ownerTypeText), traitText === null ? "" : compact(traitText), name].join(
-    "\u0000",
-  );
+  return [
+    file,
+    modulePath.join("::"),
+    compact(ownerTypeText),
+    traitText === null ? "" : compact(traitText),
+    name,
+    String(nameLine),
+  ].join("\u0000");
 }
 
 export function classifyDomainFactExtractor(): Promise<NativeOutcome> {
@@ -107,15 +117,14 @@ function collectMethod(raw: Record<string, unknown>, file: string, into: Map<str
     nonempty(raw.owner_type_text),
     trait === null ? null : nonempty(trait),
     nonempty(raw.name),
+    line(raw.line),
   );
   const seen = into.get(key);
-  // Only one body of a given method identity is ever compiled, so two that disagree mean the
-  // source selects between them — conditional compilation, typically — and syntax alone cannot
-  // say which one the rule layer's declaration is. The extractor answered; the source is what
-  // cannot be decided.
+  // One declaration has one body. Two answers for one declaration that disagree are the extractor
+  // contradicting itself about the same lines, not a source this rule cannot read.
   if (seen !== undefined && seen !== raw.returns_field_only)
     throw new Error(
-      `${file} declares ${nonempty(raw.owner_type_text)}::${nonempty(raw.name)} with two different bodies, so which one applies cannot be decided from syntax`,
+      `the answer states two bodies for ${nonempty(raw.owner_type_text)}::${nonempty(raw.name)} at ${file}:${line(raw.line)}`,
     );
   into.set(key, raw.returns_field_only);
 }

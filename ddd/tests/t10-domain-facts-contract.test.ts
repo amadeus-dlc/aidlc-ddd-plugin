@@ -59,11 +59,11 @@ test("the installed extractor answers a batch with the members and method facts 
   expect(result.kind === "unavailable" ? result.detail : "").toBe("");
   if (result.kind !== "facts") return;
   expect(result.facts.publicMembers.get(LIB)).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
-  const key = (trait: string | null, name: string) => methodKey(LIB, [], "Invoice", trait, name);
-  expect(result.facts.fieldReturns.get(key(null, "total"))).toBe(true);
-  expect(result.facts.fieldReturns.get(key(null, "doubled"))).toBe(false);
+  const key = (trait: string | null, name: string, line: number) => methodKey(LIB, [], "Invoice", trait, name, line);
+  expect(result.facts.fieldReturns.get(key(null, "total", 4))).toBe(true);
+  expect(result.facts.fieldReturns.get(key(null, "doubled", 4))).toBe(false);
   // The trait implementation is a separate entry, so rule (d) can leave it out of the getter set.
-  expect(result.facts.fieldReturns.get(key("Shown", "shown"))).toBe(true);
+  expect(result.facts.fieldReturns.get(key("Shown", "shown", 3))).toBe(true);
   expect(result.facts.notes).toEqual([]);
 });
 
@@ -125,14 +125,20 @@ const REFUSED: [string, string][] = [
   ["a member carries a line before the first", record({ members: [{ type: "Invoice", member: "0", line: 0 }] })],
   [
     "a method carries no verdict",
-    record({ methods: [{ module: [], owner_type_text: "Invoice", trait_text: null, name: "total" }] }),
+    record({ methods: [{ module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4 }] }),
   ],
   [
-    "one method identity carries two different verdicts",
+    "a method carries no line, so its declaration cannot be told from another of the same name",
+    record({
+      methods: [{ module: [], owner_type_text: "Invoice", trait_text: null, name: "total", returns_field_only: true }],
+    }),
+  ],
+  [
+    "one declaration carries two different verdicts",
     record({
       methods: [
-        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", returns_field_only: true },
-        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", returns_field_only: false },
+        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4, returns_field_only: true },
+        { module: [], owner_type_text: "Invoice", trait_text: null, name: "total", line: 4, returns_field_only: false },
       ],
     }),
   ],
@@ -162,11 +168,18 @@ test("a batch with no sources is answered without launching the extractor", () =
 });
 
 test("the join identity ignores whitespace in the type and trait, and keeps identifiers as written", () => {
-  expect(methodKey(LIB, [], "Vec < u8 >", "core :: fmt :: Debug", "total")).toBe(
-    methodKey(LIB, [], "Vec<u8>", "core::fmt::Debug", "total"),
+  expect(methodKey(LIB, [], "Vec < u8 >", "core :: fmt :: Debug", "total", 1)).toBe(
+    methodKey(LIB, [], "Vec<u8>", "core::fmt::Debug", "total", 1),
   );
-  expect(methodKey(LIB, [], "Invoice", null, "r#total")).not.toBe(methodKey(LIB, [], "Invoice", null, "total"));
-  expect(methodKey(LIB, ["a"], "Invoice", null, "total")).not.toBe(methodKey(LIB, ["b"], "Invoice", null, "total"));
+  expect(methodKey(LIB, [], "Invoice", null, "r#total", 1)).not.toBe(methodKey(LIB, [], "Invoice", null, "total", 1));
+  expect(methodKey(LIB, ["a"], "Invoice", null, "total", 1)).not.toBe(
+    methodKey(LIB, ["b"], "Invoice", null, "total", 1),
+  );
   // An inherent method and a trait method of the same name are different entries.
-  expect(methodKey(LIB, [], "Invoice", null, "shown")).not.toBe(methodKey(LIB, [], "Invoice", "Shown", "shown"));
+  expect(methodKey(LIB, [], "Invoice", null, "shown", 1)).not.toBe(methodKey(LIB, [], "Invoice", "Shown", "shown", 1));
+  // Two declarations of one name are two entries: a function body may declare its own type, and
+  // the module path names no function, so only the line tells them apart.
+  expect(methodKey(LIB, ["tests"], "Stub", null, "total", 7)).not.toBe(
+    methodKey(LIB, ["tests"], "Stub", null, "total", 12),
+  );
 });

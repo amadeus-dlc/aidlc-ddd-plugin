@@ -1,6 +1,6 @@
 {
   "darwin-arm64": {
     "target": "aarch64-apple-darwin",
-    "sha256": "87f51d4bcbccbda228a3e0a91b0ed149302db55ec2f81b1ce30d734b7cc9382c"
+    "sha256": "bd72dd2a216bc8e6263b8024182037eebdc3ac350566df2a3b87a5546b0bdf4f"
   }
 }

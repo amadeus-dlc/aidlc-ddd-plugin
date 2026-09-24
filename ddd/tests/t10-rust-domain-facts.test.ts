@@ -113,6 +113,34 @@ pub fn peek(inv: &Invoice) -> i64 { inv.total() }
   expect(reported[0].line).toBe(lineOf(lib, "pub fn peek"));
 });
 
+// Two functions may each declare a type of the same name with a method of the same name and a
+// different body. They are separate declarations, so the facts are joined per declaration rather
+// than per name: neither one can make the answer for the other, or for the file, undecidable.
+test("two function-local methods of one name and two bodies keep the gate answering", () => {
+  const lib = `pub struct Invoice { amount: i64 }
+impl Invoice { pub fn total(&self) -> i64 { return self.amount; } }
+pub fn peek(inv: &Invoice) -> i64 { inv.total() }
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn one() {
+        struct Stub(i64);
+        impl Stub { fn total(&self) -> i64 { self.0 } }
+        let _ = Stub(1).total();
+    }
+    #[test]
+    fn two() {
+        struct Stub(i64);
+        impl Stub { fn total(&self) -> i64 { self.0 + 1 } }
+        let _ = Stub(1).total();
+    }
+}
+`;
+  const reported = findingsOf("domain-facts-local-name-collision", lib, "d");
+  expect(reported).toHaveLength(1);
+  expect(reported[0].line).toBe(lineOf(lib, "pub fn peek"));
+});
+
 test("a raw identifier getter is not absorbed into the name of another type's method", () => {
   const lib = `pub struct Invoice { amount: i64 }
 impl Invoice { pub fn r#total(&self) -> i64 { self.amount } }

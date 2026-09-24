@@ -338,6 +338,13 @@ export function buildProgram(
  */
 function fieldReturn(facts: DomainFactSet | null, file: string, block: ImplBlock, method: MethodDecl): boolean | null {
   if (!facts) return null;
-  const key = methodKey(file, block.module_path, block.target_type_text, block.trait_text ?? null, method.name);
+  const key = methodKey(
+    file,
+    block.module_path,
+    block.target_type_text,
+    block.trait_text ?? null,
+    method.name,
+    method.name_span.start_line,
+  );
   return facts.fieldReturns.get(key) ?? null;
 }

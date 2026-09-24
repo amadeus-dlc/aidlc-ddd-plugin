@@ -122,6 +122,11 @@ impl<'ast> Visit<'ast> for Facts {
                 self.methods.push(json!({
                     "module": self.module, "owner_type_text": owner, "trait_text": implemented,
                     "name": spelling(&method.sig.ident),
+                    // Two declarations of one name are separate methods: a function body may hold
+                    // its own type, and the module path does not name the function it sits in. The
+                    // name's own line tells them apart, and it is the line the other extractor
+                    // reads for the same declaration.
+                    "line": line(method.sig.ident.span()),
                     "returns_field_only": returns_field_only(&method.block)
                 }));
             } else if let syn::ImplItem::Macro(item) = item {
