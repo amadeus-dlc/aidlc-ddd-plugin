@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -49,6 +50,15 @@ function fixture(harness: "claude" | "codex" = "codex", onlySensor?: string) {
     pluginBuilt: join(repository, `ddd/dist/${harness}`),
   });
   expect(composed.status, composed.stderr || composed.stdout).toBe(0);
+  // Composition writes payload bytes without a mode, so the native extractor the Rust gates launch
+  // arrives without its execute bit; the installer grants it inside the candidate tree. A gate runs
+  // in an installed project, so this fixture grants it too — otherwise every Rust gate here would
+  // report the extractor as unlaunchable instead of exercising the rule under test.
+  const binDir = join(root, leaf, "tools", "ddd", "bin");
+  for (const platform of existsSync(binDir) ? readdirSync(binDir, { withFileTypes: true }) : []) {
+    if (!platform.isDirectory()) continue;
+    for (const entry of readdirSync(join(binDir, platform.name))) chmodSync(join(binDir, platform.name, entry), 0o755);
+  }
   const graphPath = join(root, leaf, "tools/data/stage-graph.json");
   const graph = JSON.parse(readFileSync(graphPath, "utf8")) as GraphStage[];
   // Exercise the real artifact and gate-sensor machinery. Unrelated core

@@ -1,7 +1,7 @@
 {
   "experiment": "rust-syn",
-  "recorded_at": "2026-09-13T06:43:40.055Z",
-  "base_commit": "83fadbfb8ac1100637dd157bc55621eae441da02",
+  "recorded_at": "2026-09-23T19:32:31.793Z",
+  "base_commit": "71f09c781d3e2c6e257b6c7d2ecec6aab6f3e1cd",
   "versions": {
     "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
     "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -10,22 +10,27 @@
   },
   "platform": "darwin-arm64",
   "inputs": {
-    "Cargo.toml": "0f4172d205d76af18ae6c92e9b3da94c263c629ed851a6d7be153abcb4192bc0",
-    "Cargo.lock": "dfd66debba644865729f0c7665addac53587ee38a05c838f48dbea6451e8a5c4",
-    "src/main.rs": "a7507311bbdd3a5e475b6d27a793661ac81c542de3f8ff1620ff874ba0b29b2a",
+    "Cargo.toml": "183e750155c0816c115ad5dcacfdaf78d1159ddbf410a7e5460c2148b928a8ca",
+    "Cargo.lock": "fdf89a191063769342cab95c3cec44bd647540ee8af45b1613cac72c2e686424",
+    "src/main.rs": "481ac9619db7bf4c254b903414af324aeb2b08107d19ed307a571fb8cf4b5349",
     "src/analysis.rs": "84b7a698441bba7c9b10f73825cc9dba7f85724164584f742c6ea5c95a9ec1e6",
-    "cases.json": "ef97ff8c7a630411d1f0d24845ff6e081c44e257a39ee9aa0f259df49df383b4"
+    "src/domain_facts.rs": "7b9f6c2bd393b4513e0e0f34c687fb60eacbc78c572a1702b5ea61e925f5bbcb",
+    "src/domain_facts_tests.rs": "3c2a7bdac2aed3aadc0f18992a8d64d9f4561d213b5e876e7b85a90945bc56af",
+    "src/state_evidence.rs": "4f4e1458143e3a5753dc3316070b6463d54da18dc711489b15df28e2fd59b177",
+    "src/state_evidence_tests.rs": "159ca4d9227cdeab167b86fa7adf8ebcd831e3c6e7f5550672ee7df2af391b25",
+    "cases.json": "075b3eefa84b2919323401bfd88778ab0de2595329e8247b41179b0e3544ecfc"
   },
-  "verifier_sha256": "e33677ae33c9c759d56e36f5d7579b7b0ea1d24bf639e0429f3b1d88557385f2",
+  "verifier_sha256": "7b8aa095445c6fe450972941a51e4be36b380a22483bd20cdd18ef3104549399",
   "native": {
-    "bytes": 1859760,
-    "sha256": "5432bb2f8774b10e1c16f9dcd902093b9a69782961a66a8f3bb2205640d22b58",
+    "bytes": 2391584,
+    "sha256": "87f51d4bcbccbda228a3e0a91b0ed149302db55ec2f81b1ce30d734b7cc9382c",
     "relocated_empty_path": true,
     "binary_dependencies": [
       "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
     ],
     "build_ms": 31,
-    "first_batch_ms": 185,
+    "relocated_warmup_ms": 311,
+    "first_batch_ms": 3,
     "warm_batch_median_ms": 2,
     "timing_scope": "local warm filesystem; includes process startup and JSON; no performance comparison"
   },
@@ -37,7 +42,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -71,7 +76,7 @@
       "fields": [
         "Invoice.amount@2"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.amount@2"
       ],
       "unresolved": [],
@@ -92,7 +97,7 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.amount@1"
       ],
       "unresolved": [],
@@ -113,7 +118,7 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.amount@1"
       ],
       "unresolved": [],
@@ -134,7 +139,7 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.amount@1"
       ],
       "unresolved": [],
@@ -153,7 +158,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -172,7 +177,7 @@
       "fields": [
         "Invoice.0@1"
       ],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -191,7 +196,7 @@
       "fields": [
         "Invoice.0@1"
       ],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -210,7 +215,7 @@
       "fields": [
         "Invoice.type@1"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.type@1"
       ],
       "unresolved": [],
@@ -231,7 +236,7 @@
       "fields": [
         "Invoice.合計@2"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.合計@2"
       ],
       "unresolved": [],
@@ -250,7 +255,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -270,7 +275,7 @@
         "syn": [
           "total"
         ],
-        "legacy": [
+        "tree_sitter": [
           "total"
         ]
       }
@@ -280,7 +285,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -294,7 +299,7 @@
         "syn": [
           "total"
         ],
-        "legacy": []
+        "tree_sitter": []
       }
     },
     {
@@ -302,7 +307,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -325,7 +330,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -348,7 +353,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -371,7 +376,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -388,7 +393,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -407,7 +412,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -424,7 +429,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -443,7 +448,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -462,7 +467,7 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -485,7 +490,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "macro-expansion"
       ],
@@ -506,7 +511,7 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "legacy_fields": [
+      "tree_sitter_fields": [
         "Invoice.amount@1"
       ],
       "unresolved": [
@@ -527,7 +532,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "conditional-compilation"
       ],
@@ -546,7 +551,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "attribute-or-derive-expansion"
       ],
@@ -565,7 +570,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "attribute-or-derive-expansion"
       ],
@@ -578,7 +583,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "external-module-not-loaded"
       ],
@@ -591,7 +596,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "external-module-not-loaded"
       ],
@@ -604,7 +609,7 @@
       "parsed": false,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": null,
+      "tree_sitter_fields": null,
       "unresolved": [
         "parse-error"
       ],
@@ -623,7 +628,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "unsupported-item"
       ],
@@ -642,7 +647,7 @@
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "legacy_fields": [],
+      "tree_sitter_fields": [],
       "unresolved": [
         "unsupported-modifier"
       ],
@@ -662,23 +667,33 @@
   "actual_sensor_comparisons": [
     {
       "name": "clean-domain",
-      "existing_a_count": 0,
-      "syn_a_count": 0
+      "sensor_a_count": 0,
+      "sensor_d_count": 0,
+      "syn_field_candidate_count": 0
     },
     {
       "name": "violation-a",
-      "existing_a_count": 1,
-      "syn_a_count": 1
+      "sensor_a_count": 1,
+      "sensor_d_count": 0,
+      "syn_field_candidate_count": 1
     },
     {
       "name": "public-tuple",
-      "existing_a_count": 0,
-      "syn_a_count": 1
+      "sensor_a_count": 1,
+      "sensor_d_count": 0,
+      "syn_field_candidate_count": 1
     },
     {
       "name": "restricted-tuple",
-      "existing_a_count": 0,
-      "syn_a_count": 1
+      "sensor_a_count": 1,
+      "sensor_d_count": 0,
+      "syn_field_candidate_count": 1
+    },
+    {
+      "name": "explicit-return-getter",
+      "sensor_a_count": 0,
+      "sensor_d_count": 1,
+      "syn_field_candidate_count": 0
     }
   ],
   "unverified": [

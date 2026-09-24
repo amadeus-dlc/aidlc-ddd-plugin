@@ -8,6 +8,7 @@ import { fixtureMapping, withFixturePackages } from "../package-fixture.ts";
 
 import { modelDocument } from "../model-document.ts";
 import type { GoldenCase } from "../runner.ts";
+import { domainFactsCases } from "./domain-facts-cases.ts";
 import { getterArgumentCases } from "./getter-argument-cases.ts";
 import { t2Cases } from "./t2-cases.ts";
 
@@ -367,6 +368,7 @@ export const RUST_CASES: GoldenCase[] = [
   ...BASE_RUST_CASES,
   ...t2Cases(BASE_RUST_CASES),
   ...getterArgumentCases(BASE_RUST_CASES),
+  ...domainFactsCases(BASE_RUST_CASES),
 ].map((entry) => {
   const path = "inception/domain-design/ddd-aggregate-mapping.md";
   return {

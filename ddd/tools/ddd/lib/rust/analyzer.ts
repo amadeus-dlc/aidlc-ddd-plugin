@@ -67,6 +67,8 @@ export interface MethodDecl {
   return_type_text?: string;
   body_shape: BodyShape;
   span: Span;
+  /** The name alone, which is where the native facts are joined: the item span starts elsewhere. */
+  name_span: Span;
 }
 
 export interface ImplBlock {
@@ -469,14 +471,16 @@ function implFacts(file: string, tree: TSTree): ImplBlock[] {
         if (child.type !== "function_item") continue;
         const returnType = child.childForFieldName("return_type");
         const fnBody = child.childForFieldName("body") ?? undefined;
+        const nameNode = child.childForFieldName("name");
         methods.push({
-          name: child.childForFieldName("name")?.text ?? "",
+          name: nameNode?.text ?? "",
           visibility: visibilityOf(child),
           receiver: receiverOf(child.childForFieldName("parameters") ?? undefined),
           params: paramsOf(child.childForFieldName("parameters") ?? undefined, targetType),
           ...(returnType ? { return_type_text: returnType.text } : {}),
           body_shape: bodyShapeOf(fnBody),
           span: spanOf(child),
+          name_span: nameNode ? spanOf(nameNode) : spanOf(child),
         });
       }
     }

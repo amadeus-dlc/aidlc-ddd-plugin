@@ -150,7 +150,7 @@ Completion: shared contracts are concrete, migration preserves domain identities
 
 Status: agreed work; implementation pending. Depends on T-09 and coordinates with T-01/T-03/T-05/T-06. Required for the first release.
 
-Rust + syn adoption is approved following the [experiment](rust-syn-spike.md). Implement the native Rust backend and resolution boundary described in the [inspection design](inspection-contract-design.md). Fix the reproduced public tuple-field and explicit-return getter misses. Name/type resolution implementation, whole-sensor parity, and supported-platform distribution remain pending; the experiment does not complete T-10.
+Rust + syn adoption is approved following the [experiment](rust-syn-spike.md). Implement the native Rust backend and resolution boundary described in the [inspection design](inspection-contract-design.md). T-10-01 moved the extractor onto the product path and established its distribution; T-10-02 moved rules `a` and `d` onto its facts, fixed the reproduced public tuple-field and explicit-return getter misses, and made a launch failure stop the two gates that read them. The remaining rules, the module-layout inspection, the removal of the tree-sitter assets, whole-sensor parity, and supported-platform distribution remain pending; neither the experiment nor T-10-02 completes T-10.
 
 Improve host/package separation, visibility and dependency checks, explicit publication, method-specific error-type/set validation, factory bindings, and blocking unresolved inspection. Review coverage of infrastructure, hosts, ownership isolation, and existing mutation/construction checks. Correct Rust gaps rather than treating current behavior as the final specification.
 

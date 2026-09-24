@@ -9,9 +9,12 @@ import { RUST_TOOLCHAIN } from "../tools/ddd/lib/rust/state-evidence/index.ts";
 import { inspectStateExposure } from "../tools/ddd/lib/state-exposure/index.ts";
 import { freezeInput } from "../tools/ddd/lib/state-exposure-verification/input.ts";
 
-/** The two protocol identities the installed extractor answers, fixed by the inspection contract. */
+/** The protocol identities the installed extractor answers, fixed by the inspection contract. */
 const ERROR_CONTRACT = { flag: "--error-contract-version", version: 3 };
 const STATE_EXPOSURE = { flag: "--state-exposure-version", version: 2 };
+/** The decision base the rule (a) / (d) gates read (T-10-02). */
+const DOMAIN_FACTS = { flag: "--domain-facts-version", version: 4 };
+const PROTOCOLS = [ERROR_CONTRACT, STATE_EXPOSURE, DOMAIN_FACTS];
 
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";
 const HOST_KEY = `${process.platform}-${process.arch}`;
@@ -46,6 +49,7 @@ function extractorScript(options: FixtureOptions): string {
     'case "$1" in',
     `  ${ERROR_CONTRACT.flag}) ${errorContract} ;;`,
     `  ${STATE_EXPOSURE.flag}) ${answer(STATE_EXPOSURE.version)} ;;`,
+    `  ${DOMAIN_FACTS.flag}) ${answer(DOMAIN_FACTS.version)} ;;`,
     "  *) exit 1 ;;",
     "esac",
     "",
@@ -98,12 +102,11 @@ test("a recorded, executable, unchanged extractor answering the probe is ready t
   expect(outcome.binaryPath).toBe(join(root, HOST_KEY, EXTRACTOR_NAME));
 });
 
-test("one installed file answers both entry protocols, so both entries share one installation", async () => {
+test("one installed file answers every entry protocol, so all entries share one installation", async () => {
   const root = installation();
-  const errorContract = await classifyNativeExtractor(root, HOST_KEY, ERROR_CONTRACT);
-  const stateExposure = await classifyNativeExtractor(root, HOST_KEY, STATE_EXPOSURE);
-  expect([errorContract.kind, stateExposure.kind]).toEqual(["ready", "ready"]);
-  expect(stateExposure.binaryPath).toBe(errorContract.binaryPath);
+  const outcomes = await Promise.all(PROTOCOLS.map((protocol) => classifyNativeExtractor(root, HOST_KEY, protocol)));
+  expect(outcomes.map((outcome) => outcome.kind)).toEqual(PROTOCOLS.map(() => "ready"));
+  expect(new Set(outcomes.map((outcome) => outcome.binaryPath)).size).toBe(1);
 });
 
 test.each(FAILURES)("%s is classified on its own", async (kind, options) => {
@@ -222,12 +225,14 @@ test("the error-contract entry hands its consumers one unavailable execution whe
   ]);
 });
 
-test("the product installation sits in the distributed tools tree and answers both probes", async () => {
+test("the product installation sits in the distributed tools tree and answers every probe", async () => {
   expect(PLATFORM_KEY).toBe(HOST_KEY);
   expect(NATIVE_BIN_DIR).toBe(PRODUCT_BIN_DIR);
-  const errorContract = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, ERROR_CONTRACT);
-  const stateExposure = await classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, STATE_EXPOSURE);
-  expect([errorContract.kind, stateExposure.kind]).toEqual(["ready", "ready"]);
-  expect(errorContract.binaryPath).toBe(join(PRODUCT_BIN_DIR, PLATFORM_KEY, EXTRACTOR_NAME));
-  expect(stateExposure.binaryPath).toBe(errorContract.binaryPath);
+  const outcomes = await Promise.all(
+    PROTOCOLS.map((protocol) => classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, protocol)),
+  );
+  expect(outcomes.map((outcome) => outcome.kind)).toEqual(PROTOCOLS.map(() => "ready"));
+  expect([...new Set(outcomes.map((outcome) => outcome.binaryPath))]).toEqual([
+    join(PRODUCT_BIN_DIR, PLATFORM_KEY, EXTRACTOR_NAME),
+  ]);
 });

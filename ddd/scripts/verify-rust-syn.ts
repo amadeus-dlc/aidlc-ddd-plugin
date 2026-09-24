@@ -125,7 +125,10 @@ try {
     deepStrictEqual(unresolved, [...(entry.unresolved ?? [])].sort(), entry.name);
     strictEqual(result.field_inspection.state, unresolved.length ? "unresolved" : fields.length ? "violation" : "pass");
     const tree = parse(runtime, path, new TextEncoder().encode(entry.source));
-    const legacyFields = structs(tree)
+    // `treeSitterFields` / `treeSitterGetters` record what the tree-sitter extractor reports, which
+    // is a different question from what the sensor decides: rules (a) and (d) read the native facts
+    // (T-10-02), so a case can be a violation at the gate while this extractor still reports none.
+    const treeSitterFields = structs(tree)
       .filter((type) => type.kind === "struct")
       .flatMap((type) =>
         type.fields
@@ -134,7 +137,11 @@ try {
       )
       .sort();
     if (entry.compare !== false)
-      deepStrictEqual(legacyFields, [...(entry.legacyFields ?? entry.fields)].sort(), `${entry.name}: legacy`);
+      deepStrictEqual(
+        treeSitterFields,
+        [...(entry.treeSitterFields ?? entry.fields)].sort(),
+        `${entry.name}: tree-sitter fields`,
+      );
     if (entry.getters) {
       deepStrictEqual(
         result.facts.methods
@@ -143,12 +150,12 @@ try {
           .sort(),
         entry.getters,
       );
-      const legacyGetters = impls(tree)
+      const treeSitterGetters = impls(tree)
         .flatMap((block) =>
           block.methods.filter((method) => method.body_shape === "returns-field-only").map((method) => method.name),
         )
         .sort();
-      deepStrictEqual(legacyGetters, entry.legacyGetters ?? entry.getters);
+      deepStrictEqual(treeSitterGetters, entry.treeSitterGetters ?? entry.getters);
     }
     for (const method of entry.methods ?? []) {
       const fact = result.facts.methods.find((candidate) => candidate.name === method.name);
@@ -222,16 +229,28 @@ try {
       parsed: result.parsed,
       state: result.field_inspection.state,
       fields,
-      legacy_fields: entry.compare === false ? null : legacyFields,
+      tree_sitter_fields: entry.compare === false ? null : treeSitterFields,
       unresolved,
       compiler,
       signature_checks: entry.methods ?? [],
-      getter_comparison: entry.getters ? { syn: entry.getters, legacy: entry.legacyGetters ?? entry.getters } : null,
+      getter_comparison: entry.getters
+        ? { syn: entry.getters, tree_sitter: entry.treeSitterGetters ?? entry.getters }
+        : null,
     });
   }
 
-  // Use the actual source sensor on existing golden inputs and on the same
-  // inputs with tuple fields. This is not a whole-sensor parity claim.
+  // Use the actual source sensor on existing golden inputs and on the same inputs with the two
+  // forms rules (a) and (d) used to miss. This is not a whole-sensor parity claim. The sensor
+  // counts and the spike extractor's own candidate count answer different questions and are
+  // recorded apart: since T-10-02 the gate decides (a) and (d) on the native facts, so a case is a
+  // violation at the gate while the tree-sitter extractor still reports nothing for it.
+  const SENSOR_EXPECTATIONS: Record<string, { sensor_a: number; sensor_d: number; syn_fields: number }> = {
+    "clean-domain": { sensor_a: 0, sensor_d: 0, syn_fields: 0 },
+    "violation-a": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
+    "public-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
+    "restricted-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
+    "explicit-return-getter": { sensor_a: 0, sensor_d: 1, syn_fields: 0 },
+  };
   const clean = RUST_CASES.find((entry) => entry.name === "clean-domain");
   const violation = RUST_CASES.find((entry) => entry.name === "violation-a");
   ok(clean && violation);
@@ -241,13 +260,25 @@ try {
     clean,
     violation,
     ...cases
-      .filter((entry) => entry.legacyFields)
-      .map((entry) => ({
-        ...clean,
-        name: entry.name,
-        workspace: { ...clean.workspace, [domainPath]: entry.source },
-      })),
+      .filter((entry) => entry.treeSitterFields || entry.treeSitterGetters)
+      .map((entry) => {
+        const expected = SENSOR_EXPECTATIONS[entry.name];
+        ok(expected, `${entry.name}: no sensor expectation recorded`);
+        const rules = [...(expected.sensor_a ? ["a"] : []), ...(expected.sensor_d ? ["d"] : [])];
+        return {
+          ...clean,
+          name: entry.name,
+          workspace: { ...clean.workspace, [domainPath]: entry.source },
+          expect: {
+            pass: rules.length === 0,
+            rules,
+            files: Object.fromEntries(rules.map((rule) => [rule, domainPath])),
+          },
+        };
+      }),
   ]) {
+    const expected = SENSOR_EXPECTATIONS[entry.name];
+    ok(expected, `${entry.name}: no sensor expectation recorded`);
     const baseline = runGoldenCase(join(root, "tools"), entry);
     ok(baseline.ok, `${entry.name}: ${baseline.problems.join("; ")}`);
     const source = entry.workspace?.[domainPath];
@@ -255,11 +286,16 @@ try {
     const native = invoke(JSON.stringify({ protocol_version: 1, files: [{ path: domainPath, source }] }));
     strictEqual(native.exitCode, 0);
     const nativeResult = (JSON.parse(native.stdout.toString()) as { files: Result[] }).files[0];
-    const existingCount = baseline.verdict?.findings.filter((finding) => finding.rule_id === "a").length;
-    const nativeCount = nativeResult.field_inspection.candidates.length;
-    strictEqual(nativeCount, entry === clean ? 0 : 1);
-    strictEqual(existingCount, entry === violation ? 1 : 0);
-    goldenRows.push({ name: entry.name, existing_a_count: existingCount, syn_a_count: nativeCount });
+    const count = (rule: string) => baseline.verdict?.findings.filter((finding) => finding.rule_id === rule).length;
+    strictEqual(nativeResult.field_inspection.candidates.length, expected.syn_fields, `${entry.name}: syn fields`);
+    strictEqual(count("a"), expected.sensor_a, `${entry.name}: sensor rule a`);
+    strictEqual(count("d"), expected.sensor_d, `${entry.name}: sensor rule d`);
+    goldenRows.push({
+      name: entry.name,
+      sensor_a_count: count("a"),
+      sensor_d_count: count("d"),
+      syn_field_candidate_count: nativeResult.field_inspection.candidates.length,
+    });
   }
   const nativeTimes = Array.from({ length: 10 }, () => {
     const start = performance.now();
@@ -283,6 +319,8 @@ try {
         "Cargo.lock",
         "src/main.rs",
         "src/analysis.rs",
+        "src/domain_facts.rs",
+        "src/domain_facts_tests.rs",
         "src/state_evidence.rs",
         "src/state_evidence_tests.rs",
         "cases.json",

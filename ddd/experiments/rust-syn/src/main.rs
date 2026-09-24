@@ -1,4 +1,5 @@
 mod analysis;
+mod domain_facts;
 mod error_contract;
 mod state_evidence;
 
@@ -35,6 +36,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if std::env::args().nth(1).as_deref() == Some("--domain-facts-version") {
+        println!(
+            "{}",
+            json!({"extractor": "0.0.0", "syn": "3.0.5", "protocol_version": 4})
+        );
+        return Ok(());
+    }
     let mut input = String::new();
     io::stdin()
         .take(8 * 1024 * 1024 + 1)
@@ -49,6 +57,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     if value.get("protocol_version").and_then(|v| v.as_u64()) == Some(3) {
         println!("{}", error_contract::run(value)?);
+        return Ok(());
+    }
+    if value.get("protocol_version").and_then(|v| v.as_u64()) == Some(4) {
+        println!("{}", domain_facts::run(value)?);
         return Ok(());
     }
     let input: Input = serde_json::from_value(value)?;

@@ -51,24 +51,16 @@ function domainTypeSymbol(symbols: InspectionContext["symbols"], typeName: strin
 // --- (a) public field -------------------------------------------------------
 function ruleA(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
-  const out: FindingInput[] = [];
-  for (const decl of structs(target.tree)) {
-    if (decl.kind !== "struct") continue;
-    for (const field of decl.fields) {
-      if (field.visibility !== "private") {
-        out.push(
-          finding(
-            "a",
-            target.tree.file,
-            `public field ${decl.name}.${field.name} in domain layer`,
-            field.span.start_line,
-          ),
-        );
-      }
-    }
-    void context;
-  }
-  return out;
+  const file = target.tree.file;
+  const facts = context.program.domainFacts;
+  if (!facts) throw new Error("rule (a) was evaluated without the native domain facts");
+  const members = facts.publicMembers.get(file);
+  // An inspected file always has a record. Its absence means the extractor could not read the
+  // file, which is not the same answer as "it declares nothing public".
+  if (!members) throw new Error(`the native domain facts carry no member record for ${file}`);
+  return members.map((member) =>
+    finding("a", file, `public field ${member.typeName}.${member.name} in domain layer`, member.line),
+  );
 }
 
 // --- (b) undeclared mutation ------------------------------------------------
@@ -195,13 +187,15 @@ function isRepositoryArgument(
 
 function ruleD(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
+  const getterNames = context.symbols.getter_names;
+  if (!getterNames) throw new Error("rule (d) was evaluated without the native domain facts");
   const out: FindingInput[] = [];
   const callSites = calls(target.tree);
   for (const call of callSites) {
     if (call.kind !== "method-call") continue;
     const receiver = (call.receiver_text ?? "").replace(/\s+/g, " ").trim();
     if (["self", "&self", "&mut self", "Self", "&mut  self"].includes(receiver)) continue;
-    if (!context.symbols.getter_names.has(call.callee_text)) continue;
+    if (!getterNames.has(call.callee_text)) continue;
     const type = context.program.receiver(target.tree.file, call);
     if (!type) {
       context.program.notes.add(
@@ -211,9 +205,7 @@ function ruleD(target: InspectionTarget, context: InspectionContext): FindingInp
     }
     if (
       type.layer === "domain" &&
-      type.methods.some(
-        (entry) => entry.method.name === call.callee_text && entry.method.body_shape === "returns-field-only",
-      )
+      type.methods.some((entry) => entry.method.name === call.callee_text && entry.returns_field_only === true)
     ) {
       if (isRepositoryArgument(call, callSites, target, context)) continue;
       out.push(

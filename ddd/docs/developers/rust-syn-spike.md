@@ -4,11 +4,13 @@ English | [Japanese](rust-syn-spike.ja.md) | [Developer documentation](README.md
 
 Verified on 2026-09-13 against production baseline `83fadbfb8ac1100637dd157bc55621eae441da02`.
 
+Updated on 2026-09-23 for T-10-02: rules `a` and `d` now decide on the native extractor instead of tree-sitter, so the comparison below separates what each extractor reports from what the gate answers.
+
 **Decision: Rust + syn is adopted as the Rust syntax backend for T-09/T-10.** The user approved this direction after the experiment. It extracts useful DDD inspection facts and runs as a relocated native executable, and reproduces two missed public tuple-field cases in the current sensor. Production replacement still needs the [resolution and shared contract design](inspection-contract-design.md) implemented and verified, full rule parity, and supported-platform distribution tests. This experiment does not replace the installed sensors or complete T-09/T-10.
 
 ## The comparison is deliberately bounded
 
-The [experiment](../../experiments/rust-syn/) uses syn 3.0.5, pinned in Cargo.toml, with a committed Cargo.lock. The production implementation uses Bun/TypeScript and tree-sitter-rust WASM. Both implementations receive the same source text. The [verifier](../../scripts/verify-rust-syn.ts) checks 31 source cases, runs 4 cases through the real existing domain sensor, and rejects 6 malformed protocol inputs. Thirty-one successful experiment assertions are not thirty-one valid Rust programs: some inputs intentionally fail compilation or require unresolved inspection.
+The [experiment](../../experiments/rust-syn/) uses syn 3.0.5, pinned in Cargo.toml, with a committed Cargo.lock. The production implementation uses Bun/TypeScript and tree-sitter-rust WASM. Both implementations receive the same source text. The [verifier](../../scripts/verify-rust-syn.ts) checks 31 source cases, runs 5 cases through the real domain sensor, and rejects 6 malformed protocol inputs. Thirty-one successful experiment assertions are not thirty-one valid Rust programs: some inputs intentionally fail compilation or require unresolved inspection.
 
 Implemented in the experiment:
 
@@ -17,20 +19,33 @@ Implemented in the experiment:
 - A field-return shape recognizer, including explicit `return self.amount;`. It is not a complete implementation of getter-call rule `d` or a proof about effects.
 - Explicit unresolved results for tested macros, attributes/derives, conditional compilation, external modules, malformed syntax, unions, and unsupported modifiers.
 
-The actual sensor comparison covers `a` only. Its normal named-field positive/negative cases agree. Whole-sensor equivalence, the canonical artifact schema, command/factory error membership, ownership effects, and business invariants are outside this prototype.
+The actual sensor comparison covers `a` and `d`. Its normal named-field and tail-expression getter cases agree with the earlier behavior. Whole-sensor equivalence, the canonical artifact schema, command/factory error membership, ownership effects, and business invariants are outside this prototype.
 
-## The experiment exposes concrete gaps in the current extractor
+## The two extractors and the gate verdict answer different questions
 
-| Input | Existing implementation | syn experiment |
-|---|---|---|
-| Private named field | No `a` finding | No `a` candidate |
-| `pub amount: u64` | `a` finding | `a` candidate |
-| `pub struct Invoice(pub u64);` | No `a` finding | `a` candidate |
-| `pub struct Invoice(pub(crate) u64, u64);` | No `a` finding | `a` candidate |
-| Getter with tail expression `self.amount` | Getter syntax recognized | Getter syntax recognized |
-| Getter with `return self.amount;` | Getter syntax missed | Getter syntax recognized |
+Rules `a` and `d` decide on the native extractor's facts (T-10-02), so the tree-sitter column below is that extractor's own output and no longer the gate's answer. The verdict column is what `ddd-rust-domain` reports for the input today.
 
-The first four rows were checked through the real existing sensor as well as the prototype. The last two compare extracted method facts. These misses are defects in the current extraction logic, not intrinsic limitations of tree-sitter. Retaining tree-sitter and correcting those paths remains a technically viable alternative. The experiment makes no comparative speed claim.
+| Input | tree-sitter extractor | native extractor | `ddd-rust-domain` verdict |
+|---|---|---|---|
+| Private named field | No `a` field | No `a` member | No `a` finding |
+| `pub amount: u64` | `a` field | `a` member | `a` finding |
+| `pub struct Invoice(pub u64);` | No `a` field | `a` member | `a` finding |
+| `pub struct Invoice(pub(crate) u64, u64);` | No `a` field | `a` member | `a` finding |
+| Getter with tail expression `self.amount` | Getter syntax recognized | Getter syntax recognized | `d` finding at the call |
+| Getter with `return self.amount;` | Getter syntax missed | Getter syntax recognized | `d` finding at the call |
+
+The three rows whose verdict moved — the two public tuple members and the explicit-`return` getter — are the cases this migration changed. The verifier runs each of them plus the two unchanged controls through the real sensor and records both counts per case in the [execution evidence](evidence/rust-syn-spike.json) under `actual_sensor_comparisons`. The `treeSitterFields` and `treeSitterGetters` baselines in [cases.json](../../experiments/rust-syn/cases.json) stay empty on purpose: the tree-sitter extractor still misses these forms, and correcting it is outside T-10-02. The experiment makes no comparative speed claim.
+
+## What rules `a` and `d` still read from tree-sitter
+
+The native facts decide *whether* a member is public and *whether* a method body only hands back a member of `self`. Everything that turns those facts into a finding still comes from the tree-sitter extractor, and this is the remaining boundary:
+
+- Which files make up the program. The Cargo workspace scan, the layer assignment, and the `mod` walk in [`rust-modules.ts`](../../tools/ddd/lib/packaging/rust-modules.ts) choose the batch the native extractor is asked about.
+- Type resolution. `impl` blocks are bound to declarations, and a call's receiver type is resolved, by [`program.ts`](../../tools/ddd/lib/rules/rust/program.ts). The native answer carries the self type only as the text the join is keyed on.
+- Call sites. Rule `d` finds its calls, their receiver text, and the forwarded-argument repository exception through the tree-sitter call facts.
+- Macro-opaque regions and parse errors in the claimed files are still reported from the tree-sitter parse.
+
+Two limits of the native answer are recorded rather than acted on. An attribute or derive macro can append items the parser never sees; because it cannot change the members of the declaration it annotates, it is not recorded per occurrence. Item macros and `cfg`/`cfg_attr` are recorded as `domain-facts.unresolved` notes on the verdict. On a run where rules `a` and `d` have a claimed file to decide, a file the parser rejects is a note only while it is not among the ones these rules are decided from (the claimed files the gate inspects, plus every source of a domain-layer crate); when it is among them the gate stops as inspection-impossible and reports the extractor's reason, because "this file declares nothing public" is the one answer an unread file must not give.
 
 ## Parsing does not resolve names or types
 
@@ -68,9 +83,9 @@ cargo fmt --manifest-path experiments/rust-syn/Cargo.toml --check
 cargo clippy --locked --manifest-path experiments/rust-syn/Cargo.toml --all-targets -- -D warnings
 ```
 
-The command builds with `--locked`, verifies the fixtures and real-sensor comparisons, runs rustc on compiler-oracle cases, checks relocation and deterministic output, and prints JSON. Any assertion failure exits nonzero. Baseline expectations intentionally record the existing misses; update them and this report when production fixes land.
+The command builds with `--locked`, verifies the fixtures and real-sensor comparisons, runs rustc on compiler-oracle cases, checks relocation and deterministic output, and prints JSON. Any assertion failure exits nonzero. The `treeSitterFields` / `treeSitterGetters` baselines record what the tree-sitter extractor still misses; `SENSOR_EXPECTATIONS` in the verifier records what the gate answers. Update the pair that a production change actually moves, and this report with it.
 
-The experimental executable accepts one JSON request on stdin:
+The experimental executable accepts one JSON request on stdin. Protocol 1 below is the experiment's own; the sensors read the `domain-facts` protocol described in [native extractor distribution](native-extractor-distribution.md), never this one.
 
 ```json
 {"protocol_version":1,"files":[{"path":"invoice.rs","source":"pub struct Invoice(pub u64);"}]}
@@ -80,4 +95,4 @@ It emits JSON with `field_inspection.state` (`pass`, `violation`, or `unresolved
 
 ## Feed the findings into the shared design
 
-Keep the [language-independent contracts](language-independent-design.md) authoritative. T-09 implements the [inspection design](inspection-contract-design.md): required facts, resolution/completeness states, and the boundary between shared evaluation and language-specific analysis. T-10 covers the two tuple-field regressions and explicit-return getter, migrates every existing Rust rule, and validates both module layouts and supported distributions. Required unresolved facts must block approval. The TypeScript Compiler API implementation exercises the same contract with equivalent business scenarios.
+Keep the [language-independent contracts](language-independent-design.md) authoritative. T-09 implements the [inspection design](inspection-contract-design.md): required facts, resolution/completeness states, and the boundary between shared evaluation and language-specific analysis. T-10-02 has closed the two tuple-field regressions and the explicit-return getter for rules `a` and `d`, in both module layouts. The remaining Rust rules, the module-layout inspection, and the removal of the tree-sitter assets are still to migrate. Required unresolved facts must block approval. The TypeScript Compiler API implementation exercises the same contract with equivalent business scenarios.
