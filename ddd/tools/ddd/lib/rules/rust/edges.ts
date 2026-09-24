@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { uses } from "../../rust/analyzer.ts";
+import type { DomainFactSet } from "../../rust/domain-facts/index.ts";
 import { type CrateLayerAssignment, isAllowed } from "../../workspace/resolver.ts";
 import { type ExternalCrateRule, matchesIoRule } from "../lists.ts";
 import type { DependencyEdge, InspectionTarget } from "../types.ts";
@@ -16,7 +16,18 @@ function normalize(crateName: string): string {
   return crateName.replace(/_/g, "-");
 }
 
+/**
+ * The crate a `use` path names, as a Cargo crate name is written. A trailing rename belongs to the
+ * item rather than to the crate, a brace opens the list of items, and Cargo writes with hyphens
+ * what Rust writes with underscores.
+ */
+function firstSegment(pathText: string): string {
+  const withoutAlias = pathText.replace(/\s+as\s+[A-Za-z0-9_]+\s*$/, "");
+  return withoutAlias.replace(/^::/, "").split("::")[0].replace(/\{.*$/, "").trim().replace(/-/g, "_");
+}
+
 export function buildEdges(
+  facts: DomainFactSet,
   targets: readonly InspectionTarget[],
   assignments: readonly CrateLayerAssignment[],
   workspaceRoot: string,
@@ -35,8 +46,15 @@ export function buildEdges(
     if (!target.tree || !target.crate_name) continue;
     const from = byName.get(target.crate_name);
     if (!from) continue;
-    for (const use of uses(target.tree)) {
-      const first = use.first_segment;
+    const file = target.tree.file;
+    const declared = facts.files.get(file);
+    // `requireDecisionBase` runs before these edges are built and sends every inspected file the
+    // extractor did not answer for to the tool-unavailable terminal, so this is unreachable unless
+    // that guard and this build disagree about which files the batch covered. Skipping the file
+    // would leave rules (g) and (k) with no edge to judge and pass a run nothing was read for.
+    if (!declared) throw new Error(`the native facts carry no declarations for ${file}`);
+    for (const use of declared.uses) {
+      const first = firstSegment(use.path_text);
       if (LOCAL_SEGMENTS.has(first)) continue;
       if (memberNames.has(normalize(first))) {
         const to = byName.get(first) ?? byName.get(normalize(first));
@@ -45,8 +63,8 @@ export function buildEdges(
             from_crate: from.crate_name,
             to_crate: to.crate_name,
             evidence: "use-path",
-            file: use.file,
-            line: use.span.start_line,
+            file,
+            line: use.line,
             verdict: verdictFor(from, to),
           });
         }
@@ -58,8 +76,8 @@ export function buildEdges(
           from_crate: from.crate_name,
           to_crate: first,
           evidence: "use-path",
-          file: use.file,
-          line: use.span.start_line,
+          file,
+          line: use.line,
           verdict: from.layer === "domain" || from.layer === "use-case" ? "external-io" : "ok",
         });
       }

@@ -5,7 +5,7 @@
 //
 // Usage: bun scripts/verify-dist.ts [harness ...]
 //        (default: claude codex)
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ALL_CASES } from "../tests/golden/catalog.ts";
 import { runGoldenCase } from "../tests/golden/runner.ts";
@@ -28,6 +28,28 @@ interface HarnessResult {
   problems: string[];
 }
 
+/**
+ * Grants the execute bit on the projected native extractor, as the installer does.
+ *
+ * Projection writes payload bytes without a mode, so `dist/<harness>/tools/ddd/bin/` carries an
+ * extractor no process can launch; placement is the installer's responsibility, and it grants the
+ * bit inside its candidate tree. The gates here launch that extractor, so verifying the projected
+ * tools means running them in the mode an installed project has, not the mode projection leaves.
+ * Whether the installer actually grants it is a different contract, covered by the install tests.
+ */
+function grantExtractorExecuteBit(toolsDir: string): void {
+  const binDir = join(toolsDir, "ddd", "bin");
+  if (!existsSync(binDir)) return;
+  for (const entry of readdirSync(binDir, { withFileTypes: true })) {
+    // `bin/<platform-key>/<extractor>` holds the executables; `bin/manifest.json` is data beside them.
+    if (!entry.isDirectory()) continue;
+    const platformDir = join(binDir, entry.name);
+    for (const file of readdirSync(platformDir, { withFileTypes: true })) {
+      if (file.isFile()) chmodSync(join(platformDir, file.name), 0o755);
+    }
+  }
+}
+
 const results: HarnessResult[] = [];
 for (const harness of targets) {
   const toolsDir = join(dddRoot, "dist", harness, "tools");
@@ -40,6 +62,7 @@ for (const harness of targets) {
     });
     continue;
   }
+  grantExtractorExecuteBit(toolsDir);
   const entry: HarnessResult = { harness, total: 0, failed: 0, problems: [] };
   for (const testCase of cases) {
     entry.total++;

@@ -11,7 +11,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { forwardedArgumentCalls } from "./value-flow.ts";
 import type { TSLanguage, TSNode, TSParser, TSTree } from "./vendor/tree-sitter.ts";
 
 export type Visibility = "private" | "pub" | "pub-crate" | "pub-super" | "pub-in";
@@ -67,8 +66,6 @@ export interface MethodDecl {
   return_type_text?: string;
   body_shape: BodyShape;
   span: Span;
-  /** The name alone, which is where the native facts are joined: the item span starts elsewhere. */
-  name_span: Span;
 }
 
 export interface ImplBlock {
@@ -106,30 +103,7 @@ export interface CallSite {
   kind: "method-call" | "path-call";
   callee_text: string;
   receiver_text?: string;
-  /** Explicit parameter/let type only; never inferred from an expression. */
-  receiver_binding_type?: string;
   enclosing_fn?: string;
-  /** Every use forwards this result unchanged to these call arguments; absent if unproven. */
-  forwarded_argument_calls?: Span[];
-  span: Span;
-}
-
-export interface TypeAliasDecl {
-  file: string;
-  module_path: string[];
-  name: string;
-  type_text: string;
-  generic: boolean;
-}
-
-export interface ModuleDecl {
-  name: string;
-  module_path: string[];
-  inline: boolean;
-  path?: string;
-  unresolved_path: boolean;
-  auxiliary: boolean;
-  local: boolean;
   span: Span;
 }
 
@@ -265,63 +239,6 @@ function modulePathOf(node: TSNode): string[] {
     if (parent.type === "mod_item") path.unshift(parent.childForFieldName("name")?.text ?? "");
   }
   return path;
-}
-
-function bindingDeclaration(node: TSNode, name: string): TSNode | undefined {
-  if (!/^[a-zA-Z_]\w*$/.test(name)) return undefined;
-  const mentions = (pattern: TSNode | null) => pattern && new RegExp(`\\b${name}\\b`).test(pattern.text);
-  for (let child = node, parent = node.parent; parent; child = parent, parent = parent.parent) {
-    if (parent.type === "block") {
-      for (const sibling of [...parent.namedChildren].reverse()) {
-        const end = sibling.endPosition;
-        const start = child.startPosition;
-        if (
-          end.row > start.row ||
-          (end.row === start.row && end.column > start.column) ||
-          sibling.type !== "let_declaration"
-        )
-          continue;
-        const pattern = sibling.childForFieldName("pattern");
-        if (!mentions(pattern)) continue;
-        return /^(mut\s+)?[a-zA-Z_]\w*$/.test(pattern?.text ?? "") ? sibling : undefined;
-      }
-    }
-    if (parent.type === "closure_expression" || parent.type === "function_item") {
-      const params = parent.childForFieldName("parameters");
-      for (const param of params?.namedChildren ?? []) {
-        const pattern = param.childForFieldName("pattern") ?? param;
-        if (mentions(pattern)) return param;
-      }
-      if (parent.type === "function_item") return undefined;
-    }
-    if (["for_expression", "match_arm", "if_let_expression", "while_let_expression"].includes(parent.type)) {
-      if (mentions(parent.childForFieldName("pattern"))) return undefined;
-    }
-    const branch =
-      parent.type === "if_expression"
-        ? parent.childForFieldName("consequence")
-        : parent.type === "while_expression"
-          ? parent.childForFieldName("body")
-          : null;
-    if (
-      branch &&
-      branch.startPosition.row === child.startPosition.row &&
-      branch.startPosition.column === child.startPosition.column
-    ) {
-      const condition = parent.childForFieldName("condition");
-      let shadowed = false;
-      if (condition)
-        walk(condition, (candidate) => {
-          if (candidate.type === "let_condition" && mentions(candidate.childForFieldName("pattern"))) shadowed = true;
-        });
-      if (shadowed) return undefined;
-    }
-  }
-  return undefined;
-}
-
-function bindingType(node: TSNode, name: string): string | undefined {
-  return bindingDeclaration(node, name)?.childForFieldName("type")?.text;
 }
 
 function hasOpaqueMacro(node: TSNode): boolean {
@@ -480,7 +397,6 @@ function implFacts(file: string, tree: TSTree): ImplBlock[] {
           ...(returnType ? { return_type_text: returnType.text } : {}),
           body_shape: bodyShapeOf(fnBody),
           span: spanOf(child),
-          name_span: nameNode ? spanOf(nameNode) : spanOf(child),
         });
       }
     }
@@ -546,16 +462,13 @@ function callFacts(file: string, tree: TSTree): CallSite[] {
     if (node.type !== "call_expression") return;
     const fn = node.childForFieldName("function");
     if (!fn) return;
-    const forwarded = forwardedArgumentCalls(node, bindingDeclaration);
     if (fn.type === "field_expression") {
       out.push({
         file,
         module_path: modulePathOf(node),
         kind: "method-call",
-        ...(forwarded ? { forwarded_argument_calls: forwarded.map(spanOf) } : {}),
         callee_text: fn.childForFieldName("field")?.text ?? fn.text,
         receiver_text: fn.childForFieldName("value")?.text ?? "",
-        receiver_binding_type: bindingType(node, (fn.childForFieldName("value")?.text ?? "").split(".")[0]),
         ...(enclosingFn(node) ? { enclosing_fn: enclosingFn(node) } : {}),
         span: spanOf(node),
       });
@@ -691,80 +604,3 @@ export const uses = (tree: SyntaxTree): UsePath[] => useFacts(tree.file, require
 export const calls = (tree: SyntaxTree): CallSite[] => callFacts(tree.file, requireTree(tree));
 export const constructions = (tree: SyntaxTree): ConstructionSite[] => constructionFacts(tree.file, requireTree(tree));
 export const opaqueRegions = (tree: SyntaxTree): OpaqueRegion[] => tree.opaque_regions;
-
-function attributesOf(node: TSNode): string[] {
-  const attributes: string[] = [];
-  for (let sibling = node.previousNamedSibling; sibling; sibling = sibling.previousNamedSibling) {
-    if (sibling.type === "attribute_item") attributes.push(sibling.text);
-    else if (!sibling.type.includes("comment")) break;
-  }
-  return attributes;
-}
-
-function testOnly(node: TSNode): boolean {
-  for (let current: TSNode | null = node; current; current = current.parent) {
-    if (attributesOf(current).some((attr) => /^#\[\s*cfg\s*\(\s*test\s*\)\s*\]$/.test(attr))) return true;
-  }
-  return false;
-}
-
-/** Namespace declarations, including empty modules; keywords in other items are not modules. */
-export function moduleLayout(
-  tree: SyntaxTree,
-  includeAuxiliary = false,
-): { modules: ModuleDecl[]; opaque: Span[]; auxiliary: boolean } {
-  const internal = requireTree(tree);
-  const modules: ModuleDecl[] = [];
-  const opaque: Span[] = [];
-  const auxiliary = internal.rootNode.namedChildren.some(
-    (node) => node.type === "inner_attribute_item" && /^#!\[\s*cfg\s*\(\s*test\s*\)\s*\]$/.test(node.text),
-  );
-  walk(internal.rootNode, (node) => {
-    if (node.type === "macro_invocation" && isItemPosition(node) && (includeAuxiliary || !testOnly(node)))
-      opaque.push(spanOf(node));
-    if (node.type !== "mod_item") return;
-    const attributes = attributesOf(node);
-    const paths = attributes.filter((attr) => /^#\[\s*path\s*=/.test(attr));
-    let path: string | undefined;
-    let unresolved = paths.length > 1 || attributes.some((attr) => /cfg_attr/.test(attr) && /\bpath\b/.test(attr));
-    if (paths.length === 1) {
-      const text = /^#\[\s*path\s*=\s*([\s\S]*?)\s*\]$/.exec(paths[0])?.[1] ?? "";
-      try {
-        if (/^r(#+)?"/.test(text)) {
-          const raw = /^r(#+)?"([\s\S]*)"\1$/.exec(text);
-          if (!raw) throw new Error("invalid raw path");
-          path = raw[2];
-        } else path = JSON.parse(text);
-        if (typeof path !== "string" || path.length === 0) throw new Error("invalid path");
-      } catch {
-        unresolved = true;
-      }
-    }
-    modules.push({
-      name: (node.childForFieldName("name")?.text ?? "").replace(/^r#/, ""),
-      module_path: modulePathOf(node).map((part) => part.replace(/^r#/, "")),
-      inline: node.childForFieldName("body") !== null,
-      path,
-      unresolved_path: unresolved,
-      auxiliary: auxiliary || testOnly(node),
-      local: enclosingFn(node) !== undefined,
-      span: spanOf(node),
-    });
-  });
-  return { modules, opaque, auxiliary };
-}
-
-export function typeAliases(tree: SyntaxTree): TypeAliasDecl[] {
-  const aliases: TypeAliasDecl[] = [];
-  walk(requireTree(tree).rootNode, (node) => {
-    if (node.type !== "type_item" || enclosingFn(node)) return;
-    aliases.push({
-      file: tree.file,
-      module_path: modulePathOf(node),
-      name: node.childForFieldName("name")?.text ?? "",
-      type_text: node.childForFieldName("type")?.text ?? "",
-      generic: node.childForFieldName("type_parameters") !== null,
-    });
-  });
-  return aliases;
-}

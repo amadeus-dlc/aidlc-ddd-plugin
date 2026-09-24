@@ -5,12 +5,13 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { rustSourcesUnder } from "../packaging/rust-modules.ts";
 import { readSourceClaims, readStageStatus, type SensorRunContext } from "../runtime/context.ts";
 import { ToolUnavailableError } from "../runtime/runtime.ts";
 import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import { parse } from "../rust/analyzer.ts";
-import { type DomainFactSet, type RustSourceFile, readDomainFacts } from "../rust/domain-facts/index.ts";
-import { type NativeOutcome, nativeIssue } from "../rust/native/launch.ts";
+import { type DomainFactSet, type RustSourceFile, requireDomainFacts } from "../rust/domain-facts/index.ts";
+import type { NativeOutcome } from "../rust/native/launch.ts";
 import { MODEL_DATA_PATH } from "../schema/artifacts.ts";
 import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import { finding, relPath } from "../sensors/common.ts";
@@ -19,7 +20,7 @@ import { assignLayers, classifyFile, type Layer, scanWorkspace } from "../worksp
 import { IO_CRATES } from "./lists.ts";
 import { buildEdges } from "./rust/edges.ts";
 import { loadRustMapping } from "./rust/mapping.ts";
-import { buildProgram, collectRustSources } from "./rust/program.ts";
+import { buildProgram, collectRustSources, PROGRAM_LAYERS } from "./rust/program.ts";
 import { buildSymbolTable } from "./rust/symbols.ts";
 import type { InspectionContext, InspectionTarget, ModelAvailability } from "./types.ts";
 
@@ -29,12 +30,11 @@ export interface SensorConfig {
   includes_query_side: boolean;
   report_layer_diagnostics?: boolean;
   /**
-   * The native extractor rules (a) and (d) decide on, as the sensor entry classified it. `null` for
-   * a sensor that declares neither rule, which then never launches it. A classification that is not
-   * `ready` decides nothing on its own: it stops this run only once those rules have a file to
-   * decide on.
+   * The native extractor every Rust rule decides on, as the sensor entry classified it. A
+   * classification that is not `ready` decides nothing on its own: it stops this run only once
+   * those rules have a file to decide on.
    */
-  domain_facts: NativeOutcome | null;
+  domain_facts: NativeOutcome;
 }
 
 export type ContextResult =
@@ -64,38 +64,26 @@ function findWorkspaceRoot(filePath: string): { root: string; isWorkspace: boole
 }
 
 /**
- * The one place an extractor rules (a) and (d) cannot be decided from becomes a stopped inspection.
- * A launch the entry classified as unusable, a run that did not answer, and an answer that does not
- * cover a file those rules are decided from all reach the same terminal, so an extractor that
- * cannot be read from never turns into a verdict. This is called only once those rules have a file
- * to decide on, which is what keeps a run with nothing to decide out of the terminal.
+ * Stops the inspection when a file the rules are decided from carries no declarations.
  *
- * `decidedFrom` names the files rules (a) and (d) are decided from. A file among them that the
- * extractor could not read decides nothing, and stopping here carries the reason the extractor
- * gave for it — a failure raised later, while the rules run, would be reported as an evaluation
- * error and drop that reason.
+ * `decidedFrom` names those files: the claimed files the per-file rules run over, and every source
+ * the program is built from, because a declaration hidden in any of them changes what the whole
+ * program resolves to. A file among them the extractor could not read decides nothing, and stopping
+ * here carries the reason the extractor gave for it — a failure raised later, while the rules run,
+ * would be reported as an evaluation error and drop that reason.
  */
-function requireDomainFacts(
-  extractor: NativeOutcome,
-  contents: ReadonlyMap<string, Uint8Array>,
-  decidedFrom: readonly string[],
-): DomainFactSet {
-  if (extractor.kind !== "ready") throw new ToolUnavailableError(nativeIssue(extractor).message);
-  const sources: RustSourceFile[] = [...contents]
-    .sort((a, b) => a[0].localeCompare(b[0], "en"))
-    .map(([file, bytes]) => ({ file, source: new TextDecoder().decode(bytes) }));
-  const result = readDomainFacts(extractor.binaryPath, sources);
-  if (result.kind === "unavailable") throw new ToolUnavailableError(result.detail);
-  const unread = [...new Set(decidedFrom)].filter((file) => !result.facts.publicMembers.has(file)).sort();
-  if (unread.length > 0) {
-    const reasons = result.facts.notes.filter((note) =>
-      unread.some((file) => note.startsWith(`domain-facts.unresolved: ${file}:`)),
-    );
-    throw new ToolUnavailableError(
-      `the native extractor did not read ${unread.join(", ")}, so rules (a) and (d) cannot be decided: ${reasons.join("; ")}`,
-    );
-  }
-  return result.facts;
+function requireDecisionBase(facts: DomainFactSet, decidedFrom: readonly string[]): void {
+  const unread = [...new Set(decidedFrom)].filter((file) => !facts.files.has(file)).sort();
+  if (unread.length === 0) return;
+  const reasons = facts.notes.filter((note) =>
+    unread.some((file) => note.startsWith(`domain-facts.unresolved: ${file}:`)),
+  );
+  // A file can go unread without the extractor recording a reason for it — a source the batch could
+  // not even open carries no note. Naming the files is the answer then, rather than a dangling colon.
+  const detail = reasons.length > 0 ? `: ${reasons.join("; ")}` : "";
+  throw new ToolUnavailableError(
+    `the native extractor did not read ${unread.join(", ")}, so the Rust rules cannot be decided${detail}`,
+  );
 }
 
 export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext, config: SensorConfig): ContextResult {
@@ -165,8 +153,6 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
     }
   }
 
-  const collected = collectRustSources(runtime, workspaceRoot, assignments);
-
   const targets: InspectionTarget[] = [];
   const skipped: InspectionTarget[] = [];
   const opaque: string[] = [];
@@ -204,29 +190,29 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
     }
   }
 
-  // Rule (a) decides per claimed file and rule (d) collects getters across the whole program, so
-  // one batch covers both: every crate source the program is built from, plus every claimed file.
-  const factSources = new Map<string, Uint8Array>([...collected.contents, ...claimedContents]);
-  const decidedFrom = [
+  // Every Rust rule decides on the extractor, so it is required exactly where those rules have a
+  // file to decide: with no target among the claimed files none of them evaluates anything, its
+  // classification cannot change this verdict, and an unusable one is not this run's terminal.
+  // The program is what those rules are decided over, so it is not built for a run without one.
+  const facts: DomainFactSet =
+    targets.length > 0
+      ? requireDomainFacts(config.domain_facts, batchSources(workspaceRoot, assignments, claimedContents))
+      : { files: new Map(), notes: [] };
+  const collected =
+    targets.length > 0
+      ? collectRustSources(facts, workspaceRoot, assignments)
+      : { crates: [], workspaceCrates: new Set<string>() };
+  requireDecisionBase(facts, [
     ...targets.flatMap((target) => (target.tree ? [target.tree.file] : [])),
-    ...collected.crates
-      .filter((crate) => crate.assignment.layer === "domain")
-      .flatMap((crate) => crate.inventory.sources.map((source) => source.file)),
-  ];
-  // The extractor is required where the rules that read it have something to decide: with no target
-  // among the claimed files, rules (a) and (d) evaluate nothing, so its classification cannot change
-  // this verdict and an unusable one is not this run's terminal.
-  const domainFacts =
-    config.domain_facts !== null && targets.length > 0
-      ? requireDomainFacts(config.domain_facts, factSources, decidedFrom)
-      : null;
+    ...collected.crates.flatMap((crate) => crate.inventory.sources.map((source) => source.decidedFrom)),
+  ]);
 
-  const program = buildProgram(runtime, collected, domainFacts);
+  const program = buildProgram(collected, facts);
   const rustMapping = loadRustMapping(run.record_dir);
   if (rustMapping.kind === "invalid") program.notes.add("replay.disabled: aggregate mapping is invalid");
   const symbols = buildSymbolTable(program, model, rustMapping.kind === "loaded" ? rustMapping.view.aggregates : []);
 
-  const edges = buildEdges(targets, assignments, workspaceRoot, IO_CRATES);
+  const edges = buildEdges(facts, targets, assignments, workspaceRoot, IO_CRATES);
   const layerDiagnostics = [
     ...workspace.diagnostics.map((d) => ({ code: d.code, file: d.file, message: d.message })),
     ...assignments.flatMap((a) => a.diagnostics.map((d) => ({ code: d.code, file: d.file, message: d.message }))),
@@ -235,11 +221,10 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
   const noteParts: string[] = [];
   if (skipped.length > 0) noteParts.push(`${skipped.length} files outside ${config.target_layers.join("/")}`);
   if (opaque.length > 0) noteParts.push(...opaque);
-  if (domainFacts) noteParts.push(...domainFacts.notes);
+  noteParts.push(...facts.notes);
   if (model.note) noteParts.push(model.note);
 
   const context: InspectionContext = {
-    analyzer: runtime,
     rustMapping,
     run,
     workspace,
@@ -260,4 +245,33 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
     return { kind: "empty", note: "no rust sources claimed" };
   }
   return { kind: "ready", context, findings, ...(noteParts.length > 0 ? { note: noteParts.join("; ") } : {}) };
+}
+
+/**
+ * The one batch the inspection sends: every Rust source of every crate the program is built from,
+ * plus every claimed file. The module walk decides which file to open next from the declarations of
+ * the one it is on, so the batch covers each program crate's sources in full rather than only the
+ * ones a walk has already reached.
+ */
+function batchSources(
+  workspaceRoot: string,
+  assignments: readonly { crate_name: string; path: string; layer: Layer }[],
+  claimed: ReadonlyMap<string, Uint8Array>,
+): RustSourceFile[] {
+  const decoder = new TextDecoder();
+  const sources = new Map<string, string>();
+  for (const [file, bytes] of claimed) sources.set(file, decoder.decode(bytes));
+  for (const assignment of assignments) {
+    if (!PROGRAM_LAYERS.includes(assignment.layer)) continue;
+    for (const file of rustSourcesUnder(workspaceRoot, join(workspaceRoot, assignment.path))) {
+      if (sources.has(file)) continue;
+      try {
+        sources.set(file, readFileSync(join(workspaceRoot, file), "utf-8"));
+      } catch {
+        // A source that cannot be read carries no declarations to ask about. The module walk
+        // reports it where a declaration names it, which is where it is this crate's defect.
+      }
+    }
+  }
+  return [...sources].sort((a, b) => a[0].localeCompare(b[0], "en")).map(([file, source]) => ({ file, source }));
 }

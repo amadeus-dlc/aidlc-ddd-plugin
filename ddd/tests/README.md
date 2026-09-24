@@ -10,7 +10,7 @@ Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract m
 |---|---|
 | t1-model-artifacts / t1-gate-integration | Direct canonical-artifact checks and Claude/Codex normal approval admission. |
 | t7-domain-packaging | Vocabulary-based declaration/layout matching; technical names and unresolved analysis. |
-| t10-rust-module-layout | Project-wide configuration, both layout policies, direct sensors, CI exit statuses, and shared logical module resolution. |
+| t10-rust-module-layout | Project-wide configuration, both layout policies, direct sensors, CI exit statuses, shared logical module resolution, and what the gate and the CI entry each do when the extractor cannot be launched. |
 | t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
@@ -25,6 +25,7 @@ Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract m
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs. |
 | t10-rust-domain-facts / t10-domain-facts-contract | Rules (a) and (d) decided on the native extractor: reported member names, ordinals and declaration lines, what each gate does when the extractor cannot be launched, and the answers the adapter refuses rather than reading as an empty fact set. |
+| t10-rust-domain-decision-base | Rules (b), (c), (g) and domain-packaging decided on the native extractor: the line each finding carries, the same spelling in a macro body, a literal or a comment declaring nothing, module resolution's resolved and unresolved pairs, and a program source the extractor cannot read stopping the gate instead of being read as empty. |
 | install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
 | framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
 | error-contract-contract | Business-error contract vocabulary, request identity including the Cargo and the TypeScript condition, and response validation. |

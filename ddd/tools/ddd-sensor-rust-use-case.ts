@@ -7,8 +7,8 @@ import { initAnalyzer } from "./ddd/lib/rust/analyzer.ts";
 import { classifyDomainFactExtractor } from "./ddd/lib/rust/domain-facts/index.ts";
 
 const runtime = await initAnalyzer();
-// Rule (d) decides on the native extractor's facts here too, so this gate classifies the same one
-// launch and is required to read it on the same condition as the domain gate.
+// Every rule this gate reports decides on the native extractor's facts, so it classifies the same
+// one launch and is required to read it on the same condition as the domain gate.
 const extractor = await classifyDomainFactExtractor();
 process.exit(
   runSensor({

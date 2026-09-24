@@ -12,8 +12,8 @@ import { freezeInput } from "../tools/ddd/lib/state-exposure-verification/input.
 /** The protocol identities the installed extractor answers, fixed by the inspection contract. */
 const ERROR_CONTRACT = { flag: "--error-contract-version", version: 3 };
 const STATE_EXPOSURE = { flag: "--state-exposure-version", version: 2 };
-/** The decision base the rule (a) / (d) gates read (T-10-02). */
-const DOMAIN_FACTS = { flag: "--domain-facts-version", version: 4 };
+/** The decision base every Rust rule is decided on (T-10-03). */
+const DOMAIN_FACTS = { flag: "--domain-facts-version", version: 5 };
 const PROTOCOLS = [ERROR_CONTRACT, STATE_EXPOSURE, DOMAIN_FACTS];
 
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";

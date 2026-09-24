@@ -13,7 +13,6 @@ import type { InspectionContext, InspectionTarget } from "../rules/types.ts";
 import { finding, relPath } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { packageKey, packageWord, technicalName } from "./declarations.ts";
-import { inspectModules } from "./rust-modules.ts";
 
 /** Which rule of this gate reports a refusal the mapping reader made. */
 function transcribedRule(ruleId: string): string {
@@ -26,9 +25,10 @@ export function evaluateDomainPackaging(target: InspectionTarget, context: Inspe
   const crate = context.assignments.find((entry) => entry.crate_name === target.crate_name);
   if (crate?.layer !== "domain") return [];
   const findings: FindingInput[] = [];
-  const inventory =
-    context.program.moduleInventories.get(crate.crate_name) ??
-    inspectModules(context.analyzer, context.workspace.root_path, crate);
+  // The program is built from every crate a layer is assigned to, this one included, so its module
+  // walk is the one this check reads rather than a second walk over the same declarations.
+  const inventory = context.program.moduleInventories.get(crate.crate_name);
+  if (!inventory) throw new Error(`the program carries no module walk for ${crate.crate_name}`);
   const crateName = technicalName([packageWord(crate.crate_name)]);
   if (crateName || crate.crate_name === "domain")
     findings.push(

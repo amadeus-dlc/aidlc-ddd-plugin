@@ -1,5 +1,5 @@
 /**
- * Protocol version 4 of the native extractor: the facts rules (a) and (d) decide on.
+ * Protocol version 5 of the native extractor: the facts every Rust rule decides on.
  *
  * The launch classification is the shared one in `native/launch.ts`; this module owns the protocol
  * identity, the one batch this inspection sends, and the strict conversion of native spellings into
@@ -7,17 +7,30 @@
  *
  * Every condition that would leave a requested file without facts — a batch too large to send, a
  * run that did not finish, an answer that is not this protocol — is reported as one unavailable
- * result. An empty fact set is never produced as a stand-in, because "nothing public is declared"
+ * result. An empty fact set is never produced as a stand-in, because "this file declares nothing"
  * is exactly the answer an uninspected file must not give.
  */
 
-import { classifyNativeExtractor, type NativeOutcome } from "../native/launch.ts";
+import { ToolUnavailableError } from "../../runtime/runtime.ts";
+import { classifyNativeExtractor, type NativeOutcome, nativeIssue } from "../native/launch.ts";
 import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-const PROTOCOL = { flag: "--domain-facts-version", version: 4 };
+const PROTOCOL = { flag: "--domain-facts-version", version: 5 };
 /** The extractor refuses a larger request, so an oversized batch is refused before it is sent. */
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 30_000;
+
+/** Lines and columns are 1-based, as a reader counts them. */
+export interface Span {
+  readonly start_line: number;
+  readonly start_col: number;
+  readonly end_line: number;
+  readonly end_col: number;
+}
+
+/** How a method takes the value it is declared on, as the source writes it. */
+export type Receiver = "none" | "self" | "ref-self" | "mut-self" | "other";
+export type Visibility = "private" | "pub" | "pub-crate" | "pub-super" | "pub-in";
 
 /** A non-private member of a struct declaration, spelled as the source spells it. */
 export interface PublicMember {
@@ -27,14 +40,123 @@ export interface PublicMember {
   readonly line: number;
 }
 
+export interface FieldFact {
+  readonly name: string;
+  readonly visibility: Visibility;
+  readonly type_text: string;
+  readonly line: number;
+}
+
+export interface TypeFact {
+  readonly name: string;
+  readonly kind: "struct" | "enum";
+  readonly module: readonly string[];
+  /** Named fields only: a tuple element is reached by position and declares no name to resolve. */
+  readonly fields: readonly FieldFact[];
+  readonly derives: readonly string[];
+}
+
+export interface TraitFact {
+  readonly name: string;
+  readonly module: readonly string[];
+  readonly methods: readonly string[];
+}
+
+export interface ParamFact {
+  readonly name: string;
+  readonly type_text: string;
+}
+
+export interface MethodFact {
+  readonly name: string;
+  readonly receiver: Receiver;
+  readonly params: readonly ParamFact[];
+  readonly return_type_text?: string;
+  /** Whether the body only hands back a member of `self`. */
+  readonly returns_field_only: boolean;
+  readonly line: number;
+}
+
+export interface ImplFact {
+  readonly module: readonly string[];
+  readonly target_type_text: string;
+  readonly trait_text?: string;
+  readonly methods: readonly MethodFact[];
+  readonly span: Span;
+}
+
+export interface UseFact {
+  readonly module: readonly string[];
+  readonly path_text: string;
+  /** Declared inside a function body, where it binds no name the module scope can resolve. */
+  readonly local: boolean;
+  readonly line: number;
+}
+
+export interface AliasFact {
+  readonly module: readonly string[];
+  readonly name: string;
+  readonly type_text: string;
+  readonly generic: boolean;
+  readonly local: boolean;
+}
+
+export interface ConstructionFact {
+  readonly kind: "struct-literal" | "update-syntax" | "associated-call" | "default-call";
+  readonly type_text: string;
+  readonly callee_text?: string;
+  readonly span: Span;
+}
+
+export interface CallFact {
+  readonly module: readonly string[];
+  readonly kind: "method-call" | "path-call";
+  readonly callee_text: string;
+  readonly receiver_text?: string;
+  /** Explicit parameter/let type only; never inferred from an expression. */
+  readonly receiver_binding_type?: string;
+  /** Every use of this call's result reaches these calls unchanged; empty if unproven. */
+  readonly forwarded_argument_calls: readonly Span[];
+  readonly span: Span;
+}
+
+export interface ModuleFact {
+  readonly name: string;
+  readonly module: readonly string[];
+  readonly inline: boolean;
+  /** The decoded `#[path]` target, absent when the declaration carries none. */
+  readonly path?: string;
+  readonly unresolved_path: boolean;
+  readonly auxiliary: boolean;
+  readonly local: boolean;
+  readonly line: number;
+}
+
+/** An item-position macro call, which may declare items this protocol cannot see. */
+export interface ItemMacroFact {
+  readonly line: number;
+  readonly auxiliary: boolean;
+}
+
+/** What one file of the inspected program declares. A file without a record was not read. */
+export interface RustFileFacts {
+  /** The file is `#![cfg(test)]`, so nothing it declares belongs to the inspected program. */
+  readonly auxiliary: boolean;
+  readonly publicMembers: readonly PublicMember[];
+  readonly types: readonly TypeFact[];
+  readonly traits: readonly TraitFact[];
+  readonly impls: readonly ImplFact[];
+  readonly uses: readonly UseFact[];
+  readonly aliases: readonly AliasFact[];
+  readonly constructions: readonly ConstructionFact[];
+  readonly calls: readonly CallFact[];
+  readonly modules: readonly ModuleFact[];
+  readonly itemMacros: readonly ItemMacroFact[];
+}
+
 export interface DomainFactSet {
-  /**
-   * Workspace-relative file -> its non-private struct members in declaration order. A file the
-   * extractor could not parse has no entry at all.
-   */
-  readonly publicMembers: ReadonlyMap<string, readonly PublicMember[]>;
-  /** `methodKey(...)` -> whether that impl method's body only hands back a member of `self`. */
-  readonly fieldReturns: ReadonlyMap<string, boolean>;
+  /** Workspace-relative file -> what it declares. A file the extractor could not read has none. */
+  readonly files: ReadonlyMap<string, RustFileFacts>;
   /** One line per construct that could hide a declaration from this answer. */
   readonly notes: readonly string[];
 }
@@ -49,34 +171,6 @@ export interface RustSourceFile {
 export type DomainFactResult =
   | { readonly kind: "facts"; readonly facts: DomainFactSet }
   | { readonly kind: "unavailable"; readonly detail: string };
-
-/**
- * The identity an impl method is joined on. The two extractors spell the same type and trait
- * differently around whitespace, so both sides are compared with it removed; everything else is
- * compared as written, which is what keeps `r#total` apart from `total`.
- *
- * The name's own line makes the identity one declaration rather than one name: a function body may
- * declare its own type, and the module path names no function, so two local declarations of one
- * name would otherwise share it. Both extractors read that line from the same source text.
- */
-export function methodKey(
-  file: string,
-  modulePath: readonly string[],
-  ownerTypeText: string,
-  traitText: string | null,
-  name: string,
-  nameLine: number,
-): string {
-  const compact = (text: string) => text.replace(/\s+/g, "");
-  return [
-    file,
-    modulePath.join("::"),
-    compact(ownerTypeText),
-    traitText === null ? "" : compact(traitText),
-    name,
-    String(nameLine),
-  ].join("\u0000");
-}
 
 export function classifyDomainFactExtractor(): Promise<NativeOutcome> {
   return classifyNativeExtractor(NATIVE_BIN_DIR, PLATFORM_KEY, PROTOCOL);
@@ -97,9 +191,45 @@ function nonempty(value: unknown): string {
   return value;
 }
 
+function text(value: unknown): string {
+  if (typeof value !== "string") throw new Error("expected native text");
+  return value;
+}
+
+/** Text the answer may leave unset, which is not the same as text it left empty. */
+function optional(value: unknown): string | undefined {
+  if (value === null) return undefined;
+  return nonempty(value);
+}
+
+function flag(value: unknown): boolean {
+  if (typeof value !== "boolean") throw new Error("expected a native verdict");
+  return value;
+}
+
 function line(value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) throw new Error("invalid native line");
   return value;
+}
+
+function words(value: unknown): string[] {
+  return array(value).map(nonempty);
+}
+
+function span(value: unknown): Span {
+  const raw = object(value);
+  return {
+    start_line: line(raw.start_line),
+    start_col: line(raw.start_col),
+    end_line: line(raw.end_line),
+    end_col: line(raw.end_col),
+  };
+}
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T {
+  const name = nonempty(value);
+  if (!(allowed as readonly string[]).includes(name)) throw new Error(`unknown native value ${name}`);
+  return name as T;
 }
 
 function member(value: unknown): PublicMember {
@@ -107,37 +237,151 @@ function member(value: unknown): PublicMember {
   return { typeName: nonempty(raw.type), name: nonempty(raw.member), line: line(raw.line) };
 }
 
-function collectMethod(raw: Record<string, unknown>, file: string, into: Map<string, boolean>): void {
-  const trait = raw.trait_text;
-  if (trait !== null && typeof trait !== "string") throw new Error("invalid native trait");
-  if (typeof raw.returns_field_only !== "boolean") throw new Error("invalid native method fact");
-  const key = methodKey(
-    file,
-    array(raw.module).map(nonempty),
-    nonempty(raw.owner_type_text),
-    trait === null ? null : nonempty(trait),
-    nonempty(raw.name),
-    line(raw.line),
-  );
-  const seen = into.get(key);
-  // One declaration has one body. Two answers for one declaration that disagree are the extractor
-  // contradicting itself about the same lines, not a source this rule cannot read.
-  if (seen !== undefined && seen !== raw.returns_field_only)
-    throw new Error(
-      `the answer states two bodies for ${nonempty(raw.owner_type_text)}::${nonempty(raw.name)} at ${file}:${line(raw.line)}`,
-    );
-  into.set(key, raw.returns_field_only);
+function field(value: unknown): FieldFact {
+  const raw = object(value);
+  return {
+    name: nonempty(raw.name),
+    visibility: oneOf(raw.visibility, ["private", "pub", "pub-crate", "pub-super", "pub-in"] as const),
+    type_text: nonempty(raw.type_text),
+    line: line(raw.line),
+  };
+}
+
+function declaredType(value: unknown): TypeFact {
+  const raw = object(value);
+  return {
+    name: nonempty(raw.name),
+    kind: oneOf(raw.kind, ["struct", "enum"] as const),
+    module: words(raw.module),
+    fields: array(raw.fields).map(field),
+    derives: words(raw.derives),
+  };
+}
+
+function declaredTrait(value: unknown): TraitFact {
+  const raw = object(value);
+  return { name: nonempty(raw.name), module: words(raw.module), methods: words(raw.methods) };
+}
+
+function method(value: unknown): MethodFact {
+  const raw = object(value);
+  const returnType = optional(raw.return_type_text);
+  return {
+    name: nonempty(raw.name),
+    receiver: oneOf(raw.receiver, ["none", "self", "ref-self", "mut-self", "other"] as const),
+    params: array(raw.params).map((entry) => {
+      const param = object(entry);
+      return { name: text(param.name), type_text: text(param.type_text) };
+    }),
+    ...(returnType === undefined ? {} : { return_type_text: returnType }),
+    returns_field_only: flag(raw.returns_field_only),
+    line: line(raw.line),
+  };
+}
+
+function implBlock(value: unknown): ImplFact {
+  const raw = object(value);
+  const trait = optional(raw.trait_text);
+  return {
+    module: words(raw.module),
+    target_type_text: nonempty(raw.target_type_text),
+    ...(trait === undefined ? {} : { trait_text: trait }),
+    methods: array(raw.methods).map(method),
+    span: span(raw.span),
+  };
+}
+
+function importPath(value: unknown): UseFact {
+  const raw = object(value);
+  return {
+    module: words(raw.module),
+    path_text: nonempty(raw.path_text),
+    local: flag(raw.local),
+    line: line(raw.line),
+  };
+}
+
+function alias(value: unknown): AliasFact {
+  const raw = object(value);
+  return {
+    module: words(raw.module),
+    name: nonempty(raw.name),
+    type_text: nonempty(raw.type_text),
+    generic: flag(raw.generic),
+    local: flag(raw.local),
+  };
+}
+
+function construction(value: unknown): ConstructionFact {
+  const raw = object(value);
+  const callee = optional(raw.callee_text);
+  return {
+    kind: oneOf(raw.kind, ["struct-literal", "update-syntax", "associated-call", "default-call"] as const),
+    type_text: text(raw.type_text),
+    ...(callee === undefined ? {} : { callee_text: callee }),
+    span: span(raw.span),
+  };
+}
+
+function call(value: unknown): CallFact {
+  const raw = object(value);
+  const receiver = optional(raw.receiver_text);
+  const binding = optional(raw.receiver_binding_type);
+  return {
+    module: words(raw.module),
+    kind: oneOf(raw.kind, ["method-call", "path-call"] as const),
+    callee_text: nonempty(raw.callee_text),
+    ...(receiver === undefined ? {} : { receiver_text: receiver }),
+    ...(binding === undefined ? {} : { receiver_binding_type: binding }),
+    forwarded_argument_calls: array(raw.forwarded_argument_calls).map(span),
+    span: span(raw.span),
+  };
+}
+
+function moduleDeclaration(value: unknown): ModuleFact {
+  const raw = object(value);
+  const path = optional(raw.path);
+  return {
+    name: nonempty(raw.name),
+    module: words(raw.module),
+    inline: flag(raw.inline),
+    ...(path === undefined ? {} : { path }),
+    unresolved_path: flag(raw.unresolved_path),
+    auxiliary: flag(raw.auxiliary),
+    local: flag(raw.local),
+    line: line(raw.line),
+  };
+}
+
+function itemMacro(value: unknown): ItemMacroFact {
+  const raw = object(value);
+  return { line: line(raw.line), auxiliary: flag(raw.auxiliary) };
+}
+
+function fileFacts(record: Record<string, unknown>): RustFileFacts {
+  return {
+    auxiliary: flag(record.auxiliary),
+    publicMembers: array(record.members).map(member),
+    types: array(record.types).map(declaredType),
+    traits: array(record.traits).map(declaredTrait),
+    impls: array(record.impls).map(implBlock),
+    uses: array(record.uses).map(importPath),
+    aliases: array(record.aliases).map(alias),
+    constructions: array(record.constructions).map(construction),
+    calls: array(record.calls).map(call),
+    modules: array(record.modules).map(moduleDeclaration),
+    itemMacros: array(record.item_macros).map(itemMacro),
+  };
 }
 
 function convert(response: unknown, requested: readonly RustSourceFile[]): DomainFactSet {
   const raw = object(response);
   if (raw.protocol_version !== PROTOCOL.version) throw new Error("native protocol mismatch");
-  const files = array(raw.files);
-  if (files.length !== requested.length) throw new Error("native answer does not cover the request");
-  const publicMembers = new Map<string, readonly PublicMember[]>();
-  const fieldReturns = new Map<string, boolean>();
+  const entries = array(raw.files);
+  if (entries.length !== requested.length) throw new Error("native answer does not cover the request");
+  const files = new Map<string, RustFileFacts>();
   const notes = new Set<string>();
-  for (const [index, entry] of files.entries()) {
+  for (const [index, entry] of entries.entries()) {
     const record = object(entry);
     const file = requested[index].file;
     if (record.path !== file) throw new Error("native answer is not in the order it was requested");
@@ -149,10 +393,10 @@ function convert(response: unknown, requested: readonly RustSourceFile[]): Domai
       if (record.parsed !== false) throw new Error("invalid native parse state");
       continue;
     }
-    publicMembers.set(file, array(record.members).map(member));
-    for (const item of array(record.methods)) collectMethod(object(item), file, fieldReturns);
+    if (files.has(file)) throw new Error(`the answer covers ${file} twice`);
+    files.set(file, fileFacts(record));
   }
-  return { publicMembers, fieldReturns, notes: [...notes].sort() };
+  return { files, notes: [...notes].sort() };
 }
 
 /**
@@ -161,8 +405,7 @@ function convert(response: unknown, requested: readonly RustSourceFile[]): Domai
  */
 export function readDomainFacts(binaryPath: string, sources: readonly RustSourceFile[]): DomainFactResult {
   // The request contract needs at least one file, and a batch with none has nothing to answer for.
-  if (sources.length === 0)
-    return { kind: "facts", facts: { publicMembers: new Map(), fieldReturns: new Map(), notes: [] } };
+  if (sources.length === 0) return { kind: "facts", facts: { files: new Map(), notes: [] } };
   const request = JSON.stringify({
     protocol_version: PROTOCOL.version,
     files: sources.map((entry) => ({ path: entry.file, source: entry.source })),
@@ -199,4 +442,20 @@ export function readDomainFacts(binaryPath: string, sources: readonly RustSource
       detail: `the ${PROTOCOL.flag} answer cannot be read: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+}
+
+/**
+ * The one place an extractor these facts cannot be decided from becomes a stopped inspection.
+ *
+ * A launch an entry classified as unusable and a run that did not answer both reach the same
+ * terminal, so an extractor that cannot be read from never turns into a verdict. Every entry that
+ * decides on these facts converts through here, which is what keeps the two conditions and the
+ * reason each carries from drifting apart between entries. Callers decide when they have something
+ * to decide on; a run with nothing to ask about never reaches this.
+ */
+export function requireDomainFacts(extractor: NativeOutcome, sources: readonly RustSourceFile[]): DomainFactSet {
+  if (extractor.kind !== "ready") throw new ToolUnavailableError(nativeIssue(extractor).message);
+  const result = readDomainFacts(extractor.binaryPath, sources);
+  if (result.kind === "unavailable") throw new ToolUnavailableError(result.detail);
+  return result.facts;
 }

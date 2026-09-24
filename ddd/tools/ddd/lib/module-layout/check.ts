@@ -1,10 +1,11 @@
 import type { Dirent } from "node:fs";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
-import { inspectModules } from "../packaging/rust-modules.ts";
+import { inspectModules, isRustSource } from "../packaging/rust-modules.ts";
 import { DOCUMENT_NAME, type ProjectSelection } from "../project-settings/contract.ts";
 import { validateProjectSettings } from "../project-settings/settings.ts";
-import type { AnalyzerRuntime } from "../rust/analyzer.ts";
+import { type DomainFactSet, type RustSourceFile, requireDomainFacts } from "../rust/domain-facts/index.ts";
+import type { NativeOutcome } from "../rust/native/launch.ts";
 import { finding } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { isExcludedFromProjectScan } from "../shared/project-scope.ts";
@@ -12,6 +13,15 @@ import { scanWorkspace } from "../workspace/resolver.ts";
 
 export type ModuleLayout = "file" | "mod-rs";
 const posix = (path: string) => path.split(sep).join("/");
+/**
+ * Whether the discovery walk above put this project-relative file in the batch sent to the extractor.
+ * `discover` descends only into entries the project scan keeps — asking that of one entry name at a
+ * time, so a path is reached only when every segment of it was — and among the entries it reaches it
+ * collects the Rust sources alone. Both halves have to be asked here: a declaration may name a file
+ * Rust accepts and this enumeration does not, and calling such a file unparsable would name a reason
+ * for a file that was never asked about.
+ */
+const coveredByScan = (file: string) => !file.split("/").some(isExcludedFromProjectScan) && isRustSource(file);
 const within = (root: string, path: string) => {
   const rel = relative(root, path);
   return !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
@@ -46,9 +56,29 @@ function readSelection(configPath: string): ProjectSelection | { readonly detail
   return { detail: `${rejection.reason}: ${rejection.detail}${guidance}` };
 }
 
+/**
+ * The declarations of every Rust source this project holds, read in one batch.
+ *
+ * The module walk decides which file to open next from the declarations of the one it is on, so
+ * the batch is sent over the sources the project scan already found rather than over a walk that
+ * has not run yet. A file the extractor could not read is left out, and the walk reports it where
+ * a declaration names it.
+ */
+function readProjectFacts(extractor: NativeOutcome, root: string, sources: readonly string[]): DomainFactSet {
+  const batch: RustSourceFile[] = [];
+  for (const path of [...sources].sort()) {
+    try {
+      batch.push({ file: posix(relative(root, path)), source: readFileSync(path, "utf8") });
+    } catch {
+      // A source that cannot be read carries no declarations to ask about; the walk reports it.
+    }
+  }
+  return requireDomainFacts(extractor, batch);
+}
+
 /** Whole-project check: no source claims, model, layer assignment, or edition-based style inference. */
 export function checkModuleLayout(
-  runtime: AnalyzerRuntime,
+  extractor: NativeOutcome,
   project: string,
   checkBudget: () => void = () => {},
 ): LayoutResult {
@@ -114,6 +144,7 @@ export function checkModuleLayout(
     return result;
   }
   result.mode = selection.rust.moduleLayout;
+  const declarations = readProjectFacts(extractor, root, sources).files;
   const covered = new Set<string>();
   const crates = new Set<string>();
   for (const manifest of manifests.sort()) {
@@ -134,7 +165,7 @@ export function checkModuleLayout(
       if (crate.targets.length === 0)
         report("unresolved", join(path, "Cargo.toml"), "Cargo package has no inspectable targets");
       const inventory = inspectModules(
-        runtime,
+        declarations,
         root,
         {
           crate_name: crate.name,
@@ -147,12 +178,16 @@ export function checkModuleLayout(
           is_composition_root: false,
           diagnostics: [],
         },
-        { includeAuxiliary: true, checkBudget },
+        { includeAuxiliary: true, checkBudget, covers: coveredByScan },
       );
       for (const issue of inventory.problems) report("unresolved", join(root, issue.file), issue.reason, issue.line);
       for (const source of inventory.sources) {
         covered.add(source.path);
         if (source.root) continue;
+        // A file whose declarations were not read is already reported as unresolved, and the walk
+        // never established whether it has children. Judging its placement as if it had none would
+        // put a second finding of a different kind on the same file.
+        if (!declarations.has(source.decidedFrom)) continue;
         const moduleName = source.parts.at(-1);
         const isMod = basename(source.path) === "mod.rs";
         const useMod = result.mode === "mod-rs" && source.hasChildren;
