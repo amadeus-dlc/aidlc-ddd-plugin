@@ -5,8 +5,7 @@
  */
 
 import { evaluateDomainPackaging } from "../../packaging/evaluate.ts";
-import { constructions, fns, impls, structs, traits, uses } from "../../rust/analyzer.ts";
-import type { CallFact, RustFileFacts, Span } from "../../rust/domain-facts/index.ts";
+import type { CallFact, ParamFact, RustFileFacts, Span } from "../../rust/domain-facts/index.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
@@ -237,7 +236,7 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
   const out: FindingInput[] = [];
   const file = context.program.files.get(target.tree.file);
   if (!file) return [];
-  const check = (name: string, params: { name: string; type_text: string }[], line: number, module: string[]) => {
+  const check = (name: string, params: readonly ParamFact[], line: number, module: readonly string[]) => {
     if (name !== "execute") return;
     for (const param of params) {
       const stripped = stripType(param.type_text);
@@ -262,10 +261,11 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
       }
     }
   };
-  for (const block of impls(target.tree)) {
-    for (const method of block.methods) check(method.name, method.params, method.span.start_line, block.module_path);
+  const declared = declarationsOf(context, target.tree.file);
+  for (const block of declared.impls) {
+    for (const method of block.methods) check(method.name, method.params, method.line, block.module);
   }
-  for (const fn of fns(target.tree)) check(fn.name, fn.params, fn.span.start_line, fn.module_path);
+  for (const fn of declared.functions) check(fn.name, fn.params, fn.line, fn.module);
   return out;
 }
 
@@ -323,21 +323,14 @@ function ruleL(target: InspectionTarget, context: InspectionContext): FindingInp
   if (target.classification.cqrs_side !== "query") return [];
   const out: FindingInput[] = [];
   const isDomainOrRepo = (name: string) => context.symbols.type_names.has(name) || name.endsWith("Repository");
-  for (const use of uses(target.tree)) {
+  for (const use of declarationsOf(context, target.tree.file).uses) {
     const last =
       use.path_text
         .split("::")
         .pop()
         ?.replace(/[{}\s*]/g, "") ?? "";
     if (isDomainOrRepo(last)) {
-      out.push(
-        finding(
-          "l",
-          target.tree.file,
-          `query side references domain type / repository port ${last}`,
-          use.span.start_line,
-        ),
-      );
+      out.push(finding("l", target.tree.file, `query side references domain type / repository port ${last}`, use.line));
     }
   }
   for (const symbol of context.symbols.types) {
@@ -370,37 +363,24 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
     const stem = name.slice(0, -"Repository".length);
     return [...aggregates].some((aggregate) => stem === aggregate || stem.endsWith(aggregate));
   };
+  const declared = declarationsOf(context, target.tree.file);
   // Ports (traits): <Aggregate>Repository, free of a storage medium.
-  for (const trait of traits(target.tree)) {
+  for (const trait of declared.traits) {
     if (!trait.name.endsWith("Repository")) continue;
     if (!matchesAggregate(trait.name)) {
       out.push(
-        finding(
-          "m",
-          target.tree.file,
-          `repository port ${trait.name} is not <Aggregate>Repository`,
-          trait.span.start_line,
-        ),
+        finding("m", target.tree.file, `repository port ${trait.name} is not <Aggregate>Repository`, trait.line),
       );
     }
     if (containsMediaWord(trait.name)) {
-      out.push(
-        finding("m", target.tree.file, `repository port ${trait.name} names a storage medium`, trait.span.start_line),
-      );
+      out.push(finding("m", target.tree.file, `repository port ${trait.name} names a storage medium`, trait.line));
     }
   }
   // Implementations (structs): a medium prefix is allowed; the trait carries the
   // naming contract.
-  for (const decl of structs(target.tree)) {
+  for (const decl of declared.types) {
     if (decl.name.endsWith("Repository") && !matchesAggregate(decl.name)) {
-      out.push(
-        finding(
-          "m",
-          target.tree.file,
-          `repository type ${decl.name} is not <Aggregate>Repository`,
-          decl.span.start_line,
-        ),
-      );
+      out.push(finding("m", target.tree.file, `repository type ${decl.name} is not <Aggregate>Repository`, decl.line));
     }
   }
   return out;
@@ -410,7 +390,7 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
 function ruleN(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.tree) return [];
   const out: FindingInput[] = [];
-  for (const site of constructions(target.tree)) {
+  for (const site of declarationsOf(context, target.tree.file).constructions) {
     if (!context.symbols.type_names.has(site.type_text)) continue;
     if (site.kind === "struct-literal" || site.kind === "update-syntax" || site.kind === "default-call") {
       out.push(

@@ -1,5 +1,5 @@
 /**
- * Protocol version 5 of the native extractor: the facts every Rust rule decides on.
+ * Protocol version 6 of the native extractor: the facts every Rust rule decides on.
  *
  * The launch classification is the shared one in `native/launch.ts`; this module owns the protocol
  * identity, the one batch this inspection sends, and the strict conversion of native spellings into
@@ -15,7 +15,7 @@ import { ToolUnavailableError } from "../../runtime/runtime.ts";
 import { classifyNativeExtractor, type NativeOutcome, nativeIssue } from "../native/launch.ts";
 import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-const PROTOCOL = { flag: "--domain-facts-version", version: 5 };
+const PROTOCOL = { flag: "--domain-facts-version", version: 6 };
 /** The extractor refuses a larger request, so an oversized batch is refused before it is sent. */
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 30_000;
@@ -54,12 +54,16 @@ export interface TypeFact {
   /** Named fields only: a tuple element is reached by position and declares no name to resolve. */
   readonly fields: readonly FieldFact[];
   readonly derives: readonly string[];
+  /** Where the declaration opens, which is where a finding against it sends a reader. */
+  readonly line: number;
 }
 
 export interface TraitFact {
   readonly name: string;
   readonly module: readonly string[];
   readonly methods: readonly string[];
+  /** Where the declaration opens, which is where a finding against it sends a reader. */
+  readonly line: number;
 }
 
 export interface ParamFact {
@@ -83,6 +87,18 @@ export interface ImplFact {
   readonly trait_text?: string;
   readonly methods: readonly MethodFact[];
   readonly span: Span;
+}
+
+/**
+ * A function declared outside an impl block. The walk reaches a function through the item that holds
+ * it, so one written in the default value of a trait associated constant is not recorded here. A
+ * method of an impl block is carried by that block's own methods instead.
+ */
+export interface FunctionFact {
+  readonly module: readonly string[];
+  readonly name: string;
+  readonly params: readonly ParamFact[];
+  readonly line: number;
 }
 
 export interface UseFact {
@@ -146,6 +162,7 @@ export interface RustFileFacts {
   readonly types: readonly TypeFact[];
   readonly traits: readonly TraitFact[];
   readonly impls: readonly ImplFact[];
+  readonly functions: readonly FunctionFact[];
   readonly uses: readonly UseFact[];
   readonly aliases: readonly AliasFact[];
   readonly constructions: readonly ConstructionFact[];
@@ -247,6 +264,12 @@ function field(value: unknown): FieldFact {
   };
 }
 
+/** One declared parameter. A method and a function outside an impl block declare them alike. */
+function parameter(value: unknown): ParamFact {
+  const raw = object(value);
+  return { name: text(raw.name), type_text: text(raw.type_text) };
+}
+
 function declaredType(value: unknown): TypeFact {
   const raw = object(value);
   return {
@@ -255,12 +278,28 @@ function declaredType(value: unknown): TypeFact {
     module: words(raw.module),
     fields: array(raw.fields).map(field),
     derives: words(raw.derives),
+    line: line(raw.line),
   };
 }
 
 function declaredTrait(value: unknown): TraitFact {
   const raw = object(value);
-  return { name: nonempty(raw.name), module: words(raw.module), methods: words(raw.methods) };
+  return {
+    name: nonempty(raw.name),
+    module: words(raw.module),
+    methods: words(raw.methods),
+    line: line(raw.line),
+  };
+}
+
+function declaredFunction(value: unknown): FunctionFact {
+  const raw = object(value);
+  return {
+    module: words(raw.module),
+    name: nonempty(raw.name),
+    params: array(raw.params).map(parameter),
+    line: line(raw.line),
+  };
 }
 
 function method(value: unknown): MethodFact {
@@ -269,10 +308,7 @@ function method(value: unknown): MethodFact {
   return {
     name: nonempty(raw.name),
     receiver: oneOf(raw.receiver, ["none", "self", "ref-self", "mut-self", "other"] as const),
-    params: array(raw.params).map((entry) => {
-      const param = object(entry);
-      return { name: text(param.name), type_text: text(param.type_text) };
-    }),
+    params: array(raw.params).map(parameter),
     ...(returnType === undefined ? {} : { return_type_text: returnType }),
     returns_field_only: flag(raw.returns_field_only),
     line: line(raw.line),
@@ -365,6 +401,7 @@ function fileFacts(record: Record<string, unknown>): RustFileFacts {
     types: array(record.types).map(declaredType),
     traits: array(record.traits).map(declaredTrait),
     impls: array(record.impls).map(implBlock),
+    functions: array(record.functions).map(declaredFunction),
     uses: array(record.uses).map(importPath),
     aliases: array(record.aliases).map(alias),
     constructions: array(record.constructions).map(construction),

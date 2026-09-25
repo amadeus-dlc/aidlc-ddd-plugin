@@ -2,8 +2,8 @@ use super::*;
 
 fn check(source: &str) -> Value {
     let answer =
-        run(json!({"protocol_version":5,"files":[{"path":"lib.rs","source":source}]})).unwrap();
-    assert_eq!(answer["protocol_version"], 5);
+        run(json!({"protocol_version":6,"files":[{"path":"lib.rs","source":source}]})).unwrap();
+    assert_eq!(answer["protocol_version"], 6);
     answer["files"][0].clone()
 }
 
@@ -56,6 +56,53 @@ fn methods(source: &str) -> Vec<String> {
                         "{owner}/{}={}",
                         method["name"].as_str().unwrap(),
                         method["returns_field_only"].as_bool().unwrap()
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// `module::name@line(params)` for every entry the answer's `functions` list carries, in the order
+/// it lists them.
+fn functions(source: &str) -> Vec<String> {
+    list(&check(source), "functions")
+        .iter()
+        .map(|entry| {
+            let params = list(entry, "params")
+                .iter()
+                .map(|param| {
+                    format!(
+                        "{}: {}",
+                        param["name"].as_str().unwrap(),
+                        param["type_text"].as_str().unwrap()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                "{}::{}@{}({params})",
+                path_of(&entry["module"]),
+                entry["name"].as_str().unwrap(),
+                entry["line"].as_u64().unwrap(),
+            )
+        })
+        .collect()
+}
+
+/// `name@line` for every type declaration and then every trait declaration the answer lists.
+fn declarations(source: &str) -> Vec<String> {
+    let answer = check(source);
+    ["types", "traits"]
+        .into_iter()
+        .flat_map(|key| {
+            list(&answer, key)
+                .iter()
+                .map(|entry| {
+                    format!(
+                        "{}@{}",
+                        entry["name"].as_str().unwrap(),
+                        entry["line"].as_u64().unwrap()
                     )
                 })
                 .collect::<Vec<_>>()
@@ -208,14 +255,16 @@ fn domain_facts_does_not_read_a_declaration_out_of_a_macro_body_a_string_or_a_co
 }
 
 /// Every region that carries the characters of a declaration without declaring one. The module
-/// walk, the dependency edges and the construction rule all read these same regions.
+/// walk, the dependency edges, the execute-argument rule and the construction rule all read these
+/// same regions.
 #[test]
-fn domain_facts_reads_no_module_use_or_impl_out_of_a_lookalike_region() {
-    let source = "macro_rules! declare {\n    () => { mod generated; use billing::Adapter; impl Invoice { pub fn rename(&mut self) {} } };\n}\nconst DOC: &str = \"mod generated; use billing::Adapter;\";\nconst RAW: &str = r##\"mod generated; use billing::Adapter;\"##;\n// mod generated; use billing::Adapter;\n/* /* mod generated; use billing::Adapter; */ */\n";
+fn domain_facts_reads_no_module_use_impl_or_function_out_of_a_lookalike_region() {
+    let source = "macro_rules! declare {\n    () => { mod generated; use billing::Adapter; fn execute(invoice: Invoice) {} impl Invoice { pub fn rename(&mut self) {} } };\n}\nconst DOC: &str = \"mod generated; fn execute(invoice: Invoice) {}\";\nconst RAW: &str = r##\"mod generated; fn execute(invoice: Invoice) {}\"##;\n// mod generated; fn execute(invoice: Invoice) {}\n/* /* mod generated; use billing::Adapter; */ */\n";
     let answer = check(source);
     assert_eq!(list(&answer, "modules").len(), 0);
     assert_eq!(list(&answer, "uses").len(), 0);
     assert_eq!(list(&answer, "impls").len(), 0);
+    assert_eq!(list(&answer, "functions").len(), 0);
     assert_eq!(list(&answer, "item_macros").len(), 0);
 }
 
@@ -275,6 +324,49 @@ fn domain_facts_keeps_a_raw_identifier_method_name_as_written() {
     assert_eq!(
         methods("pub struct Invoice { amount: u64 }\nimpl Invoice { pub fn r#total(&self) -> u64 { self.amount } }"),
         ["::Invoice/-/r#total=true"]
+    );
+}
+
+/// A function declared outside an impl block carries the same decision the rule layer reads off an
+/// impl method. Four positions are exercised here: at the top level, inside an inline module, inside
+/// another function's body, and as a trait method that writes a body. A method of an impl block is
+/// already carried by that block and is not repeated here, and a trait method that declares no body
+/// declares no parameter binding to decide on.
+#[test]
+fn domain_facts_reports_a_function_declared_outside_an_impl_block_at_four_positions() {
+    assert_eq!(
+        functions(
+            "pub fn top(invoice: Invoice) {}\nmod inner { pub fn nested(invoice: Invoice) {} }\nfn outer() { fn local(invoice: Invoice) {} }\ntrait Runner { fn defaulted(&self, invoice: Invoice) {} fn declared(&self, invoice: Invoice); }\nstruct Issue;\nimpl Issue { pub fn method(&self, invoice: Invoice) {} }\n"
+        ),
+        [
+            "::top@1(invoice: Invoice)",
+            "inner::nested@2(invoice: Invoice)",
+            "::outer@3()",
+            "::local@3(invoice: Invoice)",
+            "::defaulted@4(invoice: Invoice)",
+        ]
+    );
+}
+
+/// A reader sent to a function is sent to its first keyword, as they are for a member, a module and
+/// an impl method; the attributes written above it must not move that line.
+#[test]
+fn domain_facts_reads_a_function_line_from_its_visibility_not_its_attributes() {
+    assert_eq!(
+        functions("/// documented\n#[inline]\npub fn execute(invoice: Invoice) {}\n"),
+        ["::execute@3(invoice: Invoice)"]
+    );
+}
+
+/// A type and a trait are each reported where a reader would be sent to read the declaration, on
+/// the same basis as every other declaration this protocol carries.
+#[test]
+fn domain_facts_reads_a_type_and_a_trait_line_from_its_visibility_not_its_attributes() {
+    assert_eq!(
+        declarations(
+            "/// documented\n#[derive(Clone)]\npub struct Invoice;\nenum Kind { Draft }\n#[allow(dead_code)]\npub trait Shown { fn shown(&self); }\ntrait Hidden {}\n"
+        ),
+        ["Invoice@3", "Kind@4", "Shown@6", "Hidden@7"]
     );
 }
 
@@ -482,7 +574,7 @@ fn domain_facts_records_the_constructs_that_can_hide_a_declaration() {
 fn domain_facts_marks_an_unparsed_file_instead_of_reporting_it_as_declaring_nothing() {
     let answer = check("pub struct {");
     assert_eq!(answer["parsed"], false);
-    for key in ["members", "types", "impls", "uses", "modules", "calls"] {
+    for key in ["members", "types", "traits", "impls", "functions", "uses", "modules", "calls"] {
         assert!(answer.get(key).is_none(), "{key} is reported for an unparsed file");
     }
     assert_eq!(answer["unresolved"][0]["reason"], "syntax-error");
@@ -490,7 +582,7 @@ fn domain_facts_marks_an_unparsed_file_instead_of_reporting_it_as_declaring_noth
 
 #[test]
 fn domain_facts_answers_one_record_per_requested_file_in_order() {
-    let answer = run(json!({"protocol_version":5,"files":[
+    let answer = run(json!({"protocol_version":6,"files":[
         {"path":"b.rs","source":"pub struct B(pub u64);"},
         {"path":"a.rs","source":"pub struct A(pub u64);"}]}))
     .unwrap();
@@ -503,10 +595,10 @@ fn domain_facts_answers_one_record_per_requested_file_in_order() {
 #[test]
 fn domain_facts_refuses_a_request_that_is_not_this_protocol() {
     for request in [
-        json!({"protocol_version":4,"files":[{"path":"lib.rs","source":""}]}),
-        json!({"protocol_version":5,"files":[]}),
-        json!({"protocol_version":5,"files":[{"path":"lib.rs"}]}),
-        json!({"protocol_version":5,"files":[{"path":"lib.rs","source":"","extra":true}]}),
+        json!({"protocol_version":5,"files":[{"path":"lib.rs","source":""}]}),
+        json!({"protocol_version":6,"files":[]}),
+        json!({"protocol_version":6,"files":[{"path":"lib.rs"}]}),
+        json!({"protocol_version":6,"files":[{"path":"lib.rs","source":"","extra":true}]}),
     ] {
         assert!(run(request).is_err());
     }

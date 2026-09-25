@@ -17,7 +17,7 @@ const PRODUCT_BIN_DIR = join(PRODUCT_TOOLS_DIR, "ddd", "bin");
 const HOST_KEY = `${process.platform}-${process.arch}`;
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";
 /** The protocol the Rust decision base is read over, fixed by the inspection contract. */
-const DOMAIN_FACTS_VERSION = 5;
+const DOMAIN_FACTS_VERSION = 6;
 
 export interface InstallationOptions {
   /** Omit the host row from the manifest, leaving this platform unrecorded. */

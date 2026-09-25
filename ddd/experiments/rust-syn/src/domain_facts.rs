@@ -1,11 +1,12 @@
-//! Version 5 domain facts: the decision base of every rule the domain gate reports. Source is
+//! Version 6 domain facts: the decision base of every rule the domain gate reports. Source is
 //! never compiled or executed.
 //!
 //! One batch carries every source of the inspected program, and the answer carries one record per
 //! requested file. A record names what the file *declares* — its non-private struct members, its
-//! types, traits, impls and their methods, its `use` paths, type aliases, module declarations,
-//! constructions and calls — and never a resolved type. Resolution across files stays with the rule
-//! layer, which joins these declarations into one program.
+//! types, traits, impls and their methods, the functions it declares outside an impl block, its
+//! `use` paths, type aliases, module declarations, constructions and calls — and never a resolved
+//! type. Resolution across files stays with the rule layer, which joins these declarations into
+//! one program.
 //!
 //! Text facts are reported as the slice of source they cover, not as re-printed tokens: the rule
 //! layer matches them against patterns a reader wrote (`Box<Invoice>`, `crate::billing::Invoice`),
@@ -29,7 +30,7 @@ use syn::{
 #[path = "domain_facts_tests.rs"]
 mod tests;
 
-const PROTOCOL_VERSION: u8 = 5;
+const PROTOCOL_VERSION: u8 = 6;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -113,6 +114,21 @@ fn declared_start(vis: &syn::Visibility, fallback: proc_macro2::Span) -> proc_ma
         syn::Visibility::Public(token) => token.span,
         syn::Visibility::Restricted(restricted) => restricted.pub_token.span,
     }
+}
+
+/// Where a function declaration opens, for the three places one can stand: an impl method, an item
+/// of its own, and a trait method that writes a body. `default` precedes the visibility it is
+/// written with, and a trait item declares no visibility at all.
+fn declared_fn_start(
+    vis: &syn::Visibility,
+    modifiers: &syn::FnModifiers,
+    signature: &syn::Signature,
+) -> proc_macro2::Span {
+    modifiers
+        .defaultness
+        .as_ref()
+        .map(|token| token.span)
+        .unwrap_or_else(|| declared_start(vis, signature.span()))
 }
 
 // --- notes and public members -----------------------------------------------
@@ -282,7 +298,9 @@ struct Walk<'a> {
     /// The source `parse_file` assigned spans from: the request's text without its BOM and shebang.
     source: &'a str,
     module: Vec<String>,
-    functions: usize,
+    /// How many function bodies enclose the node being walked, which is what makes a declaration
+    /// inside one local to it.
+    function_depth: usize,
     /// How many enclosing items carry `#[cfg(test)]`, which is what makes a module auxiliary.
     conditional_tests: usize,
     file_auxiliary: bool,
@@ -295,6 +313,7 @@ struct Walk<'a> {
     types: Vec<Value>,
     traits: Vec<Value>,
     impls: Vec<Value>,
+    functions: Vec<Value>,
     imports: Vec<Value>,
     aliases: Vec<Value>,
     constructions: Vec<Value>,
@@ -308,7 +327,7 @@ impl<'a> Walk<'a> {
         Self {
             source,
             module: Vec::new(),
-            functions: 0,
+            function_depth: 0,
             conditional_tests: 0,
             file_auxiliary,
             scopes: Vec::new(),
@@ -318,6 +337,7 @@ impl<'a> Walk<'a> {
             types: Vec::new(),
             traits: Vec::new(),
             impls: Vec::new(),
+            functions: Vec::new(),
             imports: Vec::new(),
             aliases: Vec::new(),
             constructions: Vec::new(),
@@ -334,7 +354,7 @@ impl<'a> Walk<'a> {
     }
 
     fn in_function(&self) -> bool {
-        self.functions > 0
+        self.function_depth > 0
     }
 
     fn auxiliary(&self) -> bool {
@@ -435,14 +455,22 @@ impl<'a> Walk<'a> {
 
     fn item_body(&mut self, item: &syn::Item) {
         match item {
-            syn::Item::Struct(node) => {
-                self.declared_type(&node.ident, "struct", &node.fields, &node.attrs)
-            }
+            syn::Item::Struct(node) => self.declared_type(
+                &node.ident,
+                "struct",
+                &node.fields,
+                &node.attrs,
+                declared_start(&node.vis, node.struct_token.span),
+            ),
             // An enum's members are reached through a variant, so it declares no field a rule
             // resolves a type through; only its name and derives are facts here.
-            syn::Item::Enum(node) => {
-                self.declared_type(&node.ident, "enum", &syn::Fields::Unit, &node.attrs)
-            }
+            syn::Item::Enum(node) => self.declared_type(
+                &node.ident,
+                "enum",
+                &syn::Fields::Unit,
+                &node.attrs,
+                declared_start(&node.vis, node.enum_token.span),
+            ),
             syn::Item::Trait(node) => {
                 let methods: Vec<Value> = node
                     .items
@@ -452,13 +480,30 @@ impl<'a> Walk<'a> {
                         _ => None,
                     })
                     .collect();
+                // `unsafe` stands between the visibility and the keyword, and opens the declaration
+                // when no visibility is written.
+                let start = declared_start(
+                    &node.vis,
+                    node.unsafety
+                        .as_ref()
+                        .map(|token| token.span)
+                        .unwrap_or(node.trait_token.span),
+                );
                 self.traits.push(json!({
                     "name": spelling(&node.ident), "module": self.module, "methods": methods,
+                    "line": line(start),
                 }));
                 for item in &node.items {
                     match item {
                         syn::TraitItem::Fn(method) => {
                             if let Some(block) = &method.default {
+                                // A trait item declares no visibility of its own, which is what
+                                // `Inherited` names.
+                                self.function_declaration(
+                                    &syn::Visibility::Inherited,
+                                    &method.modifiers,
+                                    &method.sig,
+                                );
                                 self.function(&method.sig, block);
                             }
                         }
@@ -493,7 +538,10 @@ impl<'a> Walk<'a> {
                     "local": self.in_function(),
                 }));
             }
-            syn::Item::Fn(node) => self.function(&node.sig, &node.block),
+            syn::Item::Fn(node) => {
+                self.function_declaration(&node.vis, &node.modifiers, &node.sig);
+                self.function(&node.sig, &node.block);
+            }
             syn::Item::Macro(node) => {
                 // A named item macro is a `macro_rules!` definition: it declares nothing by itself.
                 if node.ident.is_none() {
@@ -507,12 +555,31 @@ impl<'a> Walk<'a> {
         }
     }
 
+    /// A function declared outside an impl block. The walk reaches a function through the item that
+    /// holds it, so one written in the default value of a trait associated constant is not recorded
+    /// here. A method of an impl block is carried by that block, and a trait method without a body
+    /// binds no parameter a rule has an argument to decide on.
+    fn function_declaration(
+        &mut self,
+        vis: &syn::Visibility,
+        modifiers: &syn::FnModifiers,
+        signature: &syn::Signature,
+    ) {
+        self.functions.push(json!({
+            "module": self.module,
+            "name": spelling(&signature.ident),
+            "params": self.params(signature),
+            "line": line(declared_fn_start(vis, modifiers, signature)),
+        }));
+    }
+
     fn declared_type(
         &mut self,
         ident: &syn::Ident,
         kind: &str,
         fields: &syn::Fields,
         attrs: &[syn::Attribute],
+        start: proc_macro2::Span,
     ) {
         // Only named fields are members a rule can name; a tuple element is reached by position
         // and carries no declaration the rule layer resolves a type through.
@@ -533,7 +600,7 @@ impl<'a> Walk<'a> {
         };
         self.types.push(json!({
             "name": spelling(ident), "kind": kind, "module": self.module,
-            "fields": named, "derives": self.derives(attrs),
+            "fields": named, "derives": self.derives(attrs), "line": line(start),
         }));
     }
 
@@ -571,12 +638,7 @@ impl<'a> Walk<'a> {
         for item in &node.items {
             match item {
                 syn::ImplItem::Fn(method) => {
-                    let start = method
-                        .modifiers
-                        .defaultness
-                        .as_ref()
-                        .map(|token| token.span)
-                        .unwrap_or_else(|| declared_start(&method.vis, method.sig.span()));
+                    let start = declared_fn_start(&method.vis, &method.modifiers, &method.sig);
                     methods.push(json!({
                         "name": spelling(&method.sig.ident),
                         "receiver": receiver_kind(&method.sig),
@@ -709,11 +771,11 @@ impl<'a> Walk<'a> {
                 },
             })
             .collect();
-        self.functions += 1;
+        self.function_depth += 1;
         self.scopes.push(Scope::Function(params));
         self.block(block);
         self.scopes.pop();
-        self.functions -= 1;
+        self.function_depth -= 1;
     }
 
     fn block(&mut self, block: &syn::Block) {
@@ -1152,6 +1214,7 @@ fn analyze(path: &str, source: &str) -> Value {
         "path": path, "parsed": true, "auxiliary": walk.file_auxiliary,
         "members": notes.members, "unresolved": notes.unresolved,
         "types": walk.types, "traits": walk.traits, "impls": walk.impls,
+        "functions": walk.functions,
         "uses": walk.imports, "aliases": walk.aliases,
         "constructions": walk.constructions, "calls": calls,
         "modules": walk.modules, "item_macros": walk.item_macros,
