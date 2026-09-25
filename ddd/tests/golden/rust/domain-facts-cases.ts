@@ -2,9 +2,9 @@
  * Cases for the two rules that decide on native extractor facts (T-10-02): public tuple members for
  * rule (a) and explicit-`return` getters for rule (d).
  *
- * Each rule gets the input the current tree-sitter decision base drops, the neighbouring input whose
- * verdict must not move, and both module layouts, so the switch of decision base is observed at the
- * sensor boundary rather than inside the extractor.
+ * Each rule gets the input the tree-sitter decision base these replaced used to drop, the
+ * neighbouring input whose verdict must not move, and both module layouts, so the switch of decision
+ * base is observed at the sensor boundary rather than inside the extractor.
  */
 
 import type { GoldenCase } from "../runner.ts";

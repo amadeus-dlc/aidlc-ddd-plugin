@@ -8,7 +8,7 @@
  * a temp record directory. The runner never writes into the fixture source.
  */
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -29,6 +29,11 @@ export interface GoldenCase {
    * after `workspace`, so a link may name a file the same case declares.
    */
   links?: Record<string, string>;
+  /**
+   * project-root-relative path -> the permission bits it is left with. Applied after `workspace` and
+   * `links`, so a case can take away the access an inspection needs to a file it just declared.
+   */
+  modes?: Record<string, number>;
   /** aidlc-state.md content; defaults to a single EXECUTE line. */
   state?: string;
   expect: {
@@ -96,6 +101,9 @@ export function materializeCase(testCase: GoldenCase): { root: string; outputPat
     const path = join(root, rel);
     mkdirSync(dirname(path), { recursive: true });
     symlinkSync(target, path);
+  }
+  for (const [rel, mode] of Object.entries(testCase.modes ?? {})) {
+    chmodSync(join(root, rel), mode);
   }
   return { root, outputPath: join(record, testCase.output) };
 }

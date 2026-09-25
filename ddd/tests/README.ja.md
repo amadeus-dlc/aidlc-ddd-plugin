@@ -20,7 +20,7 @@
 | artifact-set-migration | プロジェクト1件の成果物一式のpreview・適用・再実行・書込の途中失敗、移行前に記録を拒否していたゲートとCIコマンドが移行後に受理すること |
 | rust-mapping-view | 言語共通の写像を、Rustソースセンサーが照合するcrate名・モジュール列・replayメソッドへ投影し、他言語を渡さないこと |
 | generation-instructions | 実行用指示ディレクトリの全YAML/TOML例を、ゲートと同じ読込処理で読むこと、およびそれらのディレクトリを英語に保つこと |
-| u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
+| u2-rust-analysis-foundation | Cargoワークスペースの走査、crateの層・CQRS側の判定、ファイル分類、依存許可表 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力、規則h・l・m・nの各所見が読み手を送る行 |

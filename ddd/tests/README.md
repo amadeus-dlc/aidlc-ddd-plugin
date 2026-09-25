@@ -20,7 +20,7 @@ Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract m
 | artifact-set-migration | Preview, apply, re-run and partway write failure of one project's whole artifact set, and the gates and CI command that refused the record accepting it once migrated. |
 | rust-mapping-view | Projecting the language-neutral mapping onto the crate name, module path and replay methods the Rust source sensors compare, leaving other languages out. |
 | generation-instructions | Reading every YAML/TOML example of the runtime instruction directories through the same readers the gates use, and keeping those directories in English. |
-| u2-rust-analysis-foundation | Cargo layer classification and Rust syntax analysis. |
+| u2-rust-analysis-foundation | Cargo workspace scanning, crate layer and CQRS-side assignment, file classification, and the dependency permission table. |
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs, and the line each finding of rules (h), (l), (m) and (n) sends a reader to. |

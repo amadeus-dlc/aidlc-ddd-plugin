@@ -17,8 +17,7 @@
       "tsconfig.error-contract.json",
       "biome.json",
       "!!src/entries/data",
-      "!!tests/fixtures",
-      "!!tools/ddd/lib/rust/vendor"
+      "!!tests/fixtures"
     ]
   },
   "formatter": {

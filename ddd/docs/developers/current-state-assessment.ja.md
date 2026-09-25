@@ -12,7 +12,7 @@
 
 専用ステージ1本、contribution 4本、設計センサー6本、Rustセンサー3本、ナレッジ8本を持つ。手書きの正規モデルローダー、ID・系譜・参照解決、Cargoの層判定、tree-sitterのRust解析、配布・導入スクリプトも存在する。
 
-実体は[ステージ](../../stages/inception/ddd-domain-modeling.md)、[追加手順](../../contributions)、[スキーマ](../../tools/ddd/lib/schema)、[解析](../../tools/ddd/lib/rust/analyzer.ts)、[規則](../../tools/ddd/lib/rules/rust/evaluators.ts)、[インストーラ](../../scripts/install.ts)にある。
+実体は[ステージ](../../stages/inception/ddd-domain-modeling.md)、[追加手順](../../contributions)、[スキーマ](../../tools/ddd/lib/schema)、[規則](../../tools/ddd/lib/rules/rust/evaluators.ts)、[インストーラ](../../scripts/install.ts)にある。基準時点の tree-sitter 解析はツリーに存在しない。T-10-06 で同梱資産とともに撤去し、現在すべての規則が判定に使う Rust の事実は[ネイティブ抽出器のアダプタ](../../tools/ddd/lib/rust/domain-facts/index.ts)から得る。この撤去は後の結果であり、この基準時点の内容ではない。
 
 ## 2. 承認時検査には接続不良がある
 
