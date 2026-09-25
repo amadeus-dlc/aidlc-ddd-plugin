@@ -667,10 +667,116 @@
       }
     }
   ],
+  "rust_module_layouts": [
+    {
+      "package": "billing-domain",
+      "module_layout": "file",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain/src/invoice.rs"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "package": "billing-domain",
+      "module_layout": "file",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain/src/missing.rs"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "package": "billing-domain-mod-rs",
+      "module_layout": "mod-rs",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain-mod-rs/src/invoice/mod.rs"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "package": "billing-domain-mod-rs",
+      "module_layout": "mod-rs",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain-mod-rs/src/missing/mod.rs"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    }
+  ],
   "changes": [
     {
       "project": "rust",
-      "request_identity": "sha256:d91e440019e6250b82998cdd210071abc7f1c97d2b4215400f1f3d4c9b6d8add",
+      "request_identity": "sha256:3ae22f2ab2bc41a6ab33730d5d4f9d65275906c92a6c1320efbd64bea8fe9798",
       "mapped_method": {
         "identity_changed": true,
         "fresh": {
@@ -954,7 +1060,7 @@
   "unverified": [
     "matching the mapped error type spelling against the resolved declaration name",
     "compiler acceptance of the scenario modules",
-    "the Rust mod-rs layout and the TypeScript index-file layout",
+    "the TypeScript index-file layout",
     "production sensor and approval gate integration",
     "error paths, state preservation and invariants of a running application"
   ]

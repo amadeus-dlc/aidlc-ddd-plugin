@@ -14,6 +14,7 @@ import type { AggregateMapping, MappingLanguage } from "../aggregate-mapping/con
 import { loadAggregateMapping } from "../aggregate-mapping/loader.ts";
 import type { SourceInput } from "../error-contract/contract.ts";
 import type { OperationExecution, OperationObservation } from "../operation-error-set/contract.ts";
+import type { RustModuleLayout } from "../project-settings/contract.ts";
 import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import type { DomainModel } from "../schema/model.ts";
 
@@ -34,6 +35,16 @@ export const PROJECT_ROOTS = {
   "typescript-companion": join(FIXTURE, "typescript-companion-workspace"),
 } as const;
 export type ScenarioProject = keyof typeof PROJECT_ROOTS;
+
+/**
+ * The Rust workspace writes one package in each project module layout, so both are exercised. A
+ * mapping reaches either by naming its package; a package this does not record is not placed under
+ * a guessed layout, because which layout it is written in is exactly what would be guessed.
+ */
+export const RUST_PACKAGE_LAYOUT: ReadonlyMap<string, RustModuleLayout> = new Map([
+  ["billing-domain", "file"],
+  ["billing-domain-mod-rs", "mod-rs"],
+]);
 
 const SOURCE_EXTENSION: Readonly<Record<ScenarioProject, string>> = {
   rust: ".rs",

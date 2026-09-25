@@ -21,10 +21,13 @@ import {
   loadScenarioMapping,
   loadScenarioModel,
   type ObservedOperations,
+  RUST_PACKAGE_LAYOUT,
   type ScenarioProject,
   scenarioSources,
 } from "../tools/ddd/lib/operation-error-set-verification/scenario.ts";
 import { observeTypeScriptOperations } from "../tools/ddd/lib/operation-error-set-verification/typescript.ts";
+import type { RustModuleLayout } from "../tools/ddd/lib/project-settings/contract.ts";
+import { projectSettingsPayload } from "../tools/ddd/lib/project-settings/payload.ts";
 import type { DomainModel } from "../tools/ddd/lib/schema/model.ts";
 
 const root = resolve(import.meta.dir, "..");
@@ -185,18 +188,19 @@ const TYPESCRIPT_DROP = {
   from: '"already-issued" | "empty-lines";',
   to: '"already-issued";',
 };
-const PROJECTS: readonly Project[] = [
-  {
-    name: "rust",
-    language: "rust",
-    observe: (mapping, sources) => observeRustOperations(mapping, sources),
-    dropEmptyLines: {
-      file: "billing-domain/src/invoice.rs",
-      from: "    AlreadyIssued,\n    EmptyLines,\n}",
-      to: "    AlreadyIssued,\n}",
-    },
-    lockedCase: "Locked",
+const RUST: Project = {
+  name: "rust",
+  language: "rust",
+  observe: (mapping, sources) => observeRustOperations(mapping, sources),
+  dropEmptyLines: {
+    file: "billing-domain/src/invoice.rs",
+    from: "    AlreadyIssued,\n    EmptyLines,\n}",
+    to: "    AlreadyIssued,\n}",
   },
+  lockedCase: "Locked",
+};
+const PROJECTS: readonly Project[] = [
+  RUST,
   {
     name: "typescript-class",
     language: "typescript",
@@ -223,6 +227,11 @@ const problems: string[] = [];
 function mappingAt(project: Project, module: string): AggregateMapping {
   const mapping = MAPPINGS[project.language];
   return { ...mapping, code: { ...mapping.code, module: [module] } };
+}
+/** The Rust mapping pointed at one module of one package of the scenario workspace. */
+function rustMappingAt(packageName: string, module: string): AggregateMapping {
+  const mapping = mappingAt(RUST, module);
+  return { ...mapping, code: { ...mapping.code, package: packageName } };
 }
 function withOperation(
   mapping: AggregateMapping,
@@ -291,6 +300,64 @@ async function scenarioResults() {
       check(`${project.name} ${scenario.module}`, results[project.name], expected);
     }
     rows.push({ module: scenario.module, description: scenario.description, results });
+  }
+  return rows;
+}
+
+/**
+ * Where each project module layout places the mapped module. Written from the layout contract, not
+ * read from the path under test, so a path that answered one layout for every package fails one of
+ * the two rows.
+ */
+const LAYOUT_FILE: Readonly<Record<RustModuleLayout, (packageName: string, module: string) => string>> = {
+  file: (packageName, module) => `${packageName}/src/${module}.rs`,
+  "mod-rs": (packageName, module) => `${packageName}/src/${module}/mod.rs`,
+};
+function scenarioModule(module: string): { module: string; description: string; expected: Expected } {
+  const scenario = SCENARIOS.find((entry) => entry.module === module);
+  if (!scenario) throw new Error(`the scenario table does not state ${module}`);
+  const expected = scenario.expected.rust;
+  if (!expected) throw new Error(`the scenario table does not judge ${module} from Rust`);
+  return { module, description: scenario.description, expected };
+}
+/**
+ * The modules read from every layout. The scenario that owns a module states its judgement, which
+ * the layout does not change, so a module the scenario does not judge from Rust stops the run.
+ */
+const LAYOUT_MODULES = [scenarioModule("invoice"), scenarioModule("missing")];
+
+/**
+ * The Rust workspace owns one package per project module layout, and a mapping reaches either by
+ * naming its package. The scenarios above are read from the `file` package; this reads every package
+ * the scenario writes, so the same judgements are recorded from both layouts, against the file and
+ * the settings each layout gives the mapped module.
+ */
+async function moduleLayoutResults() {
+  const rows = [];
+  for (const [packageName, layout] of RUST_PACKAGE_LAYOUT) {
+    const settings = projectSettingsPayload({ languages: ["rust"], rust: { moduleLayout: layout }, typescript: null });
+    for (const entry of LAYOUT_MODULES) {
+      const { observed, result } = await run(
+        RUST,
+        rustMappingAt(packageName, entry.module),
+        scenarioSources(RUST.name),
+      );
+      const observedFiles = [...new Set(observed.observations.map(({ request }) => request.target.file))];
+      const results = both(result);
+      const label = `rust ${layout} ${entry.module}`;
+      check(label, results, entry.expected);
+      check(`${label} file`, observedFiles, [LAYOUT_FILE[layout](packageName, entry.module)]);
+      for (const { operationRef, request } of observed.observations)
+        check(`${label} settings of ${operationRef}`, request.settings, settings);
+      rows.push({
+        package: packageName,
+        module_layout: layout,
+        module: entry.module,
+        description: entry.description,
+        files: observedFiles,
+        results,
+      });
+    }
   }
   return rows;
 }
@@ -395,6 +462,7 @@ function version(argv: string[]): string {
 
 try {
   const scenarios = await scenarioResults();
+  const moduleLayouts = await moduleLayoutResults();
   const changes = [];
   for (const project of PROJECTS) changes.push(await changeResults(project));
   const report = {
@@ -410,11 +478,12 @@ try {
     },
     projects: PROJECTS.map((project) => ({ name: project.name, language: project.language })),
     scenarios,
+    rust_module_layouts: moduleLayouts,
     changes,
     unverified: [
       "matching the mapped error type spelling against the resolved declaration name",
       "compiler acceptance of the scenario modules",
-      "the Rust mod-rs layout and the TypeScript index-file layout",
+      "the TypeScript index-file layout",
       "production sensor and approval gate integration",
       "error paths, state preservation and invariants of a running application",
     ],

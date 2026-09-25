@@ -97,7 +97,7 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 
 | 経路 | 入口 | 対象の決め方 |
 |---|---|---|
-| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | [配布 manifest](native-extractor-distribution.ja.md) がこのプラットフォームに記録したターゲットトリプルと、featureなしで `resolveCargoCondition` を実行する。この経路自体は `rustc` を必要としない。写像のモジュールを、ライブラリcrateルートと同じディレクトリの `<module>.rs` に置く。宣言パスは `[...module, type]`、モジュール配置は `file` |
+| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | [配布 manifest](native-extractor-distribution.ja.md) がこのプラットフォームに記録したターゲットトリプルと、featureなしで `resolveCargoCondition` を実行する。この経路自体は `rustc` を必要としない。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまりライブラリcrateルートと同じディレクトリの `file` なら `<module>.rs`、`mod-rs` なら `<module>/mod.rs` に置く。宣言パスはどちらの配置でも `[...module, type]`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
 | TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを `<packageRoot>/src/<module>.ts` に置く。宣言パスは `[type]`、モジュール配置は `named-file`、コード表現は `class` または `companion` |
 
 モデルと写像は [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) が本番のローダーで読みます。
@@ -107,6 +107,8 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 正規モデルは、集約 `aggregate.invoice` にコマンド `command.invoice.issue`（`already-issued`、`empty-lines`）と生成操作 `factory.invoice.open`（`negative-amount`、`missing-customer`）を持ちます。Rustの写像とTypeScriptの写像は同じモデルを参照し、業務IDも共通です。異なるのはケースの綴り（`AlreadyIssued` と `already-issued` など）だけです。TypeScriptは、class方式とコンパニオン方式の2プロジェクトが同じ写像を共有します。1プロジェクトの中で2つの表現を混在させません。
 
 各プロジェクトのモジュールが1つのシナリオです。写像の `module` をそのモジュールへ向けて到達します。期待値はシナリオから手書きしたもので、実行結果を写したものではありません。
+
+Rustのワークスペースは、プロジェクトのモジュール配置ごとに1つのパッケージを持ちます。写像の `package` をそのパッケージへ向けて到達します。`billing-domain` は `file` で書かれ、下表の全モジュールを持ちます。`billing-domain-mod-rs` は `mod-rs` で書かれ、`invoice` と `missing` を持ちます。下表は `file` のパッケージから読んだものです。両方に書かれた2モジュールはどちらの配置でも同じ判定になり、証跡の `rust_module_layouts` に記録します。
 
 | モジュール | 内容 | Rust | TypeScript（両表現） |
 |---|---|---|---|
@@ -139,6 +141,6 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 - 2つの操作が同じエラー型を共有しているかは検査しません。他の操作のエラーを含むunionは、ケース単位の `foreign-error` で検出します。
 - 本番センサーと承認ゲートには接続していません。
 - シナリオのモジュールをコンパイラが受理するかは測りません。いくつかのモジュールは、意図的にコンパイルできない形で書いています。
-- このシナリオが使う配置は、Rustの `file` とTypeScriptの `named-file` だけです。もう一方の配置は `error-contract/1` の検証が扱います。
+- このシナリオはRustの両方のモジュール配置を使いますが、TypeScriptの配置は `named-file` だけです。TypeScriptの `index-file` は `error-contract/1` の検証が扱います。
 - 型とケースの一致は、各失敗経路の状態維持や不変条件を証明しません。
 - 確認した環境は、証跡に記録した darwin-arm64、rustc 1.95.0、cargo 1.95.0、Bun 1.3.13、TypeScript 6.0.3、syn 3.0.5 です。
