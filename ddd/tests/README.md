@@ -44,9 +44,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 386 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 387 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 386 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 387 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
 
 ## Verified regressions and remaining checks
 

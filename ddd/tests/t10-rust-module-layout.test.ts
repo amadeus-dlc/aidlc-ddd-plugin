@@ -394,6 +394,40 @@ test("a Cargo target root in an excluded directory is reported on the manifest t
   }
 });
 
+// A Cargo member is a path the manifest states, and nothing stops it from leaving the inspected
+// project. The check is observed at both of its own entries rather than one being inferred from the
+// other: `checkModuleLayout` ends in a finding list, the CI entry in a verdict and an exit status.
+test("a Cargo member outside the inspected project is reported on the manifest that names it", async () => {
+  const parent = mkdtempSync(join(tmpdir(), "ddd-layout-outside-"));
+  const project = join(parent, "project");
+  const outside = join(parent, "outside-crate");
+  try {
+    mkdirSync(project, { recursive: true });
+    mkdirSync(join(outside, "src"), { recursive: true });
+    writeFileSync(join(project, ".ddd.toml"), layoutConfig());
+    writeFileSync(join(project, "Cargo.toml"), '[workspace]\nmembers = ["../outside-crate"]\n');
+    writeFileSync(join(outside, "Cargo.toml"), LAYOUT_MANIFEST);
+    // The member is a real, readable crate: what stops the walk is where it sits, not what it holds.
+    writeFileSync(join(outside, "src/lib.rs"), "pub struct Invoice;\n");
+
+    const { checkModuleLayout } = await import("../tools/ddd/lib/module-layout/check.ts");
+    const result = checkModuleLayout(await readyExtractor(), project);
+    expect(result.findings.map((entry) => [entry.rule_id, entry.file, entry.message])).toEqual([
+      ["module-layout.unresolved", "Cargo.toml", "Cargo member is outside the inspected project"],
+    ]);
+    // The member was never walked, so it is not counted as a crate this run inspected.
+    expect(result.crates).toBe(0);
+
+    const cli = runLayoutCli(join(import.meta.dir, "../tools"), project);
+    expect(cli.exitCode).toBe(1);
+    const verdict = JSON.parse(cli.stdout);
+    expect(verdict.pass).toBe(false);
+    expect(located(verdict)).toEqual([["module-layout.unresolved", "Cargo.toml"]]);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test("a module whose declarations could not be read is reported once, not also on its placement", () => {
   const { sensor, cli } = bothLayoutEntries(
     scanScopeCase("scan-scope-unparsable-parent", "mod-rs", {

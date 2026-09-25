@@ -24,9 +24,12 @@ import {
   scenarioSources,
 } from "../tools/ddd/lib/operation-error-set-verification/scenario.ts";
 import { observeTypeScriptOperations } from "../tools/ddd/lib/operation-error-set-verification/typescript.ts";
+import type { RustModuleLayout } from "../tools/ddd/lib/project-settings/contract.ts";
+import { projectSettingsPayload } from "../tools/ddd/lib/project-settings/payload.ts";
 import {
   ALREADY_ISSUED,
   atModule,
+  atPackage,
   EMPTY_LINES,
   edit,
   ISSUE,
@@ -397,6 +400,99 @@ describe("Rust, TypeScript class and TypeScript companion give one language-neut
           judged("unresolved", [foreign(OPEN, ALREADY_ISSUED, ISSUE)], ["incomplete-case-set"]),
         ),
       });
+    },
+    TIMEOUT,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The Rust workspace written in both project module layouts
+// ---------------------------------------------------------------------------
+
+/**
+ * The Rust scenario workspace owns one package per project module layout, and the mapping reaches
+ * either by naming its package. Both are observed against the same workspace in one run, so a path
+ * that answered a single layout for every package would satisfy one row and fail the other.
+ */
+const RUST_LAYOUTS: [layout: RustModuleLayout, packageName: string, file: (module: string) => string][] = [
+  ["file", "billing-domain", (module) => `billing-domain/src/${module}.rs`],
+  ["mod-rs", "billing-domain-mod-rs", (module) => `billing-domain-mod-rs/src/${module}/mod.rs`],
+];
+const MOD_RS_PACKAGE = "billing-domain-mod-rs";
+
+/** The Rust mapping pointed at one module of one package of the scenario workspace. */
+function rustMappingAt(packageName: string, module: string): AggregateMapping {
+  return atPackage(mappingAt(RUST, module), packageName);
+}
+
+describe("the Rust path writes each scenario package in the module layout that package is written in", () => {
+  test.each(RUST_LAYOUTS)(
+    "%s: the mapped module is observed where that layout places it, and the observation names that layout",
+    async (layout, packageName, file) => {
+      const observed = await RUST.observe(rustMappingAt(packageName, "invoice"), scenarioSources(RUST.name));
+      const settings = projectSettingsPayload({
+        languages: ["rust"],
+        rust: { moduleLayout: layout },
+        typescript: null,
+      });
+      expect(
+        sortedByJson(
+          observed.observations.map(({ operationRef, request }) => ({
+            operationRef,
+            file: request.target.file,
+            // The module path a mapping states is the same in either layout; only the file moves.
+            declarationPath: request.target.declarationPath,
+            settings: request.settings,
+          })),
+        ),
+      ).toEqual(
+        sortedByJson(
+          [ISSUE, OPEN].map((operationRef) => ({
+            operationRef,
+            file: file("invoice"),
+            declarationPath: ["invoice", "Invoice"],
+            settings,
+          })),
+        ),
+      );
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "the mapped closed sets of the mod-rs package pass",
+    async () => {
+      const { result } = await run(RUST, rustMappingAt(MOD_RS_PACKAGE, "invoice"), scenarioSources(RUST.name));
+      expect({ issue: judgement(result, ISSUE), open: judgement(result, OPEN) }).toEqual(both(PASS, PASS));
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "a mapping that names a package the workspace does not own is refused rather than observed",
+    async () => {
+      // Which package the mapping names decides both the crate root and the layout the module is
+      // looked for in. A name the workspace does not answer for leaves neither to be guessed, so the
+      // path stops with its reason instead of producing an observation nothing could have resolved.
+      await expect(
+        RUST.observe(rustMappingAt("billing-domain-absent", "invoice"), scenarioSources(RUST.name)),
+      ).rejects.toThrow("the workspace does not own one package");
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "a case each operation of the mod-rs package leaves out is a violation",
+    async () => {
+      // A pass on its own would also be reported by a path that never reached the module; the same
+      // workspace and the same layout have to tell the two answers of a judged module apart.
+      const { result } = await run(RUST, rustMappingAt(MOD_RS_PACKAGE, "missing"), scenarioSources(RUST.name));
+      expect({ issue: judgement(result, ISSUE), open: judgement(result, OPEN) }).toEqual(
+        both(
+          judged("violation", [missing(ISSUE, EMPTY_LINES)]),
+          judged("violation", [missing(OPEN, MISSING_CUSTOMER)]),
+        ),
+      );
     },
     TIMEOUT,
   );

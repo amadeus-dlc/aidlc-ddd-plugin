@@ -255,4 +255,24 @@ cases.push(
     [unresolved("build.rs")],
   ),
 );
+// A `#[path]` names its target verbatim, so it can name a file outside the crate it is written in.
+// The walk stops at the crate boundary and reports that on the file the declaration is written in,
+// while the sibling declaration beside it still resolves. The file the escaping declaration names is
+// readable and belongs to no crate of this project, so it is reported as the stale source it is —
+// a walk that followed the declaration instead would cover that file and report nothing at all.
+const escaping = specimen(
+  "violation-path-outside-crate",
+  "file",
+  {
+    "Cargo.toml": '[workspace]\nmembers = ["billing"]\n',
+    "billing/Cargo.toml": manifest,
+    "billing/src/lib.rs": 'mod invoice;\n#[path="../../outside.rs"] mod generated;\n',
+    "billing/src/invoice.rs": "pub struct Invoice;\n",
+    "outside.rs": "pub struct Generated;\n",
+  },
+  [unresolved("billing/src/lib.rs"), unresolved("outside.rs")],
+);
+delete escaping.workspace["src/lib.rs"];
+delete escaping.workspace["src/invoice.rs"];
+cases.push(escaping);
 export const MODULE_LAYOUT_CASES = cases;

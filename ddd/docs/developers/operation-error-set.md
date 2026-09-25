@@ -97,7 +97,7 @@ Each path turns the mapping into `error-contract/1` targets, runs the extractor,
 
 | Path | Entry point | How the target is decided |
 |---|---|---|
-| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | Runs `resolveCargoCondition` with no features for the target triple the [distribution manifest](native-extractor-distribution.md) records for this platform, so the path needs no `rustc` of its own. Places the mapped module as `<module>.rs` beside the library crate root. The declaration path is `[...module, type]` and the module layout is `file` |
+| Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | Runs `resolveCargoCondition` with no features for the target triple the [distribution manifest](native-extractor-distribution.md) records for this platform, so the path needs no `rustc` of its own. Places the mapped module where the module layout its package is written in puts it, beside the library crate root: `<module>.rs` under `file`, and `<module>/mod.rs` under `mod-rs`. The declaration path is `[...module, type]` in either layout. A package the scenario records no layout for is refused rather than placed under a guessed one |
 | TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | Runs `resolveTypeScriptCondition` for the project. Places the mapped module as `<packageRoot>/src/<module>.ts`. The declaration path is `[type]`, the module layout is `named-file`, and the code representation is `class` or `companion` |
 
 [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) reads the model and the mappings through the production loaders.
@@ -107,6 +107,8 @@ Each path turns the mapping into `error-contract/1` targets, runs the extractor,
 The canonical model gives the aggregate `aggregate.invoice` the command `command.invoice.issue` (`already-issued`, `empty-lines`) and the generation operation `factory.invoice.open` (`negative-amount`, `missing-customer`). The Rust mapping and the TypeScript mapping name the same model and share every business id; only the case spellings differ (`AlreadyIssued` versus `already-issued`, and so on). In TypeScript, a class project and a companion project share one mapping; no project mixes the two representations.
 
 Each module of a project is one scenario, reached by pointing the mapping's `module` at it. The expectations are written from the scenario, not copied from a run.
+
+The Rust workspace owns one package per project module layout, reached by pointing the mapping's `package` at it: `billing-domain` is written in `file` and carries every module of the table below, and `billing-domain-mod-rs` is written in `mod-rs` and carries `invoice` and `missing`. The table below is read from the `file` package; the two modules written in both are judged the same from either, and the evidence records that under `rust_module_layouts`.
 
 | Module | Content | Rust | TypeScript (both representations) |
 |---|---|---|---|
@@ -139,6 +141,6 @@ The checks across a change run on each of the three paths.
 - Whether two operations share one error type is not checked. A union that includes another operation's errors is found case by case as `foreign-error`.
 - The production sensors and the approval gate are not connected.
 - Whether a compiler accepts the scenario modules is not measured. Several modules are written not to compile.
-- This scenario uses only the Rust `file` layout and the TypeScript `named-file` layout; the other layouts are covered by the `error-contract/1` verification.
+- This scenario uses both Rust module layouts, but of the TypeScript layouts only `named-file`; the TypeScript `index-file` layout is covered by the `error-contract/1` verification.
 - Matching types and cases does not prove state preservation or invariants on each failure path.
 - The verified environment is the one the evidence records: darwin-arm64, rustc 1.95.0, cargo 1.95.0, Bun 1.3.13, TypeScript 6.0.3 and syn 3.0.5.

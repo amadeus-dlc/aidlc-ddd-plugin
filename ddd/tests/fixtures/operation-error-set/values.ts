@@ -255,6 +255,10 @@ export function atModule(value: AggregateMapping, module: string): AggregateMapp
   return { ...value, code: { ...value.code, module: [module] } };
 }
 
+export function atPackage(value: AggregateMapping, packageName: string): AggregateMapping {
+  return { ...value, code: { ...value.code, package: packageName } };
+}
+
 // ---------------------------------------------------------------------------
 // Observations: error-contract requests over a self-contained snapshot
 // ---------------------------------------------------------------------------

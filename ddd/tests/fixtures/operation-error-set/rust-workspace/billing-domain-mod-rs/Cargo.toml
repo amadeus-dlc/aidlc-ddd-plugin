@@ -1,0 +1,9 @@
+[package]
+name = "billing-domain-mod-rs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "billing_domain_mod_rs"
+path = "src/lib.rs"
