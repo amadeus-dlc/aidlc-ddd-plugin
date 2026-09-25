@@ -43,10 +43,10 @@ export function buildEdges(
   };
 
   for (const target of targets) {
-    if (!target.tree || !target.crate_name) continue;
+    if (!target.file || !target.crate_name) continue;
     const from = byName.get(target.crate_name);
     if (!from) continue;
-    const file = target.tree.file;
+    const file = target.file;
     const declared = facts.files.get(file);
     // `requireDecisionBase` runs before these edges are built and sends every inspected file the
     // extractor did not answer for to the tool-unavailable terminal, so this is unreachable unless

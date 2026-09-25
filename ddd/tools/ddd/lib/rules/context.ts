@@ -8,8 +8,6 @@ import { dirname, join } from "node:path";
 import { rustSourcesUnder } from "../packaging/rust-modules.ts";
 import { readSourceClaims, readStageStatus, type SensorRunContext } from "../runtime/context.ts";
 import { ToolUnavailableError } from "../runtime/runtime.ts";
-import type { AnalyzerRuntime } from "../rust/analyzer.ts";
-import { parse } from "../rust/analyzer.ts";
 import { type DomainFactSet, type RustSourceFile, requireDomainFacts } from "../rust/domain-facts/index.ts";
 import type { NativeOutcome } from "../rust/native/launch.ts";
 import { MODEL_DATA_PATH } from "../schema/artifacts.ts";
@@ -86,7 +84,7 @@ function requireDecisionBase(facts: DomainFactSet, decidedFrom: readonly string[
   );
 }
 
-export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext, config: SensorConfig): ContextResult {
+export function assembleContext(run: SensorRunContext, config: SensorConfig): ContextResult {
   const claimsResult = readSourceClaims(run, { extensions: [".rs"] });
   if (!claimsResult.ok) {
     return { kind: "failed", findings: [finding("runtime.claims", ".", claimsResult.reason)] };
@@ -155,7 +153,6 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
 
   const targets: InspectionTarget[] = [];
   const skipped: InspectionTarget[] = [];
-  const opaque: string[] = [];
   const claimByPath = new Map(rustClaims.filter((c) => c.resolved_path).map((c) => [c.resolved_path as string, c]));
   const claimedContents = new Map<string, Uint8Array>();
 
@@ -172,16 +169,12 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
       if (classification.role === "crate-source" && (inLayer || querySide)) {
         try {
           const content = readFileSync(join(root, file));
-          const tree = parse(runtime, file, content);
-          target.tree = tree;
+          target.file = file;
           claimedContents.set(file, content);
-          for (const region of tree.opaque_regions) {
-            opaque.push(
-              `analyzer.macro-opaque: ${region.file}:${region.span.start_line} (${region.macro_name ?? region.reason})`,
-            );
-          }
         } catch {
-          /* unreadable file is skipped */
+          // A claim that cannot be read stays a target, without a file of its own: it is still one of
+          // the files the rules have to decide, so it keeps the extractor required for this run, and
+          // the per-file rules it carries no declarations for report nothing rather than passing it.
         }
         targets.push(target);
       } else {
@@ -203,7 +196,7 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
       ? collectRustSources(facts, workspaceRoot, assignments)
       : { crates: [], workspaceCrates: new Set<string>() };
   requireDecisionBase(facts, [
-    ...targets.flatMap((target) => (target.tree ? [target.tree.file] : [])),
+    ...targets.flatMap((target) => (target.file ? [target.file] : [])),
     ...collected.crates.flatMap((crate) => crate.inventory.sources.map((source) => source.decidedFrom)),
   ]);
 
@@ -220,7 +213,6 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
 
   const noteParts: string[] = [];
   if (skipped.length > 0) noteParts.push(`${skipped.length} files outside ${config.target_layers.join("/")}`);
-  if (opaque.length > 0) noteParts.push(...opaque);
   noteParts.push(...facts.notes);
   if (model.note) noteParts.push(model.note);
 
@@ -235,7 +227,6 @@ export function assembleContext(runtime: AnalyzerRuntime, run: SensorRunContext,
     program,
     model,
     denylist: IO_CRATES,
-    opaque,
     edges,
     layerDiagnostics,
     targetLayers: config.target_layers,

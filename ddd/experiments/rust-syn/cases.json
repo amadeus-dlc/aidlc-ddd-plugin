@@ -33,12 +33,12 @@
   {
     "name": "public-tuple",
     "source": "pub struct Invoice(pub u64);",
-    "fields": ["Invoice.0@1"], "treeSitterFields": [], "compile": true
+    "fields": ["Invoice.0@1"], "compile": true
   },
   {
     "name": "restricted-tuple",
     "source": "pub struct Invoice(pub(crate) u64, u64);",
-    "fields": ["Invoice.0@1"], "treeSitterFields": [], "compile": true
+    "fields": ["Invoice.0@1"], "compile": true
   },
   {
     "name": "raw-identifier",
@@ -59,7 +59,7 @@
   {
     "name": "explicit-return-getter",
     "source": "pub struct Invoice { amount: u64 }\nimpl Invoice { pub fn total(&self) -> u64 { return self.amount; } }\npub fn peek(inv: &Invoice) -> u64 { inv.total() }",
-    "fields": [], "compile": true, "getters": ["total"], "treeSitterGetters": [], "calls": ["total"]
+    "fields": [], "compile": true, "getters": ["total"], "calls": ["total"]
   },
   {
     "name": "alias-and-reexport",
@@ -150,7 +150,7 @@
   {
     "name": "malformed-source",
     "source": "pub struct Invoice { pub amount: }",
-    "fields": [], "parsed": false, "compare": false, "compile": false,
+    "fields": [], "parsed": false, "compile": false,
     "unresolved": ["parse-error"]
   },
   {

@@ -4,7 +4,6 @@
  */
 
 import type { SensorRunContext, SourceClaim } from "../runtime/context.ts";
-import type { SyntaxTree } from "../rust/analyzer.ts";
 import type { ElementIndex } from "../schema/index-builder.ts";
 import type { CargoWorkspace, CrateLayerAssignment, FileClassification, Layer } from "../workspace/resolver.ts";
 import type { ExternalCrateRule } from "./lists.ts";
@@ -14,7 +13,12 @@ import type { RustProgram } from "./rust/program.ts";
 export interface InspectionTarget {
   claim: SourceClaim;
   classification: FileClassification;
-  tree?: SyntaxTree;
+  /**
+   * The claimed file the per-file rules decide over, present only when the inspection could read it.
+   * Absent means the file stays a target the rules have to decide — it carries no declarations of its
+   * own, so no per-file rule evaluates it — rather than a file dropped from the inspection.
+   */
+  file?: string;
   crate_name?: string;
 }
 
@@ -83,7 +87,6 @@ export interface InspectionContext {
   program: RustProgram;
   model: ModelAvailability;
   denylist: readonly ExternalCrateRule[];
-  opaque: string[];
   edges: DependencyEdge[];
   layerDiagnostics: { code: string; file: string; message: string }[];
   targetLayers: readonly Layer[];

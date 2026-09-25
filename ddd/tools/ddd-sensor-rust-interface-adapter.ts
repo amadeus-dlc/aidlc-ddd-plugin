@@ -1,13 +1,11 @@
 #!/usr/bin/env bun
-import { evaluateSensor } from "./ddd/lib/rules/evaluate.ts";
-import { runSensor, ToolUnavailableError } from "./ddd/lib/runtime/runtime.ts";
 // ddd-sensor-rust-interface-adapter — the code-generation gate for the
 // interface-adapter / rmu layers and every query-side file (U5). Rules
 // k / l / m / n and g.
-import { initAnalyzer } from "./ddd/lib/rust/analyzer.ts";
+import { evaluateSensor } from "./ddd/lib/rules/evaluate.ts";
+import { runSensor } from "./ddd/lib/runtime/runtime.ts";
 import { classifyDomainFactExtractor } from "./ddd/lib/rust/domain-facts/index.ts";
 
-const runtime = await initAnalyzer();
 // Rule (g) reads the dependency edges the native extractor's `use` facts build, so this gate
 // classifies the same one launch and is required to read it on the same condition as the others.
 const extractor = await classifyDomainFactExtractor();
@@ -16,10 +14,8 @@ process.exit(
     sensor_id: "ddd-rust-interface-adapter",
     severity: "blocking",
     budget_ms: 9000,
-    evaluate: (context, api) => {
-      if (runtime.state !== "ready") throw new ToolUnavailableError("tree-sitter-rust runtime is unavailable");
-      return evaluateSensor(
-        runtime,
+    evaluate: (context, api) =>
+      evaluateSensor(
         context,
         {
           sensor_id: "ddd-rust-interface-adapter",
@@ -29,7 +25,6 @@ process.exit(
         },
         ["k", "l", "m", "n", "g"],
         api,
-      );
-    },
+      ),
   }),
 );

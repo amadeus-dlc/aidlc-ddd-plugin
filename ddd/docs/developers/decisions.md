@@ -36,6 +36,12 @@ Syn does not provide compiler type inference, trait solving, or macro expansion.
 
 Retaining tree-sitter and fixing its current extractor was viable; the measured tuple/getter misses were implementation defects, not parser limitations. The selected direction is native Rust analysis, with all-rule parity and platform distribution still required. Do not select a compiler-internal semantic provider or claim release readiness from the small prototype.
 
+## 2026-09-25: Remove the tree-sitter assets rather than keep them for a second opinion
+
+Status: in force. Every rule every shipped Rust sensor reports decided on the native extractor once T-10-05 landed, leaving tree-sitter with two answers: whether a claimed file could be read, and where its macro-opaque regions were. Keeping a 1 MB parser and grammar for those two was rejected. The first is a plain file read, and the second is dropped rather than reimplemented: the native side already refuses a macro that can hide a module declaration and already notes item macros and `cfg`/`cfg_attr`, so what is given up is the report for an expression-position macro and for a non-built-in attribute macro. Adding a replacement note would have been a new rule, which this change was not asked for.
+
+The cost is that the tree-sitter answer is no longer available to compare against from this repository. Where an earlier task recorded "what the enumerations this replaced reported here is not established", that question is now permanently open here rather than pending; [completion tasks](completion-tasks.md) records it for the parent issue. The alternative — keeping the grammar as a comparison oracle no shipped code reads — was rejected because an asset the product does not use is not kept current, and a stale oracle answers a different question from the one asked.
+
 ## Consistency and recovery policy
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.
@@ -48,7 +54,7 @@ Choose saga implementation, storage, and delivery-order guarantees from the actu
 
 | Date | Decision | Current meaning |
 |---|---|---|
-| 2026-09-11 | Cache parsing by content hash and attach a filename to SyntaxTree per request. | Do not confuse separate files with identical content. |
+| 2026-09-11 | Cache parsing by content hash and attach a filename to SyntaxTree per request. | No longer in force: T-10-06 removed the analyzer and `SyntaxTree` with it, so there is no parse to share. What replaced the filename it carried is `InspectionTarget.file`, the claimed file's own path. |
 | 2026-09-11 | Apply CQRS cross-side prohibition before same-layer permission. | Detect forbidden command/query edges even within the same layer. |
 | 2026-09-11 | Add trait extraction, Cargo external dependencies, and Rust golden cases. | Expand inputs for m and dependency checks without claiming full Rust coverage. |
 | 2026-09-11 | Add installation scripts and provenance. | Fresh-install/update code exists; current end-to-end host verification belongs to T-05. |

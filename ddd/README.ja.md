@@ -74,6 +74,6 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 ## ライセンス
 
-[MIT](../LICENSE)。`web-tree-sitter` とRust文法の同梱ライセンスは [vendor](tools/ddd/lib/rust/vendor/) と [wasm/LICENSE](tools/ddd/wasm/LICENSE) にあります。
+[MIT](../LICENSE)。同梱するネイティブRust抽出器のcrateが直接宣言する第三者クレートは [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md) に一覧があります。同ファイルに記載のとおり、ビルドが解決する集合全体ではありません。
 
 Rustプロジェクトでは、生成前にプロジェクト直下の `.ddd.toml` で `file` か `mod-rs` を選択してください。設定、承認時の必須検査、CIコマンドは[モジュール配置契約](docs/users/rust-module-layout.ja.md)を参照してください。

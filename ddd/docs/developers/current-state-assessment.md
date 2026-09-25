@@ -12,7 +12,7 @@ Design, guidance, and knowledge were cleaned up after the assessment. Sensor and
 
 At the baseline, there were one dedicated stage, four contributions, six design sensors, three Rust sensors, and eight knowledge files. A hand-written model loader, ID/lineage/reference resolution, Cargo layer classification, tree-sitter Rust analysis, and distribution/installation scripts existed.
 
-See the [stage](../../stages/inception/ddd-domain-modeling.md), [contributions](../../contributions), [schema](../../tools/ddd/lib/schema), [analyzer](../../tools/ddd/lib/rust/analyzer.ts), [rules](../../tools/ddd/lib/rules/rust/evaluators.ts), and [installer](../../scripts/install.ts).
+See the [stage](../../stages/inception/ddd-domain-modeling.md), [contributions](../../contributions), [schema](../../tools/ddd/lib/schema), [rules](../../tools/ddd/lib/rules/rust/evaluators.ts), and [installer](../../scripts/install.ts). The baseline's tree-sitter analyzer is no longer in the tree: T-10-06 removed it together with the vendored assets, and the Rust facts every rule now decides on come from the [native extractor adapter](../../tools/ddd/lib/rust/domain-facts/index.ts) instead. That removal is a later result, not part of this baseline.
 
 ## 2. Approval integration defects
 

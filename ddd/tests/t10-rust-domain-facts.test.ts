@@ -275,3 +275,71 @@ test("with the extractor not installed, the domain gate answers a use-case claim
   expect(inside.exitCode).toBe(127);
   expect(inside.stdout).toBe("");
 });
+
+// --- a claimed file the inspection itself cannot read -------------------------
+
+const ORPHAN = "packages/domain/billing-domain/src/orphan.rs";
+
+/** A public member, so a claim that was read reports rule (a) and one that was not reports nothing. */
+const ORPHAN_SOURCE = "pub struct Orphan {\n    pub amount: i64,\n}\n";
+
+/**
+ * The clean domain fixture with one more source of the same crate that no `mod` declares, claimed on
+ * its own. The module walk never reaches it, so the only thing that reads it is the inspection's own
+ * read of the claimed files — which `modes` is what takes away.
+ */
+function orphanClaimCase(name: string, readable: boolean): GoldenCase {
+  const source = caseNamed("clean-domain");
+  if (!source.workspace) throw new Error("the clean domain fixture carries no workspace");
+  return claiming(
+    {
+      ...source,
+      name,
+      workspace: { ...source.workspace, [ORPHAN]: ORPHAN_SOURCE },
+      ...(readable ? {} : { modes: { [ORPHAN]: 0o000 } }),
+      expect: { pass: true, rules: [] },
+    },
+    [ORPHAN],
+  );
+}
+
+function reportedPairs(stdout: string): [string, string, number | undefined][] {
+  const verdict: SensorVerdict = JSON.parse(stdout);
+  return verdict.findings
+    .map((entry): [string, string, number | undefined] => [entry.rule_id, entry.file, entry.line])
+    .sort((left, right) => left[0].localeCompare(right[0], "en"));
+}
+
+/** What a claim outside every module root is reported as, whether or not it could be read. */
+const ORPHAN_UNREACHABLE: [string, string, number | undefined] = ["domain-packaging.unresolved", ORPHAN, undefined];
+
+// Dropping read permission does nothing for a superuser, whose read succeeds regardless, so the two
+// tests below either observe the unreadable claim or do not run at all.
+const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
+
+test.skipIf(RUNNING_AS_SUPERUSER)("a claimed file the inspection cannot read is inspected without it", () => {
+  const readable = spawnSensor(toolsDir, orphanClaimCase("domain-facts-orphan-readable", true));
+  expect(readable.exitCode, readable.stderr).toBe(0);
+  expect(reportedPairs(readable.stdout)).toEqual([["a", ORPHAN, 2], ORPHAN_UNREACHABLE]);
+
+  // Only the read permission of the claimed file differs between the two runs. A claim the inspection
+  // could not read carries no declarations for the per-file rules, and it is not a file the extractor
+  // was asked about and failed to read, so it is not this run's terminal either: the gate answers, and
+  // what it still reports about the claim is that it sits outside every module root.
+  const sealed = spawnSensor(toolsDir, orphanClaimCase("domain-facts-orphan-sealed", false));
+  expect(sealed.exitCode, sealed.stderr).toBe(0);
+  expect(reportedPairs(sealed.stdout)).toEqual([ORPHAN_UNREACHABLE]);
+});
+
+test.skipIf(RUNNING_AS_SUPERUSER)("the same unreadable claim is still a file the rules have to decide", () => {
+  // The test above shows the gate answers this claim while the extractor is installed. Here the same
+  // claim is the whole claim set and the extractor is not installed, so a verdict would mean the
+  // unreadable claim had been dropped from what the rules decide over — which is what separates it
+  // from the empty claim set two tests above, where there is genuinely nothing to decide.
+  const result = spawnSensor(
+    toolsWithExtractor({ present: false }),
+    orphanClaimCase("domain-facts-orphan-sealed-blocked", false),
+  );
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
+});

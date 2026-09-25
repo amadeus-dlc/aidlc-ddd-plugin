@@ -8,7 +8,7 @@ Work toward completion is ongoing. Claude/Codex sandbox verification passes, wit
 
 ## What it provides
 
-One dedicated stage, six contributions to existing stages, six design sensors, four Rust sensors, and ten knowledge files. Designs reference IDs in one canonical model. Bundled tree-sitter handles Rust analysis without Cargo; building and testing generated Rust applications still requires a Rust toolchain.
+One dedicated stage, six contributions to existing stages, six design sensors, four Rust sensors, and ten knowledge files. Designs reference IDs in one canonical model. A bundled native extractor handles Rust analysis without Cargo; building and testing generated Rust applications still requires a Rust toolchain.
 
 Completion targets are Claude Code and Codex. Kimi/opencode are excluded, and custom builds for them are not maintained.
 
@@ -51,6 +51,6 @@ Report issues through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-p
 
 ## License
 
-[MIT](LICENSE). Bundled libraries have licenses under [tree-sitter](ddd/tools/ddd/lib/rust/vendor/) and [Rust grammar](ddd/tools/ddd/wasm/LICENSE).
+[MIT](LICENSE). The bundled native Rust extractor is built from third-party crates; see its [notice](ddd/tools/ddd/bin/NOTICE.md).
 
 Rust application projects must select one module layout in `.ddd.toml`. See the [configuration and enforcement contract](ddd/docs/users/rust-module-layout.md).

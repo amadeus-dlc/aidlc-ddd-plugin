@@ -51,8 +51,8 @@ function declarationsOf(context: InspectionContext, file: string): RustFileFacts
 
 // --- (a) public field -------------------------------------------------------
 function ruleA(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
-  const file = target.tree.file;
+  if (!target.file) return [];
+  const file = target.file;
   return declarationsOf(context, file).publicMembers.map((member) =>
     finding("a", file, `public field ${member.typeName}.${member.name} in domain layer`, member.line),
   );
@@ -60,16 +60,16 @@ function ruleA(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (b) undeclared mutation ------------------------------------------------
 function ruleB(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const out: FindingInput[] = [];
   for (const symbol of context.symbols.types) {
     for (const mutator of symbol.mutators) {
-      if (mutator.file !== target.tree.file) continue;
+      if (mutator.file !== target.file) continue;
       if (mutator.classification === "undeclared") {
         out.push(
           finding(
             "b",
-            target.tree.file,
+            target.file,
             `mutating method ${symbol.type_name}::${mutator.method_name} is not declared as command.${symbol.aggregate_slug}.${mutator.command_slug}`,
             mutator.line,
           ),
@@ -82,9 +82,9 @@ function ruleB(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (c) incomplete construction --------------------------------------------
 function ruleC(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const out: FindingInput[] = [];
-  const declared = declarationsOf(context, target.tree.file);
+  const declared = declarationsOf(context, target.file);
   const inherentSpans = new Map<string, Span[]>();
   for (const block of declared.impls) {
     if (block.trait_text !== undefined) continue;
@@ -100,7 +100,7 @@ function ruleC(target: InspectionTarget, context: InspectionContext): FindingInp
         out.push(
           finding(
             "c",
-            target.tree.file,
+            target.file,
             `domain type ${site.type_text} built outside its inherent impl (${site.kind})`,
             site.span.start_line,
           ),
@@ -108,34 +108,29 @@ function ruleC(target: InspectionTarget, context: InspectionContext): FindingInp
       }
     } else if (site.kind === "default-call") {
       out.push(
-        finding(
-          "c",
-          target.tree.file,
-          `domain type ${site.type_text} built via Default (c-default)`,
-          site.span.start_line,
-        ),
+        finding("c", target.file, `domain type ${site.type_text} built via Default (c-default)`, site.span.start_line),
       );
     }
   }
   for (const symbol of context.symbols.types) {
     for (const location of symbol.defaults) {
-      if (location.file !== target.tree.file) continue;
+      if (location.file !== target.file) continue;
       out.push(
         finding(
           "c",
-          target.tree.file,
+          target.file,
           `domain type ${symbol.type_name} has a Default construction path (c-default)`,
           location.line,
         ),
       );
     }
     for (const mutator of symbol.mutators) {
-      if (mutator.file !== target.tree.file) continue;
+      if (mutator.file !== target.file) continue;
       if (mutator.classification === "post-init") {
         out.push(
           finding(
             "c",
-            target.tree.file,
+            target.file,
             `domain type ${symbol.type_name} has a post-init method ${mutator.method_name} (c-post-init)`,
             mutator.line,
           ),
@@ -154,7 +149,7 @@ function isRepositoryArgument(
   target: InspectionTarget,
   context: InspectionContext,
 ): boolean {
-  if (target.classification.effective_layer !== "use-case" || !call.forwarded_argument_calls.length || !target.tree) {
+  if (target.classification.effective_layer !== "use-case" || !call.forwarded_argument_calls.length || !target.file) {
     return false;
   }
   return call.forwarded_argument_calls.every((span) => {
@@ -177,19 +172,19 @@ function isRepositoryArgument(
 }
 
 function ruleD(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const getterNames = context.symbols.getter_names;
   const out: FindingInput[] = [];
-  const callSites = declarationsOf(context, target.tree.file).calls;
+  const callSites = declarationsOf(context, target.file).calls;
   for (const call of callSites) {
     if (call.kind !== "method-call") continue;
     const receiver = (call.receiver_text ?? "").replace(/\s+/g, " ").trim();
     if (["self", "&self", "&mut self", "Self", "&mut  self"].includes(receiver)) continue;
     if (!getterNames.has(call.callee_text)) continue;
-    const type = context.program.receiver(target.tree.file, call);
+    const type = context.program.receiver(target.file, call);
     if (!type) {
       context.program.notes.add(
-        `syntax.unresolved: ${target.tree.file}:${call.span.start_line} getter receiver; rule d not evaluated`,
+        `syntax.unresolved: ${target.file}:${call.span.start_line} getter receiver; rule d not evaluated`,
       );
       continue;
     }
@@ -197,11 +192,11 @@ function ruleD(target: InspectionTarget, context: InspectionContext): FindingInp
       type.layer === "domain" &&
       type.methods.some((entry) => entry.method.name === call.callee_text && entry.method.returns_field_only)
     ) {
-      if (isRepositoryArgument(target.tree.file, call, callSites, target, context)) continue;
+      if (isRepositoryArgument(target.file, call, callSites, target, context)) continue;
       out.push(
         finding(
           "d",
-          target.tree.file,
+          target.file,
           `getter ${call.callee_text} called from ${target.classification.effective_layer} layer (Tell, Don't Ask)`,
           call.span.start_line,
         ),
@@ -231,10 +226,10 @@ function ruleG(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (h) execute aggregate argument -----------------------------------------
 function ruleH(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   if (context.model.status !== "available") return [];
   const out: FindingInput[] = [];
-  const file = context.program.files.get(target.tree.file);
+  const file = context.program.files.get(target.file);
   if (!file) return [];
   const check = (name: string, params: readonly ParamFact[], line: number, module: readonly string[]) => {
     if (name !== "execute") return;
@@ -251,17 +246,12 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
         context.symbols.types.some((symbol) => symbol.key === type.key && symbol.aggregate_ref !== undefined)
       ) {
         out.push(
-          finding(
-            "h",
-            target.tree?.file ?? "",
-            `execute receives aggregate ${stripped} directly; pass ids and value objects`,
-            line,
-          ),
+          finding("h", file.file, `execute receives aggregate ${stripped} directly; pass ids and value objects`, line),
         );
       }
     }
   };
-  const declared = declarationsOf(context, target.tree.file);
+  const declared = declarationsOf(context, target.file);
   for (const block of declared.impls) {
     for (const method of block.methods) check(method.name, method.params, method.line, block.module);
   }
@@ -271,38 +261,33 @@ function ruleH(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (i) use case chaining --------------------------------------------------
 function ruleI(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const out: FindingInput[] = [];
-  for (const call of declarationsOf(context, target.tree.file).calls) {
+  for (const call of declarationsOf(context, target.file).calls) {
     if (call.callee_text !== "execute" && !call.callee_text.endsWith("::execute")) continue;
     if (["self", "Self"].includes((call.receiver_text ?? "").trim())) continue;
-    const file = context.program.files.get(target.tree.file);
+    const file = context.program.files.get(target.file);
     if (!file) continue;
     const type =
       call.kind === "method-call"
-        ? context.program.receiver(target.tree.file, call)
-        : context.program.resolveType(
-            target.tree.file,
-            [...file.module, ...call.module],
-            call.callee_text.slice(0, -9),
-          );
+        ? context.program.receiver(target.file, call)
+        : context.program.resolveType(target.file, [...file.module, ...call.module], call.callee_text.slice(0, -9));
     if (!type) {
       context.program.notes.add(
-        `syntax.unresolved: ${target.tree.file}:${call.span.start_line} execute receiver; rule i not evaluated`,
+        `syntax.unresolved: ${target.file}:${call.span.start_line} execute receiver; rule i not evaluated`,
       );
       continue;
     }
     const caller = file.impls.find((block) => withinSpan(call.span, block.span));
     const callerType =
-      caller &&
-      context.program.resolveType(target.tree.file, [...file.module, ...caller.module], caller.target_type_text);
+      caller && context.program.resolveType(target.file, [...file.module, ...caller.module], caller.target_type_text);
     if (callerType?.key === type.key) continue;
     if (
       type.layer === "use-case" &&
       type.kind !== "trait" &&
       type.methods.some((entry) => !entry.trait && entry.method.name === "execute")
     ) {
-      out.push(finding("i", target.tree.file, `use case calls ${type.key}::execute`, call.span.start_line));
+      out.push(finding("i", target.file, `use case calls ${type.key}::execute`, call.span.start_line));
     }
   }
   return out;
@@ -319,26 +304,26 @@ function ruleK(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (l) query side domain / repository reference ---------------------------
 function ruleL(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   if (target.classification.cqrs_side !== "query") return [];
   const out: FindingInput[] = [];
   const isDomainOrRepo = (name: string) => context.symbols.type_names.has(name) || name.endsWith("Repository");
-  for (const use of declarationsOf(context, target.tree.file).uses) {
+  for (const use of declarationsOf(context, target.file).uses) {
     const last =
       use.path_text
         .split("::")
         .pop()
         ?.replace(/[{}\s*]/g, "") ?? "";
     if (isDomainOrRepo(last)) {
-      out.push(finding("l", target.tree.file, `query side references domain type / repository port ${last}`, use.line));
+      out.push(finding("l", target.file, `query side references domain type / repository port ${last}`, use.line));
     }
   }
   for (const symbol of context.symbols.types) {
-    if (symbol.file !== target.tree.file) continue;
+    if (symbol.file !== target.file) continue;
     for (const typeText of symbol.field_type_texts) {
       const stripped = stripType(typeText);
       if (isDomainOrRepo(stripped)) {
-        out.push(finding("l", target.tree.file, `query side references domain type / repository port ${stripped}`));
+        out.push(finding("l", target.file, `query side references domain type / repository port ${stripped}`));
       }
     }
   }
@@ -347,7 +332,7 @@ function ruleL(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (m) repository naming --------------------------------------------------
 function ruleM(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const out: FindingInput[] = [];
   const aggregates = new Set<string>();
   if (context.model.status === "available" && context.model.index) {
@@ -363,24 +348,22 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
     const stem = name.slice(0, -"Repository".length);
     return [...aggregates].some((aggregate) => stem === aggregate || stem.endsWith(aggregate));
   };
-  const declared = declarationsOf(context, target.tree.file);
+  const declared = declarationsOf(context, target.file);
   // Ports (traits): <Aggregate>Repository, free of a storage medium.
   for (const trait of declared.traits) {
     if (!trait.name.endsWith("Repository")) continue;
     if (!matchesAggregate(trait.name)) {
-      out.push(
-        finding("m", target.tree.file, `repository port ${trait.name} is not <Aggregate>Repository`, trait.line),
-      );
+      out.push(finding("m", target.file, `repository port ${trait.name} is not <Aggregate>Repository`, trait.line));
     }
     if (containsMediaWord(trait.name)) {
-      out.push(finding("m", target.tree.file, `repository port ${trait.name} names a storage medium`, trait.line));
+      out.push(finding("m", target.file, `repository port ${trait.name} names a storage medium`, trait.line));
     }
   }
   // Implementations (structs): a medium prefix is allowed; the trait carries the
   // naming contract.
   for (const decl of declared.types) {
     if (decl.name.endsWith("Repository") && !matchesAggregate(decl.name)) {
-      out.push(finding("m", target.tree.file, `repository type ${decl.name} is not <Aggregate>Repository`, decl.line));
+      out.push(finding("m", target.file, `repository type ${decl.name} is not <Aggregate>Repository`, decl.line));
     }
   }
   return out;
@@ -388,15 +371,15 @@ function ruleM(target: InspectionTarget, context: InspectionContext): FindingInp
 
 // --- (n) restoration bypass -------------------------------------------------
 function ruleN(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  if (!target.tree) return [];
+  if (!target.file) return [];
   const out: FindingInput[] = [];
-  for (const site of declarationsOf(context, target.tree.file).constructions) {
+  for (const site of declarationsOf(context, target.file).constructions) {
     if (!context.symbols.type_names.has(site.type_text)) continue;
     if (site.kind === "struct-literal" || site.kind === "update-syntax" || site.kind === "default-call") {
       out.push(
         finding(
           "n",
-          target.tree.file,
+          target.file,
           `adapter constructs ${site.type_text} via ${site.kind} instead of a full constructor`,
           site.span.start_line,
         ),
@@ -409,7 +392,7 @@ function ruleN(target: InspectionTarget, context: InspectionContext): FindingInp
         out.push(
           finding(
             "n",
-            target.tree.file,
+            target.file,
             `adapter constructs ${site.type_text} via ${site.callee_text ?? "an unknown function"} instead of a full constructor`,
             site.span.start_line,
           ),

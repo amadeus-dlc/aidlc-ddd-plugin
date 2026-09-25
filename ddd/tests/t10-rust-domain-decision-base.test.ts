@@ -301,6 +301,95 @@ ${INVOICE}`;
   expect(verdict.pass).toBe(false);
 });
 
+// --- who reports a macro the inspection cannot expand -------------------------
+
+/**
+ * One file carrying every macro shape the inspection can meet, each on its own line: an item-position
+ * call at the top level and one inside a `mod` body, an expression-position call inside a function, a
+ * non-built-in attribute macro, and the built-in attributes (`cfg`, `cfg_attr`, `derive`, `allow`,
+ * `test`) that are not macro expansion at all. What reports each shape is then read off the verdict
+ * per line, rather than per file.
+ */
+const MACRO_SHAPES = `${INVOICE}domain_modules!();
+pub mod inner {
+    inner_modules!();
+}
+pub fn compute() -> i64 {
+    let value = compute_amount!();
+    value
+}
+#[cfg(feature = "alternate")]
+mod alternate;
+#[cfg_attr(test, path = "billing.rs")]
+mod billing;
+#[my_attr]
+pub struct Tagged;
+#[derive(Clone)]
+#[allow(dead_code)]
+pub struct Builtin;
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn one() {}
+}
+`;
+
+/**
+ * The `<producer>: <file>:<line> <detail>` parts of a note that speak about `file`, split into the
+ * producer that wrote each one and the line it names. A note is read per part because that is the
+ * unit a producer contributes; the whole string says nothing about which of them reported what.
+ */
+function noteRefs(note: string | undefined, file: string): { producer: string; line: number }[] {
+  const refs: { producer: string; line: number }[] = [];
+  for (const part of (note ?? "").split("; ")) {
+    const separator = part.indexOf(": ");
+    if (separator < 0) continue;
+    const named = part.slice(separator + 2);
+    if (!named.startsWith(`${file}:`)) continue;
+    const line = Number.parseInt(named.slice(file.length + 1), 10);
+    if (Number.isNaN(line)) continue;
+    refs.push({ producer: part.slice(0, separator), line });
+  }
+  return refs;
+}
+
+function linesOf(source: string, declarations: readonly string[]): number[] {
+  return declarations.map((declaration) => lineOf(source, declaration)).sort((a, b) => a - b);
+}
+
+test("every note the macro shapes produce is written by the extractor", () => {
+  const verdict = verdictOf(domainCase("decision-base-macro-producers", { [DOMAIN]: MACRO_SHAPES }));
+  const producers = [...new Set(noteRefs(verdict.note, DOMAIN).map((ref) => ref.producer))].sort();
+  expect(producers, verdict.note).toEqual(["domain-facts.unresolved", "syntax.unresolved"]);
+});
+
+test("only the macro shapes that can hide a module declaration are refused", () => {
+  const verdict = verdictOf(domainCase("decision-base-macro-refusals", { [DOMAIN]: MACRO_SHAPES }));
+  const refused = reported(verdict, "domain-packaging.unresolved")
+    .map((entry) => entry.line)
+    .sort((a, b) => (a ?? 0) - (b ?? 0));
+  expect(refused, verdict.note).toEqual(
+    linesOf(MACRO_SHAPES, ["domain_modules!();", "inner_modules!();", "mod alternate;", "mod billing;"]),
+  );
+});
+
+test("an expression macro and a non-built-in attribute macro are reported by nobody", () => {
+  // Neither shape can hide a module declaration, so the module walk has nothing to refuse about them
+  // and the decision base is complete without them. They are the two shapes this file reports
+  // nothing at all for, which is what a reader of a verdict has to be able to tell.
+  const verdict = verdictOf(domainCase("decision-base-macro-unreported", { [DOMAIN]: MACRO_SHAPES }));
+  const silent = linesOf(MACRO_SHAPES, ["let value = compute_amount!();", "#[my_attr]"]);
+  expect(
+    noteRefs(verdict.note, DOMAIN).filter((ref) => silent.includes(ref.line)),
+    verdict.note,
+  ).toEqual([]);
+  expect(
+    verdict.findings.filter(
+      (entry) => entry.file === DOMAIN && entry.line !== undefined && silent.includes(entry.line),
+    ),
+  ).toEqual([]);
+});
+
 // --- the identifier a decision-base file is named by --------------------------
 
 /**

@@ -5,7 +5,6 @@
 
 import type { SensorRunContext } from "../runtime/context.ts";
 import type { SensorApi } from "../runtime/runtime.ts";
-import type { AnalyzerRuntime } from "../rust/analyzer.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { assembleContext, type ContextResult, type SensorConfig } from "./context.ts";
 import { rulesFor } from "./definitions.ts";
@@ -18,13 +17,12 @@ export interface Evaluation {
 }
 
 export function evaluateSensor(
-  runtime: AnalyzerRuntime,
   run: SensorRunContext,
   config: SensorConfig,
   ruleIds: readonly string[],
   api?: SensorApi,
 ): Evaluation {
-  const assembled: ContextResult = assembleContext(runtime, run, config);
+  const assembled: ContextResult = assembleContext(run, config);
   if (assembled.kind === "empty") return { findings: [], note: assembled.note };
   if (assembled.kind === "failed") {
     return { findings: assembled.findings, ...(assembled.note ? { note: assembled.note } : {}) };

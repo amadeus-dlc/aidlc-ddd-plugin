@@ -1,7 +1,7 @@
 {
   "experiment": "rust-syn",
-  "recorded_at": "2026-09-23T19:32:31.793Z",
-  "base_commit": "71f09c781d3e2c6e257b6c7d2ecec6aab6f3e1cd",
+  "recorded_at": "2026-09-25T18:30:57.466Z",
+  "base_commit": "838e60801b7fa83791af6b0d25305ec00db3a760",
   "versions": {
     "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
     "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
@@ -12,24 +12,24 @@
   "inputs": {
     "Cargo.toml": "183e750155c0816c115ad5dcacfdaf78d1159ddbf410a7e5460c2148b928a8ca",
     "Cargo.lock": "fdf89a191063769342cab95c3cec44bd647540ee8af45b1613cac72c2e686424",
-    "src/main.rs": "481ac9619db7bf4c254b903414af324aeb2b08107d19ed307a571fb8cf4b5349",
+    "src/main.rs": "76c1a10a6f0e7828e8d85675879b912b2c5206ab1afedac5a2f928b102330379",
     "src/analysis.rs": "84b7a698441bba7c9b10f73825cc9dba7f85724164584f742c6ea5c95a9ec1e6",
-    "src/domain_facts.rs": "7b9f6c2bd393b4513e0e0f34c687fb60eacbc78c572a1702b5ea61e925f5bbcb",
-    "src/domain_facts_tests.rs": "3c2a7bdac2aed3aadc0f18992a8d64d9f4561d213b5e876e7b85a90945bc56af",
+    "src/domain_facts.rs": "90ec58d5f3eef28a0bb3be8780f2086196bd113eaff071c1d3cd5203a27e34d7",
+    "src/domain_facts_tests.rs": "93b338bf499dc06ffc8ed9740678d2355ff55db8c9f00d2d541fad6b105e12f6",
     "src/state_evidence.rs": "4f4e1458143e3a5753dc3316070b6463d54da18dc711489b15df28e2fd59b177",
     "src/state_evidence_tests.rs": "159ca4d9227cdeab167b86fa7adf8ebcd831e3c6e7f5550672ee7df2af391b25",
-    "cases.json": "075b3eefa84b2919323401bfd88778ab0de2595329e8247b41179b0e3544ecfc"
+    "cases.json": "2abef3a954ac271fa8018517116f505055f2b04bc065e0e56738bcec85a2899b"
   },
-  "verifier_sha256": "7b8aa095445c6fe450972941a51e4be36b380a22483bd20cdd18ef3104549399",
+  "verifier_sha256": "bca15d7b9d584c5fd191fb1b43589b49a3d5a3aedf6663bf1fe4f0b70babcd31",
   "native": {
-    "bytes": 2391584,
-    "sha256": "87f51d4bcbccbda228a3e0a91b0ed149302db55ec2f81b1ce30d734b7cc9382c",
+    "bytes": 2491440,
+    "sha256": "3d038e05f6648424066201a3d83db9cd1bae5660fe6b0f6c3c5236815ab3f1fe",
     "relocated_empty_path": true,
     "binary_dependencies": [
       "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)"
     ],
-    "build_ms": 31,
-    "relocated_warmup_ms": 311,
+    "build_ms": 45,
+    "relocated_warmup_ms": 397,
     "first_batch_ms": 3,
     "warm_batch_median_ms": 2,
     "timing_scope": "local warm filesystem; includes process startup and JSON; no performance comparison"
@@ -42,7 +42,6 @@
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -67,7 +66,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "public-field",
@@ -76,9 +75,6 @@
       "fields": [
         "Invoice.amount@2"
       ],
-      "tree_sitter_fields": [
-        "Invoice.amount@2"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -88,7 +84,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "crate-visible-field",
@@ -97,9 +93,6 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "tree_sitter_fields": [
-        "Invoice.amount@1"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -109,7 +102,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "super-visible-field",
@@ -118,9 +111,6 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "tree_sitter_fields": [
-        "Invoice.amount@1"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -130,7 +120,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "scoped-visible-field",
@@ -139,9 +129,6 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "tree_sitter_fields": [
-        "Invoice.amount@1"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -151,14 +138,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "private-tuple",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -168,7 +154,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "public-tuple",
@@ -177,7 +163,6 @@
       "fields": [
         "Invoice.0@1"
       ],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -187,7 +172,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "restricted-tuple",
@@ -196,7 +181,6 @@
       "fields": [
         "Invoice.0@1"
       ],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -206,7 +190,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "raw-identifier",
@@ -215,9 +199,6 @@
       "fields": [
         "Invoice.type@1"
       ],
-      "tree_sitter_fields": [
-        "Invoice.type@1"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -227,7 +208,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "unicode-and-comments",
@@ -236,9 +217,6 @@
       "fields": [
         "Invoice.合計@2"
       ],
-      "tree_sitter_fields": [
-        "Invoice.合計@2"
-      ],
       "unresolved": [],
       "compiler": [
         {
@@ -248,14 +226,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "direct-getter-and-command",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -271,21 +248,15 @@
           "returnType": "Result<(),IssueError>"
         }
       ],
-      "getter_comparison": {
-        "syn": [
-          "total"
-        ],
-        "tree_sitter": [
-          "total"
-        ]
-      }
+      "getters": [
+        "total"
+      ]
     },
     {
       "name": "explicit-return-getter",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -295,19 +266,15 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": {
-        "syn": [
-          "total"
-        ],
-        "tree_sitter": []
-      }
+      "getters": [
+        "total"
+      ]
     },
     {
       "name": "alias-and-reexport",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -323,14 +290,13 @@
           "returnType": "Outcome<()>"
         }
       ],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "associated-error",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -346,14 +312,13 @@
           "returnType": "Result<(),Self::Error>"
         }
       ],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "typed-self",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -369,14 +334,13 @@
           "returnType": null
         }
       ],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "inferred-receiver",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -386,14 +350,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "async-in-2015",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -405,14 +368,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "async-in-2018",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -422,14 +384,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "unknown-type",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -441,14 +402,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "wrong-return-type",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -460,14 +420,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "shadowed-result",
       "parsed": true,
       "state": "pass",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [],
       "compiler": [
         {
@@ -483,14 +442,13 @@
           "returnType": "Result<(),()>"
         }
       ],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "generated-public-field",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "macro-expansion"
       ],
@@ -502,7 +460,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "conditional-field",
@@ -511,9 +469,6 @@
       "fields": [
         "Invoice.amount@1"
       ],
-      "tree_sitter_fields": [
-        "Invoice.amount@1"
-      ],
       "unresolved": [
         "conditional-compilation"
       ],
@@ -525,14 +480,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "conditional-attribute",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "conditional-compilation"
       ],
@@ -544,14 +498,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "derive",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "attribute-or-derive-expansion"
       ],
@@ -563,53 +516,49 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "attribute-macro",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "attribute-or-derive-expansion"
       ],
       "compiler": [],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "named-external-module",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "external-module-not-loaded"
       ],
       "compiler": [],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "directory-external-module",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "external-module-not-loaded"
       ],
       "compiler": [],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "malformed-source",
       "parsed": false,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": null,
       "unresolved": [
         "parse-error"
       ],
@@ -621,14 +570,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "unsupported-union",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "unsupported-item"
       ],
@@ -640,14 +588,13 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     },
     {
       "name": "unstable-modifier",
       "parsed": true,
       "state": "unresolved",
       "fields": [],
-      "tree_sitter_fields": [],
       "unresolved": [
         "unsupported-modifier"
       ],
@@ -661,7 +608,7 @@
         }
       ],
       "signature_checks": [],
-      "getter_comparison": null
+      "getters": null
     }
   ],
   "actual_sensor_comparisons": [
@@ -697,14 +644,13 @@
     }
   ],
   "unverified": [
-    "full sensor parity",
+    "sensor answers for inputs the golden catalog does not carry",
     "Cargo and cross-file resolution",
     "type inference and trait solving",
     "macro expansion and cfg selection",
     "source edition selection",
     "Linux/Windows/x86_64",
     "minimum OS/Rust versions",
-    "WASM distribution",
-    "plugin installation and gate integration"
+    "WASM distribution"
   ]
 }

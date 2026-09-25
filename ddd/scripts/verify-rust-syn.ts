@@ -7,7 +7,6 @@ import { join, resolve } from "node:path";
 import cases from "../experiments/rust-syn/cases.json";
 import { runGoldenCase } from "../tests/golden/runner.ts";
 import { RUST_CASES } from "../tests/golden/rust/cases.ts";
-import { impls, initAnalyzer, parse, structs } from "../tools/ddd/lib/rust/analyzer.ts";
 
 const root = resolve(import.meta.dir, "..");
 const experiment = join(root, "experiments/rust-syn");
@@ -108,8 +107,6 @@ try {
     strictEqual(bad.stdout.length, 0);
     ok(bad.stderr.length > 0);
   }
-  const runtime = await initAnalyzer();
-  strictEqual(runtime.state, "ready");
   const rows = [];
   for (const [index, entry] of cases.entries()) {
     const result = response.files[index];
@@ -124,24 +121,6 @@ try {
     const unresolved = [...new Set(result.unresolved.map((item) => item.reason))].sort();
     deepStrictEqual(unresolved, [...(entry.unresolved ?? [])].sort(), entry.name);
     strictEqual(result.field_inspection.state, unresolved.length ? "unresolved" : fields.length ? "violation" : "pass");
-    const tree = parse(runtime, path, new TextEncoder().encode(entry.source));
-    // `treeSitterFields` / `treeSitterGetters` record what the tree-sitter extractor reports, which
-    // is a different question from what the sensor decides: rules (a) and (d) read the native facts
-    // (T-10-02), so a case can be a violation at the gate while this extractor still reports none.
-    const treeSitterFields = structs(tree)
-      .filter((type) => type.kind === "struct")
-      .flatMap((type) =>
-        type.fields
-          .filter((field) => field.visibility !== "private")
-          .map((field) => `${canonical(type.name)}.${canonical(field.name)}@${field.span.start_line}`),
-      )
-      .sort();
-    if (entry.compare !== false)
-      deepStrictEqual(
-        treeSitterFields,
-        [...(entry.treeSitterFields ?? entry.fields)].sort(),
-        `${entry.name}: tree-sitter fields`,
-      );
     if (entry.getters) {
       deepStrictEqual(
         result.facts.methods
@@ -150,12 +129,6 @@ try {
           .sort(),
         entry.getters,
       );
-      const treeSitterGetters = impls(tree)
-        .flatMap((block) =>
-          block.methods.filter((method) => method.body_shape === "returns-field-only").map((method) => method.name),
-        )
-        .sort();
-      deepStrictEqual(treeSitterGetters, entry.treeSitterGetters ?? entry.getters);
     }
     for (const method of entry.methods ?? []) {
       const fact = result.facts.methods.find((candidate) => candidate.name === method.name);
@@ -229,21 +202,21 @@ try {
       parsed: result.parsed,
       state: result.field_inspection.state,
       fields,
-      tree_sitter_fields: entry.compare === false ? null : treeSitterFields,
       unresolved,
       compiler,
       signature_checks: entry.methods ?? [],
-      getter_comparison: entry.getters
-        ? { syn: entry.getters, tree_sitter: entry.treeSitterGetters ?? entry.getters }
-        : null,
+      getters: entry.getters ?? null,
     });
   }
 
   // Use the actual source sensor on existing golden inputs and on the same inputs with the two
   // forms rules (a) and (d) used to miss. This is not a whole-sensor parity claim. The sensor
   // counts and the spike extractor's own candidate count answer different questions and are
-  // recorded apart: since T-10-02 the gate decides (a) and (d) on the native facts, so a case is a
-  // violation at the gate while the tree-sitter extractor still reports nothing for it.
+  // recorded apart: the gate decides (a) from the declaration's members and (d) at the call, while
+  // this extractor reports only the field candidates of the one file it was handed.
+  //
+  // Which experiment cases are also run through the sensor is read from this table: an entry here is
+  // a form whose gate answer is worth recording beside the extractor's own.
   const SENSOR_EXPECTATIONS: Record<string, { sensor_a: number; sensor_d: number; syn_fields: number }> = {
     "clean-domain": { sensor_a: 0, sensor_d: 0, syn_fields: 0 },
     "violation-a": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
@@ -260,10 +233,12 @@ try {
     clean,
     violation,
     ...cases
-      .filter((entry) => entry.treeSitterFields || entry.treeSitterGetters)
+      .filter((entry) => Object.hasOwn(SENSOR_EXPECTATIONS, entry.name))
       .map((entry) => {
+        // The filter admits only a name this table carries. The guard the loop below applies to every
+        // entry is the one that can fail, because `clean` and `violation` reach it from RUST_CASES
+        // rather than through this filter.
         const expected = SENSOR_EXPECTATIONS[entry.name];
-        ok(expected, `${entry.name}: no sensor expectation recorded`);
         const rules = [...(expected.sensor_a ? ["a"] : []), ...(expected.sensor_d ? ["d"] : [])];
         return {
           ...clean,
@@ -348,8 +323,12 @@ try {
     deterministic_output: true,
     cases: rows,
     actual_sensor_comparisons: goldenRows,
+    // What this backend has still not been measured on. T-10-06 removed one entry and narrowed
+    // another; [rust-syn spike](../docs/developers/rust-syn-spike.md) records the command and
+    // output each change was read from. An entry leaves this list only on a measurement, never on
+    // an argument that a measurement would probably pass.
     unverified: [
-      "full sensor parity",
+      "sensor answers for inputs the golden catalog does not carry",
       "Cargo and cross-file resolution",
       "type inference and trait solving",
       "macro expansion and cfg selection",
@@ -357,7 +336,6 @@ try {
       "Linux/Windows/x86_64",
       "minimum OS/Rust versions",
       "WASM distribution",
-      "plugin installation and gate integration",
     ],
   };
   const output = `${JSON.stringify(report, null, 2)}\n`;
