@@ -313,11 +313,12 @@ function reportedPairs(stdout: string): [string, string, number | undefined][] {
 /** What a claim outside every module root is reported as, whether or not it could be read. */
 const ORPHAN_UNREACHABLE: [string, string, number | undefined] = ["domain-packaging.unresolved", ORPHAN, undefined];
 
-// Dropping read permission does nothing for a superuser, whose read succeeds regardless, so the two
-// tests below either observe the unreadable claim or do not run at all.
-const RUNNING_AS_SUPERUSER = process.getuid?.() === 0;
+// Dropping read permission does nothing for a superuser, whose read succeeds regardless, nor on
+// Windows, where `chmodSync` changes only the write permission. The two tests below therefore either
+// observe the unreadable claim or do not run at all.
+const READ_PERMISSION_UNENFORCED = process.getuid?.() === 0 || process.platform === "win32";
 
-test.skipIf(RUNNING_AS_SUPERUSER)("a claimed file the inspection cannot read is inspected without it", () => {
+test.skipIf(READ_PERMISSION_UNENFORCED)("a claimed file the inspection cannot read is inspected without it", () => {
   const readable = spawnSensor(toolsDir, orphanClaimCase("domain-facts-orphan-readable", true));
   expect(readable.exitCode, readable.stderr).toBe(0);
   expect(reportedPairs(readable.stdout)).toEqual([["a", ORPHAN, 2], ORPHAN_UNREACHABLE]);
@@ -331,7 +332,7 @@ test.skipIf(RUNNING_AS_SUPERUSER)("a claimed file the inspection cannot read is 
   expect(reportedPairs(sealed.stdout)).toEqual([ORPHAN_UNREACHABLE]);
 });
 
-test.skipIf(RUNNING_AS_SUPERUSER)("the same unreadable claim is still a file the rules have to decide", () => {
+test.skipIf(READ_PERMISSION_UNENFORCED)("the same unreadable claim is still a file the rules have to decide", () => {
   // The test above shows the gate answers this claim while the extractor is installed. Here the same
   // claim is the whole claim set and the extractor is not installed, so a verdict would mean the
   // unreadable claim had been dropped from what the rules decide over — which is what separates it

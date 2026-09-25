@@ -87,4 +87,4 @@ bun run prepare:native
 
 ## 対象外
 
-TypeScript 側抽出器の配布と、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、T-10-03 では `ddd-rust-domain` が報告する残りの規則と、その packaging 規則が読むパッケージ解決・モジュール解決を接続しました。T-10-04 では、`ddd-rust-use-case` と `ddd-rust-interface-adapter` だけが報告する4件の規則（`h`・`l`・`m`・`n`）を接続し、T-10-05 ではモジュール配置検査とその CI 用入口を、両方のプロジェクト配置で同じ事実により判定するようにしました。T-10-06 で tree-sitter 資産を撤去したため、出荷されるどの Rust センサーもこの抽出器だけを読みます。そのcrateが直接宣言する第三者クレートは、実行ファイルと並んで同梱される [`bin/NOTICE.md`](../../tools/ddd/bin/NOTICE.md) に記載しています。それがビルドの解決する集合全体ではないことは、同ファイル自身が明記しています。
+TypeScript 側抽出器の配布と、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、T-10-03 では `ddd-rust-domain` が報告する残りの規則と、その packaging 規則が読むパッケージ解決・モジュール解決を接続しました。T-10-04 では、`ddd-rust-use-case` と `ddd-rust-interface-adapter` だけが報告する4件の規則（`h`・`l`・`m`・`n`）を接続し、T-10-05 ではモジュール配置検査とその CI 用入口を、両方のプロジェクト配置で同じ事実により判定するようにしました。T-10-06 で tree-sitter 資産を撤去したため、出荷されるどの Rust センサーもこの抽出器だけを読みます。実行ファイルがリンクする第三者クレートとそのライセンスは、実行ファイルと並んで同梱される [`bin/NOTICE.md`](../../tools/ddd/bin/NOTICE.md) に記載しています。
