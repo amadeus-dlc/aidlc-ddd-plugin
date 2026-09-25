@@ -22,6 +22,14 @@ afterEach(() => {
   for (const root of temporary.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+/**
+ * The tests that launch the installed extractor hash a multi-megabyte file and spawn two processes,
+ * which is work the default per-test budget can cut off in a full run even though it measures in
+ * milliseconds on its own. The budget is stated so those tests report what the extractor answered
+ * rather than that the runner stopped waiting, and stays bounded so a hung launch still fails.
+ */
+const LAUNCH_TIMEOUT_MS = 30_000;
+
 /** An extractor that consumes the request and answers with exactly `answer`. */
 function stub(answer: string): string {
   const root = mkdtempSync(join(tmpdir(), "ddd-domain-facts-stub-"));
@@ -37,6 +45,7 @@ const SOURCE = `pub struct Invoice(pub u64);
 pub trait Shown { fn shown(&self) -> u64; }
 impl Shown for Invoice { fn shown(&self) -> u64 { self.0 } }
 impl Invoice { pub fn total(&self) -> u64 { return self.0; } pub fn doubled(&self) -> u64 { self.0 * 2 } }
+pub fn restore(raw: u64) -> Invoice { Invoice(raw) }
 `;
 const REQUEST: RustSourceFile[] = [{ file: LIB, source: SOURCE }];
 
@@ -44,8 +53,12 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
   return readDomainFacts(stub(answer), sources);
 }
 
+/** This protocol, and the one it replaced: an installation left on the latter must be refused. */
+const PROTOCOL_VERSION = 6;
+const REPLACED_PROTOCOL_VERSION = 5;
+
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
-function record(overrides: Record<string, unknown> = {}): string {
+function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTOCOL_VERSION): string {
   const body = {
     path: LIB,
     parsed: true,
@@ -55,6 +68,7 @@ function record(overrides: Record<string, unknown> = {}): string {
     types: [],
     traits: [],
     impls: [],
+    functions: [],
     uses: [],
     aliases: [],
     constructions: [],
@@ -63,44 +77,55 @@ function record(overrides: Record<string, unknown> = {}): string {
     item_macros: [],
     ...overrides,
   };
-  return `echo '${JSON.stringify({ protocol_version: 5, files: [body] })}'`;
+  return `echo '${JSON.stringify({ protocol_version: protocolVersion, files: [body] })}'`;
 }
 
 const SPAN = { start_line: 1, start_col: 1, end_line: 1, end_col: 2 };
 const METHOD = { name: "total", receiver: "ref-self", params: [], return_type_text: null, line: 4 };
+const FUNCTION = { module: [], name: "restore", params: [{ name: "raw", type_text: "u64" }], line: 5 };
 
-test("the installed extractor answers a batch with the declarations the rules decide on", async () => {
-  const outcome = await classifyDomainFactExtractor();
-  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
-  if (outcome.kind !== "ready") return;
-  const result = readDomainFacts(outcome.binaryPath, REQUEST);
-  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
-  if (result.kind !== "facts") return;
-  const declared = result.facts.files.get(LIB);
-  expect(declared).toBeDefined();
-  if (!declared) return;
-  expect(declared.publicMembers).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
-  // A tuple element is reached by position, so the type declares no field a rule resolves through.
-  expect(declared.types).toEqual([{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [] }]);
-  expect(declared.traits).toEqual([{ name: "Shown", module: [], methods: ["shown"] }]);
-  // The trait implementation is a separate block, so rule (d) can leave it out of the getter set.
-  expect(
-    declared.impls.map((block) => [
-      block.trait_text ?? null,
-      block.methods.map((method) => [method.name, method.receiver, method.returns_field_only, method.line]),
-    ]),
-  ).toEqual([
-    ["Shown", [["shown", "ref-self", true, 3]]],
-    [
-      null,
+test(
+  "the installed extractor answers a batch with the declarations the rules decide on",
+  async () => {
+    const outcome = await classifyDomainFactExtractor();
+    expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+    if (outcome.kind !== "ready") return;
+    const result = readDomainFacts(outcome.binaryPath, REQUEST);
+    expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+    if (result.kind !== "facts") return;
+    const declared = result.facts.files.get(LIB);
+    expect(declared).toBeDefined();
+    if (!declared) return;
+    expect(declared.publicMembers).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
+    // A tuple element is reached by position, so the type declares no field a rule resolves through.
+    // The line is what a finding against the declaration sends a reader to.
+    expect(declared.types).toEqual([{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [], line: 1 }]);
+    expect(declared.traits).toEqual([{ name: "Shown", module: [], methods: ["shown"], line: 2 }]);
+    // A function outside an impl block carries the same parameter decision an impl method carries,
+    // so rule (h) reads both from this one answer rather than from a second parse.
+    expect(declared.functions).toEqual([
+      { module: [], name: "restore", params: [{ name: "raw", type_text: "u64" }], line: 5 },
+    ]);
+    // The trait implementation is a separate block, so rule (d) can leave it out of the getter set.
+    expect(
+      declared.impls.map((block) => [
+        block.trait_text ?? null,
+        block.methods.map((method) => [method.name, method.receiver, method.returns_field_only, method.line]),
+      ]),
+    ).toEqual([
+      ["Shown", [["shown", "ref-self", true, 3]]],
       [
-        ["total", "ref-self", true, 4],
-        ["doubled", "ref-self", false, 4],
+        null,
+        [
+          ["total", "ref-self", true, 4],
+          ["doubled", "ref-self", false, 4],
+        ],
       ],
-    ],
-  ]);
-  expect(result.facts.notes).toEqual([]);
-});
+    ]);
+    expect(result.facts.notes).toEqual([]);
+  },
+  LAUNCH_TIMEOUT_MS,
+);
 
 /**
  * The line a finding sends a reader to is the line of the file on disk. A shebang is the one prefix
@@ -109,53 +134,61 @@ test("the installed extractor answers a batch with the declarations the rules de
  * than past it. It is observed here, against the installed file, because a fix to the extractor
  * source that is not rebuilt into `tools/ddd/bin` would leave every gate running the old answer.
  */
-test("the installed extractor reports the line of the original file, not of what it parsed", async () => {
-  const outcome = await classifyDomainFactExtractor();
-  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
-  if (outcome.kind !== "ready") return;
-  const file = "packages/domain/billing-domain/src/script.rs";
-  const source = `#!/usr/bin/env rust-script\npub struct Invoice { #[cfg(feature = "x")] pub amount: u64 }\n`;
-  const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
-  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
-  if (result.kind !== "facts") return;
-  expect(result.facts.files.get(file)?.publicMembers).toEqual([{ typeName: "Invoice", name: "amount", line: 2 }]);
-  expect(result.facts.notes).toEqual([`domain-facts.unresolved: ${file}:2 conditional-compilation`]);
-});
+test(
+  "the installed extractor reports the line of the original file, not of what it parsed",
+  async () => {
+    const outcome = await classifyDomainFactExtractor();
+    expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+    if (outcome.kind !== "ready") return;
+    const file = "packages/domain/billing-domain/src/script.rs";
+    const source = `#!/usr/bin/env rust-script\npub struct Invoice { #[cfg(feature = "x")] pub amount: u64 }\n`;
+    const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
+    expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+    if (result.kind !== "facts") return;
+    expect(result.facts.files.get(file)?.publicMembers).toEqual([{ typeName: "Invoice", name: "amount", line: 2 }]);
+    expect(result.facts.notes).toEqual([`domain-facts.unresolved: ${file}:2 conditional-compilation`]);
+  },
+  LAUNCH_TIMEOUT_MS,
+);
 
 /**
  * A text fact is the slice of source it covers rather than re-printed tokens, because the rule
  * layer matches it against the shapes a reader writes. Re-printing would separate those tokens and
  * stop every one of those matches.
  */
-test("the installed extractor reports text as the source writes it, not as tokens", async () => {
-  const outcome = await classifyDomainFactExtractor();
-  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
-  if (outcome.kind !== "ready") return;
-  const file = "packages/domain/billing-domain/src/text.rs";
-  const source = `use crate::billing::{Invoice, Ledger as Book};
+test(
+  "the installed extractor reports text as the source writes it, not as tokens",
+  async () => {
+    const outcome = await classifyDomainFactExtractor();
+    expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+    if (outcome.kind !== "ready") return;
+    const file = "packages/domain/billing-domain/src/text.rs";
+    const source = `use crate::billing::{Invoice, Ledger as Book};
 #[derive(Clone, serde::Serialize)]
 pub struct Batch { entries: Box<Vec<Invoice>> }
 type Alias = Option<Invoice>;
 fn build() -> Batch { Batch { entries: crate::billing::Invoice::all() } }
 `;
-  const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
-  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
-  if (result.kind !== "facts") return;
-  const declared = result.facts.files.get(file);
-  expect(declared?.uses.map((entry) => entry.path_text)).toEqual(["crate::billing::{Invoice, Ledger as Book}"]);
-  expect(declared?.types[0]?.derives).toEqual(["Clone", "serde::Serialize"]);
-  expect(declared?.types[0]?.fields.map((field) => field.type_text)).toEqual(["Box<Vec<Invoice>>"]);
-  expect(declared?.aliases.map((entry) => entry.type_text)).toEqual(["Option<Invoice>"]);
-  expect(declared?.constructions.map((entry) => [entry.kind, entry.type_text])).toEqual([
-    ["struct-literal", "Batch"],
-    ["associated-call", "crate::billing::Invoice"],
-  ]);
-});
+    const result = readDomainFacts(outcome.binaryPath, [{ file, source }]);
+    expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+    if (result.kind !== "facts") return;
+    const declared = result.facts.files.get(file);
+    expect(declared?.uses.map((entry) => entry.path_text)).toEqual(["crate::billing::{Invoice, Ledger as Book}"]);
+    expect(declared?.types[0]?.derives).toEqual(["Clone", "serde::Serialize"]);
+    expect(declared?.types[0]?.fields.map((field) => field.type_text)).toEqual(["Box<Vec<Invoice>>"]);
+    expect(declared?.aliases.map((entry) => entry.type_text)).toEqual(["Option<Invoice>"]);
+    expect(declared?.constructions.map((entry) => [entry.kind, entry.type_text])).toEqual([
+      ["struct-literal", "Batch"],
+      ["associated-call", "crate::billing::Invoice"],
+    ]);
+  },
+  LAUNCH_TIMEOUT_MS,
+);
 
 test("a file the extractor could not parse carries no declarations, and says why", () => {
   const result = answered(
     `echo '${JSON.stringify({
-      protocol_version: 5,
+      protocol_version: PROTOCOL_VERSION,
       files: [{ path: LIB, parsed: false, unresolved: [{ reason: "syntax-error", line: 1 }] }],
     })}'`,
   );
@@ -186,9 +219,13 @@ const REFUSED: [string, string][] = [
   ["the answer is not JSON", "echo 'not json'"],
   ["the answer is empty", "true"],
   ["the answer is another protocol", `echo '${JSON.stringify({ protocol_version: 2, files: [] })}'`],
+  // The protocol this one replaced answers the same shape under a version this adapter no longer
+  // reads, so an installation left on it stops the inspection instead of deciding on stale facts.
+  // The record it carries is complete, so the version is the only thing left to refuse it for.
+  ["the answer is the protocol this one replaced", record({}, REPLACED_PROTOCOL_VERSION)],
   [
     "the answer covers fewer files than were asked about",
-    `echo '${JSON.stringify({ protocol_version: 5, files: [] })}'`,
+    `echo '${JSON.stringify({ protocol_version: PROTOCOL_VERSION, files: [] })}'`,
   ],
   ["the answer names a file that was not asked about", record({ path: "packages/domain/billing-domain/src/other.rs" })],
   ["the answer does not say whether the file is auxiliary", record({ auxiliary: undefined })],
@@ -200,10 +237,16 @@ const REFUSED: [string, string][] = [
     "a member carries a line that is not a whole number",
     record({ members: [{ type: "Invoice", member: "0", line: 1.5 }] }),
   ],
-  ["a type carries no kind", record({ types: [{ name: "Invoice", module: [], fields: [], derives: [] }] })],
+  ["a type carries no kind", record({ types: [{ name: "Invoice", module: [], fields: [], derives: [], line: 1 }] })],
   [
     "a type carries a kind this protocol does not name",
-    record({ types: [{ name: "Invoice", kind: "union", module: [], fields: [], derives: [] }] }),
+    record({ types: [{ name: "Invoice", kind: "union", module: [], fields: [], derives: [], line: 1 }] }),
+  ],
+  // A declaration a rule reports on is reported at a line, so a declaration without one cannot be
+  // handed to a reader and cannot be told apart from another declaration of the same name.
+  [
+    "a type carries no line",
+    record({ types: [{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [] }] }),
   ],
   [
     "a field carries a visibility this protocol does not name",
@@ -214,12 +257,19 @@ const REFUSED: [string, string][] = [
           kind: "struct",
           module: [],
           derives: [],
+          line: 1,
           fields: [{ name: "id", visibility: "open", type_text: "u64", line: 1 }],
         },
       ],
     }),
   ],
-  ["a trait carries no method list", record({ traits: [{ name: "Shown", module: [] }] })],
+  ["a trait carries no method list", record({ traits: [{ name: "Shown", module: [], line: 2 }] })],
+  ["a trait carries no line", record({ traits: [{ name: "Shown", module: [], methods: [] }] })],
+  ["the answer carries no function list", record({ functions: undefined })],
+  ["a function carries no line", record({ functions: [{ ...FUNCTION, line: undefined }] })],
+  // An absent parameter list reads as a function that takes nothing, which is the answer a rule
+  // reading those parameters must never be given in place of the ones it could not be told.
+  ["a function carries no parameter list", record({ functions: [{ ...FUNCTION, params: undefined }] })],
   [
     "an impl carries no span, so nothing built inside it can be told from outside",
     record({ impls: [{ module: [], target_type_text: "Invoice", trait_text: null, methods: [] }] }),
@@ -317,30 +367,34 @@ test.each(REFUSED)("the batch is unavailable, not empty, when %s", (_label, answ
 // A project's sources can together exceed one request while every file fits in one. Facts are per
 // file, so the sources are sent in as many requests as they need and the answers are joined; the
 // size of a project never turns into a stopped gate by itself.
-test("sources that together exceed one request are sent in several and answered as one", async () => {
-  const outcome = await classifyDomainFactExtractor();
-  expect(outcome.kind, "run bun run prepare:native").toBe("ready");
-  if (outcome.kind !== "ready") return;
-  const filler = `// ${"x".repeat(78)}\n`.repeat(40 * 1024);
-  const sources = [0, 1, 2].map((index) => ({
-    file: `packages/domain/billing-domain/src/part${index}.rs`,
-    source: `pub struct Part${index}(pub u64);\n${filler}`,
-  }));
-  expect(Buffer.byteLength(JSON.stringify(sources))).toBeGreaterThan(8 * 1024 * 1024);
-  let between = 0;
-  const result = readDomainFacts(outcome.binaryPath, sources, () => {
-    between += 1;
-  });
-  expect(result.kind === "unavailable" ? result.detail : "").toBe("");
-  if (result.kind !== "facts") return;
-  expect([...result.facts.files.keys()].sort()).toEqual(sources.map((entry) => entry.file));
-  for (const [index, entry] of sources.entries())
-    expect(result.facts.files.get(entry.file)?.publicMembers).toEqual([
-      { typeName: `Part${index}`, name: "0", line: 1 },
-    ]);
-  // The caller's own limits are consulted between requests, never in the middle of one.
-  expect(between).toBeGreaterThan(0);
-});
+test(
+  "sources that together exceed one request are sent in several and answered as one",
+  async () => {
+    const outcome = await classifyDomainFactExtractor();
+    expect(outcome.kind, "run bun run prepare:native").toBe("ready");
+    if (outcome.kind !== "ready") return;
+    const filler = `// ${"x".repeat(78)}\n`.repeat(40 * 1024);
+    const sources = [0, 1, 2].map((index) => ({
+      file: `packages/domain/billing-domain/src/part${index}.rs`,
+      source: `pub struct Part${index}(pub u64);\n${filler}`,
+    }));
+    expect(Buffer.byteLength(JSON.stringify(sources))).toBeGreaterThan(8 * 1024 * 1024);
+    let between = 0;
+    const result = readDomainFacts(outcome.binaryPath, sources, () => {
+      between += 1;
+    });
+    expect(result.kind === "unavailable" ? result.detail : "").toBe("");
+    if (result.kind !== "facts") return;
+    expect([...result.facts.files.keys()].sort()).toEqual(sources.map((entry) => entry.file));
+    for (const [index, entry] of sources.entries())
+      expect(result.facts.files.get(entry.file)?.publicMembers).toEqual([
+        { typeName: `Part${index}`, name: "0", line: 1 },
+      ]);
+    // The caller's own limits are consulted between requests, never in the middle of one.
+    expect(between).toBeGreaterThan(0);
+  },
+  LAUNCH_TIMEOUT_MS,
+);
 
 test("a file larger than one request is refused before anything is sent, and is named", () => {
   const oversized = [{ file: LIB, source: "a".repeat(9 * 1024 * 1024) }];

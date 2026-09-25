@@ -15,13 +15,13 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # the build for one platform
 
 `<platform-key>` is `${process.platform}-${process.arch}`, for example `darwin-arm64`. [`manifest.ts`](../../tools/ddd/lib/rust/native/manifest.ts) resolves that path relative to itself, so the same relative location holds in the source tree, in `dist/<harness>/` and in an installed project.
 
-[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts), [`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts) and [`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) all resolve their default launch path through that module, so none carries an installation path of its own. Each entry keeps its own protocol version — 3 for the error contract, 2 for state exposure, 5 for domain facts — and the manifest records none of them: the protocol numbers and the extractor and syn versions stay in the code that checks them.
+[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts), [`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts) and [`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) all resolve their default launch path through that module, so none carries an installation path of its own. Each entry keeps its own protocol version — 3 for the error contract, 2 for state exposure, 6 for domain facts — and the manifest records none of them: the protocol numbers and the extractor and syn versions stay in the code that checks them.
 
 | Protocol | Version flag | `protocol_version` | Read by |
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | the operation error-set comparison |
 | `state-exposure/1` | `--state-exposure-version` | 2 | the state-exposure inspection |
-| `domain-facts/1` | `--domain-facts-version` | 5 | every rule `ddd-rust-domain` reports, and the program and module resolution the other Rust gates and the module walk are built on |
+| `domain-facts/1` | `--domain-facts-version` | 6 | every rule `ddd-rust-domain`, `ddd-rust-use-case` and `ddd-rust-interface-adapter` report, and the program and module resolution they and the module walk are built on |
 
 A caller may still pass an explicit command to `extractRust`. That names a process to observe for a controlled verification scenario, so it is launched as given and the installed extractor is neither resolved nor verified.
 
@@ -87,4 +87,4 @@ The development commands are a separate matter. `bun run prepare:native`, `bun r
 
 ## Out of scope
 
-Distributing the TypeScript extractor and moving the Rust crate out of `experiments/rust-syn/` are not part of this change. Rules `a` and `d` were connected in T-10-02, and T-10-03 connected the rest of what `ddd-rust-domain` reports along with the package and module resolution its packaging rules read. Four of the six rules only `ddd-rust-use-case` and `ddd-rust-interface-adapter` report — `h`, `l`, `m`, `n` — still enumerate their declarations from tree-sitter trees, while resolving each candidate through the native program; `i` and `k` already decide on the native call and `use` facts. The tree-sitter assets themselves are still shipped.
+Distributing the TypeScript extractor and moving the Rust crate out of `experiments/rust-syn/` are not part of this change. Rules `a` and `d` were connected in T-10-02, T-10-03 connected the rest of what `ddd-rust-domain` reports along with the package and module resolution its packaging rules read, and T-10-04 connected the four rules only `ddd-rust-use-case` and `ddd-rust-interface-adapter` report — `h`, `l`, `m`, `n` — so every rule_id both gates report now decides on this protocol. What tree-sitter still answers for those gates is which claimed files are inspected at all and where their macro-opaque regions are. The tree-sitter assets themselves are still shipped.

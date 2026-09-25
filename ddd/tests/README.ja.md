@@ -23,8 +23,8 @@
 | u2-rust-analysis-foundation | Cargoの層判定とRust構文解析 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |
-| u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力 |
-| t10-rust-domain-facts / t10-domain-facts-contract | ネイティブ抽出器で判定する規則a・d。報告するメンバー名・序数・宣言行、抽出器を起動できない場合の各ゲートの挙動、空の事実集合として読まずに拒否する応答 |
+| u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力、規則h・l・m・nの各所見が読み手を送る行 |
+| t10-rust-domain-facts / t10-domain-facts-contract | ネイティブ抽出器で判定する規則。報告するメンバー名・序数・宣言行、implブロックの外で宣言された関数、抽出器を起動できない場合の各ゲートの挙動、空の事実集合として読まずに拒否する応答 |
 | t10-rust-domain-decision-base | ネイティブ抽出器で判定する規則b・c・gとdomain-packaging。所見が持つ行、マクロ本体・文字列・コメント内の同じ字面が何も宣言しないこと、モジュール解決の解決・未解決の対、判定元プログラムのソースを抽出器が読めない場合に空として読まずゲートを停止すること |
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |

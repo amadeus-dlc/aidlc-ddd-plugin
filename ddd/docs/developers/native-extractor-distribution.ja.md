@@ -15,13 +15,13 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 
 `<platform-key>` は `${process.platform}-${process.arch}` です（例: `darwin-arm64`）。[`manifest.ts`](../../tools/ddd/lib/rust/native/manifest.ts) は自身からの相対でこのパスを解決するため、ソースツリー、`dist/<harness>/`、導入先プロジェクトのいずれでも同じ相対位置になります。
 
-[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts)、[`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts)、[`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) は、いずれも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2、domain-facts は 5）。manifest はいずれも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
+[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts)、[`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts)、[`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) は、いずれも既定の起動パスをこのモジュール経由で解決するため、独自の設置パスを持ちません。protocol のバージョンは各入口が持ったままです（error-contract は 3、state-exposure は 2、domain-facts は 6）。manifest はいずれも記録しません。protocol 番号と抽出器・syn のバージョンは、それを検証するコード側が正本です。
 
 | protocol | 版フラグ | `protocol_version` | 読む側 |
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | 操作エラー集合の照合 |
 | `state-exposure/1` | `--state-exposure-version` | 2 | 状態公開の検査 |
-| `domain-facts/1` | `--domain-facts-version` | 5 | `ddd-rust-domain` が報告するすべての規則、および他の Rust ゲートとモジュール走査が用いるプログラム解決・モジュール解決 |
+| `domain-facts/1` | `--domain-facts-version` | 6 | `ddd-rust-domain`・`ddd-rust-use-case`・`ddd-rust-interface-adapter` が報告するすべての規則、およびそれらとモジュール走査が用いるプログラム解決・モジュール解決 |
 
 呼び出し側は `extractRust` に明示的な command を渡せます。これは制御された検証シナリオで観測する対象プロセスを指すため、渡されたまま起動し、設置済み抽出器の解決も検証も行いません。
 
@@ -87,4 +87,4 @@ bun run prepare:native
 
 ## 対象外
 
-TypeScript 側抽出器の配布と、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、T-10-03 では `ddd-rust-domain` が報告する残りの規則と、その packaging 規則が読むパッケージ解決・モジュール解決を接続しました。`ddd-rust-use-case` と `ddd-rust-interface-adapter` だけが報告する6件の規則のうち4件（`h`・`l`・`m`・`n`）は、今も宣言の列挙を tree-sitter の構文木から行い、各候補の解決はネイティブのプログラム解決で行います。`i` と `k` はすでにネイティブの呼び出し事実と `use` 事実で判定します。tree-sitter 資産自体は同梱を続けます。
+TypeScript 側抽出器の配布と、Rust crate の `experiments/rust-syn/` からの移動は、この変更の範囲外です。規則 `a`・`d` は T-10-02 で接続済みで、T-10-03 では `ddd-rust-domain` が報告する残りの規則と、その packaging 規則が読むパッケージ解決・モジュール解決を接続しました。T-10-04 では、`ddd-rust-use-case` と `ddd-rust-interface-adapter` だけが報告する4件の規則（`h`・`l`・`m`・`n`）を接続したため、両ゲートが報告するすべての rule_id がこの protocol で判定されます。この2ゲートについて tree-sitter が答えるのは、どの申告ファイルを検査対象にするかと、マクロ由来の未解析領域の位置だけです。tree-sitter 資産自体は同梱を続けます。

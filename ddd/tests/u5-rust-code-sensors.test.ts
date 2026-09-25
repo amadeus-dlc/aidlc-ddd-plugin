@@ -102,11 +102,15 @@ function buildProject(crates: Crate[], options: { model?: string; stageStatus?: 
   return root;
 }
 
-function runSensor(
-  sensor: string,
-  proj: string,
-  stage = "code-generation",
-): { pass: boolean; rules: string[]; note?: string } {
+interface Verdict {
+  pass: boolean;
+  rules: string[];
+  /** `<rule_id>@<line>` per finding, in report order: the position the gate sends a reader to. */
+  located: string[];
+  note?: string;
+}
+
+function runSensor(sensor: string, proj: string, stage = "code-generation"): Verdict {
   const output = join(proj, "aidlc/spaces/default/intents/i1/construction/u1/code-generation/code-summary.md");
   const proc = Bun.spawnSync(
     ["bun", join(toolsDir, `ddd-sensor-rust-${sensor}.ts`), "--stage", stage, "--output-path", output],
@@ -117,12 +121,47 @@ function runSensor(
   );
   const stdout = proc.stdout.toString().trim();
   if (!stdout) throw new Error(`no verdict (exit ${proc.exitCode}): ${proc.stderr.toString()}`);
-  const verdict = JSON.parse(stdout) as { pass: boolean; findings: { rule_id: string }[]; note?: string };
+  const verdict = JSON.parse(stdout) as {
+    pass: boolean;
+    findings: { rule_id: string; line?: number }[];
+    note?: string;
+  };
   return {
     pass: verdict.pass,
     rules: verdict.findings.map((f) => f.rule_id),
+    located: verdict.findings.map((f) => `${f.rule_id}@${f.line ?? "-"}`),
     ...(verdict.note ? { note: verdict.note } : {}),
   };
+}
+
+const USE_CASE_LIB = "packages/use-case/billing-use-case/src/lib.rs";
+
+/** A use-case crate holding `lib`, over a domain crate whose only aggregate type is `Invoice`. */
+function useCaseProject(lib: string): string {
+  return buildProject([
+    { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+    { path: "packages/use-case/billing-use-case", name: "billing-use-case", lib, deps: ["billing-domain"] },
+  ]);
+}
+
+/** An interface-adapter crate holding `lib`, with no other crate in the workspace. */
+function adapterProject(lib: string): string {
+  return buildProject([
+    { path: "packages/interface-adapter/billing-interface-adapter", name: "billing-interface-adapter", lib },
+  ]);
+}
+
+/** A query-side crate holding `lib`, over a domain crate whose only aggregate type is `Invoice`. */
+function queryProject(lib: string): string {
+  return buildProject([
+    { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+    {
+      path: "packages/query/use-case/billing-query-use-case",
+      name: "billing-query-use-case",
+      lib,
+      deps: ["billing-domain"],
+    },
+  ]);
 }
 
 const DOMAIN_CLEAN = `pub struct Invoice {
@@ -187,11 +226,52 @@ describe("ddd-rust-domain", () => {
 describe("ddd-rust-use-case", () => {
   test("reports an aggregate argument to execute (h)", () => {
     const lib = `use billing_domain::Invoice;\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn execute(&self, invoice: Invoice) {}\n}\n`;
-    const proj = buildProject([
-      { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
-      { path: "packages/use-case/billing-use-case", name: "billing-use-case", lib, deps: ["billing-domain"] },
-    ]);
-    expect(runSensor("use-case", proj).rules).toContain("h");
+    expect(runSensor("use-case", useCaseProject(lib)).located).toEqual(["h@4"]);
+  });
+
+  /**
+   * A function declaring `execute` outside an impl block carries the same argument decision an impl
+   * method carries. Four positions are exercised here, because a declaration set that misses one of
+   * them turns its finding into a silent pass.
+   */
+  test.each([
+    ["at the top level", "use billing_domain::Invoice;\npub fn execute(invoice: Invoice) {}\n", "h@2"],
+    [
+      "inside an inline module",
+      "use billing_domain::Invoice;\npub mod inner {\n    use super::Invoice;\n    pub fn execute(invoice: Invoice) {}\n}\n",
+      "h@4",
+    ],
+    [
+      "inside another function's body",
+      "use billing_domain::Invoice;\npub fn outer() {\n    fn execute(invoice: Invoice) {}\n}\n",
+      "h@3",
+    ],
+    [
+      "as a trait method that writes a body",
+      "use billing_domain::Invoice;\npub trait Runner {\n    fn execute(&self, invoice: Invoice) {}\n}\n",
+      "h@3",
+    ],
+  ])("reports an aggregate argument to an execute declared %s (h)", (_label, lib, expected) => {
+    expect(runSensor("use-case", useCaseProject(lib)).located).toEqual([expected]);
+  });
+
+  /** A trait method without a body binds no parameter this rule has an argument to decide on. */
+  test("does not report a trait method that declares no body (h)", () => {
+    const lib = "use billing_domain::Invoice;\npub trait Runner {\n    fn execute(&self, invoice: Invoice);\n}\n";
+    const result = runSensor("use-case", useCaseProject(lib));
+    expect(result.located).toEqual([]);
+    expect(result.pass).toBe(true);
+  });
+
+  /**
+   * An unexpanded macro can declare an `execute` no answer here can see. It produces no finding, and
+   * the reason it produces none is carried to the reader rather than left out of the verdict.
+   */
+  test("does not report an execute an unexpanded macro may declare, and says the expansion is missing (h)", () => {
+    const lib = "use billing_domain::Invoice;\nmake_use_case!{ fn execute(invoice: Invoice) {} }\n";
+    const result = runSensor("use-case", useCaseProject(lib));
+    expect(result.located).toEqual([]);
+    expect(result.note ?? "").toContain(`domain-facts.unresolved: ${USE_CASE_LIB}:2 macro-expansion`);
   });
 
   test("reports use-case chaining (i)", () => {
@@ -202,12 +282,28 @@ describe("ddd-rust-use-case", () => {
 });
 
 describe("ddd-rust-interface-adapter", () => {
+  /**
+   * A finding against a declaration sends a reader to the line the declaration starts on. The
+   * attributes written above it are not part of that declaration and must not move the line.
+   */
   test("reports a repository trait with a medium word (m)", () => {
-    const lib = "pub trait DynamoDbInvoiceRepository {}\n";
-    const proj = buildProject([
-      { path: "packages/interface-adapter/billing-interface-adapter", name: "billing-interface-adapter", lib },
-    ]);
-    expect(runSensor("interface-adapter", proj).rules).toContain("m");
+    const lib = '#[doc = "the port"]\npub trait DynamoDbInvoiceRepository {}\n';
+    expect(runSensor("interface-adapter", adapterProject(lib)).located).toEqual(["m@2"]);
+  });
+
+  test("reports a repository port trait that does not name its aggregate (m)", () => {
+    const lib = "pub trait InvoiceRepository {}\npub trait PaymentRepository {}\n";
+    expect(runSensor("interface-adapter", adapterProject(lib)).located).toEqual(["m@2"]);
+  });
+
+  /**
+   * Port traits and repository types are two separate declaration sets. A struct and an enum both
+   * declare a repository type, so both are read from the set the implementations come from.
+   */
+  test("reports a repository struct or enum that does not name its aggregate (m)", () => {
+    const lib =
+      "pub trait InvoiceRepository {}\n#[derive(Clone)]\n#[allow(dead_code)]\npub struct PaymentRepository;\npub enum LedgerRepository { Empty }\n";
+    expect(runSensor("interface-adapter", adapterProject(lib)).located).toEqual(["m@4", "m@5"]);
   });
 
   test("reports a restoration bypass (n)", () => {
@@ -221,6 +317,27 @@ describe("ddd-rust-interface-adapter", () => {
         deps: ["billing-domain"],
       },
     ]);
-    expect(runSensor("interface-adapter", proj).rules).toContain("n");
+    expect(runSensor("interface-adapter", proj).located).toEqual(["n@2"]);
+  });
+
+  test("reports a query-side domain import (l)", () => {
+    const lib = "#[allow(unused_imports)]\nuse billing_domain::Invoice;\npub fn read() -> u8 { 0 }\n";
+    expect(runSensor("interface-adapter", queryProject(lib)).located).toEqual(["l@2"]);
+  });
+
+  /**
+   * Rule `l` matches the literal text after the last `::`, so a glob, a rename and a multi-name
+   * group each leave it a last segment that matches no domain type — even though the rename and
+   * the group do take `Invoice` in. That is an existing gap, recorded for the parent issue in
+   * [completion tasks](../docs/developers/completion-tasks.md) rather than closed here; what this
+   * test fixes is the parity the migration has to keep, which is that reading the imports from
+   * another answer must not turn one of them into a match the reader was never shown before.
+   */
+  test("does not report a query-side glob, rename or multi-name group import (l)", () => {
+    const lib =
+      "use billing_domain::*;\nuse billing_domain::Invoice as Bill;\nuse billing_domain::{Invoice, Ledger};\npub fn read() -> u8 { 0 }\n";
+    const result = runSensor("interface-adapter", queryProject(lib));
+    expect(result.located).toEqual([]);
+    expect(result.pass).toBe(true);
   });
 });
