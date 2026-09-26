@@ -14,7 +14,7 @@ import { EXTRACTOR_NAME, MANIFEST_NAME, NATIVE_BIN_DIR, PLATFORM_KEY } from "../
 const PROTOCOLS = [
   { flag: "--error-contract-version", version: 3 },
   { flag: "--state-exposure-version", version: 2 },
-  { flag: "--domain-facts-version", version: 6 },
+  { flag: "--domain-facts-version", version: 7 },
 ];
 
 const root = resolve(import.meta.dir, "..");

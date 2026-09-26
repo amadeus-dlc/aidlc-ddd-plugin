@@ -15,13 +15,13 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # the build for one platform
 
 `<platform-key>` is `${process.platform}-${process.arch}`, for example `darwin-arm64`. [`manifest.ts`](../../tools/ddd/lib/rust/native/manifest.ts) resolves that path relative to itself, so the same relative location holds in the source tree, in `dist/<harness>/` and in an installed project.
 
-[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts), [`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts) and [`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) all resolve their default launch path through that module, so none carries an installation path of its own. Each entry keeps its own protocol version — 3 for the error contract, 2 for state exposure, 6 for domain facts — and the manifest records none of them: the protocol numbers and the extractor and syn versions stay in the code that checks them.
+[`rust/error-contract/index.ts`](../../tools/ddd/lib/rust/error-contract/index.ts), [`rust/state-evidence/index.ts`](../../tools/ddd/lib/rust/state-evidence/index.ts) and [`rust/domain-facts/index.ts`](../../tools/ddd/lib/rust/domain-facts/index.ts) all resolve their default launch path through that module, so none carries an installation path of its own. Each entry keeps its own protocol version — 3 for the error contract, 2 for state exposure, 7 for domain facts — and the manifest records none of them: the protocol numbers and the extractor and syn versions stay in the code that checks them.
 
 | Protocol | Version flag | `protocol_version` | Read by |
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | the operation error-set comparison |
 | `state-exposure/1` | `--state-exposure-version` | 2 | the state-exposure inspection |
-| `domain-facts/1` | `--domain-facts-version` | 6 | every rule `ddd-rust-domain`, `ddd-rust-use-case` and `ddd-rust-interface-adapter` report, and the program and module resolution they and the module walk are built on |
+| `domain-facts/1` | `--domain-facts-version` | 7 | every rule `ddd-rust-domain`, `ddd-rust-use-case` and `ddd-rust-interface-adapter` report, and the program and module resolution they and the module walk are built on |
 
 A caller may still pass an explicit command to `extractRust`. That names a process to observe for a controlled verification scenario, so it is launched as given and the installed extractor is neither resolved nor verified.
 

@@ -304,11 +304,12 @@ ${INVOICE}`;
 // --- who reports a macro the inspection cannot expand -------------------------
 
 /**
- * One file carrying every macro shape the inspection can meet, each on its own line: an item-position
- * call at the top level and one inside a `mod` body, an expression-position call inside a function, a
- * non-built-in attribute macro, and the built-in attributes (`cfg`, `cfg_attr`, `derive`, `allow`,
- * `test`) that are not macro expansion at all. What reports each shape is then read off the verdict
- * per line, rather than per file.
+ * One file carrying every macro shape the inspection can meet while still answering, each on its own
+ * line: an item-position call at the top level and one inside a `mod` body, an expression-position
+ * call inside a function, and the built-in attributes (`cfg`, `cfg_attr`, `derive`, `allow`, `test`)
+ * that are not macro expansion at all. What reports each shape is then read off the verdict per line,
+ * rather than per file. An attribute that is not built in is left out: in a file rule (a) decides from
+ * it stops the gate instead of answering, which `t10-rust-domain-facts.test.ts` observes.
  */
 const MACRO_SHAPES = `${INVOICE}domain_modules!();
 pub mod inner {
@@ -322,8 +323,6 @@ pub fn compute() -> i64 {
 mod alternate;
 #[cfg_attr(test, path = "billing.rs")]
 mod billing;
-#[my_attr]
-pub struct Tagged;
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct Builtin;
@@ -373,12 +372,12 @@ test("only the macro shapes that can hide a module declaration are refused", () 
   );
 });
 
-test("an expression macro and a non-built-in attribute macro are reported by nobody", () => {
-  // Neither shape can hide a module declaration, so the module walk has nothing to refuse about them
-  // and the decision base is complete without them. They are the two shapes this file reports
-  // nothing at all for, which is what a reader of a verdict has to be able to tell.
+test("an expression macro is reported by nobody", () => {
+  // It cannot hide a module declaration, so the module walk has nothing to refuse about it and the
+  // decision base is complete without it. It is the one shape this file reports nothing at all for,
+  // which is what a reader of a verdict has to be able to tell.
   const verdict = verdictOf(domainCase("decision-base-macro-unreported", { [DOMAIN]: MACRO_SHAPES }));
-  const silent = linesOf(MACRO_SHAPES, ["let value = compute_amount!();", "#[my_attr]"]);
+  const silent = linesOf(MACRO_SHAPES, ["let value = compute_amount!();"]);
   expect(
     noteRefs(verdict.note, DOMAIN).filter((ref) => silent.includes(ref.line)),
     verdict.note,

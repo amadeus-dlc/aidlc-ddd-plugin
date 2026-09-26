@@ -22,7 +22,7 @@ export function evaluateSensor(
   ruleIds: readonly string[],
   api?: SensorApi,
 ): Evaluation {
-  const assembled: ContextResult = assembleContext(run, config);
+  const assembled: ContextResult = assembleContext(run, config, ruleIds);
   if (assembled.kind === "empty") return { findings: [], note: assembled.note };
   if (assembled.kind === "failed") {
     return { findings: assembled.findings, ...(assembled.note ? { note: assembled.note } : {}) };

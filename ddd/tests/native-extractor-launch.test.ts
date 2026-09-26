@@ -13,7 +13,7 @@ import { freezeInput } from "../tools/ddd/lib/state-exposure-verification/input.
 const ERROR_CONTRACT = { flag: "--error-contract-version", version: 3 };
 const STATE_EXPOSURE = { flag: "--state-exposure-version", version: 2 };
 /** The decision base every Rust rule is decided on (T-10-04). */
-const DOMAIN_FACTS = { flag: "--domain-facts-version", version: 6 };
+const DOMAIN_FACTS = { flag: "--domain-facts-version", version: 7 };
 const PROTOCOLS = [ERROR_CONTRACT, STATE_EXPOSURE, DOMAIN_FACTS];
 
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";

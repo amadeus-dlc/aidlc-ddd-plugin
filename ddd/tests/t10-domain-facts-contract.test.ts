@@ -54,8 +54,8 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
 }
 
 /** This protocol, and the one it replaced: an installation left on the latter must be refused. */
-const PROTOCOL_VERSION = 6;
-const REPLACED_PROTOCOL_VERSION = 5;
+const PROTOCOL_VERSION = 7;
+const REPLACED_PROTOCOL_VERSION = 6;
 
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
 function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTOCOL_VERSION): string {
@@ -211,6 +211,36 @@ test("the same unresolved construct reported twice becomes one note", () => {
     `domain-facts.unresolved: ${LIB}:3 conditional-compilation`,
     `domain-facts.unresolved: ${LIB}:9 macro-expansion`,
   ]);
+});
+
+// Whether a file carries an attribute macro decides whether rules (a) and (d) can be decided from it,
+// so the rule layer reads it off the file's facts rather than out of the text of a note.
+
+test("an attribute-macro record is carried on its file as the line it names, and still becomes a note", () => {
+  const result = answered(
+    record({
+      unresolved: [
+        { reason: "conditional-compilation", line: 2 },
+        { reason: "attribute-macro", line: 3 },
+        { reason: "attribute-macro", line: 7 },
+      ],
+    }),
+  );
+  expect(result.kind).toBe("facts");
+  if (result.kind !== "facts") return;
+  expect(result.facts.files.get(LIB)?.attributeMacros).toEqual([3, 7]);
+  expect(result.facts.notes).toEqual([
+    `domain-facts.unresolved: ${LIB}:2 conditional-compilation`,
+    `domain-facts.unresolved: ${LIB}:3 attribute-macro`,
+    `domain-facts.unresolved: ${LIB}:7 attribute-macro`,
+  ]);
+});
+
+test("a file with no attribute-macro record carries none, rather than leaving the answer unset", () => {
+  const result = answered(record({ unresolved: [{ reason: "macro-expansion", line: 4 }] }));
+  expect(result.kind).toBe("facts");
+  if (result.kind !== "facts") return;
+  expect(result.facts.files.get(LIB)?.attributeMacros).toEqual([]);
 });
 
 /** Each way an answer can fail to cover the request. None of them may become an empty fact set. */

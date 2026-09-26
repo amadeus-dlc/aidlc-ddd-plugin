@@ -62,29 +62,63 @@ function findWorkspaceRoot(filePath: string): { root: string; isWorkspace: boole
 }
 
 /**
- * Stops the inspection when a file the rules are decided from carries no declarations.
+ * The rules an attribute macro leaves undecidable (#80). An attribute macro replaces the item it
+ * annotates, so it can add the public member rule (a) reports or the getter rule (d) reports, and
+ * the declarations the extractor read are then not the ones the program has. A gate that runs (a) or
+ * (d) stops as a whole on such a record, so none of its rules is evaluated; a gate that runs neither
+ * keeps the record as a note.
+ */
+const ATTRIBUTE_MACRO_RULES: readonly string[] = ["a", "d"];
+
+/**
+ * Stops the inspection when a file the rules are decided from carries no declarations, or carries an
+ * attribute that may be an attribute macro while `attributeMacroRules` — the rules among (a) and (d)
+ * this gate runs — is not empty.
  *
  * `decidedFrom` names those files: the claimed files the per-file rules run over, and every source
  * the program is built from, because a declaration hidden in any of them changes what the whole
  * program resolves to. A file among them the extractor could not read decides nothing, and stopping
  * here carries the reason the extractor gave for it — a failure raised later, while the rules run,
- * would be reported as an evaluation error and drop that reason.
+ * would be reported as an evaluation error and drop that reason. An unread file is reported first:
+ * it carries no declarations at all, so whether it carries an attribute macro is not known.
  */
-function requireDecisionBase(facts: DomainFactSet, decidedFrom: readonly string[]): void {
-  const unread = [...new Set(decidedFrom)].filter((file) => !facts.files.has(file)).sort();
-  if (unread.length === 0) return;
-  const reasons = facts.notes.filter((note) =>
-    unread.some((file) => note.startsWith(`domain-facts.unresolved: ${file}:`)),
-  );
-  // A file can go unread without the extractor recording a reason for it — a source the batch could
-  // not even open carries no note. Naming the files is the answer then, rather than a dangling colon.
-  const detail = reasons.length > 0 ? `: ${reasons.join("; ")}` : "";
+function requireDecisionBase(
+  facts: DomainFactSet,
+  decidedFrom: readonly string[],
+  attributeMacroRules: readonly string[],
+): void {
+  const decided = new Set(decidedFrom);
+  const unread = [...decided].filter((file) => !facts.files.has(file)).sort();
+  if (unread.length > 0) {
+    const reasons = facts.notes.filter((note) =>
+      unread.some((file) => note.startsWith(`domain-facts.unresolved: ${file}:`)),
+    );
+    // A file can go unread without the extractor recording a reason for it — a source the batch could
+    // not even open carries no note. Naming the files is the answer then, rather than a dangling colon.
+    const detail = reasons.length > 0 ? `: ${reasons.join("; ")}` : "";
+    throw new ToolUnavailableError(
+      `the native extractor did not read ${unread.join(", ")}, so the Rust rules cannot be decided${detail}`,
+    );
+  }
+  if (attributeMacroRules.length === 0) return;
+  const attributeMacros = [...facts.files]
+    .filter(([file]) => decided.has(file))
+    .sort((a, b) => a[0].localeCompare(b[0], "en"))
+    .flatMap(([file, fileFacts]) =>
+      [...fileFacts.attributeMacros].sort((a, b) => a - b).map((line) => `${file}:${line} attribute-macro`),
+    );
+  if (attributeMacros.length === 0) return;
+  const rules = attributeMacroRules.map((ruleId) => `(${ruleId})`).join(" and ");
   throw new ToolUnavailableError(
-    `the native extractor did not read ${unread.join(", ")}, so the Rust rules cannot be decided${detail}`,
+    `an attribute macro may replace the item it annotates, so ${attributeMacroRules.length === 1 ? "rule" : "rules"} ${rules} cannot be decided: ${attributeMacros.join("; ")}`,
   );
 }
 
-export function assembleContext(run: SensorRunContext, config: SensorConfig): ContextResult {
+export function assembleContext(
+  run: SensorRunContext,
+  config: SensorConfig,
+  ruleIds: readonly string[],
+): ContextResult {
   const claimsResult = readSourceClaims(run, { extensions: [".rs"] });
   if (!claimsResult.ok) {
     return { kind: "failed", findings: [finding("runtime.claims", ".", claimsResult.reason)] };
@@ -195,10 +229,14 @@ export function assembleContext(run: SensorRunContext, config: SensorConfig): Co
     targets.length > 0
       ? collectRustSources(facts, workspaceRoot, assignments)
       : { crates: [], workspaceCrates: new Set<string>() };
-  requireDecisionBase(facts, [
-    ...targets.flatMap((target) => (target.file ? [target.file] : [])),
-    ...collected.crates.flatMap((crate) => crate.inventory.sources.map((source) => source.decidedFrom)),
-  ]);
+  requireDecisionBase(
+    facts,
+    [
+      ...targets.flatMap((target) => (target.file ? [target.file] : [])),
+      ...collected.crates.flatMap((crate) => crate.inventory.sources.map((source) => source.decidedFrom)),
+    ],
+    ATTRIBUTE_MACRO_RULES.filter((ruleId) => ruleIds.includes(ruleId)),
+  );
 
   const program = buildProgram(collected, facts);
   const rustMapping = loadRustMapping(run.record_dir);
