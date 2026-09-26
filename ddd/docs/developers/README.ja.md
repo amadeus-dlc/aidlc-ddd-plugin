@@ -28,6 +28,7 @@
 | 各時点での実測 | [現状評価](current-state-assessment.ja.md) |
 | テストコマンドと入力の構成 | [テストガイド](../../tests/README.ja.md) |
 | センサーごとの正常・異常・境界ケース | [検査契約の対応表](sensor-coverage.ja.md) |
+| 実際に検証したRustの実行モデル・永続化方式・モジュール配置の組み合わせ | [Rustの実行モデルと永続化方式の検証](rust-execution-persistence-verification.ja.md) |
 | Rustによる構文解析の比較結果と型解決・配布の限界 | [Rust＋synの試作](rust-syn-spike.ja.md) |
 | 新規導入、更新、失敗時の挙動 | [導入検証](installation-verification.ja.md) |
 | ネイティブ抽出器の設置先、対応プラットフォーム、起動失敗時の応答 | [ネイティブ抽出器の配布](native-extractor-distribution.ja.md) |

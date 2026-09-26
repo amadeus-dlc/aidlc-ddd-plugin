@@ -1,0 +1,424 @@
+{
+  "verified_at": "2026-09-26T00:06:29Z",
+  "scope": "T-10-07 survey of which programming_model x persistence_method x module-layout combinations the existing Rust tests, golden cases and verification scenarios actually decide. No rule, judgement or golden expectation was changed.",
+  "base_commit": "1621a6d657bccb2b9c0e1809f32c434c43f25bdd",
+  "platform": "darwin-arm64",
+  "toolchain": {
+    "bun": "1.3.13",
+    "rustc": "1.95.0",
+    "aidlc": "2.9.0"
+  },
+  "axes": [
+    {
+      "axis": "programming_model",
+      "values": ["actor", "class"],
+      "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:20",
+      "read_for_a_decision_by": [
+        "tools/ddd-sensor-mapping-declarations.ts:75 builds the aggregate_ref -> programming_model map",
+        "tools/ddd-sensor-mapping-declarations.ts:109-113 is the condition; :111 compares === \"actor\"",
+        "tools/ddd-sensor-mapping-declarations.ts:116 reports mapping-declarations.process-manager-required"
+      ],
+      "not_read_by": [
+        "Any Rust source rule. The Rust view type omits the field (tools/ddd/lib/rules/rust/mapping.ts:18-25) and the projection does not copy it (:56-72)."
+      ]
+    },
+    {
+      "axis": "persistence_method",
+      "values": ["state-sourcing", "event-sourcing"],
+      "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:23",
+      "read_for_a_decision_by": [
+        "tools/ddd/lib/rules/rust/symbols.ts:128 returns false unless the value is event-sourcing, which is the precondition of the replay exemption; the exemption's other preconditions are at :124-144",
+        "tools/ddd/lib/rules/rust/symbols.ts:157-170 is the classification order the value feeds: :157 unknown for an ambiguous aggregate binding, :158 replay-exempt, :159 post-init for a name in POST_INIT (tools/ddd/lib/rules/lists.ts:7), :160 unknown when the domain model cannot be read, :170 declared-command or undeclared",
+        "tools/ddd/lib/rules/rust/evaluators.ts:68 is rule b, which reports only on the undeclared classification",
+        "tools/ddd/lib/rules/rust/evaluators.ts:127-139 is rule c, which reports c-post-init only on the post-init classification; because :158 is decided ahead of :159, the replay exemption changes this verdict too, not only rule b's"
+      ],
+      "not_read_by": [
+        "The declaration gate, the module-layout inspection."
+      ]
+    },
+    {
+      "axis": "rust.module_layout of .ddd.toml",
+      "values": ["file", "mod-rs"],
+      "declared_at": "tools/ddd/lib/project-settings/contract.ts:4 (type) and :28 (RUST_MODULE_LAYOUTS); tools/ddd/lib/project-settings/settings.ts:218 is the consumer that puts the chosen value into the selection",
+      "read_for_a_decision_by": [
+        "tools/ddd/lib/module-layout/check.ts:151 reads selection.rust.moduleLayout"
+      ],
+      "not_read_by": [
+        "The Rust source sensors, which resolve modules from the mapping and the source tree."
+      ]
+    }
+  ],
+  "decision_layers": [
+    {
+      "id": "a",
+      "name": "layout-inspection",
+      "holds": ".ddd.toml in both declared modes; no aggregate mapping",
+      "note": "tests/golden/module-layout/cases.ts:22 is the only golden group that writes .ddd.toml, and :19 records that it deliberately carries neither a source manifest nor a domain model."
+    },
+    {
+      "id": "b",
+      "name": "rust-source-rules",
+      "holds": "an aggregate mapping and real Rust sources; no .ddd.toml",
+      "note": "Module placement here is physical: src/<name>.rs, src/<name>/mod.rs, or a #[path] attribute."
+    },
+    {
+      "id": "c",
+      "name": "resolution",
+      "holds": "an aggregate mapping, real sources and a layout setting at once",
+      "note": "tools/ddd/lib/operation-error-set-verification/scenario.ts:44-47 maps billing-domain to file and billing-domain-mod-rs to mod-rs."
+    },
+    {
+      "id": "declaration-gate",
+      "name": "language-neutral declaration gate",
+      "holds": "an aggregate mapping and use-case declarations; no Rust source",
+      "note": "The only layer that reads programming_model."
+    },
+    {
+      "id": "mapping-read",
+      "name": "mapping read and migration",
+      "holds": "an aggregate mapping only",
+      "note": "Covers the reader, the Rust view projection and the legacy-format migration."
+    },
+    {
+      "id": "d",
+      "name": "gate-integration",
+      "holds": "an aggregate mapping, real Rust sources and a .ddd.toml, passed through the real gate",
+      "note": "tests/t1-gate-integration.test.ts:288-313 writes .ddd.toml with layoutConfig(\"file\") at :300, the case mapping at :306 and the case sources at :307. Its fixture keeps every ddd-* sensor applicable (:67-68) and contributions/construction/code-generation.md lists both ddd-rust-module-layout and ddd-rust-domain for code-generation, so the layout inspection and the Rust source rules decide in the same execution. It covers only the declared file layout and only two packaging cases: the test drives four PACKAGING_CASES entries (:291-294), but clean-packaging-declarations and violation-packaging-technical-name run at domain-design, whose sensor set (contributions/inception/domain-design.md) carries no Rust sensor, and both come from design() (tests/golden/packaging/cases.ts:83-94), which clones a DESIGN_CASES entry and so has no workspace for :307 to write. Only clean-packaging-inline and violation-packaging-empty-inline reach this layer."
+    }
+  ],
+  "combinations": [
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "crate-root",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/package-fixture.ts:50-51 is the default fixture mapping",
+        "tests/golden/rust/cases.ts:372-377 injects it into every RUST_CASES entry without its own mapping",
+        "tests/u5-golden.test.ts:13-18 runs them"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "file",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/rust/t2-cases.ts:26 violation-b-split-impl, child path at :27",
+        "tests/golden/rust/t2-cases.ts:39-40 clean-b-split-command",
+        "tests/golden/rust/t2-cases.ts:131-132 violation-b-trait-impl",
+        "tests/golden/rust/t2-cases.ts:154 violation-d-split-getter",
+        "tests/golden/rust/t2-cases.ts:115 violation-i-imported-use-case, child in the use-case crate at :118",
+        "tests/golden/rust/domain-facts-cases.ts:102 violation-a-d-module-file",
+        "tests/golden/packaging/cases.ts:243-253 clean-packaging-external-module"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "mod-rs",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/rust/domain-facts-cases.ts:109-112 violation-a-d-mod-rs, MOD_RS constant at :15",
+        "tests/golden/packaging/cases.ts:255-258 clean-packaging-mod-rs"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "file-and-mod-rs-conflict",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/packaging/cases.ts:378-385 violation-packaging-ambiguous-source reports domain-packaging.unresolved"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "path-attribute",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/packaging/cases.ts:267-273 clean-packaging-path-attribute",
+        "tests/golden/packaging/cases.ts:462-472 clean-packaging-path-child",
+        "tests/golden/contract/cases.ts:244-252 violation-module-cycle, the #[path] at :246"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "file-and-mod-rs",
+      "decision_layer": "c",
+      "verified": true,
+      "evidence": [
+        "tests/operation-error-set-languages.test.ts:428-460 covers both packages in one run",
+        "tests/operation-error-set-languages.test.ts:462-469 the mod-rs package passes",
+        "tests/operation-error-set-languages.test.ts:484-498 the mod-rs package violation side",
+        "tools/ddd/lib/operation-error-set-verification/scenario.ts:44-47 is the package-to-layout table",
+        "tests/fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md:10-11 declares the combination"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "module_layout": "crate-root",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/rust/t2-cases.ts:48 clean-b-declared-replay, its persistence_method at :59",
+        "tests/golden/rust/t2-cases.ts:164 violation-b-replay-wrong-crate",
+        "tests/golden/rust/t2-cases.ts:165 violation-b-replay-wrong-module",
+        "tests/golden/rust/t2-cases.ts:166 violation-b-replay-unlisted-method",
+        "tests/golden/rust/t2-cases.ts:167 violation-b-replay-duplicate-method",
+        "tests/golden/rust/t2-cases.ts:189-194 violation-b-replay-scalar"
+      ],
+      "derived_cases_excluded_from_this_cell": [
+        "tests/golden/rust/t2-cases.ts:163 violation-b-replay-state-sourcing replaces persistence_method: event-sourcing with state-sourcing, so its mapping is state-sourcing; it is the identification test for the exemption precondition",
+        "tests/golden/rust/t2-cases.ts:177-188 violation-b-replay-unknown-event makes the whole mapping unreadable, as the comment at :175-176 records, so the event-sourcing value never reaches the rule",
+        "tests/golden/rust/t2-cases.ts:196-203 clean-b-split-replay keeps event-sourcing but places the replay method in a child file, so it is the evidence for the file row"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "module_layout": "declared-file-with-inline-modules",
+      "decision_layer": "d",
+      "verified": true,
+      "evidence": [
+        "tests/golden/packaging/cases.ts:176-181 clean-packaging-inline",
+        "tests/golden/packaging/cases.ts:129-134 violation-packaging-empty-inline",
+        "tests/t1-gate-integration.test.ts:288-313 drives both through the real gate",
+        "tests/golden/packaging/cases.ts:63 gives class and :64 gives state-sourcing because these cases declare no replay"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "module_layout": "file",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/rust/t2-cases.ts:196-201 clean-b-split-replay, whose replay method sits in the child file declared at :27"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "module_layout": "path-attribute",
+      "decision_layer": "b",
+      "verified": true,
+      "evidence": [
+        "tests/golden/packaging/cases.ts:438-453 clean-packaging-path-replay; its replay at :445 makes mapping() choose event-sourcing at :64"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "module_layout": "none",
+      "decision_layer": "mapping-read",
+      "verified": true,
+      "evidence": [
+        "tests/rust-mapping-view.test.ts:83-93, persistence_method at :87"
+      ]
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "module_layout": "mod-rs",
+      "decision_layer": null,
+      "verified": false,
+      "reason": "No case combines the two, on either of the two scans this rests on, which look for different things. Scan one, the mappings that declare event-sourcing under tests/: two of them come with a Rust source tree, tests/golden/rust/t2-cases.ts:59 (module at the crate root, :66; only its derived clean-b-split-replay uses the file child at :27) and tests/golden/packaging/cases.ts:64 (its one case with a replay is clean-packaging-path-replay at :438-453, its replay at :445, placed behind #[path]). The other five declare the value in a mapping document that writes no Rust source at all, so none of them claims a physical placement: tests/rust-mapping-view.test.ts:87 (its viewOf at :58-67 writes the record files only), tests/fixtures/aggregate-mapping/workspace.ts:210 and :368, tests/aggregate-mapping-migration.test.ts:109, tests/artifact-set-migration.test.ts:197. The remaining occurrence, tests/golden/rust/t2-cases.ts:163, is the derivation tuple that removes the value rather than a mapping that declares it. Scan two, the modules that a case carrying an aggregate mapping writes into a mod.rs under tests/, module placement meaning here the physical placement of the modules the case writes. A case that writes a mod.rs without any aggregate mapping declares no persistence_method, so it cannot combine with event-sourcing and is outside this scan: the module-layout specimens in tests/golden/module-layout/cases.ts (:19 records that they carry no domain model), tests/t10-rust-module-layout.test.ts and tests/error-contract-rust.test.ts. Within the scan there are four, tests/golden/rust/domain-facts-cases.ts:109-112 (MOD_RS at :15), tests/golden/packaging/cases.ts:255-258, tests/golden/packaging/cases.ts:378-380 (the conflict case, which keeps invoice.rs beside the mod.rs) and tests/operation-error-set-languages.test.ts:419. All four are state-sourcing, so the two sets do not meet. In three of the four the aggregate the mapping declares still sits at the crate root (tests/golden/package-fixture.ts:53 and ROOT_PACKAGE at tests/golden/packaging/cases.ts:22-27, consumed at :68, both module: []), and what the mod.rs holds is a claimed source file or a mapped domain package. Only tests/operation-error-set-languages.test.ts:419 puts the mapped aggregate's own module in a mod.rs, and that mapping is state-sourcing as well (tests/fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md:10-11), so the gap holds on the narrower reading too."
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "state-sourcing",
+      "module_layout": "none",
+      "decision_layer": "declaration-gate",
+      "verified": true,
+      "evidence": [
+        "tests/golden/design/cases.ts:674-693 violation-process-manager-required; the mapping is turned actor at :682 and carries language: rust at :131",
+        "tests/golden/contract/cases.ts:85-108 clean-actor-process-manager",
+        "tests/golden/contract/cases.ts:337-341 clean-multi-aggregate-mapping",
+        "tests/u4-golden.test.ts:18-23 runs DESIGN_CASES; tests/t9-sensor-contract.test.ts:9-13 runs CONTRACT_CASES"
+      ]
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "state-sourcing",
+      "module_layout": "none",
+      "decision_layer": "mapping-read",
+      "verified": true,
+      "evidence": [
+        "tests/fixtures/aggregate-mapping/workspace.ts:404-405 in the canonical mapping",
+        "tests/fixtures/aggregate-mapping/workspace.ts:219-220 in the legacy YAML",
+        "tests/aggregate-mapping-migration.test.ts:121-123 asserts the migrated result",
+        "tests/artifact-set-migration.test.ts:209-211 asserts the migrated result"
+      ]
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "state-sourcing",
+      "module_layout": "file-or-mod-rs",
+      "decision_layer": null,
+      "verified": false,
+      "reason": "No case declares actor on an aggregate and writes Rust sources for it in the same record. Every actor declaration under tests/ is the list in the actor x event-sourcing row below, and none of those records carries a .rs file at all, so each one reaches the declaration gate or the mapping read and migration boundaries and stops there. A separate fact, with a separate reason: such a case would not make any Rust source rule answer differently from the class combinations above, because the Rust view drops programming_model (tools/ddd/lib/rules/rust/mapping.ts:18-25 and :56-72). Exercising the combination is a test; making the axis change a Rust source verdict would be a change of judgement."
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "event-sourcing",
+      "module_layout": "any",
+      "decision_layer": null,
+      "verified": false,
+      "reason": "No case declares this pair in any layer. Every actor declaration under tests/ is state-sourcing: tests/golden/design/cases.ts:682 derives from the state-sourcing base at :128, tests/fixtures/aggregate-mapping/workspace.ts:219-220 and :404-405, tests/aggregate-mapping-migration.test.ts:121-123, tests/artifact-set-migration.test.ts:209-211. The one other occurrence, tests/aggregate-mapping-migration.test.ts:395, is a supplement row that sets programming_model and is refused with aggregate-mapping.unknown-key, so it produces no accepted mapping."
+    }
+  ],
+  "both_layouts_without_a_mapping": [
+    {
+      "test": "tests/t10-rust-module-layout.test.ts:35-58 over tests/golden/module-layout/cases.ts",
+      "layouts": ["file", "mod-rs"],
+      "mapping": "none",
+      "note": "Both declared modes of .ddd.toml. tests/golden/module-layout/cases.ts:19 records that no source manifest or domain model is present."
+    },
+    {
+      "test": "tests/error-contract-rust.test.ts:123-158, executed at :165-194",
+      "layouts": ["file", "mod-rs"],
+      "mapping": "none",
+      "note": "billing-domain is file and billing-use-case is mod-rs per tools/ddd/lib/error-contract-verification/scenario.ts:16-19."
+    },
+    {
+      "test": "scripts/verify-error-contract.ts",
+      "layouts": ["file"],
+      "mapping": "none",
+      "note": "It carries the same layout table at :128, but both inspect calls (:165-172 and :186-193) name billing-domain, so the mod-rs branch is never reached."
+    }
+  ],
+  "checks": [
+    {
+      "command": "cd ddd && bun run check",
+      "result": "passed",
+      "exit_code": 0,
+      "passed": 2340,
+      "skipped": 3,
+      "failed": 0,
+      "tests": 2343,
+      "test_files": 47,
+      "expect_calls": 7984,
+      "duration_seconds": 402.15,
+      "coverage": {
+        "line": "10175/11096 = 91.70% (floor 80%)",
+        "function": "1161/1234 = 94.08% (floor 80%)"
+      },
+      "cargo": {
+        "state_evidence": "12 passed, 0 failed",
+        "domain_facts": "32 passed, 0 failed"
+      },
+      "note": "The entry the CI workflow runs (.github/workflows/ci.yml:72-74). Run three times with the documents of this task in place, starting 2026-09-25T23:14:13Z, 2026-09-25T23:23:49Z and 2026-09-25T23:59:37Z; all three exited 0 with the same pass/skip/fail counts and coverage. The figures here are from the third run, which covers the final state of these documents. bun test tests/ spans all 47 test files, so this entry includes tests/t1-gate-integration.test.ts listed separately below."
+    },
+    {
+      "command": "cd ddd && bun test tests/u5-golden.test.ts",
+      "result": "passed",
+      "passed": 96,
+      "failed": 0,
+      "expect_calls": 97,
+      "covers": "the Rust source layer (b) for RUST_CASES"
+    },
+    {
+      "command": "cd ddd && bun test tests/t7-domain-packaging.test.ts",
+      "result": "passed",
+      "passed": 56,
+      "failed": 0,
+      "expect_calls": 56,
+      "covers": "the packaging cases: mod-rs, #[path] and the file/mod-rs conflict"
+    },
+    {
+      "command": "cd ddd && bun test tests/u4-golden.test.ts",
+      "result": "passed",
+      "passed": 65,
+      "failed": 0,
+      "expect_calls": 67,
+      "covers": "the declaration gate for actor (DESIGN_CASES)"
+    },
+    {
+      "command": "cd ddd && bun test tests/t9-sensor-contract.test.ts",
+      "result": "passed",
+      "passed": 129,
+      "failed": 0,
+      "expect_calls": 204,
+      "covers": "CONTRACT_CASES, including clean-actor-process-manager, clean-multi-aggregate-mapping and violation-module-cycle"
+    },
+    {
+      "command": "cd ddd && bun test tests/t10-rust-module-layout.test.ts",
+      "result": "passed",
+      "passed": 125,
+      "failed": 0,
+      "expect_calls": 259,
+      "covers": "the layout-inspection layer (a) in both declared modes"
+    },
+    {
+      "command": "cd ddd && bun test tests/operation-error-set-languages.test.ts tests/error-contract-rust.test.ts",
+      "result": "passed",
+      "passed": 94,
+      "failed": 0,
+      "expect_calls": 306,
+      "covers": "the resolution layer (c) and the reference-form resolution across both packages"
+    },
+    {
+      "command": "cd ddd && bun test tests/rust-mapping-view.test.ts",
+      "result": "passed",
+      "passed": 7,
+      "failed": 0,
+      "expect_calls": 15,
+      "covers": "the Rust view projection of the mapping"
+    },
+    {
+      "command": "cd ddd && bun test tests/aggregate-mapping-contract.test.ts tests/aggregate-mapping-migration.test.ts tests/artifact-set-migration.test.ts",
+      "result": "passed",
+      "passed": 225,
+      "failed": 0,
+      "expect_calls": 952,
+      "covers": "the mapping read and migration boundaries that carry the actor declaration"
+    },
+    {
+      "command": "cd ddd && bun test tests/generation-instructions.test.ts",
+      "result": "passed",
+      "passed": 11,
+      "failed": 0,
+      "expect_calls": 55,
+      "covers": "the runtime instruction directories are written in English"
+    },
+    {
+      "command": "cd ddd && bun test tests/t1-gate-integration.test.ts",
+      "result": "passed",
+      "passed": 332,
+      "skipped": 1,
+      "failed": 0,
+      "expect_calls": 2504,
+      "duration_seconds": 281.51,
+      "covers": "the gate-integration layer (d), where a mapping, real Rust sources and a .ddd.toml decide in one gate execution"
+    },
+    {
+      "command": "cd ddd && bun run verify:operation-error-set",
+      "result": "passed",
+      "exit_code": 0,
+      "note": "Regenerated docs/developers/evidence/operation-error-set.json with no change; git status stayed limited to the documents this task edits."
+    }
+  ],
+  "unverified": [
+    "class x event-sourcing x mod-rs",
+    "actor x either persistence method at the Rust source layer",
+    "actor x event-sourcing in any layer",
+    "the layout inspection running against a declared mod-rs layout together with an aggregate mapping in one execution (path d is the only path that runs the layout inspection beside a mapping, and it covers the declared file layout over two packaging cases only; path c does carry a declared mod-rs layout beside a mapping but never runs the layout inspection: checkModuleLayout at tools/ddd/lib/module-layout/check.ts:85-88 takes an extractor, a project root and a budget callback and no mapping, its shipped callers are tools/ddd-check-rust-module-layout.ts:11 and tools/ddd-sensor-rust-module-layout.ts:15, the only other callers are the direct ones in tests/t10-rust-module-layout.test.ts at :68, :75, :80, :87, :226, :266 and :414 which are path a and carry no mapping, and operation-error-set-verification is not among them)",
+    "the mod-rs branch of scripts/verify-error-contract.ts"
+  ],
+  "limits": [
+    "This is a survey of the existing tests at one commit, not a coverage guarantee. No script generates it and no check compares it against the cases, so a later case will not update it.",
+    "Verified here means a case exercises the combination, not that the combination is fully specified. Detailed strategy-specific checks remain incomplete, as docs/developers/domain-layer-design.md states.",
+    "The gaps are gaps in the tests. They are not statements that a combination is unsupported or invalid; programming_model and persistence_method stay independent choices.",
+    "No golden case definition puts a declared layout and a mapped aggregate together. Paths c and d both hold a mapping, real sources and a layout setting at once, and both carry only class x state-sourcing. Path c does carry a declared mod-rs layout beside a mapping, as its combination row records, but it uses that setting only to resolve where the mapped module should be; it never runs the layout inspection. checkModuleLayout (tools/ddd/lib/module-layout/check.ts:85-88) takes an extractor, a project root and a budget callback, and no mapping; its shipped callers are tools/ddd-check-rust-module-layout.ts:11 and tools/ddd-sensor-rust-module-layout.ts:15, the only other callers are the direct ones in tests/t10-rust-module-layout.test.ts (:68, :75, :80, :87, :226, :266, :414), which are path a and carry no mapping, and operation-error-set-verification is not among them. Path d is the only path that runs the layout inspection and the Rust source rules against a mapping in one execution, and it covers just the declared file layout over two packaging cases. So no path runs the layout inspection together with a mapping under a declared mod-rs layout.",
+    "All measurements were taken on darwin-arm64 with the toolchain recorded above."
+  ]
+}
