@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
-# scripts/run-takt.sh — 使う Claude アカウントを固定して takt を起動する
+# scripts/run-takt.sh — 使う Claude アカウントと takt の設定を固定して takt を起動する
+#
+# takt はグローバル層 (既定は ~/.takt) とプロジェクト層 (.takt/) の設定を重ねて読む。
+# ~/.takt は他のプロジェクトが書き換えることがあり、プロファイルや companion の有効・無効が
+# このリポジトリの実行へ混ざる。そのため TAKT_CONFIG_DIR をこのリポジトリの .takt/global に
+# 固定し、~/.takt を読まないようにする。呼び出し元が TAKT_CONFIG_DIR を設定していても上書きする。
 #
 # takt (provider: claude) は親プロセスの環境変数をそのまま Claude に渡す。シェルに
 # CLAUDE_CODE_OAUTH_TOKEN が残っていると Claude はそのトークンを優先し、/login し直した
@@ -19,6 +24,10 @@
 # 例:
 #   scripts/run-takt.sh --config-dir ~/.claude-ai-1@ideo-plus.jp        # takt run
 #   scripts/run-takt.sh --config-dir ~/.claude-ai-1@ideo-plus.jp list   # takt list
+#   scripts/run-takt.sh --config-dir ~/.claude-ai-1@ideo-plus.jp add '#80'   # takt add
+#
+# takt をこのスクリプトを通さずに直接起動すると ~/.takt が読まれる。add・list などの
+# サブコマンドも、このスクリプト経由で実行すること。
 #
 # bash 3.2 (macOS 標準) 互換のため、配列は使用しない。
 #
@@ -81,10 +90,15 @@ if [ "$#" -eq 0 ]; then
   set -- run
 fi
 
+TAKT_GLOBAL_DIR="${REPO_ROOT}/.takt/global"
+[ -f "${TAKT_GLOBAL_DIR}/config.yaml" ] || die "takt のグローバル層の設定が見つかりません: ${TAKT_GLOBAL_DIR}/config.yaml"
+
 unset CLAUDE_CODE_OAUTH_TOKEN
 export CLAUDE_CONFIG_DIR="${CONFIG_DIR}"
+export TAKT_CONFIG_DIR="${TAKT_GLOBAL_DIR}"
 
 cd "${REPO_ROOT}"
 printf '==> CLAUDE_CONFIG_DIR=%s (CLAUDE_CODE_OAUTH_TOKEN は unset 済み)\n' "${CLAUDE_CONFIG_DIR}"
+printf '==> TAKT_CONFIG_DIR=%s (~/.takt は読まない)\n' "${TAKT_CONFIG_DIR}"
 printf '==> takt %s\n' "$*"
 exec takt "$@"

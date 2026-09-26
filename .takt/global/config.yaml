@@ -1,0 +1,11 @@
+# takt のグローバル層として、このリポジトリが所有する設定。
+#
+# scripts/run-takt.sh が TAKT_CONFIG_DIR をこのディレクトリへ向けるため、~/.takt は読まれない。
+# ~/.takt は他のプロジェクトが書き換えることがあり、その変更がこのリポジトリの takt 実行へ
+# 混ざらないようにするためである。
+#
+# ここにはグローバル層でしか書けないキーだけを置く。プロジェクト層に書けるもの
+# (rate_limit_fallback など) は ../config.yaml に、プロバイダとモデルは ../runtime.yaml に置く。
+language: ja
+# タスクの worktree の作成先。プロジェクト層の config.yaml では指定できない。
+worktree_dir: ~/takt-worktrees

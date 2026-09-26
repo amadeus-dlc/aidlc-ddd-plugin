@@ -6,6 +6,12 @@
 
 # Project configuration
 !config.yaml
+!runtime.yaml
+
+# The global layer this repository owns (scripts/run-takt.sh points TAKT_CONFIG_DIR here)
+!global/
+!global/config.yaml
+!global/runtime.yaml
 
 # Facets and workflows (version-controlled)
 !workflows/
