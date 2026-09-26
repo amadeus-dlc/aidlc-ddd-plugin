@@ -2,8 +2,8 @@ use super::*;
 
 fn check(source: &str) -> Value {
     let answer =
-        run(json!({"protocol_version":6,"files":[{"path":"lib.rs","source":source}]})).unwrap();
-    assert_eq!(answer["protocol_version"], 6);
+        run(json!({"protocol_version":7,"files":[{"path":"lib.rs","source":source}]})).unwrap();
+    assert_eq!(answer["protocol_version"], 7);
     answer["files"][0].clone()
 }
 
@@ -570,6 +570,156 @@ fn domain_facts_records_the_constructs_that_can_hide_a_declaration() {
     );
 }
 
+/// `reason@line` for every unresolved record, sorted, so a case states the set it expects rather than
+/// the order the visit happens to take.
+fn sorted_reasons_at(source: &str) -> Vec<String> {
+    let mut reasons = reasons_at(source);
+    reasons.sort();
+    reasons
+}
+
+/// An attribute macro replaces the item it annotates, so the item a reader sees is not necessarily the
+/// one the program declares. It is recorded on the line its `#` stands on.
+#[test]
+fn domain_facts_records_an_attribute_that_is_not_built_in_as_a_possible_attribute_macro() {
+    assert_eq!(
+        reasons_at("#[add_public_field]\npub struct Invoice { id: String }"),
+        ["attribute-macro@1"]
+    );
+}
+
+/// Whether an attribute may be a macro is read off the attribute, not off where it is written.
+#[test]
+fn domain_facts_records_a_possible_attribute_macro_wherever_it_is_written() {
+    assert_eq!(
+        sorted_reasons_at(
+            "pub struct A {\n    #[field_macro]\n    id: String,\n}\n#[fn_macro]\nfn run() {}\n#[impl_macro]\nimpl A {\n    #[method_macro]\n    fn get(&self) {}\n}\n#[trait_macro]\ntrait T {}\n#[mod_macro]\nmod inner {}\n"
+        ),
+        [
+            "attribute-macro@12",
+            "attribute-macro@14",
+            "attribute-macro@2",
+            "attribute-macro@5",
+            "attribute-macro@7",
+            "attribute-macro@9",
+        ]
+    );
+}
+
+/// A test-only module still belongs to the file rule (a) reads every member of, and a path-qualified
+/// attribute is not a built-in one.
+#[test]
+fn domain_facts_records_a_qualified_attribute_inside_a_test_only_module() {
+    assert_eq!(
+        sorted_reasons_at(
+            "#[cfg(test)]\nmod tests {\n    #[tokio::test]\n    async fn one() {}\n}"
+        ),
+        ["attribute-macro@3", "conditional-compilation@1"]
+    );
+}
+
+/// The same characters in a region that declares nothing, a doc comment included, record nothing.
+#[test]
+fn domain_facts_does_not_record_an_attribute_spelled_where_nothing_is_declared() {
+    let source = "macro_rules! declare {\n    () => { #[add_public_field] pub struct X; };\n}\nconst DOC: &str = \"#[add_public_field] pub struct X;\";\nconst RAW: &str = r##\"#[add_public_field] pub struct X;\"##;\n// #[add_public_field] pub struct X;\n/* /* #[add_public_field] pub struct X; */ */\n/// #[add_public_field] pub struct X;\npub struct Y;\n";
+    assert_eq!(reasons_at(source), Vec::<String>::new());
+}
+
+/// A built-in attribute expands to nothing, and what `cfg_attr` would apply is a configuration this
+/// protocol does not evaluate: it stays the one conditional-compilation record it always was.
+#[test]
+fn domain_facts_does_not_record_a_built_in_attribute_or_what_cfg_attr_would_apply() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Clone)]\n#[allow(dead_code)]\n#[non_exhaustive]\n#[rustfmt::skip]\n#[cfg_attr(test, my_macro)]\npub struct Builtin;"
+        ),
+        ["conditional-compilation@5"]
+    );
+}
+
+/// The built-in and tool attributes a domain crate commonly carries. `#[unsafe(...)]` is read by syn
+/// 3.0.5 as an attribute whose path is `unsafe`, so it is one of them.
+#[test]
+fn domain_facts_does_not_record_built_in_or_tool_attributes() {
+    let source = "#![allow(dead_code)]\n#[doc = \"documented\"]\n#[doc(hidden)]\n#[must_use]\n#[inline]\n#[deprecated(note = \"x\")]\npub fn a() -> u64 { 0 }\n#[repr(C)]\n#[derive(Debug)]\npub struct B;\n#[clippy::msrv = \"1.70\"]\n#[diagnostic::on_unimplemented(message = \"x\")]\npub trait C {}\n#[expect(unused)]\n#[track_caller]\n#[cold]\npub fn d() {}\n#[unsafe(no_mangle)]\npub extern \"C\" fn e() {}\n#[test]\n#[ignore]\n#[should_panic]\nfn f() {}\n#[macro_export]\nmacro_rules! g { () => {} }\n#[automatically_derived]\nimpl Clone for B { fn clone(&self) -> Self { B } }\n";
+    assert_eq!(reasons_at(source), Vec::<String>::new());
+}
+
+/// A helper attribute of a derive the same item carries is read by that derive, which cannot change
+/// the item's members, so it is not a possible attribute macro. The derive is matched by its last
+/// path segment, and the helper may stand on the item or on one of its fields.
+#[test]
+fn domain_facts_does_not_record_the_serde_helpers_of_a_serde_derive_on_the_same_struct() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(serde::Serialize)]\n#[serde(rename_all = \"camelCase\")]\npub struct Invoice { #[serde(rename = \"x\")] id: String }"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn domain_facts_does_not_record_the_serde_helpers_on_the_variants_of_a_serde_enum() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Deserialize)]\n#[serde(tag = \"kind\")]\npub enum Event {\n    #[serde(rename = \"issued\")]\n    Issued { #[serde(default)] amount: u64 },\n    Paid(#[serde(default)] u64),\n}\n"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn domain_facts_records_a_serde_helper_on_an_item_without_a_serde_derive() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Clone)]\n#[serde(rename_all = \"camelCase\")]\npub struct Invoice { id: String }"
+        ),
+        ["attribute-macro@2"]
+    );
+}
+
+/// The derive allows its helpers on the item it is written on alone: not on another item of the same
+/// file, and not on an impl block of the same type, which is an item of its own.
+#[test]
+fn domain_facts_allows_a_serde_helper_on_the_derived_item_only() {
+    assert_eq!(
+        sorted_reasons_at(
+            "#[derive(Serialize)]\npub struct A { id: String }\n#[serde(rename_all = \"camelCase\")]\npub struct B { id: String }\n#[derive(Serialize)]\npub struct C;\nimpl C {\n    #[serde(skip)]\n    fn hidden(&self) {}\n}\n"
+        ),
+        ["attribute-macro@3", "attribute-macro@8"]
+    );
+}
+
+/// `Default` declares the `#[default]` helper that picks the default variant of an enum it derives.
+#[test]
+fn domain_facts_does_not_record_the_default_helper_on_a_variant_of_a_default_enum() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Clone, Default)]\npub enum InvoiceStatus {\n    #[default]\n    Draft,\n    Issued,\n}\n"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn domain_facts_records_the_default_helper_on_an_enum_without_a_default_derive() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Clone)]\npub enum InvoiceStatus {\n    #[default]\n    Draft,\n    Issued,\n}\n"
+        ),
+        ["attribute-macro@3"]
+    );
+}
+
+/// Only the helpers of an allow-listed derive are allowed; the helper of any other derive is recorded.
+#[test]
+fn domain_facts_records_the_helper_of_a_derive_the_allow_list_does_not_name() {
+    assert_eq!(
+        reasons_at("#[derive(thiserror::Error)]\n#[error(\"failed\")]\npub struct Failure;"),
+        ["attribute-macro@2"]
+    );
+}
+
 #[test]
 fn domain_facts_marks_an_unparsed_file_instead_of_reporting_it_as_declaring_nothing() {
     let answer = check("pub struct {");
@@ -582,7 +732,7 @@ fn domain_facts_marks_an_unparsed_file_instead_of_reporting_it_as_declaring_noth
 
 #[test]
 fn domain_facts_answers_one_record_per_requested_file_in_order() {
-    let answer = run(json!({"protocol_version":6,"files":[
+    let answer = run(json!({"protocol_version":7,"files":[
         {"path":"b.rs","source":"pub struct B(pub u64);"},
         {"path":"a.rs","source":"pub struct A(pub u64);"}]}))
     .unwrap();
@@ -595,10 +745,10 @@ fn domain_facts_answers_one_record_per_requested_file_in_order() {
 #[test]
 fn domain_facts_refuses_a_request_that_is_not_this_protocol() {
     for request in [
-        json!({"protocol_version":5,"files":[{"path":"lib.rs","source":""}]}),
-        json!({"protocol_version":6,"files":[]}),
-        json!({"protocol_version":6,"files":[{"path":"lib.rs"}]}),
-        json!({"protocol_version":6,"files":[{"path":"lib.rs","source":"","extra":true}]}),
+        json!({"protocol_version":6,"files":[{"path":"lib.rs","source":""}]}),
+        json!({"protocol_version":7,"files":[]}),
+        json!({"protocol_version":7,"files":[{"path":"lib.rs"}]}),
+        json!({"protocol_version":7,"files":[{"path":"lib.rs","source":"","extra":true}]}),
     ] {
         assert!(run(request).is_err());
     }

@@ -1,4 +1,4 @@
-//! Version 6 domain facts: the decision base of every rule the domain gate reports. Source is
+//! Version 7 domain facts: the decision base of every rule the domain gate reports. Source is
 //! never compiled or executed.
 //!
 //! One batch carries every source of the inspected program, and the answer carries one record per
@@ -13,8 +13,8 @@
 //! and re-printing would insert token separators that those patterns do not allow.
 //!
 //! Two kinds of "cannot be read" are kept apart, because they are answered differently. `unresolved`
-//! notes name a construct that could hide a declaration from this answer (`cfg`, macro expansion);
-//! a record without `parsed: true` names a file that yielded no declarations at all. Neither is ever
+//! notes name a construct that could hide a declaration from this answer (`cfg`, macro expansion,
+//! an attribute that may be an attribute macro); a record without `parsed: true` names a file that yielded no declarations at all. Neither is ever
 //! flattened into an empty declaration list, because "this file declares nothing" is the one answer
 //! an uninspected file must not give.
 use proc_macro2::TokenTree;
@@ -30,7 +30,119 @@ use syn::{
 #[path = "domain_facts_tests.rs"]
 mod tests;
 
-const PROTOCOL_VERSION: u8 = 6;
+const PROTOCOL_VERSION: u8 = 7;
+
+/// The single-segment attributes the compiler itself defines, which expand to nothing and so cannot
+/// replace what they annotate. `cfg` and `cfg_attr` are left out: they are recorded under their own
+/// reason. A path-qualified attribute (`tokio::test`, `core::prelude::v1::test`) is never read as
+/// one of these: telling a crate's macro from a built-in re-exported under a path takes the name
+/// resolution this protocol does not perform, so it is recorded rather than trusted.
+const BUILT_IN_ATTRIBUTES: &[&str] = &[
+    "test",
+    "ignore",
+    "should_panic",
+    "derive",
+    "automatically_derived",
+    "macro_export",
+    "macro_use",
+    "proc_macro",
+    "proc_macro_derive",
+    "proc_macro_attribute",
+    "allow",
+    "expect",
+    "warn",
+    "deny",
+    "forbid",
+    "deprecated",
+    "must_use",
+    "link",
+    "link_name",
+    "link_ordinal",
+    "no_link",
+    "repr",
+    "crate_type",
+    "crate_name",
+    "no_main",
+    "export_name",
+    "link_section",
+    "no_mangle",
+    "used",
+    "inline",
+    "cold",
+    "naked",
+    "no_builtins",
+    "target_feature",
+    "track_caller",
+    "instruction_set",
+    "doc",
+    "no_std",
+    "no_implicit_prelude",
+    "path",
+    "recursion_limit",
+    "type_length_limit",
+    "panic_handler",
+    "global_allocator",
+    "windows_subsystem",
+    "feature",
+    "non_exhaustive",
+    "debugger_visualizer",
+    "collapse_debuginfo",
+    "unsafe",
+];
+
+/// The tool namespaces the compiler reserves (`#[rustfmt::skip]`, `#[clippy::msrv]`,
+/// `#[diagnostic::on_unimplemented]`): an attribute under one of them is read by a tool, never
+/// expanded.
+const TOOL_ATTRIBUTE_NAMESPACES: &[&str] = &["rustfmt", "clippy", "diagnostic"];
+
+/// Derive helper attributes that are not read as possible attribute macros, each with the derives
+/// (by their last path segment) that declare it. A helper is only inert on the item a derive naming
+/// it is written on, and syntax alone cannot tell it from an attribute macro of the same name, so a
+/// helper stays allowed only when that derive stands on the same item.
+const DERIVE_HELPER_ALLOW_LIST: &[(&str, &[&str])] = &[
+    ("serde", &["Serialize", "Deserialize"]),
+    ("default", &["Default"]),
+];
+
+fn is_built_in_attribute(path: &syn::Path) -> bool {
+    if path.leading_colon.is_some() {
+        return false;
+    }
+    let mut segments = path.segments.iter();
+    match (segments.next(), segments.next()) {
+        (Some(only), None) => BUILT_IN_ATTRIBUTES.contains(&only.ident.to_string().as_str()),
+        (Some(namespace), Some(_)) => {
+            TOOL_ATTRIBUTE_NAMESPACES.contains(&namespace.ident.to_string().as_str())
+        }
+        _ => false,
+    }
+}
+
+/// The helpers of the allow-listed derives an item carries. A `derive` whose arguments do not parse
+/// as paths allows nothing, so its item's helpers are recorded rather than trusted.
+fn allowed_derive_helpers(attrs: &[syn::Attribute]) -> Vec<&'static str> {
+    let derived: Vec<String> = attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("derive"))
+        .filter_map(|attr| {
+            attr.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Path, syn::Token![,]>::parse_terminated,
+            )
+            .ok()
+        })
+        .flatten()
+        .filter_map(|path| {
+            path.segments
+                .last()
+                .map(|segment| segment.ident.to_string())
+        })
+        .collect();
+    DERIVE_HELPER_ALLOW_LIST
+        .iter()
+        .filter(|(_, derives)| derives.iter().any(|name| derived.iter().any(|d| d == name)))
+        .map(|(helper, _)| *helper)
+        .collect()
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -139,19 +251,50 @@ fn declared_fn_start(
 struct Notes {
     members: Vec<Value>,
     unresolved: Vec<Value>,
+    /// The derive helpers allowed on the item being visited, innermost item last. Every item opens
+    /// its own entry, so a helper allowed on a struct is not allowed on an item nested inside it.
+    derive_helpers: Vec<Vec<&'static str>>,
 }
 
 impl Notes {
-    /// Only the constructs that can add or remove a declaration these rules read are recorded.
-    /// An attribute or derive macro cannot change the members of the declaration it annotates, so
-    /// it is a documented limit of this protocol rather than a per-occurrence record.
+    /// Only the constructs that can add or remove a declaration these rules read are recorded. An
+    /// attribute macro replaces the item it annotates, so it can add public members or methods, or
+    /// rewrite an inline module, and the item a reader sees is not necessarily the one the program
+    /// declares. A derive macro cannot change the item it annotates (it can only add items beside
+    /// it), so a derive and the allow-listed helpers it reads are not recorded.
     fn unresolved(&mut self, reason: &str, span: proc_macro2::Span) {
         self.unresolved
             .push(json!({"reason": reason, "line": line(span)}));
     }
+
+    fn is_allowed_derive_helper(&self, path: &syn::Path) -> bool {
+        self.derive_helpers
+            .last()
+            .is_some_and(|allowed| allowed.iter().any(|helper| path.is_ident(helper)))
+    }
+
+    fn within_derived_item(&mut self, attrs: &[syn::Attribute], visit: impl FnOnce(&mut Self)) {
+        self.derive_helpers.push(allowed_derive_helpers(attrs));
+        visit(self);
+        self.derive_helpers.pop();
+    }
 }
 
 impl<'ast> Visit<'ast> for Notes {
+    fn visit_item(&mut self, node: &'ast syn::Item) {
+        self.derive_helpers.push(Vec::new());
+        visit::visit_item(self, node);
+        self.derive_helpers.pop();
+    }
+
+    fn visit_item_enum(&mut self, node: &'ast syn::ItemEnum) {
+        self.within_derived_item(&node.attrs, |notes| visit::visit_item_enum(notes, node));
+    }
+
+    fn visit_item_union(&mut self, node: &'ast syn::ItemUnion) {
+        self.within_derived_item(&node.attrs, |notes| visit::visit_item_union(notes, node));
+    }
+
     fn visit_item_struct(&mut self, node: &'ast syn::ItemStruct) {
         for (index, field) in node.fields.iter().enumerate() {
             if matches!(field.vis, syn::Visibility::Inherited) {
@@ -169,7 +312,7 @@ impl<'ast> Visit<'ast> for Notes {
             self.members
                 .push(json!({"type": spelling(&node.ident), "member": member, "line": line}));
         }
-        visit::visit_item_struct(self, node);
+        self.within_derived_item(&node.attrs, |notes| visit::visit_item_struct(notes, node));
     }
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
@@ -193,6 +336,8 @@ impl<'ast> Visit<'ast> for Notes {
         let path = node.path();
         if path.is_ident("cfg") || path.is_ident("cfg_attr") {
             self.unresolved("conditional-compilation", node.span());
+        } else if !is_built_in_attribute(path) && !self.is_allowed_derive_helper(path) {
+            self.unresolved("attribute-macro", node.span());
         }
         visit::visit_attribute(self, node);
     }
@@ -1192,6 +1337,7 @@ fn analyze(path: &str, source: &str) -> Value {
     let mut notes = Notes {
         members: Vec::new(),
         unresolved: Vec::new(),
+        derive_helpers: Vec::new(),
     };
     notes.visit_file(&parsed);
     // `parse_file` assigns spans from the text left after it drops a BOM and cuts a shebang, so a

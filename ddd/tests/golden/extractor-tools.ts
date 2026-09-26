@@ -17,7 +17,9 @@ const PRODUCT_BIN_DIR = join(PRODUCT_TOOLS_DIR, "ddd", "bin");
 const HOST_KEY = `${process.platform}-${process.arch}`;
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";
 /** The protocol the Rust decision base is read over, fixed by the inspection contract. */
-const DOMAIN_FACTS_VERSION = 6;
+const DOMAIN_FACTS_VERSION = 7;
+/** The unresolved reason the extractor records for an attribute that may replace what it annotates. */
+const ATTRIBUTE_MACRO_REASON = "attribute-macro";
 
 export interface InstallationOptions {
   /** Omit the host row from the manifest, leaving this platform unrecorded. */
@@ -32,6 +34,13 @@ export interface InstallationOptions {
   readonly probe?: "fails";
   /** Answer the probe with a protocol the adapter does not accept. */
   readonly protocol?: number;
+  /**
+   * Answer the batch as the product extractor does, less every attribute-macro record. The input
+   * and every other fact stay the product's, so a run through this copy and one through the product
+   * differ in that record alone — which is the answer the rule layer received before the extractor
+   * recorded attribute macros at all.
+   */
+  readonly batch?: "without-attribute-macros";
 }
 
 const temporary: string[] = [];
@@ -41,13 +50,37 @@ export function removeExtractorTools(): void {
   for (const root of temporary.splice(0)) rmSync(root, { recursive: true, force: true });
 }
 
-function extractorStub(options: InstallationOptions): string {
+/**
+ * Runs the extractor named by its first argument over the request on stdin and prints the answer
+ * without the unresolved records carrying the reason named by its second. A run that fails is passed
+ * on as the same failure, so the filter never turns a missing answer into an empty one.
+ */
+const RECORD_FILTER = `const [extractor, reason] = process.argv.slice(2);
+const run = Bun.spawnSync([extractor], {
+  stdin: Buffer.from(await Bun.stdin.arrayBuffer()),
+  stdout: "pipe",
+  stderr: "inherit",
+});
+if (run.exitCode !== 0) process.exit(run.exitCode ?? 1);
+const answer = JSON.parse(run.stdout.toString());
+for (const file of answer.files) file.unresolved = file.unresolved.filter((entry) => entry.reason !== reason);
+process.stdout.write(JSON.stringify(answer));
+`;
+
+function extractorStub(options: InstallationOptions, root: string): string {
   const answer = `echo '{"protocol_version":${options.protocol ?? DOMAIN_FACTS_VERSION},"extractor":"0.0.0","syn":"3.0.5"}'`;
+  let batch = "exit 1";
+  if (options.batch === "without-attribute-macros") {
+    const filter = join(root, "record-filter.ts");
+    writeFileSync(filter, RECORD_FILTER);
+    const product = join(PRODUCT_BIN_DIR, HOST_KEY, EXTRACTOR_NAME);
+    batch = `exec '${process.execPath}' '${filter}' '${product}' '${ATTRIBUTE_MACRO_REASON}'`;
+  }
   return [
     "#!/bin/sh",
     'case "$1" in',
     `  --*-version) ${options.probe === "fails" ? "exit 1" : answer} ;;`,
-    "  *) exit 1 ;;",
+    `  *) ${batch} ;;`,
     "esac",
     "",
   ].join("\n");
@@ -64,7 +97,7 @@ export function toolsWithExtractor(options: InstallationOptions): string {
   });
   const bin = join(tools, "ddd", "bin");
   mkdirSync(bin, { recursive: true });
-  const body = extractorStub(options);
+  const body = extractorStub(options, root);
   const recorded = createHash("sha256")
     .update(options.digest === "stale" ? `${body}# recorded from other bytes\n` : body)
     .digest("hex");

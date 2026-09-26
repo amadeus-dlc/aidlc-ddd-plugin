@@ -1,5 +1,5 @@
 /**
- * Protocol version 6 of the native extractor: the facts every Rust rule decides on.
+ * Protocol version 7 of the native extractor: the facts every Rust rule decides on.
  *
  * The launch classification is the shared one in `native/launch.ts`; this module owns the protocol
  * identity, the one batch this inspection sends, and the strict conversion of native spellings into
@@ -15,7 +15,9 @@ import { ToolUnavailableError } from "../../runtime/runtime.ts";
 import { classifyNativeExtractor, type NativeOutcome, nativeIssue } from "../native/launch.ts";
 import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-const PROTOCOL = { flag: "--domain-facts-version", version: 6 };
+const PROTOCOL = { flag: "--domain-facts-version", version: 7 };
+/** The unresolved reason the extractor gives an attribute that may replace the item it annotates. */
+const ATTRIBUTE_MACRO_REASON = "attribute-macro";
 /** The extractor refuses a larger request, so an oversized batch is refused before it is sent. */
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 30_000;
@@ -169,6 +171,11 @@ export interface RustFileFacts {
   readonly calls: readonly CallFact[];
   readonly modules: readonly ModuleFact[];
   readonly itemMacros: readonly ItemMacroFact[];
+  /**
+   * The line of every attribute that may be an attribute macro. Such a macro replaces the item it
+   * annotates, so what this file declares cannot be decided from its syntax alone.
+   */
+  readonly attributeMacros: readonly number[];
 }
 
 export interface DomainFactSet {
@@ -408,6 +415,10 @@ function fileFacts(record: Record<string, unknown>): RustFileFacts {
     calls: array(record.calls).map(call),
     modules: array(record.modules).map(moduleDeclaration),
     itemMacros: array(record.item_macros).map(itemMacro),
+    attributeMacros: array(record.unresolved)
+      .map(object)
+      .filter((reason) => nonempty(reason.reason) === ATTRIBUTE_MACRO_REASON)
+      .map((reason) => line(reason.line)),
   };
 }
 

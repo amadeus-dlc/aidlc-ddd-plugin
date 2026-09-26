@@ -3,7 +3,8 @@
  *
  * The golden suite fixes which rule fires on which file; this file fixes what the golden runner
  * cannot compare — how many findings a declaration produces, the line each one carries, and the
- * member or method name it reports — plus what the gates do when the extractor cannot be launched.
+ * member or method name it reports — plus what the gates do when the extractor cannot be launched,
+ * and when a file these rules decide from carries an attribute that may be an attribute macro.
  */
 
 import { afterEach, expect, test } from "bun:test";
@@ -343,4 +344,194 @@ test.skipIf(READ_PERMISSION_UNENFORCED)("the same unreadable claim is still a fi
   );
   expect(result.exitCode).toBe(127);
   expect(result.stdout).toBe("");
+});
+
+// --- an attribute macro in the files rules (a) and (d) decide from -------------
+
+// An attribute that is neither built in nor a helper of a derive on the same item may be an attribute
+// macro, which replaces the item it annotates: it can add the public member rule (a) looks for, or the
+// getter rule (d) looks for. Syntax alone cannot tell the replaced item from the one written, so a file
+// those rules decide from that carries one leaves them undecidable. Each stop is paired with the same
+// input answered without the extractor's attribute-macro record, which is how the rule layer was
+// answered before the extractor recorded one: that run passes with no finding of the rule.
+
+const USE_CASE = "packages/use-case/billing-use-case/src/lib.rs";
+const INTERFACE_ADAPTER = "packages/interface-adapter/billing-interface-adapter/src/lib.rs";
+
+/** The one aggregate the fixture model declares, with the one command that model gives it. */
+const INVOICE = `pub struct Invoice {
+    id: String,
+    amount: i64,
+}
+impl Invoice {
+    pub fn issue(&mut self) {}
+}
+`;
+
+/** The verdict of a run that answered; a run that stopped instead fails with the reason it gave. */
+function answeredVerdict(result: { exitCode: number | null; stdout: string; stderr: string }): SensorVerdict {
+  expect(result.exitCode, result.stderr).toBe(0);
+  return JSON.parse(result.stdout);
+}
+
+/** The parts a verdict note is joined from, since each producer contributes whole parts. */
+function noteParts(verdict: SensorVerdict): string[] {
+  return (verdict.note ?? "").split("; ");
+}
+
+function ruleFindings(verdict: SensorVerdict, rule: string): SensorVerdict["findings"] {
+  return verdict.findings.filter((entry) => entry.rule_id === rule);
+}
+
+/** The run of `input` whose extractor answers as the product one, less every attribute-macro record. */
+function withoutAttributeMacroRecords(input: GoldenCase): SensorVerdict {
+  return answeredVerdict(spawnSensor(toolsWithExtractor({ batch: "without-attribute-macros" }), input));
+}
+
+test("an attribute macro on a declaration rule (a) decides from stops the domain gate, where the answer without its record passed", () => {
+  const lib = `#[add_public_field]\n${INVOICE}`;
+  const input = domainCase("domain-facts-attribute-macro-a", lib);
+
+  const unrecorded = withoutAttributeMacroRecords(input);
+  expect(unrecorded.pass, unrecorded.note).toBe(true);
+  expect(ruleFindings(unrecorded, "a")).toEqual([]);
+
+  const recorded = spawnSensor(toolsDir, input);
+  expect(recorded.exitCode).toBe(127);
+  expect(recorded.stdout).toBe("");
+  expect(recorded.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[add_public_field]")} attribute-macro`);
+});
+
+test("an attribute macro in another crate rule (d) decides from stops the use-case gate, where the answer without its record passed", () => {
+  // Only the use-case source is claimed. The getter its call reaches would be declared in the domain
+  // crate, so that crate's source is a file rule (d) decides from although nothing claims it.
+  const domain = "#[expose_getters]\npub struct Invoice { amount: i64 }\n";
+  const source = caseNamed("violation-h");
+  const input: GoldenCase = {
+    ...source,
+    name: "domain-facts-attribute-macro-d",
+    workspace: {
+      ...source.workspace,
+      [DOMAIN]: domain,
+      [USE_CASE]: "use billing_domain::Invoice;\npub fn render(invoice: &Invoice) -> i64 { invoice.amount() }\n",
+    },
+    expect: { pass: true, rules: [] },
+  };
+
+  const unrecorded = withoutAttributeMacroRecords(input);
+  expect(unrecorded.pass, unrecorded.note).toBe(true);
+  expect(ruleFindings(unrecorded, "d")).toEqual([]);
+
+  const recorded = spawnSensor(toolsDir, input);
+  expect(recorded.exitCode).toBe(127);
+  expect(recorded.stdout).toBe("");
+  expect(recorded.stderr).toContain(`${DOMAIN}:${lineOf(domain, "#[expose_getters]")} attribute-macro`);
+});
+
+test("an attribute macro in a file no rule decides from is reported in the note and the gate answers", () => {
+  // A `#[cfg(test)]` module file is left out of the program the module walk builds, so rules (a) and
+  // (d) decide nothing from it. The batch still carries every source of the crate, so the extractor
+  // answers for this file too, and what it records there is reported rather than dropped.
+  const tests = "packages/domain/billing-domain/src/tests.rs";
+  const base = domainCase("domain-facts-attribute-macro-outside", `${INVOICE}#[cfg(test)]\nmod tests;\n`);
+  const verdict = answeredVerdict(
+    spawnSensor(toolsDir, {
+      ...base,
+      workspace: { ...base.workspace, [tests]: "#[tokio::test]\nasync fn one() {}\n" },
+    }),
+  );
+  expect(noteParts(verdict)).toContain(`domain-facts.unresolved: ${tests}:1 attribute-macro`);
+});
+
+test("the same attribute macro inside a test module of a file rule (a) decides from stops the gate", () => {
+  // The module walk leaves a `#[cfg(test)]` module out of the program, but the file it is written in
+  // is one rule (a) reads every member of, so whether to stop is decided per file, not per item.
+  const lib = `${INVOICE}#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn one() {}
+}
+`;
+  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-inline-test", lib));
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[tokio::test]")} attribute-macro`);
+});
+
+/**
+ * The two-crate use-case workspace with the repository crate of the adapter fixture added, whose source
+ * is `adapter`. That crate belongs to the program both gates build, so one file is read by the
+ * interface-adapter gate, which decides neither rule (a) nor (d), and by the use-case gate, which
+ * decides rule (d).
+ */
+function programWithAdapter(adapter: string): Record<string, string> {
+  const members = [
+    "packages/domain/billing-domain",
+    "packages/use-case/billing-use-case",
+    "packages/interface-adapter/billing-interface-adapter",
+  ];
+  return {
+    ...caseNamed("violation-h").workspace,
+    ...caseNamed("clean-repository").workspace,
+    "Cargo.toml": `[workspace]\nmembers = [${members.map((member) => `"${member}"`).join(", ")}]\nresolver = "2"\n`,
+    [INTERFACE_ADAPTER]: adapter,
+  };
+}
+
+test("an attribute macro the interface-adapter gate reads is a note there and a stop at the use-case gate", () => {
+  const adapter =
+    "pub trait InvoiceRepository {}\n#[my_attr]\npub struct InMemoryInvoiceRepository;\nimpl InvoiceRepository for InMemoryInvoiceRepository {}\n";
+  const workspace = programWithAdapter(adapter);
+  const recordedAt = `${INTERFACE_ADAPTER}:${lineOf(adapter, "#[my_attr]")} attribute-macro`;
+
+  const adapterGate = answeredVerdict(
+    spawnSensor(toolsDir, {
+      ...caseNamed("clean-repository"),
+      name: "domain-facts-attribute-macro-adapter",
+      workspace,
+    }),
+  );
+  expect(noteParts(adapterGate)).toContain(`domain-facts.unresolved: ${recordedAt}`);
+
+  const useCaseGate = spawnSensor(toolsDir, {
+    ...caseNamed("violation-h"),
+    name: "domain-facts-attribute-macro-adapter-use-case",
+    workspace,
+  });
+  expect(useCaseGate.exitCode).toBe(127);
+  expect(useCaseGate.stdout).toBe("");
+  expect(useCaseGate.stderr).toContain(recordedAt);
+});
+
+test("a declaration carrying derives alone keeps being decided by rule (a)", () => {
+  const lib = "#[derive(Clone, Debug)]\npub struct Invoice {\n    id: String,\n    pub amount: i64,\n}\n";
+  const reported = findingsOf("domain-facts-attribute-derive-only", lib, "a");
+  expect(reported.map((entry) => entry.line)).toEqual([lineOf(lib, "pub amount")]);
+});
+
+test("a declaration carrying the helpers of its own serde derive keeps being decided by rule (a)", () => {
+  const lib = `#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Invoice {
+    #[serde(rename = "invoiceId")]
+    id: String,
+    pub amount: i64,
+}
+`;
+  const reported = findingsOf("domain-facts-attribute-serde-helper", lib, "a");
+  expect(reported.map((entry) => entry.line)).toEqual([lineOf(lib, "pub amount")]);
+});
+
+test("the same serde helper on a declaration without a serde derive stops the domain gate", () => {
+  const lib = `#[derive(Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Invoice {
+    id: String,
+    pub amount: i64,
+}
+`;
+  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-serde-without-derive", lib));
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[serde(")} attribute-macro`);
 });
