@@ -22,6 +22,7 @@ import type {
   ReasonCode,
 } from "../../../tools/ddd/lib/error-contract/contract.ts";
 import { prepareErrorContractRequest } from "../../../tools/ddd/lib/error-contract/request.ts";
+import type { TypeScriptModuleLayout } from "../../../tools/ddd/lib/project-settings/contract.ts";
 import { projectSettingsPayload } from "../../../tools/ddd/lib/project-settings/payload.ts";
 import type { Command, DomainError, DomainModel, FactoryRule } from "../../../tools/ddd/lib/schema/model.ts";
 
@@ -251,8 +252,9 @@ export function withCase(value: AggregateMapping, errorRef: string, spelling: st
   };
 }
 
-export function atModule(value: AggregateMapping, module: string): AggregateMapping {
-  return { ...value, code: { ...value.code, module: [module] } };
+/** A copy of `value` whose mapped module path is `module`, one segment per argument. */
+export function atModule(value: AggregateMapping, ...module: string[]): AggregateMapping {
+  return { ...value, code: { ...value.code, module } };
 }
 
 export function atPackage(value: AggregateMapping, packageName: string): AggregateMapping {
@@ -292,13 +294,25 @@ const RUST_PACKAGE_ID = "path+file:///fixture/billing-domain#0.1.0";
 const TYPESCRIPT_PACKAGE_ID = "path:billing-domain#billing-domain@0.1.0";
 
 /** What an observation may differ in; every field left out keeps the base value. */
-interface ObservationOptions {
+export interface ObservationOptions {
   readonly type?: string;
   /** The Rust module path the declaration is observed in; TypeScript names its module by the file. */
   readonly module?: readonly string[];
+  /** The TypeScript file the declaration is observed in, which is also the one source it is read from. */
+  readonly file?: string;
+  /** The TypeScript package root the observed package is recorded at. */
+  readonly packageRoot?: string;
+  /** The whole TypeScript declaration path, when it is not the type alone. */
+  readonly declarationPath?: readonly string[];
+  /**
+   * The TypeScript module layout the project settings name, or null for settings that name no
+   * TypeScript choice at all.
+   */
+  readonly moduleLayout?: TypeScriptModuleLayout | null;
   readonly packageName?: string;
   readonly content?: string;
   readonly otherCondition?: boolean;
+  /** Observed under the other Rust module layout; a TypeScript observation names its layout by `moduleLayout`. */
   readonly otherSettings?: boolean;
   readonly toolVersion?: string;
 }
@@ -337,8 +351,20 @@ function rustInput(method: string, options: ObservationOptions): InspectionInput
   };
 }
 
+function typeScriptSettings(options: ObservationOptions): InspectionInput["settings"] {
+  if (options.otherSettings) throw new Error("a TypeScript observation names its module layout by moduleLayout");
+  if (options.moduleLayout === null) return {};
+  return projectSettingsPayload({
+    languages: ["typescript"],
+    rust: null,
+    typescript: { moduleLayout: options.moduleLayout ?? "named-file", codeRepresentation: "class" },
+  });
+}
+
 function typeScriptInput(method: string, options: ObservationOptions): InspectionInput {
-  const file = SOURCE_FILES.typescript;
+  const file = options.file ?? SOURCE_FILES.typescript;
+  const packageRoot = options.packageRoot ?? "billing-domain";
+  const tsconfigPath = `${packageRoot}/tsconfig.json`;
   return {
     language: "typescript",
     typeScriptCondition: {
@@ -353,8 +379,8 @@ function typeScriptInput(method: string, options: ObservationOptions): Inspectio
           packageId: TYPESCRIPT_PACKAGE_ID,
           name: options.packageName ?? "billing-domain",
           version: "0.1.0",
-          packageRoot: "billing-domain",
-          tsconfigPath: "billing-domain/tsconfig.json",
+          packageRoot,
+          tsconfigPath,
           entryPoints: [],
           projectReferences: [],
           dependencies: [],
@@ -364,20 +390,13 @@ function typeScriptInput(method: string, options: ObservationOptions): Inspectio
     },
     target: {
       packageId: TYPESCRIPT_PACKAGE_ID,
-      targetName: "billing-domain/tsconfig.json",
+      targetName: tsconfigPath,
       file,
-      declarationPath: [options.type ?? "Invoice"],
+      declarationPath: options.declarationPath ?? [options.type ?? "Invoice"],
       operation: method,
     },
     sources: [{ path: file, content: options.content ?? SOURCE }],
-    settings: projectSettingsPayload({
-      languages: ["typescript"],
-      rust: null,
-      typescript: {
-        moduleLayout: options.otherSettings ? "index-file" : "named-file",
-        codeRepresentation: "class",
-      },
-    }),
+    settings: typeScriptSettings(options),
     toolchain: [{ name: "fixture", version: options.toolVersion ?? "1" }],
   };
 }

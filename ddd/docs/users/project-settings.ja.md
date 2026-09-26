@@ -24,6 +24,15 @@ code_representation = "class"
 | `typescript.module_layout` | `named-file` / `index-file` | 親が `src/invoice.ts` / 親が `src/invoice/index.ts`。末端はどちらも `src/invoice/line.ts` |
 | `typescript.code_representation` | `class` / `companion` | class による表現か、型と同名コンパニオンによる表現か |
 
+TypeScript のソースルートは、パッケージのルート（`package.json` のあるディレクトリ）直下の `src` です。モジュールを置くファイルを決めるのは、実装写像ではなくこの設定です。実装写像の `code.module` はモジュールパスだけを述べます。モジュールパス `[m1, …, mn]` のファイルは次のとおりです。
+
+| `typescript.module_layout` | モジュールのファイル |
+|---|---|
+| `named-file` | `src/m1/…/mn.ts` |
+| `index-file` | 子を持つモジュールは `src/m1/…/mn/index.ts`、末端のモジュールは `src/m1/…/mn.ts` |
+
+[操作エラー集合の照合](../developers/operation-error-set.ja.md)（`operation-error-set/1`）は、この規約で、観測が指すファイルが写像したモジュールのファイルかを検査します。`src` 以外のソースルートは扱いません。
+
 集約の実行モデルと永続化方式は `ddd-aggregate-mapping.md` が持ち続けます。ここに `programming_model` や `persistence_method` を書くと拒否されます。集約の実行モデルとしての `class` と、TypeScript のコード表現としての `class` は別物です。
 
 ## 各形式を検査がどう扱うか

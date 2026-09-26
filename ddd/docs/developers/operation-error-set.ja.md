@@ -41,10 +41,27 @@ bun run check                        # 上記を含む全体検査
 | 観測が `error-contract/1` の要求として正しくない（識別の改変を含む） | 観測を信用できない |
 | 観測の言語、`target.operation`、`target.declarationPath` の末尾、`target.packageId` が指すパッケージの名前が、写像の言語・メソッド・型・パッケージと一致しない | 別の対象の観測である |
 | Rust の観測の `target.declarationPath` のうち型より前の要素が、写像の `module` と一致しない（`r#name` と `name` は同じセグメントとして扱う） | 同名の型を別のモジュールで観測している |
+| TypeScript の観測の `target.file` が、プロジェクト設定が写像の `module` を置くファイルではない | 同名の型を別のモジュールで観測している |
+| TypeScript の観測の `target.declarationPath` が型の1要素だけではない（名前空間の中の型など） | 同名の型を、モジュールの直下ではない場所で観測している |
+| TypeScript の観測の `settings` が TypeScript のモジュール配置を名指ししない | 写像のモジュールを置くファイルを決められない |
+| TypeScript の写像の `module` が空、または TypeScript のモジュール名として綴れない要素（`..`、`/` を含む要素など）を持つ | プロジェクト設定がそのモジュールを置くファイルを定めていない |
 | 観測どうしで、ソース、解析条件、設定、ツール版のいずれかが異なる | 異なる解析スナップショットを混在させない |
 | 観測が欠けている、1つの操作に2件ある、または写像にない操作を指している | 操作と観測を1対1に結び付けられない |
 
-Rust の宣言パスは、プロジェクトのファイル配置にかかわらず、crate ルートからのモジュールパスに型を続けたものです。このため照合器は、宣言パスの前半を写像の `module` と比べます。TypeScript のモジュールはファイルそのもので、写像はそのファイルを置くソースルートを定めていません。このため照合器は、TypeScript の観測のファイルを写像の `module` と比べず、配置は TypeScript の検証経路が決めます。
+Rust の宣言パスは、プロジェクトのファイル配置にかかわらず、crate ルートからのモジュールパスに型を続けたものです。このため照合器は、宣言パスの前半を写像の `module` と比べます。
+
+TypeScript のモジュールはファイルそのものです。写像はモジュールパスだけを述べ、そのファイルの置き場所は述べません。置き場所は観測側、すなわち[プロジェクト設定](../users/project-settings.ja.md)が述べる契約です。ソースルートはパッケージのルート直下の `src` で、`typescript.moduleLayout` が配置を決めます。照合器は、要求が既に持つ次の材料から、写像の `module` に対して許されるファイルを求め、観測の `target.file` と完全一致で比べます。
+
+- 観測の `target.packageId` が指す `typeScriptCondition.packages[].packageRoot`
+- 観測の `settings` の `typescript.moduleLayout`
+- 写像の `module`
+
+| 配置 | 許すファイル（`module` が `[m1, …, mn]` のとき） |
+|---|---|
+| `named-file` | `<packageRoot>/src/m1/…/mn.ts` |
+| `index-file` | `<packageRoot>/src/m1/…/mn/index.ts`（子を持つモジュール）と `<packageRoot>/src/m1/…/mn.ts`（末端のモジュール） |
+
+`index-file` で2つの置き場所を両方受理するのは、子の有無の検査がモジュール配置検査の担当だからです。パスは正規化せずに連結し、大文字小文字や拡張子（`.tsx`・`.mts`・`.d.ts`）も同一視しません。宣言パスは `[type]` の1要素に限ります。これにより、観測を写像へ結ぶ検査の強さは Rust と同じになります。つまり、別のモジュール、下位のモジュール、モジュールの直下にない型を、どちらの言語でも拒否します。実装写像の形式と `schema_version` は変えていません。
 
 ## 要求識別
 
@@ -98,7 +115,7 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 | 経路 | 入口 | 対象の決め方 |
 |---|---|---|
 | Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | [配布 manifest](native-extractor-distribution.ja.md) がこのプラットフォームに記録したターゲットトリプルと、featureなしで `resolveCargoCondition` を実行する。この経路自体は `rustc` を必要としない。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまりライブラリcrateルートと同じディレクトリの `file` なら `<module>.rs`、`mod-rs` なら `<module>/mod.rs` に置く。宣言パスはどちらの配置でも `[...module, type]`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
-| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを `<packageRoot>/src/<module>.ts` に置く。宣言パスは `[type]`、モジュール配置は `named-file`、コード表現は `class` または `companion` |
+| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまり `<packageRoot>/src` の下の `named-file` なら `<module>.ts`、`index-file` なら `<module>/index.ts`（子を持つモジュール）と `<module>.ts`（末端のモジュール）のうちソースにある方に置き（どちらも無い、または両方ある場合は拒否する）、設定にもその配置を記録する。宣言パスは `[type]`、コード表現は `class` または `companion`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
 
 モデルと写像は [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) が本番のローダーで読みます。
 
@@ -109,6 +126,8 @@ Rust の宣言パスは、プロジェクトのファイル配置にかかわら
 各プロジェクトのモジュールが1つのシナリオです。写像の `module` をそのモジュールへ向けて到達します。期待値はシナリオから手書きしたもので、実行結果を写したものではありません。
 
 Rustのワークスペースは、プロジェクトのモジュール配置ごとに1つのパッケージを持ちます。写像の `package` をそのパッケージへ向けて到達します。`billing-domain` は `file` で書かれ、下表の全モジュールを持ちます。`billing-domain-mod-rs` は `mod-rs` で書かれ、`invoice` と `missing` を持ちます。下表は `file` のパッケージから読んだものです。両方に書かれた2モジュールはどちらの配置でも同じ判定になり、証跡の `rust_module_layouts` に記録します。
+
+TypeScriptの2プロジェクトも同じ構成です。`billing-domain` は `named-file` で書かれ、下表の全モジュールを持ちます。`billing-domain-index-file` は `index-file` で書かれ、`invoice` と `missing` を、子（`line.ts`）を持つディレクトリの `index.ts` として持ちます。下表は `named-file` のパッケージから読んだものです。両方に書かれた2モジュールは、両表現・両配置で同じ判定になり、証跡の `typescript_module_layouts` に記録します。
 
 | モジュール | 内容 | Rust | TypeScript（両表現） |
 |---|---|---|---|
@@ -137,10 +156,9 @@ Rustのワークスペースは、プロジェクトのモジュール配置ご�
 ## 限界
 
 - 写像の `code.error_type` の綴りと、解決したエラー型の宣言名は比べません。`error-contract/1` はエラー型を内部形式を前提にしない `symbolId` としてだけ返すためです。比べるには `error-contract/1` に宣言名を公開する変更が必要で、T-10/T-11の前提作業として親課題に記録します。
-- TypeScript の観測が写像の `module` のファイルを指しているかは検査しません。写像は TypeScript のモジュールを置くソースルートを定めていないため、ファイルとモジュールを結ぶのは、モジュールを `<packageRoot>/src/<module>.ts` に置く検証経路だけです。検証経路以外で用意した観測が、パッケージ・型・メソッドの同じ別モジュールのファイルを指していても受理します。比較器で検査するには、写像または観測がその配置を述べる必要があります。
 - 2つの操作が同じエラー型を共有しているかは検査しません。他の操作のエラーを含むunionは、ケース単位の `foreign-error` で検出します。
 - 本番センサーと承認ゲートには接続していません。
 - シナリオのモジュールをコンパイラが受理するかは測りません。いくつかのモジュールは、意図的にコンパイルできない形で書いています。
-- このシナリオはRustの両方のモジュール配置を使いますが、TypeScriptの配置は `named-file` だけです。TypeScriptの `index-file` は `error-contract/1` の検証が扱います。
+- TypeScript のソースルートは、パッケージのルート直下の `src` だけを扱います。それ以外のソースルートに置いたモジュールの観測は拒否します。
 - 型とケースの一致は、各失敗経路の状態維持や不変条件を証明しません。
 - 確認した環境は、証跡に記録した darwin-arm64、rustc 1.95.0、cargo 1.95.0、Bun 1.3.13、TypeScript 6.0.3、syn 3.0.5 です。

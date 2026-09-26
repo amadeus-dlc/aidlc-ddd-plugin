@@ -773,10 +773,228 @@
       }
     }
   ],
+  "typescript_module_layouts": [
+    {
+      "project": "typescript-class",
+      "package": "billing-domain",
+      "module_layout": "named-file",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain/src/invoice.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-class",
+      "package": "billing-domain",
+      "module_layout": "named-file",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain/src/missing.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-class",
+      "package": "billing-domain-index-file",
+      "module_layout": "index-file",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain-index-file/src/invoice/index.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-class",
+      "package": "billing-domain-index-file",
+      "module_layout": "index-file",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain-index-file/src/missing/index.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-companion",
+      "package": "billing-domain",
+      "module_layout": "named-file",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain/src/invoice.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-companion",
+      "package": "billing-domain",
+      "module_layout": "named-file",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain/src/missing.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-companion",
+      "package": "billing-domain-index-file",
+      "module_layout": "index-file",
+      "module": "invoice",
+      "description": "the mapped closed sets",
+      "files": [
+        "billing-domain-index-file/src/invoice/index.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "pass",
+          "findings": [],
+          "reasons": []
+        }
+      }
+    },
+    {
+      "project": "typescript-companion",
+      "package": "billing-domain-index-file",
+      "module_layout": "index-file",
+      "module": "missing",
+      "description": "a case each operation leaves out",
+      "files": [
+        "billing-domain-index-file/src/missing/index.ts"
+      ],
+      "results": {
+        "issue": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.issue.empty-lines"
+            }
+          ],
+          "reasons": []
+        },
+        "open": {
+          "rule_result": "violation",
+          "findings": [
+            {
+              "code": "missing-error",
+              "error": "error.invoice.open.missing-customer"
+            }
+          ],
+          "reasons": []
+        }
+      }
+    }
+  ],
   "changes": [
     {
       "project": "rust",
-      "request_identity": "sha256:3ae22f2ab2bc41a6ab33730d5d4f9d65275906c92a6c1320efbd64bea8fe9798",
+      "request_identity": "sha256:44615b63ab5b62458f4280a3b594dcf8b2f1a8b1d80263ab3f2ef186f9e917e2",
       "mapped_method": {
         "identity_changed": true,
         "fresh": {
@@ -870,7 +1088,7 @@
     },
     {
       "project": "typescript-class",
-      "request_identity": "sha256:97e13285157f074916e8beb0a99635b409bd86c1a4c2f30df0f5c2a0cb854a10",
+      "request_identity": "sha256:d2edef36513c27a6e81042c7b637d58e59a71e7cd7f3b317e21ae1d075d91b39",
       "mapped_method": {
         "identity_changed": true,
         "fresh": {
@@ -964,7 +1182,7 @@
     },
     {
       "project": "typescript-companion",
-      "request_identity": "sha256:08e8bf33bdd291930be37660801d485bff637c68332a65e314bcbbed4743aa65",
+      "request_identity": "sha256:f6434d1a07c23ba99f254fb17a2a60bebac538451d5d4919b3a8556a192d00aa",
       "mapped_method": {
         "identity_changed": true,
         "fresh": {
@@ -1060,7 +1278,6 @@
   "unverified": [
     "matching the mapped error type spelling against the resolved declaration name",
     "compiler acceptance of the scenario modules",
-    "the TypeScript index-file layout",
     "production sensor and approval gate integration",
     "error paths, state preservation and invariants of a running application"
   ]

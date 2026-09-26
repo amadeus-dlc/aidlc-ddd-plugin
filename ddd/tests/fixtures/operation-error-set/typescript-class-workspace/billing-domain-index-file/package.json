@@ -1,0 +1,13 @@
+{
+  "name": "billing-domain-index-file",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./invoice": "./src/invoice/index.ts",
+    "./missing": "./src/missing/index.ts"
+  },
+  "dependencies": {
+    "billing-domain": "0.1.0"
+  }
+}

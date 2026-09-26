@@ -11,6 +11,8 @@
 import { SPELLINGS } from "../aggregate-mapping/language.ts";
 import type { InspectionRequest, JsonValue, Language } from "../error-contract/contract.ts";
 import { isDigest, validateRequest as validateObservation } from "../error-contract/request.ts";
+import type { TypeScriptModuleLayout } from "../project-settings/contract.ts";
+import { typeScriptSelection } from "../project-settings/payload.ts";
 import { OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import {
   array,
@@ -63,26 +65,78 @@ function snapshotOf(request: InspectionRequest): string {
   return canonicalJson(snapshot as unknown as JsonValue);
 }
 
+const ANOTHER_MODULE = "Observes the mapped type in another module than the mapped one.";
+
 /**
- * Whether the observation names its type in the mapped module, where the language states the module
- * in the declaration path. A Rust declaration path is the module path from the crate root followed by
- * the type, whichever file layout the project uses, so every mapped segment is compared as the
- * language identifies it. A TypeScript module is a file, and the mapping fixes no source root to place
- * it under, so the file stays with the verification path.
+ * The files the project settings write a mapped TypeScript module in. The mapping states the module
+ * path alone; the source root is `src` directly under the package root, `named-file` writes a module
+ * as `<module>.ts`, and `index-file` writes a module with children as `<module>/index.ts` and a leaf
+ * as `<module>.ts`. Whether the module has children is the module layout check's to judge, so both
+ * `index-file` places are accepted here. The path is joined as written rather than normalised, which
+ * is sound only because every segment is spelled as a TypeScript module name.
  */
-function observesMappedModule(observation: InspectionRequest, code: OperationCode): boolean {
-  if (observation.language !== "rust") return true;
-  const observed = observation.target.declarationPath.slice(0, -1);
-  const identity = SPELLINGS.rust.segmentIdentity;
-  return (
-    observed.length === code.module.length &&
-    observed.every((segment, index) => identity(segment) === identity(code.module[index]))
+function typeScriptModuleFiles(
+  layout: TypeScriptModuleLayout,
+  packageRoot: string,
+  module: readonly string[],
+): readonly string[] {
+  const path = `${packageRoot}/src/${module.join("/")}`;
+  return layout === "named-file" ? [`${path}.ts`] : [`${path}.ts`, `${path}/index.ts`];
+}
+
+/**
+ * Refuses an observation that does not name its type in the mapped module. A Rust declaration path is
+ * the module path from the crate root followed by the type, whichever file layout the project uses, so
+ * every mapped segment is compared as the language identifies it. A TypeScript module is a file, and
+ * where the file of a module sits is the project settings' contract, not the mapping's: the observation
+ * is bound to the files its own settings and package root place the mapped module in, and names the
+ * type directly in that file, as a Rust observation names it directly in its module.
+ */
+function checkMappedModule(observation: InspectionRequest, code: OperationCode, field: string): void {
+  if (observation.language === "rust") {
+    const observed = observation.target.declarationPath.slice(0, -1);
+    const identity = SPELLINGS.rust.segmentIdentity;
+    requireValue(
+      observed.length === code.module.length &&
+        observed.every((segment, index) => identity(segment) === identity(code.module[index])),
+      `${field}.observation.target.declarationPath`,
+      ANOTHER_MODULE,
+    );
+    return;
+  }
+  const layout = typeScriptSelection(observation.settings)?.moduleLayout;
+  requireValue(
+    layout,
+    `${field}.observation.settings`,
+    "The project settings name no TypeScript module layout to place the mapped module by.",
+  );
+  // The package root module has no file the settings state, and a segment TypeScript cannot spell as
+  // a module name, such as `..` or `a/b`, would reach another file once joined.
+  requireValue(
+    code.module.length > 0 && code.module.every(SPELLINGS.typescript.isModuleSegment),
+    `${field}.code.module`,
+    "The project settings place no file for this mapped module path.",
+  );
+  requireValue(
+    observation.target.declarationPath.length === 1,
+    `${field}.observation.target.declarationPath`,
+    ANOTHER_MODULE,
+  );
+  const packageRoot = observation.typeScriptCondition.packages.find(
+    (entry) => entry.packageId === observation.target.packageId,
+  )?.packageRoot;
+  requireValue(
+    packageRoot !== undefined &&
+      typeScriptModuleFiles(layout, packageRoot, code.module).includes(observation.target.file),
+    `${field}.observation.target.file`,
+    ANOTHER_MODULE,
   );
 }
 
 /**
  * The invariants a request holds however it was produced. An observation is compared with the
- * mapping through the language, the method, the declaration it names and the name of its package.
+ * mapping through the language, the method, the declaration it names, the module that declaration
+ * sits in and the name of its package.
  */
 function checkOperations(language: Language, operations: readonly ComparedOperation[], subject: string): void {
   requireValue(operations.length > 0, subject, "The aggregate has no operation to compare.");
@@ -115,11 +169,7 @@ function checkOperations(language: Language, operations: readonly ComparedOperat
       `${field}.observation.target.declarationPath`,
       "Observes another declaration than the mapped type.",
     );
-    requireValue(
-      observesMappedModule(observation, code),
-      `${field}.observation.target.declarationPath`,
-      "Observes the mapped type in another module than the mapped one.",
-    );
+    checkMappedModule(observation, code, field);
     requireValue(
       packageName(observation) === code.package,
       `${field}.observation.target.packageId`,

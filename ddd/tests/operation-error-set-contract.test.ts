@@ -42,6 +42,7 @@ import {
   NEGATIVE_AMOUNT,
   nonStandardResult,
   notCompleted,
+  type ObservationOptions,
   OPEN,
   observationOf,
   observationRequest,
@@ -548,6 +549,172 @@ describe("preparation refuses input it cannot compare", () => {
     expect(outcome.kind).toBe("input-rejected");
     if (outcome.kind === "input-rejected") expect(outcome.issues.length).toBeGreaterThan(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// A TypeScript observation is bound to the file the project settings place the mapped module in
+// ---------------------------------------------------------------------------
+
+/**
+ * A TypeScript world whose mapping names `module` and whose every observation is taken with the same
+ * `options`, so the observations share one snapshot and nothing but the bound file can be refused.
+ */
+function typeScriptWorld(module: readonly string[], options: ObservationOptions): World {
+  const value = world("typescript");
+  return {
+    model: value.model,
+    mapping: atModule(value.mapping, ...module),
+    observations: [
+      { operationRef: ISSUE, request: observationRequest("typescript", "issue", options) },
+      { operationRef: OPEN, request: observationRequest("typescript", "open", options) },
+    ],
+  };
+}
+
+describe("a TypeScript observation names the file the project settings place the mapped module in", () => {
+  // The project settings state the source root, `src` directly under the package root, and where a
+  // layout writes a module: `named-file` as `<module>.ts`, `index-file` as `<module>/index.ts` for a
+  // module with children and `<module>.ts` for a leaf. The mapping states the module path only.
+  const ACCEPTED: [string, readonly string[], ObservationOptions][] = [
+    ["named-file: the mapped module as a named file", ["invoice"], { file: "billing-domain/src/invoice.ts" }],
+    [
+      "named-file: a nested mapped module as a named file in its parent's directory",
+      ["invoice", "line"],
+      { file: "billing-domain/src/invoice/line.ts" },
+    ],
+    [
+      "index-file: the mapped module as the directory entry of a module with children",
+      ["invoice"],
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice/index.ts" },
+    ],
+    [
+      "index-file: the mapped module as a named leaf file",
+      ["invoice"],
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice.ts" },
+    ],
+    [
+      "index-file: a nested mapped module as a directory entry",
+      ["invoice", "line"],
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice/line/index.ts" },
+    ],
+    [
+      "index-file: a nested mapped module as a named leaf file",
+      ["invoice", "line"],
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice/line.ts" },
+    ],
+    [
+      "named-file: a package whose root is nested in the project",
+      ["invoice"],
+      { packageRoot: "packages/billing-domain", file: "packages/billing-domain/src/invoice.ts" },
+    ],
+    [
+      "index-file: a package whose root is nested in the project",
+      ["invoice"],
+      {
+        moduleLayout: "index-file",
+        packageRoot: "packages/billing-domain",
+        file: "packages/billing-domain/src/invoice/index.ts",
+      },
+    ],
+  ];
+  test.each(ACCEPTED)("is prepared at %s", (_label, module, options) => {
+    expect(prepareOperationErrorSetRequest(typeScriptWorld(module, options)).kind).toBe("prepared");
+  });
+
+  // Each row differs from an accepted one in the file, the settings, the mapped module path or the
+  // declaration path alone, and names the same package, type and method as the mapping.
+  const REFUSED: [string, readonly string[], ObservationOptions][] = [
+    ["another module of the same package", ["invoice"], { file: "billing-domain/src/billing.ts" }],
+    ["the mapped module outside the source root", ["invoice"], { file: "billing-domain/lib/invoice.ts" }],
+    ["the mapped module at the package root", ["invoice"], { file: "billing-domain/invoice.ts" }],
+    ["the mapped module below another module", ["invoice"], { file: "billing-domain/src/sub/invoice.ts" }],
+    ["a module below the mapped module", ["invoice"], { file: "billing-domain/src/invoice/draft.ts" }],
+    ["the parent of the mapped module", ["invoice", "line"], { file: "billing-domain/src/invoice.ts" }],
+    ["the mapped module under another package root", ["invoice"], { file: "other/src/invoice.ts" }],
+    [
+      "the mapped module under the package root the observation does not record",
+      ["invoice"],
+      { packageRoot: "packages/billing-domain", file: "billing-domain/src/invoice.ts" },
+    ],
+    ["named-file: a directory entry", ["invoice"], { file: "billing-domain/src/invoice/index.ts" }],
+    ["the mapped module spelled in another case", ["invoice"], { file: "billing-domain/src/Invoice.ts" }],
+    ["the mapped module with a .tsx extension", ["invoice"], { file: "billing-domain/src/invoice.tsx" }],
+    ["the mapped module with a .mts extension", ["invoice"], { file: "billing-domain/src/invoice.mts" }],
+    ["the declaration file of the mapped module", ["invoice"], { file: "billing-domain/src/invoice.d.ts" }],
+    [
+      "index-file: a child of the mapped module",
+      ["invoice"],
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice/line.ts" },
+    ],
+    [
+      "index-file: the directory entry of another module",
+      ["invoice"],
+      { moduleLayout: "index-file", file: "billing-domain/src/billing/index.ts" },
+    ],
+    [
+      "settings that name no TypeScript module layout",
+      ["invoice"],
+      { moduleLayout: null, file: "billing-domain/src/invoice.ts" },
+    ],
+    ["named-file: a mapping of the package root module", [], { file: "billing-domain/src/index.ts" }],
+    ["named-file: a mapping of the package root module, read as an empty name", [], { file: "billing-domain/src/.ts" }],
+    [
+      "index-file: a mapping of the package root module",
+      [],
+      { moduleLayout: "index-file", file: "billing-domain/src/index.ts" },
+    ],
+    [
+      "a mapped module segment that is a path of two segments",
+      ["invoice/line"],
+      { file: "billing-domain/src/invoice/line.ts" },
+    ],
+    ["a mapped module segment that names the parent directory", [".."], { file: "billing-domain/src/...ts" }],
+    [
+      "the mapped type declared inside a namespace of the mapped module",
+      ["invoice"],
+      { file: "billing-domain/src/invoice.ts", declarationPath: ["Ns", "Invoice"] },
+    ],
+  ];
+  test.each(REFUSED)("refuses %s", (_label, module, options) => {
+    const outcome = prepareOperationErrorSetRequest(typeScriptWorld(module, options));
+    expect(outcome.kind).toBe("input-rejected");
+    if (outcome.kind === "input-rejected") expect(outcome.issues.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * A request that never went through preparation: a prepared request whose observations are swapped
+   * for those of `elsewhere`, with its identity recomputed so that nothing but the binding is judged.
+   */
+  function rewritten(elsewhere: World): unknown {
+    const request = prepare(world("typescript"));
+    const fields = {
+      schemaVersion: request.schemaVersion,
+      ruleId: request.ruleId,
+      language: request.language,
+      aggregateRef: request.aggregateRef,
+      model: request.model,
+      operations: request.operations.map((operation) => ({
+        ...operation,
+        observation: observationOf(elsewhere, operation.operationRef),
+      })),
+    };
+    return { ...fields, requestIdentity: digest(canonicalJson(jsonCopy(fields, "rewritten"))) };
+  }
+  const REREAD: [string, ObservationOptions, "evaluated" | "input-rejected"][] = [
+    [
+      "the directory entry of the mapped module under index-file is evaluated",
+      { moduleLayout: "index-file", file: "billing-domain/src/invoice/index.ts" },
+      "evaluated",
+    ],
+    ["another module of the same package is refused", { file: "billing-domain/src/billing.ts" }, "input-rejected"],
+  ];
+  test.each(REREAD)(
+    "on inspection, a request rewritten outside preparation to observe %s",
+    (_label, options, expected) => {
+      const elsewhere = typeScriptWorld(["invoice"], options);
+      expect(inspectOperationErrorSet(rewritten(elsewhere), matchingExecutions(elsewhere)).kind).toBe(expected);
+    },
+  );
 });
 
 describe("inspection accepts only the request it prepared and one execution per operation", () => {

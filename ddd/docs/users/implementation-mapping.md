@@ -21,6 +21,8 @@ Every gate reads this format. Version 1, the Rust-only crate/module format, is a
 
 A module path is a list of segments, so no language's separator is built into the format. Rust segments keep their spelling, including a raw `r#type`; `r#type` and `type` name the same module.
 
+`code.module` states the module path alone, neither a source root nor where a file sits. In TypeScript, the [project settings](project-settings.md) state the file a module sits in: `src` directly under the package root, and `typescript.module_layout`. The mapping's format and its `schema_version: 2` do not change for that.
+
 ## Rust and TypeScript examples
 
 The canonical model must be in `schema_version: 2` (see [operation-owned errors](domain-model-operation-errors.md)), because only that format gives a factory rule its own business errors.
