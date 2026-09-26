@@ -6,25 +6,10 @@ companion:
   enabled: true
 provider:
   profiles:
-    opus:
+    opus-5-5:
       provider: claude
-      model: claude-opus-5
-    fable:
-      provider: claude
-      model: claude-fable-5-1
-  # 既定は Claude Opus 5
+      model: claude-opus-5-5
+  # すべてのステップ（レビュアー群・companion・その moderator を含む）を Claude Opus 5.5 で動かす。
+  # Claude Opus 5 と Claude Fable 5.1 は使わない。
   defaults:
-    profile: opus
-  targets:
-    # `review` タグ付きのステップ（レビュアー群）は Claude Fable 5.1
-    tags:
-      review:
-        profile: fable
-    # 実装中に並走するレビュー companion と、その指摘を裁定する moderator も Claude Fable 5.1
-    companions:
-      ai-antipattern-review-companion:
-        profile: fable
-      testing-review-companion:
-        profile: fable
-      review-companion-moderator:
-        profile: fable
+    profile: opus-5-5
