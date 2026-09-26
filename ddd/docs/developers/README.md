@@ -28,6 +28,7 @@ The layer designs define conventions for generated applications and the plugin. 
 | Measurements from each checkpoint | [Current-state assessment](current-state-assessment.md) |
 | Test commands and fixture organization | [Test guide](../../tests/README.md) |
 | Positive, negative, and boundary evidence per sensor | [Sensor coverage matrix](sensor-coverage.md) |
+| Rust execution model, persistence strategy, and module layout combinations actually tested | [Rust execution and persistence verification](rust-execution-persistence-verification.md) |
 | Native Rust parsing, comparison results, and semantic/distribution limits | [Rust + syn experiment](rust-syn-spike.md) |
 | Fresh installation, updates, and failure behavior | [Installation verification](installation-verification.md) |
 | Installed path, covered platforms, and launch failures of the native extractor | [Native extractor distribution](native-extractor-distribution.md) |
