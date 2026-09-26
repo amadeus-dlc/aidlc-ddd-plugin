@@ -1,0 +1,30 @@
+# このリポジトリで takt が使うプロバイダとモデル。~/.takt/runtime.yaml は読まない
+# (scripts/run-takt.sh が TAKT_CONFIG_DIR を .takt/global へ向けるため)。
+version: 1
+# 実装中に並走するレビュー companion を有効にする。以前は ~/.takt/runtime.yaml から受け継いでいた。
+companion:
+  enabled: true
+provider:
+  profiles:
+    opus:
+      provider: claude
+      model: claude-opus-5
+    fable:
+      provider: claude
+      model: claude-fable-5-1
+  # 既定は Claude Opus 5
+  defaults:
+    profile: opus
+  targets:
+    # `review` タグ付きのステップ（レビュアー群）は Claude Fable 5.1
+    tags:
+      review:
+        profile: fable
+    # 実装中に並走するレビュー companion と、その指摘を裁定する moderator も Claude Fable 5.1
+    companions:
+      ai-antipattern-review-companion:
+        profile: fable
+      testing-review-companion:
+        profile: fable
+      review-companion-moderator:
+        profile: fable
