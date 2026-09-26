@@ -31,15 +31,24 @@ const PROJECT_ROOT: Readonly<Record<TypeScriptCodeRepresentation, string>> = {
 const RESULT_DEFINITION = { packageName: "billing-domain", modulePath: "src/result.ts", typeName: "Result" } as const;
 
 /**
- * Where the mapped module sits under `layout`, in the package's `src`. `index-file` reaches a module
- * through the directory it owns, and the scenario gives every module it writes there a child, so that
- * placement is the one the layout states for a module with children.
+ * Where the mapped module sits under `layout`, in the package's `src`. `index-file` writes a module
+ * with children as `<module>/index.ts` and a leaf as `<module>.ts`, so the file is the one of the two
+ * the sources actually hold. Neither, or both, is refused rather than guessed.
  */
-function mappedModuleFile(layout: TypeScriptModuleLayout, packageRoot: string, module: readonly string[]): string {
-  const source = posix.join(packageRoot, "src");
-  return layout === "named-file"
-    ? posix.join(source, ...module).concat(".ts")
-    : posix.join(source, ...module, "index.ts");
+function mappedModuleFile(
+  layout: TypeScriptModuleLayout,
+  packageRoot: string,
+  module: readonly string[],
+  sources: readonly SourceInput[],
+): string {
+  const named = posix.join(packageRoot, "src", ...module).concat(".ts");
+  if (layout === "named-file") return named;
+  const index = posix.join(packageRoot, "src", ...module, "index.ts");
+  const present = [index, named].filter((file) => sources.some((source) => source.path === file));
+  if (present.length !== 1) {
+    throw new Error(`the sources do not hold exactly one file for module ${module.join("/")}: ${index} or ${named}`);
+  }
+  return present[0];
 }
 
 export function observeTypeScriptOperations(
@@ -59,7 +68,7 @@ export function observeTypeScriptOperations(
   const [owner] = owners;
   const layout = TYPESCRIPT_PACKAGE_LAYOUT.get(mapping.code.package);
   if (!layout) throw new Error(`the scenario records no module layout for package ${mapping.code.package}`);
-  const file = mappedModuleFile(layout, owner.packageRoot, mapping.code.module);
+  const file = mappedModuleFile(layout, owner.packageRoot, mapping.code.module, sources);
 
   const observed = mapping.operations.map((operation) => {
     const frozen = freezeInput({

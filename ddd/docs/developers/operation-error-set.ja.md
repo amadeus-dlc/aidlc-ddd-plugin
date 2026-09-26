@@ -115,7 +115,7 @@ TypeScript のモジュールはファイルそのものです。写像はモジ
 | 経路 | 入口 | 対象の決め方 |
 |---|---|---|
 | Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | [配布 manifest](native-extractor-distribution.ja.md) がこのプラットフォームに記録したターゲットトリプルと、featureなしで `resolveCargoCondition` を実行する。この経路自体は `rustc` を必要としない。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまりライブラリcrateルートと同じディレクトリの `file` なら `<module>.rs`、`mod-rs` なら `<module>/mod.rs` に置く。宣言パスはどちらの配置でも `[...module, type]`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
-| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまり `<packageRoot>/src` の下の `named-file` なら `<module>.ts`、`index-file` なら `<module>/index.ts` に置き、設定にもその配置を記録する。宣言パスは `[type]`、コード表現は `class` または `companion`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
+| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | プロジェクトごとに `resolveTypeScriptCondition` を実行する。写像のモジュールを、そのパッケージが書かれているモジュール配置が置く場所、つまり `<packageRoot>/src` の下の `named-file` なら `<module>.ts`、`index-file` なら `<module>/index.ts`（子を持つモジュール）と `<module>.ts`（末端のモジュール）のうちソースにある方に置き（どちらも無い、または両方ある場合は拒否する）、設定にもその配置を記録する。宣言パスは `[type]`、コード表現は `class` または `companion`。シナリオが配置を記録していないパッケージは、推測した配置に置かず拒否する |
 
 モデルと写像は [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) が本番のローダーで読みます。
 
