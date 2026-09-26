@@ -24,9 +24,14 @@ import {
   RUST_PACKAGE_LAYOUT,
   type ScenarioProject,
   scenarioSources,
+  TYPESCRIPT_PACKAGE_LAYOUT,
 } from "../tools/ddd/lib/operation-error-set-verification/scenario.ts";
 import { observeTypeScriptOperations } from "../tools/ddd/lib/operation-error-set-verification/typescript.ts";
-import type { RustModuleLayout } from "../tools/ddd/lib/project-settings/contract.ts";
+import type {
+  RustModuleLayout,
+  TypeScriptCodeRepresentation,
+  TypeScriptModuleLayout,
+} from "../tools/ddd/lib/project-settings/contract.ts";
 import { projectSettingsPayload } from "../tools/ddd/lib/project-settings/payload.ts";
 import type { DomainModel } from "../tools/ddd/lib/schema/model.ts";
 
@@ -228,9 +233,9 @@ function mappingAt(project: Project, module: string): AggregateMapping {
   const mapping = MAPPINGS[project.language];
   return { ...mapping, code: { ...mapping.code, module: [module] } };
 }
-/** The Rust mapping pointed at one module of one package of the scenario workspace. */
-function rustMappingAt(packageName: string, module: string): AggregateMapping {
-  const mapping = mappingAt(RUST, module);
+/** The mapping of a project pointed at one module of one package of that project. */
+function packageMappingAt(project: Project, packageName: string, module: string): AggregateMapping {
+  const mapping = mappingAt(project, module);
   return { ...mapping, code: { ...mapping.code, package: packageName } };
 }
 function withOperation(
@@ -309,22 +314,39 @@ async function scenarioResults() {
  * read from the path under test, so a path that answered one layout for every package fails one of
  * the two rows.
  */
-const LAYOUT_FILE: Readonly<Record<RustModuleLayout, (packageName: string, module: string) => string>> = {
+const RUST_LAYOUT_FILE: Readonly<Record<RustModuleLayout, (packageName: string, module: string) => string>> = {
   file: (packageName, module) => `${packageName}/src/${module}.rs`,
   "mod-rs": (packageName, module) => `${packageName}/src/${module}/mod.rs`,
 };
-function scenarioModule(module: string): { module: string; description: string; expected: Expected } {
+/**
+ * The same for the TypeScript project module layouts, under the source root the project settings
+ * state. `index-file` writes a module with children as its directory entry, and the scenario gives
+ * every module of that package a child.
+ */
+const TYPESCRIPT_LAYOUT_FILE: Readonly<
+  Record<TypeScriptModuleLayout, (packageName: string, module: string) => string>
+> = {
+  "named-file": (packageName, module) => `${packageName}/src/${module}.ts`,
+  "index-file": (packageName, module) => `${packageName}/src/${module}/index.ts`,
+};
+function scenarioModule(
+  language: Language,
+  module: string,
+): { module: string; description: string; expected: Expected } {
   const scenario = SCENARIOS.find((entry) => entry.module === module);
   if (!scenario) throw new Error(`the scenario table does not state ${module}`);
-  const expected = scenario.expected.rust;
-  if (!expected) throw new Error(`the scenario table does not judge ${module} from Rust`);
+  const expected = scenario.expected[language];
+  if (!expected) throw new Error(`the scenario table does not judge ${module} from ${language}`);
   return { module, description: scenario.description, expected };
 }
 /**
  * The modules read from every layout. The scenario that owns a module states its judgement, which
- * the layout does not change, so a module the scenario does not judge from Rust stops the run.
+ * the layout does not change, so a module the scenario does not judge from the language stops the run.
  */
-const LAYOUT_MODULES = [scenarioModule("invoice"), scenarioModule("missing")];
+const LAYOUT_MODULES = (language: Language) => [
+  scenarioModule(language, "invoice"),
+  scenarioModule(language, "missing"),
+];
 
 /**
  * The Rust workspace owns one package per project module layout, and a mapping reaches either by
@@ -336,17 +358,17 @@ async function moduleLayoutResults() {
   const rows = [];
   for (const [packageName, layout] of RUST_PACKAGE_LAYOUT) {
     const settings = projectSettingsPayload({ languages: ["rust"], rust: { moduleLayout: layout }, typescript: null });
-    for (const entry of LAYOUT_MODULES) {
+    for (const entry of LAYOUT_MODULES("rust")) {
       const { observed, result } = await run(
         RUST,
-        rustMappingAt(packageName, entry.module),
+        packageMappingAt(RUST, packageName, entry.module),
         scenarioSources(RUST.name),
       );
       const observedFiles = [...new Set(observed.observations.map(({ request }) => request.target.file))];
       const results = both(result);
       const label = `rust ${layout} ${entry.module}`;
       check(label, results, entry.expected);
-      check(`${label} file`, observedFiles, [LAYOUT_FILE[layout](packageName, entry.module)]);
+      check(`${label} file`, observedFiles, [RUST_LAYOUT_FILE[layout](packageName, entry.module)]);
       for (const { operationRef, request } of observed.observations)
         check(`${label} settings of ${operationRef}`, request.settings, settings);
       rows.push({
@@ -357,6 +379,55 @@ async function moduleLayoutResults() {
         files: observedFiles,
         results,
       });
+    }
+  }
+  return rows;
+}
+
+/** The code representation each TypeScript project is written in, which its settings name. */
+const REPRESENTATION: Readonly<Partial<Record<ScenarioProject, TypeScriptCodeRepresentation>>> = {
+  "typescript-class": "class",
+  "typescript-companion": "companion",
+};
+
+/**
+ * Each TypeScript project owns one package per project module layout as well, and is read the same
+ * way from both, in each code representation.
+ */
+async function typeScriptModuleLayoutResults() {
+  const rows = [];
+  for (const project of PROJECTS.filter((entry) => entry.language === "typescript")) {
+    const codeRepresentation = REPRESENTATION[project.name];
+    if (!codeRepresentation) throw new Error(`${project.name} names no code representation`);
+    for (const [packageName, layout] of TYPESCRIPT_PACKAGE_LAYOUT) {
+      const settings = projectSettingsPayload({
+        languages: ["typescript"],
+        rust: null,
+        typescript: { moduleLayout: layout, codeRepresentation },
+      });
+      for (const entry of LAYOUT_MODULES("typescript")) {
+        const { observed, result } = await run(
+          project,
+          packageMappingAt(project, packageName, entry.module),
+          scenarioSources(project.name),
+        );
+        const observedFiles = [...new Set(observed.observations.map(({ request }) => request.target.file))];
+        const results = both(result);
+        const label = `${project.name} ${layout} ${entry.module}`;
+        check(label, results, entry.expected);
+        check(`${label} file`, observedFiles, [TYPESCRIPT_LAYOUT_FILE[layout](packageName, entry.module)]);
+        for (const { operationRef, request } of observed.observations)
+          check(`${label} settings of ${operationRef}`, request.settings, settings);
+        rows.push({
+          project: project.name,
+          package: packageName,
+          module_layout: layout,
+          module: entry.module,
+          description: entry.description,
+          files: observedFiles,
+          results,
+        });
+      }
     }
   }
   return rows;
@@ -463,6 +534,7 @@ function version(argv: string[]): string {
 try {
   const scenarios = await scenarioResults();
   const moduleLayouts = await moduleLayoutResults();
+  const typeScriptModuleLayouts = await typeScriptModuleLayoutResults();
   const changes = [];
   for (const project of PROJECTS) changes.push(await changeResults(project));
   const report = {
@@ -479,11 +551,11 @@ try {
     projects: PROJECTS.map((project) => ({ name: project.name, language: project.language })),
     scenarios,
     rust_module_layouts: moduleLayouts,
+    typescript_module_layouts: typeScriptModuleLayouts,
     changes,
     unverified: [
       "matching the mapped error type spelling against the resolved declaration name",
       "compiler acceptance of the scenario modules",
-      "the TypeScript index-file layout",
       "production sensor and approval gate integration",
       "error paths, state preservation and invariants of a running application",
     ],

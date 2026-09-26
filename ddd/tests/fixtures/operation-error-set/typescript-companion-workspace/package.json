@@ -3,5 +3,5 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "workspaces": ["billing-domain"]
+  "workspaces": ["billing-domain", "billing-domain-index-file"]
 }

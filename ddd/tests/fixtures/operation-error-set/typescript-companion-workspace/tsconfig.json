@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "./billing-domain" }]
+  "references": [{ "path": "./billing-domain" }, { "path": "./billing-domain-index-file" }]
 }
