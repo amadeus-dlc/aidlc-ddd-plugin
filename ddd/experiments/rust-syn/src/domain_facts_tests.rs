@@ -715,7 +715,30 @@ fn domain_facts_records_the_default_helper_on_an_enum_without_a_default_derive()
 #[test]
 fn domain_facts_records_the_helper_of_a_derive_the_allow_list_does_not_name() {
     assert_eq!(
-        reasons_at("#[derive(thiserror::Error)]\n#[error(\"failed\")]\npub struct Failure;"),
+        reasons_at(
+            "#[derive(strum::Display)]\n#[strum(serialize_all = \"snake_case\")]\npub enum Status { Draft }"
+        ),
+        ["attribute-macro@2"]
+    );
+}
+
+/// thiserror's helpers are allowed on the item that derives `Error`, on the item and its variants
+/// and fields alike.
+#[test]
+fn domain_facts_does_not_record_the_thiserror_helpers_of_an_error_derive() {
+    assert_eq!(
+        reasons_at(
+            "#[derive(Debug, thiserror::Error)]\npub enum InvoiceError {\n    #[error(\"not found\")]\n    NotFound,\n    #[error(transparent)]\n    Io(#[from] Cause),\n    #[error(\"wrapped\")]\n    Wrapped { #[source] cause: Cause, #[backtrace] trace: Trace },\n}\n"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+/// The same `#[error]` on an item that does not derive `Error` is recorded.
+#[test]
+fn domain_facts_records_the_error_helper_on_an_item_without_an_error_derive() {
+    assert_eq!(
+        reasons_at("#[derive(Debug)]\n#[error(\"failed\")]\npub struct Failure;"),
         ["attribute-macro@2"]
     );
 }

@@ -102,6 +102,12 @@ const TOOL_ATTRIBUTE_NAMESPACES: &[&str] = &["rustfmt", "clippy", "diagnostic"];
 const DERIVE_HELPER_ALLOW_LIST: &[(&str, &[&str])] = &[
     ("serde", &["Serialize", "Deserialize"]),
     ("default", &["Default"]),
+    // thiserror's `#[derive(Error)]`: the helpers that shape a domain error type's message and its
+    // source chain.
+    ("error", &["Error"]),
+    ("from", &["Error"]),
+    ("source", &["Error"]),
+    ("backtrace", &["Error"]),
 ];
 
 fn is_built_in_attribute(path: &syn::Path) -> bool {
