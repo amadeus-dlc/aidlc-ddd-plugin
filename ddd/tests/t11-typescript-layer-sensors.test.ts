@@ -513,6 +513,16 @@ function expectStopped(run: SensorRun): void {
 
 /** Use-case sources a rule or the facts cannot decide, each with the construct the stop names. */
 const USE_CASE_UNDECIDED: [string, string, string][] = [
+  [
+    "execute called by name where the file declares a class of that name",
+    "class execute {}\n\nexport function go(): void {\n  execute();\n}\n",
+    "execute();",
+  ],
+  [
+    "execute called by name where the file declares a variable of that name",
+    "const execute = (): void => {};\n\nexport function go(): void {\n  execute();\n}\n",
+    "execute();",
+  ],
   ["a syntax error", "export class IssueInvoice {}\nconst = ;\n", "const = ;"],
   ["a decorator", "@sealed\nexport class IssueInvoice {}\n", "@sealed"],
   [

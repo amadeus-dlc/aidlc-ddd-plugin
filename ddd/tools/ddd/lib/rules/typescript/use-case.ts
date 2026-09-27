@@ -111,9 +111,10 @@ export function ruleH(inspection: TsInspection, target: TsTarget): FindingInput[
 /**
  * A call of `execute` on a use case of the use-case layer: a class that declares `execute`, reached
  * through a receiver stated to be it. A call on `this`, on a value of the calling class itself, or
- * on an interface — a port — is not one. A function `execute` called by name is one only when the
- * file does not declare it; since which function an import names is not decided here, it is left
- * undecided, as is a receiver whose type is not stated.
+ * on an interface — a port — is not one. A function `execute` called by name is none when the file
+ * declares it as a function; otherwise — an import, or a class or variable of that name — which
+ * function it calls is not decided here, so it is left undecided, as is a receiver whose type is not
+ * stated.
  */
 export function ruleI(inspection: TsInspection, target: TsTarget): FindingInput[] {
   const facts = factsOf(inspection, target.file);
@@ -122,8 +123,10 @@ export function ruleI(inspection: TsInspection, target: TsTarget): FindingInput[
     if (call.callee_text !== "execute") continue;
     const line = call.span.start_line;
     if (call.kind === "function-call") {
-      if (!facts.declarations.some((declaration) => declaration.name === "execute"))
-        inspection.undecided.add(target.file, line, "execute called by name, not declared in this file");
+      // Only a function declaration of the file is known to be the one called; a class or a variable
+      // of the same name (an arrow function among them) is not decided to be a function here.
+      if (!facts.declarations.some((declaration) => declaration.name === "execute" && declaration.kind === "function"))
+        inspection.undecided.add(target.file, line, "execute called by name, not declared as a function in this file");
       continue;
     }
     if (call.kind !== "method-call" || (call.receiver_text ?? "").trim() === "this") continue;
