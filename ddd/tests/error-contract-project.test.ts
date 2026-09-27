@@ -177,7 +177,7 @@ describe("a project configuration the condition does not model", () => {
   test.each([
     ["module resolution", "moduleResolution", "node16"],
     ["module kind", "module", "commonjs"],
-    ["language target", "target", "es2020"],
+    ["language target", "target", "es2016"],
   ])("refuses to record an unsupported %s instead of narrowing it", (_label, key, value) => {
     const reasons = inCopy(
       (root) =>
@@ -187,6 +187,17 @@ describe("a project configuration the condition does not model", () => {
       unavailable,
     );
     expect(reasons.map((reason) => reason.code)).toContain("unsupported-syntax");
+  });
+
+  test("records a supported target below ESNext as the target the project states", () => {
+    const condition = inCopy(
+      (root) =>
+        rewrite(root, "tsconfig.base.json", (document) => {
+          (document.compilerOptions as Record<string, unknown>).target = "ES2017";
+        }),
+      resolved,
+    );
+    expect(condition.target).toBe("es2017");
   });
 
   test("refuses a project that does not type check strictly", () => {

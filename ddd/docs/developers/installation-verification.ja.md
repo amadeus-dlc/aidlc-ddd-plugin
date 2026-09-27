@@ -28,7 +28,7 @@ tag/latestの取得はHTTP境界にアーカイブfixtureを用い、バージ�
 
 配布物をビルドし、対象ハーネス・共有スキル・AI-DLC記録の候補コピーを作る。配布物の標準hookでcomposeし、候補コピーの内側で[ネイティブ抽出器](native-extractor-distribution.ja.md)へ実行権限を付与し、drop、グラフのコンパイル、選択した配布物と配置されたファイルの一致を確認してから反映する。dry-runは反映前に終了する。
 
-事実抽出が使う[TypeScript Compiler API](typescript-fact-extraction.ja.md)は `tools/` の配布物に含まれ、独自の手順を必要としない。サンドボックスの試験はClaudeとCodexへ導入し、`owned_files` がcompilerとそのmanifestを記録していることを確認し、パッケージを取得できないプロセスで、導入後と `--update` 後のそれぞれに導入済みツリーから抽出を起動する。
+事実抽出が使う[TypeScript Compiler API](typescript-fact-extraction.ja.md)は `tools/` の配布物に含まれ、独自の手順を必要としない。サンドボックスの試験はClaudeとCodexへ導入し、`owned_files` がcompilerとそのmanifestを記録していることを確認し、パッケージを取得できないプロセスで、導入後と `--update` 後のそれぞれに導入済みツリーから抽出を起動する。あわせて、導入済みのTypeScriptゲート（ドメイン、ユースケース、インターフェースアダプタ、モジュール配置）を、各コード表現・各モジュール配置の生成見本に対して実行し、どのゲートも見本を検査したうえで合格することを確認する。導入済みのCI用入口 `ddd-check-typescript-module-layout.ts` は、すべての見本で0を返し、もう一方の配置の親モジュールのファイルを加えると `module-layout.unresolved` とともに1を返す。`scripts/verify-dist.ts` は同じゲートとCI用入口を `dist/<harness>/tools` から実行し、`t1-gate-integration.test.ts` はすべての見本について、全DDDセンサーのもとでcode-generationのゲートを開く。
 
 反映するのは変更ファイルだけ。候補作成時と導入先の内容を照合し、シンボリックリンク経由の書込みは拒否する。反映用のバックアップも保持する。compose・検証の失敗時は導入先を変更しない。反映中のプロセス強制終了やストレージ障害は注入しておらず、ファイルシステム全体の原子性を保証するものではない。
 

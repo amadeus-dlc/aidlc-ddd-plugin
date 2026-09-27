@@ -8,11 +8,12 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 
 | File | Scope |
 |---|---|
-| t1-model-artifacts / t1-gate-integration | Direct canonical-artifact checks and Claude/Codex normal approval admission. |
+| t1-model-artifacts / t1-gate-integration | Direct canonical-artifact checks and Claude/Codex normal approval admission, including every TypeScript generation sample opening the code-generation gate under every DDD sensor. |
 | t7-domain-packaging | Vocabulary-based declaration/layout matching; technical names and unresolved analysis. |
 | t10-rust-module-layout | Project-wide configuration, both layout policies, direct sensors, CI exit statuses, shared logical module resolution, and what the gate and the CI entry each do when the extractor cannot be launched. |
 | t11-typescript-module-layout | TypeScript layout settings, both layout policies over package `src` roots, unresolved structure (ambiguous, missing, linked, unplaceable, nested packages, unreadable directories), the direct sensor and the CI entry returning the same verdict, CI exit statuses, and a project without TypeScript left unreported. |
 | t11-typescript-generation-samples | The TypeScript generation samples in both code representations and both module layouts: the domain, use-case, interface-adapter and module layout gates with no finding, the first three having inspected the claimed sources, the module layout CI entry exiting 0, the compiler with no diagnostic, and the parent module placed as the layout requires. |
+| t11-typescript-behavior | The four shared behavior scenarios — a normal state change, state kept on a business error, an invalid value refused at creation, and restoration after persistence — run on the TypeScript generation sample of each code representation under each module layout, with the sample's packages linked under `node_modules`; and the `class` programming model and `state-sourcing` persistence each sample's mapping declares. See [TypeScript execution and persistence verification](../docs/developers/typescript-execution-persistence-verification.md). |
 | t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
@@ -28,8 +29,8 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs, and the line each finding of rules (h), (l), (m) and (n) sends a reader to. |
 | t10-rust-domain-facts / t10-domain-facts-contract | Rules decided on the native extractor: reported member names, ordinals and declaration lines, the functions a file declares outside an impl block, what each gate does when the extractor cannot be launched, what each gate does when a file rules (a) and (d) decide from carries a possible attribute macro, the attribute-macro lines carried on a file's facts, and the answers the adapter refuses rather than reading as an empty fact set. |
 | t10-rust-domain-decision-base | Rules (b), (c), (g) and domain-packaging decided on the native extractor: the line each finding carries, the same spelling in a macro body, a literal or a comment declaring nothing, module resolution's resolved and unresolved pairs, and a program source the extractor cannot read stopping the gate instead of being read as empty. |
-| install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths, including launching the TypeScript extraction from an installed and an updated tree. Network acquisition is opt-in. |
-| typescript-compiler-launch | Launch classification of the distributed TypeScript Compiler API: each blocking condition with its own subject and reason code, the fixed order when several hold, the sensor stopping as uninspectable, and the distributed compiler matching the pinned version and its recorded digest. |
+| install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths, including launching the TypeScript extraction from an installed and an updated tree, and the installed TypeScript gates and module layout CI entry over every generation sample. Network acquisition is opt-in. |
+| typescript-compiler-launch | Launch classification of the distributed TypeScript Compiler API: each blocking condition with its own subject and reason code, the fixed order when several hold, the sensor stopping as uninspectable, the distributed compiler matching the pinned version and its recorded digest, and the supported `target` range (`ES2017` to `ESNext`, recorded as stated; lower or unstated targets and packages stating different targets refused). |
 | t11-typescript-domain-facts | The TypeScript fact contract: declarations, members and visibility, imports and exports with type-only ones told apart, calls, constructions, positions, each unresolved reason, syntax errors, the parameters of a function declaration, the calls a getter result is handed to unchanged and each use that hands it nowhere, and launching from a copied tools tree with no TypeScript package in reach. |
 | t11-typescript-domain-sensor / u5-golden | The TypeScript domain gate on both the class and the companion representation: the TypeScript golden cases in process and through the entry, the member, method and line each finding names, the same meaning as the Rust domain gate's same scene, state hiding decided as the state-evidence inspection decides it, every construct the facts or the rules cannot decide stopping the gate, and a compiler that cannot be launched stopping it as T-11-01 does. |
 | t11-typescript-layer-sensors / u5-golden | The TypeScript use-case and interface-adapter gates on both the class and the companion representation of the domain: the golden cases in process and through the entries, the file, line and words each finding names, each scene meaning what the same scene of `ddd-rust-use-case` / `ddd-rust-interface-adapter` means, the command/query boundary and type-only dependencies, each gate reading only the sources its rules decide from, every construct either gate cannot decide stopping it, and a compiler that cannot be launched stopping it. |
@@ -37,7 +38,7 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | error-contract-contract | Business-error contract vocabulary, request identity including the Cargo and the TypeScript condition, and response validation. |
 | error-contract-cargo | Cargo condition resolution at the boundary and the lockfile left untouched. |
 | error-contract-rust | Native resolution of supported reference forms in both module layouts, bounded cases, package identity, and a build condition change. |
-| error-contract-project | TypeScript project condition resolution at the boundary, inherited compiler options, and the project left untouched. |
+| error-contract-project | TypeScript project condition resolution at the boundary, inherited compiler options, a target below ESNext recorded as stated, and the project left untouched. |
 | error-contract-typescript | Compiler API resolution of supported reference forms in both module layouts and code representations, bounded cases, symbol identity, and a project condition change. |
 | operation-error-set-contract | Operation error-set comparison from hand-written error-contract answers: request identity, refused input, missing, unexpected and foreign cases, result contract findings, unresolved facts, earlier observations after a change, no language-specific import in the comparator, and a TypeScript observation bound to the file the project settings place the mapped module in. |
 | operation-error-set-languages | One shared scenario resolved by the Rust, TypeScript class and TypeScript companion paths and judged by the same comparison, a changed mapping, model or snapshot never judged from an earlier observation, and both module layouts of Rust and of TypeScript observed and judged the same. |
@@ -50,7 +51,7 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 620 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 620 cases per harness, and 24 TypeScript runs per harness: the four TypeScript gates, the module layout CI entry, and that entry refusing a mixed layout, for each of the four generation samples. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
 `bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 620 distribution cases per harness, and normal approval integration. It sends 207 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain, and a TypeScript domain, use-case or interface-adapter gate that cannot decide is shown to keep the approval closed on each harness.
 
@@ -67,6 +68,14 @@ See [remaining work](../docs/developers/completion-tasks.md) and [measurements](
 Define rule/case correspondence in `golden/contract/coverage.ts` and additional inputs under `golden/contract/`. Generate both editions with `bun scripts/report-sensor-coverage.ts --write`; run `bun run test:coverage` to catch missing references and evidence. The report does not measure all implementation branches, all Rust syntax, or business semantics.
 
 `bun run test:install` is included in the regular sandbox. Run real acquisition with `bun run test:install:remote`.
+
+## Next.js integration
+
+```sh
+bun run verify:nextjs-integration
+```
+
+Builds and runs every TypeScript generation sample in an ESM Next.js application on the server-side Node.js runtime. It needs Node.js and npm on `PATH` and access to the npm registry, and it is not part of `bun run check`. See [Next.js integration verification](../docs/developers/nextjs-integration-verification.md).
 
 ## Shared state exposure verification
 

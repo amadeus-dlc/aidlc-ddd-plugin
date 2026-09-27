@@ -27,9 +27,10 @@ import type {
   ToolVersion,
   TypeScriptCondition,
   TypeScriptInspectionRequest,
+  TypeScriptLanguageTarget,
   TypeScriptPackage,
 } from "./contract.ts";
-import { SCHEMA_VERSION } from "./contract.ts";
+import { SCHEMA_VERSION, TYPESCRIPT_LANGUAGE_TARGETS } from "./contract.ts";
 
 function path(value: unknown, subject: string): string {
   const name = nonempty(value, subject);
@@ -167,18 +168,24 @@ function resultDefinition(value: unknown, subject: string, known: ReadonlySet<st
   };
 }
 
+function languageTarget(value: unknown, subject: string): TypeScriptLanguageTarget {
+  const target = TYPESCRIPT_LANGUAGE_TARGETS.find((name) => name === value);
+  requireValue(target !== undefined, subject, "Unsupported language target.");
+  return target;
+}
+
 function typeScriptCondition(value: unknown, subject: string): TypeScriptCondition {
   const item = record(value, subject);
   requireValue(item.module === "esnext", `${subject}.module`, "Unsupported module kind.");
   requireValue(item.moduleResolution === "bundler", `${subject}.moduleResolution`, "Unsupported module resolution.");
-  requireValue(item.target === "esnext", `${subject}.target`, "Unsupported language target.");
+  const target = languageTarget(item.target, `${subject}.target`);
   requireValue(item.strict === true, `${subject}.strict`, "Expected a project that type checks strictly.");
   const packages = typeScriptPackages(item.packages, `${subject}.packages`);
   return {
     compilerApiVersion: nonempty(item.compilerApiVersion, `${subject}.compilerApiVersion`),
     module: item.module,
     moduleResolution: item.moduleResolution,
-    target: item.target,
+    target,
     resolutionConditions: array(item.resolutionConditions, `${subject}.resolutionConditions`).map((name, index) =>
       nonempty(name, `${subject}.resolutionConditions.${index}`),
     ),

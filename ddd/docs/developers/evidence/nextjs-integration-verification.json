@@ -1,0 +1,588 @@
+{
+  "verified_at": "2026-09-27T16:35:44.786Z",
+  "scope": "T-11-06 integration of the TypeScript generation samples (class and companion representations under the named-file and index-file layouts) into an ESM Next.js application on the server-side Node.js runtime: npm ci, next build, the four TypeScript gates and the module layout CI entry over the installed and built project, next start and HTTP requests through the sample's IssueInvoice.",
+  "base_commit": "a1c9f8969100ed47bc7a63e603dc3b424395dc0d",
+  "base_commit_note": "Measured on an uncommitted working tree holding the T-11-06 changes on top of the base commit.",
+  "command": "cd ddd && bun run verify:nextjs-integration",
+  "platform": "darwin-arm64",
+  "toolchain": {
+    "node": "v24.19.0",
+    "npm": "11.17.0",
+    "bun": "1.3.13",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript_host": "6.0.3",
+    "typescript_compiler_api_of_the_gates": "6.0.3"
+  },
+  "host": {
+    "generated_by": "create-next-app@16.3.6 --ts --app --no-eslint --no-tailwind --no-src-dir --import-alias @/*",
+    "definition": "tests/fixtures/nextjs-integration/host.ts",
+    "lockfile": "tests/fixtures/nextjs-integration/package-lock.json",
+    "changes_from_generated": [
+      "package.json: \"type\": \"module\" and exact dependency versions; typescript 6.0.3 instead of ^5",
+      "next.config.mjs instead of next.config.ts, with transpilePackages naming the four sample packages",
+      "tsconfig.json: allowImportingTsExtensions: true added; without it next build's type check fails with TS5097 on the sample sources, which import with the .ts extension",
+      "lib/invoices.ts and app/api/invoices/[id]/issue/route.ts (export const runtime = \"nodejs\") added; generated pages, layout and public/ left out",
+      "a root package.json declaring npm workspaces; the root tsconfig.json also references apps/web, and the sample packages' tsconfig.json state target ES2017 like the host"
+    ],
+    "tsconfig_rewritten_by_next_build": false
+  },
+  "run": {
+    "started_at": "2026-09-27T16:35:15.303Z",
+    "finished_at": "2026-09-27T16:35:44.786Z",
+    "platform": "darwin-arm64",
+    "toolchain": {
+      "node": "v24.19.0",
+      "npm": "11.17.0",
+      "bun": "1.3.13"
+    },
+    "ok": true,
+    "samples": [
+      {
+        "representation": "class",
+        "layout": "named-file",
+        "ok": true,
+        "installed": {
+          "next": "16.3.6",
+          "react": "19.2.8",
+          "react-dom": "19.2.8",
+          "typescript": "6.0.3"
+        },
+        "steps": [
+          {
+            "step": "npm ci",
+            "ok": true,
+            "seconds": 2.02
+          },
+          {
+            "step": "next build",
+            "ok": true,
+            "seconds": 3.73
+          },
+          {
+            "step": "gate ddd-typescript-domain",
+            "ok": true,
+            "seconds": 0.27,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-use-case",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-interface-adapter",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-module-layout",
+            "ok": true,
+            "seconds": 0.02,
+            "detail": []
+          },
+          {
+            "step": "layout CI entry",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"named-file\"}"
+          },
+          {
+            "step": "next start",
+            "ok": true,
+            "seconds": 0.27
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": {
+              "status": 200,
+              "body": {
+                "ok": true
+              },
+              "expected": {
+                "status": 200,
+                "body": {
+                  "ok": true
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "already-issued"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "already-issued"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-empty/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "empty-lines"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "empty-lines"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-unknown/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 404,
+              "body": {
+                "ok": false,
+                "error": "invoice-not-found"
+              },
+              "expected": {
+                "status": 404,
+                "body": {
+                  "ok": false,
+                  "error": "invoice-not-found"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "representation": "class",
+        "layout": "index-file",
+        "ok": true,
+        "installed": {
+          "next": "16.3.6",
+          "react": "19.2.8",
+          "react-dom": "19.2.8",
+          "typescript": "6.0.3"
+        },
+        "steps": [
+          {
+            "step": "npm ci",
+            "ok": true,
+            "seconds": 2.15
+          },
+          {
+            "step": "next build",
+            "ok": true,
+            "seconds": 3.72
+          },
+          {
+            "step": "gate ddd-typescript-domain",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-use-case",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-interface-adapter",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-module-layout",
+            "ok": true,
+            "seconds": 0.02,
+            "detail": []
+          },
+          {
+            "step": "layout CI entry",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"index-file\"}"
+          },
+          {
+            "step": "next start",
+            "ok": true,
+            "seconds": 0.26
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": {
+              "status": 200,
+              "body": {
+                "ok": true
+              },
+              "expected": {
+                "status": 200,
+                "body": {
+                  "ok": true
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "already-issued"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "already-issued"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-empty/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "empty-lines"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "empty-lines"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-unknown/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 404,
+              "body": {
+                "ok": false,
+                "error": "invoice-not-found"
+              },
+              "expected": {
+                "status": 404,
+                "body": {
+                  "ok": false,
+                  "error": "invoice-not-found"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "representation": "companion",
+        "layout": "named-file",
+        "ok": true,
+        "installed": {
+          "next": "16.3.6",
+          "react": "19.2.8",
+          "react-dom": "19.2.8",
+          "typescript": "6.0.3"
+        },
+        "steps": [
+          {
+            "step": "npm ci",
+            "ok": true,
+            "seconds": 2.29
+          },
+          {
+            "step": "next build",
+            "ok": true,
+            "seconds": 3.82
+          },
+          {
+            "step": "gate ddd-typescript-domain",
+            "ok": true,
+            "seconds": 0.13,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-use-case",
+            "ok": true,
+            "seconds": 0.13,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-interface-adapter",
+            "ok": true,
+            "seconds": 0.13,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-module-layout",
+            "ok": true,
+            "seconds": 0.02,
+            "detail": []
+          },
+          {
+            "step": "layout CI entry",
+            "ok": true,
+            "seconds": 0.02,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"named-file\"}"
+          },
+          {
+            "step": "next start",
+            "ok": true,
+            "seconds": 0.27
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": {
+              "status": 200,
+              "body": {
+                "ok": true
+              },
+              "expected": {
+                "status": 200,
+                "body": {
+                  "ok": true
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "already-issued"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "already-issued"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-empty/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "empty-lines"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "empty-lines"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-unknown/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 404,
+              "body": {
+                "ok": false,
+                "error": "invoice-not-found"
+              },
+              "expected": {
+                "status": 404,
+                "body": {
+                  "ok": false,
+                  "error": "invoice-not-found"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "representation": "companion",
+        "layout": "index-file",
+        "ok": true,
+        "installed": {
+          "next": "16.3.6",
+          "react": "19.2.8",
+          "react-dom": "19.2.8",
+          "typescript": "6.0.3"
+        },
+        "steps": [
+          {
+            "step": "npm ci",
+            "ok": true,
+            "seconds": 2.36
+          },
+          {
+            "step": "next build",
+            "ok": true,
+            "seconds": 3.77
+          },
+          {
+            "step": "gate ddd-typescript-domain",
+            "ok": true,
+            "seconds": 0.13,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-use-case",
+            "ok": true,
+            "seconds": 0.13,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-interface-adapter",
+            "ok": true,
+            "seconds": 0.12,
+            "detail": []
+          },
+          {
+            "step": "gate ddd-typescript-module-layout",
+            "ok": true,
+            "seconds": 0.02,
+            "detail": []
+          },
+          {
+            "step": "layout CI entry",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"index-file\"}"
+          },
+          {
+            "step": "next start",
+            "ok": true,
+            "seconds": 0.26
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0.01,
+            "detail": {
+              "status": 200,
+              "body": {
+                "ok": true
+              },
+              "expected": {
+                "status": 200,
+                "body": {
+                  "ok": true
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-open/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "already-issued"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "already-issued"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-empty/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 409,
+              "body": {
+                "ok": false,
+                "error": "empty-lines"
+              },
+              "expected": {
+                "status": 409,
+                "body": {
+                  "ok": false,
+                  "error": "empty-lines"
+                }
+              }
+            }
+          },
+          {
+            "step": "POST /api/invoices/invoice-unknown/issue",
+            "ok": true,
+            "seconds": 0,
+            "detail": {
+              "status": 404,
+              "body": {
+                "ok": false,
+                "error": "invoice-not-found"
+              },
+              "expected": {
+                "status": 404,
+                "body": {
+                  "ok": false,
+                  "error": "invoice-not-found"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "unverified": [
+    "Linux, Windows and x86_64 hosts",
+    "Node.js other than 24, npm other than 11, installation with pnpm, yarn or bun",
+    "Next.js other than 16.3.6, next build --webpack",
+    "next dev",
+    "client boundaries: a \"use client\" component or a Server Component page using the sample",
+    "deciding the host's own sources with the TypeScript gates (the host belongs to no layer; the CI entry inspected the sample's four packages)",
+    "packages stating different targets (a refused configuration)"
+  ],
+  "out_of_scope": [
+    "Edge Runtime, Cloudflare Workers and other runtimes than Node.js (language-independent design section 1)"
+  ],
+  "limits": [
+    "The repository is in memory and keeps its state for the lifetime of one server process; external persistence is not covered.",
+    "Not part of bun run check: it fetches from the npm registry and runs next build."
+  ]
+}

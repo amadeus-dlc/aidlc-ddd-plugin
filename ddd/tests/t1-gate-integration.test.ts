@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { artifactFilename } from "../../.codex/tools/aidlc-artifact-vocabulary.ts";
 import type { GraphStage } from "../../.codex/tools/aidlc-graph.ts";
 import { filterProducesByKind } from "../../.codex/tools/aidlc-lib.ts";
@@ -23,6 +23,8 @@ import {
   STATE_FILE,
   SUPPLEMENT_FILE,
 } from "./fixtures/artifact-set/workspace.ts";
+import { inspectedPassProblemsAt, sampleGateCases } from "./fixtures/typescript-generation/gate-runs.ts";
+import { generationSamples } from "./fixtures/typescript-generation/samples.ts";
 import { gateCases } from "./golden/contract/coverage.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { layoutConfig } from "./golden/module-layout/cases.ts";
@@ -599,4 +601,86 @@ for (const harness of ["claude", "codex"] as const) {
       ALL_SENSORS_TIMEOUT_MS,
     );
   });
+}
+
+// Every generation sample, under both module layouts and both code representations, is admitted by
+// the real gate with every DDD sensor on, as a project generated from the instructions is.
+const TYPESCRIPT_SENSORS = [
+  TYPESCRIPT_SENSOR,
+  TYPESCRIPT_USE_CASE_SENSOR,
+  TYPESCRIPT_INTERFACE_ADAPTER_SENSOR,
+  "ddd-typescript-module-layout",
+];
+
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: every TypeScript generation sample under every DDD sensor`, () => {
+    for (const sample of generationSamples()) {
+      test(
+        `the ${sample.representation} / ${sample.layout} sample opens the code-generation gate`,
+        () => {
+          const f = fixture(harness);
+          const stage = f.graph.find((candidate) => candidate.slug === "code-generation");
+          const sensors = stage?.sensors_applicable.map((sensor) => sensor.id) ?? [];
+          for (const sensor of TYPESCRIPT_SENSORS) expect(sensors).toContain(sensor);
+          const phase = stage?.phase ?? "construction";
+          f.state("code-generation", phase, "feature");
+          appendFileSync(join(f.record, "aidlc-state.md"), "- [x] ddd-domain-modeling — EXECUTE\n");
+          for (const artifact of stage?.produces ?? []) {
+            write(
+              join(f.record, `${phase}/u1/code-generation/${artifactFilename(artifact)}`),
+              "# Supporting artifact\n",
+            );
+          }
+          for (const [path, content] of Object.entries(sample.domainCase.files)) write(join(f.record, path), content);
+          for (const [path, content] of Object.entries(sample.workspace)) write(join(f.root, path), content);
+          const result = openGate(f, "code-generation");
+          expect(result.output).toContain("Recorded awaiting-approval");
+          const auditRoot = join(f.record, "audit");
+          const auditText = readdirSync(auditRoot, { recursive: true })
+            .filter((path) => String(path).endsWith(".md"))
+            .map((path) => readFileSync(join(auditRoot, String(path)), "utf8"))
+            .join("\n");
+          for (const sensor of sensors) expect(auditText).toContain(sensor);
+          expect(auditText).not.toMatch(/script-error|tool-unavailable|SENSOR_FAILED/);
+          // The gate keeps no verdict note for a pass, and a TypeScript gate also passes with no
+          // finding when it inspects nothing. Each installed TypeScript gate is therefore run again
+          // with the output path the gate recorded for it, over the tree the gate judged, and has to
+          // be a pass that inspected the sample, as on the other paths.
+          const toolsDir = join(f.root, `.${harness}`, "tools");
+          for (const gateCase of sampleGateCases(sample)) {
+            const outputPath = projectPath(f.root, gateOutputPath(auditText, gateCase.sensor));
+            expect(inspectedPassProblemsAt(toolsDir, gateCase, outputPath)).toEqual([]);
+          }
+        },
+        ALL_SENSORS_TIMEOUT_MS,
+      );
+    }
+  });
+}
+
+/** The output path the gate's audit records for the passing run of `sensor`. */
+/**
+ * The recorded output path as an absolute path under `root`. The audit records it relative to the
+ * project, which some platforms spell with a `<project-dir>` prefix (where the temporary directory is
+ * reached through a symbolic link, as `/tmp` is on macOS) and others as a bare relative path.
+ */
+function projectPath(root: string, recorded: string): string {
+  if (recorded.startsWith("<project-dir>")) return recorded.replace("<project-dir>", root);
+  return isAbsolute(recorded) ? recorded : join(root, recorded);
+}
+
+function gateOutputPath(auditText: string, sensor: string): string {
+  for (const entry of auditText.split("\n---\n")) {
+    const lines = new Map(
+      entry
+        .split("\n")
+        .map((line) => /^\*\*(.+?)\*\*: (.*)$/.exec(line))
+        .filter((match) => match !== null)
+        .map((match) => [match[1], match[2]] as const),
+    );
+    if (lines.get("Event") !== "SENSOR_PASSED" || lines.get("Sensor ID") !== sensor) continue;
+    const outputPath = lines.get("Output path");
+    if (outputPath !== undefined) return outputPath;
+  }
+  throw new Error(`the audit records no passing run of ${sensor}`);
 }

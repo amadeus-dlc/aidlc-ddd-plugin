@@ -30,6 +30,7 @@
     "verify:error-contract": "bun scripts/verify-error-contract.ts",
     "verify:error-contract:typescript": "bun scripts/verify-error-contract-typescript.ts",
     "verify:operation-error-set": "bun scripts/verify-operation-error-set.ts",
+    "verify:nextjs-integration": "bun scripts/verify-nextjs-integration.ts",
     "typecheck:error-contract": "tsc --noEmit --project tsconfig.error-contract.json",
     "typecheck:typescript-facts": "tsc --noEmit --project tsconfig.typescript-facts.json"
   },

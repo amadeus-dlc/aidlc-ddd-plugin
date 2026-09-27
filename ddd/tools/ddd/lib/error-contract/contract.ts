@@ -77,7 +77,24 @@ export interface ResultDefinition {
 /** The module settings this condition models; anything else is refused at the boundary. */
 export type TypeScriptModuleKind = "esnext";
 export type TypeScriptModuleResolution = "bundler";
-export type TypeScriptLanguageTarget = "esnext";
+/**
+ * The language targets a project may state, from ES2017 — what create-next-app writes — to ESNext.
+ * The facts and the rules do not depend on the target, so any of these is recorded as the project
+ * states it rather than narrowed to one; a target below ES2017 is refused.
+ */
+export const TYPESCRIPT_LANGUAGE_TARGETS = [
+  "es2017",
+  "es2018",
+  "es2019",
+  "es2020",
+  "es2021",
+  "es2022",
+  "es2023",
+  "es2024",
+  "es2025",
+  "esnext",
+] as const;
+export type TypeScriptLanguageTarget = (typeof TYPESCRIPT_LANGUAGE_TARGETS)[number];
 export interface TypeScriptCondition {
   readonly compilerApiVersion: string;
   readonly module: TypeScriptModuleKind;

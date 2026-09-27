@@ -695,3 +695,17 @@ describe("a project condition change inside one inspection process", () => {
     expect(stepKinds(again)).toContain("package-entry");
   });
 });
+
+describe("a project condition recorded at a supported target below ESNext", () => {
+  test("is inspected to the same standard result and closed error set as one recorded at ESNext", () => {
+    const [, owner, file, declarationPath, operation] = VARIANTS[0];
+    const spec = { package: owner, file, declarationPath, operation };
+    const atEsNext = inspect(spec);
+    const atEs2017 = inspect({ ...spec, condition: (base) => ({ ...base, target: "es2017" }) });
+    expect(atEs2017.executionState).toBe("completed");
+    expect(atEs2017.unresolvedReasons).toEqual([]);
+    expect(standardResult(atEs2017)).toBe(true);
+    expect(caseNames(atEs2017)).toEqual(caseNames(atEsNext));
+    expect(stepKinds(atEs2017)).toEqual(stepKinds(atEsNext));
+  });
+});

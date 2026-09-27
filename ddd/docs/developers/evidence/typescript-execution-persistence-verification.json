@@ -1,0 +1,166 @@
+{
+  "verified_at": "2026-09-27T15:49:09Z",
+  "scope": "T-11-06 shared behavior scenarios (language-independent design section 11) run on the TypeScript generation samples, and the programming_model x persistence_method each scenario exercises per code representation and module layout.",
+  "base_commit": "a1c9f8969100ed47bc7a63e603dc3b424395dc0d",
+  "base_commit_note": "Measured on an uncommitted working tree holding the T-11-06 changes on top of the base commit.",
+  "platform": "darwin-arm64",
+  "toolchain": {
+    "bun": "1.3.13",
+    "typescript_compiler_api": "6.0.3"
+  },
+  "command": "cd ddd && bun test tests/t11-typescript-behavior.test.ts",
+  "result": {
+    "tests": 26,
+    "pass": 26,
+    "fail": 0,
+    "expect_calls": 22,
+    "child_runs": {
+      "runs": 4,
+      "tests_per_run": 4,
+      "pass_per_run": 4,
+      "fail_per_run": 0,
+      "expect_calls_per_run": 38,
+      "note": "Each sample's four scenarios run in a child bun test process started in the sample's directory without coverage (tests/t11-typescript-behavior.test.ts:60-77, tests/fixtures/typescript-behavior/sample-runner.ts:37-55); the parent counts above judge the child's report and do not include the child's expect() calls."
+    }
+  },
+  "axes": [
+    {
+      "axis": "programming_model",
+      "values": [
+        "actor",
+        "class"
+      ],
+      "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:20",
+      "read_for_a_decision_by": [
+        "tools/ddd-sensor-mapping-declarations.ts:111 requires a Process Manager for a use case whose target aggregates are all actor"
+      ],
+      "not_read_by": [
+        "The behavior scenarios, which run the sample sources as written."
+      ]
+    },
+    {
+      "axis": "persistence_method",
+      "values": [
+        "state-sourcing",
+        "event-sourcing"
+      ],
+      "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:23",
+      "read_for_a_decision_by": [
+        "tools/ddd/lib/rules/mutations.ts:81, the replay exemption the TypeScript evaluators use (tools/ddd/lib/rules/typescript/evaluators.ts:32)"
+      ],
+      "not_read_by": [
+        "The behavior scenarios."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "state-change",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:82-98"
+    },
+    {
+      "id": "business-error-keeps-state",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:99-124"
+    },
+    {
+      "id": "invalid-value-rejected",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:125-135"
+    },
+    {
+      "id": "restore-after-persistence",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:136-161"
+    }
+  ],
+  "combinations": [
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "code_representation": "class",
+      "module_layout": "named-file",
+      "scenarios": [
+        "state-change",
+        "business-error-keeps-state",
+        "invalid-value-rejected",
+        "restore-after-persistence"
+      ],
+      "result": "pass",
+      "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: class / named-file",
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "code_representation": "class",
+      "module_layout": "index-file",
+      "scenarios": [
+        "state-change",
+        "business-error-keeps-state",
+        "invalid-value-rejected",
+        "restore-after-persistence"
+      ],
+      "result": "pass",
+      "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: class / index-file",
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "code_representation": "companion",
+      "module_layout": "named-file",
+      "scenarios": [
+        "state-change",
+        "business-error-keeps-state",
+        "invalid-value-rejected",
+        "restore-after-persistence"
+      ],
+      "result": "pass",
+      "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: companion / named-file",
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "state-sourcing",
+      "code_representation": "companion",
+      "module_layout": "index-file",
+      "scenarios": [
+        "state-change",
+        "business-error-keeps-state",
+        "invalid-value-rejected",
+        "restore-after-persistence"
+      ],
+      "result": "pass",
+      "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: companion / index-file",
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+    }
+  ],
+  "checks": [
+    "tests/t11-typescript-behavior.test.ts:103-111 checks that the child reports every scenario id, in order, and exits 0",
+    "tests/t11-typescript-behavior.test.ts:113-118 passes a scenario only when the child reports it as passing",
+    "tests/t11-typescript-behavior.test.ts:122-125 checks that each sample's mapping declares programming_model class and persistence_method state-sourcing",
+    "tests/t11-typescript-behavior.test.ts:129-136 checks the four scenario ids",
+    "tests/t11-typescript-behavior.test.ts:138-146 checks the four representation x layout combinations"
+  ],
+  "unverified": [
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing",
+      "reason": "No generation sample declares event-sourcing or has a replay method."
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "state-sourcing",
+      "reason": "No sample declares actor together with TypeScript sources."
+    },
+    {
+      "programming_model": "actor",
+      "persistence_method": "event-sourcing",
+      "reason": "No sample declares the pair."
+    }
+  ],
+  "limits": [
+    "InMemoryInvoiceRepository holds references; restoration is checked from InvoiceRecord through Invoice.restore and from the stored aggregate, not through serialization to external storage.",
+    "One aggregate (invoice) with one child module (invoice/line).",
+    "Run on bun; Node.js execution is limited to the Next.js integration verification.",
+    "The shared behavior scenarios are not yet implemented for Rust."
+  ]
+}

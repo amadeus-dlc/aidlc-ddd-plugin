@@ -18,6 +18,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { legacySetFiles, RECORD_DIR, SUPPLEMENT_FILE } from "./fixtures/artifact-set/workspace.ts";
 import { PROBE, PROBE_CONSTRUCTED_TYPE, writeTypeScriptProject } from "./fixtures/typescript-facts/project.ts";
+import {
+  inspectedPassProblems,
+  runLayoutCiEntry,
+  sampleGateCases,
+} from "./fixtures/typescript-generation/gate-runs.ts";
+import { generationSamples } from "./fixtures/typescript-generation/samples.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { runGoldenCase } from "./golden/runner.ts";
 
@@ -217,6 +223,31 @@ for (const harness of ["claude", "codex"] as const)
     expect(JSON.parse(readFileSync(receiptPath, "utf8")).version).toBe("0.1.1");
     expect(typeScriptLaunchOf(tools, inspected, f.root)).toEqual(launched);
   }, 60_000);
+
+/** Each of the sixteen gate runs per harness loads the distributed compiler in a process of its own. */
+const INSTALLED_TYPESCRIPT_GATES_TIMEOUT_MS = 60_000;
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the installed TypeScript gates and CI entry pass every generation sample and the CI entry refuses a mixed layout`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const tools = join(f.project, f.leaf, "tools");
+      for (const sample of generationSamples()) {
+        const label = `${sample.representation}/${sample.layout}`;
+        for (const gateCase of sampleGateCases(sample))
+          expect(inspectedPassProblems(tools, gateCase), `${label} ${gateCase.sensor}`).toEqual([]);
+        const passed = runLayoutCiEntry(tools, sample, false);
+        expect(passed.exitCode, `${label}: ${passed.output}`).toBe(0);
+        const refused = runLayoutCiEntry(tools, sample, true);
+        expect(refused.exitCode, `${label} mixed layout: ${refused.output}`).toBe(1);
+        expect(refused.output).toContain("module-layout.unresolved");
+      }
+    },
+    INSTALLED_TYPESCRIPT_GATES_TIMEOUT_MS,
+  );
 
 for (const harness of ["claude", "codex"] as const)
   test(`${harness}: a user file at the native extractor path is refused without touching the destination`, () => {
