@@ -165,6 +165,23 @@ const FAILURES: FailureCase[] = [
       ),
   },
   {
+    label: "a project whose root references a package config that is not its tsconfig.json",
+    kind: "project-condition-mismatch",
+    code: "unsupported-syntax",
+    classify: () => {
+      const root = writeTypeScriptProject(temporaryDir("ddd-typescript-project-"));
+      writeFileSync(
+        join(root, "billing-domain/tsconfig.build.json"),
+        readFileSync(join(root, "billing-domain/tsconfig.json")),
+      );
+      writeFileSync(
+        join(root, "tsconfig.json"),
+        `${JSON.stringify({ files: [], references: [{ path: "./billing-domain/tsconfig.build.json" }] })}\n`,
+      );
+      return classifyTypeScriptExtractor(root);
+    },
+  },
+  {
     label: "a project root without a tsconfig.json",
     kind: "project-condition-mismatch",
     code: "tool-unavailable",
@@ -178,6 +195,13 @@ test(
     expect((await classifyTypeScriptExtractor(SUPPORTED_WORKSPACE)).kind).toBe("ready");
     const written = writeTypeScriptProject(temporaryDir("ddd-typescript-project-"));
     expect((await classifyTypeScriptExtractor(written, TYPESCRIPT_VENDOR_DIR)).kind).toBe("ready");
+    // A reference may name the package's tsconfig.json itself rather than its directory.
+    const byFile = writeTypeScriptProject(temporaryDir("ddd-typescript-project-"));
+    writeFileSync(
+      join(byFile, "tsconfig.json"),
+      `${JSON.stringify({ files: [], references: [{ path: "./billing-domain/tsconfig.json" }] })}\n`,
+    );
+    expect((await classifyTypeScriptExtractor(byFile, TYPESCRIPT_VENDOR_DIR)).kind).toBe("ready");
   },
   LAUNCH_TIMEOUT_MS,
 );

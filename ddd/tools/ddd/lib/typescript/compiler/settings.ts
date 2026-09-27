@@ -7,8 +7,8 @@
  * carries. Both must refuse exactly the same projects, so the range is stated here once.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type ts from "typescript";
 
 export type CompilerApi = typeof ts;
@@ -54,7 +54,23 @@ export function parseConfig(api: CompilerApi, path: string, subject: string): Pa
   if (read.error) unreadable(subject, api.flattenDiagnosticMessageText(read.error.messageText, " "));
   const parsed = api.parseJsonConfigFileContent(read.config, host, dirname(path), undefined, path);
   if (parsed.errors.length) unreadable(subject, api.flattenDiagnosticMessageText(parsed.errors[0].messageText, " "));
-  return { options: parsed.options, references: (parsed.projectReferences ?? []).map((entry) => entry.path) };
+  return {
+    options: parsed.options,
+    references: (parsed.projectReferences ?? []).map((entry) => packageRoot(entry.path, subject)),
+  };
+}
+
+/**
+ * The package root a project reference names. A reference may name the package's directory or the
+ * config file itself; both reach the same package when that file is its `tsconfig.json`. A reference
+ * to a config file of another name would have the package read under settings its `tsconfig.json`
+ * does not state, so it is refused rather than silently replaced by that file.
+ */
+function packageRoot(reference: string, subject: string): string {
+  if (!existsSync(reference) || !statSync(reference).isFile()) return reference;
+  if (basename(reference) !== "tsconfig.json")
+    notModelled(`${subject}.references`, `${basename(reference)} is not the package's tsconfig.json.`);
+  return dirname(reference);
 }
 
 /** The compiler settings a package states, including everything its config inherits. */
