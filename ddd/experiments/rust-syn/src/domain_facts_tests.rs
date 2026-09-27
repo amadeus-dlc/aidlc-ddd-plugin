@@ -588,9 +588,10 @@ fn domain_facts_records_an_attribute_that_is_not_built_in_as_a_possible_attribut
     );
 }
 
-/// Whether an attribute may be a macro is read off the attribute, not off where it is written.
+/// Outside `#[cfg(test)]` code, whether an attribute may be a macro is read off the attribute, not off
+/// where in the syntax it is written.
 #[test]
-fn domain_facts_records_a_possible_attribute_macro_wherever_it_is_written() {
+fn domain_facts_records_a_possible_attribute_macro_wherever_it_is_written_outside_test_only_code() {
     assert_eq!(
         sorted_reasons_at(
             "pub struct A {\n    #[field_macro]\n    id: String,\n}\n#[fn_macro]\nfn run() {}\n#[impl_macro]\nimpl A {\n    #[method_macro]\n    fn get(&self) {}\n}\n#[trait_macro]\ntrait T {}\n#[mod_macro]\nmod inner {}\n"
@@ -606,15 +607,120 @@ fn domain_facts_records_a_possible_attribute_macro_wherever_it_is_written() {
     );
 }
 
-/// A test-only module still belongs to the file rule (a) reads every member of, and a path-qualified
-/// attribute is not a built-in one.
+/// A `#[cfg(test)]` item is not part of the build rules (a) and (d) decide on, so an attribute macro
+/// inside it cannot change a declaration they read. The `cfg` itself stays the conditional-compilation
+/// record it always was.
 #[test]
-fn domain_facts_records_a_qualified_attribute_inside_a_test_only_module() {
+fn domain_facts_does_not_record_an_attribute_macro_inside_a_test_only_module() {
     assert_eq!(
         sorted_reasons_at(
             "#[cfg(test)]\nmod tests {\n    #[tokio::test]\n    async fn one() {}\n}"
         ),
+        ["conditional-compilation@1"]
+    );
+}
+
+/// The item that carries `#[cfg(test)]` is test-only as a whole, attributes written above the `cfg`
+/// included.
+#[test]
+fn domain_facts_does_not_record_an_attribute_macro_on_the_test_only_item_itself() {
+    assert_eq!(
+        sorted_reasons_at("#[my_attr]\n#[cfg(test)]\nfn helper() {}"),
+        ["conditional-compilation@2"]
+    );
+}
+
+/// A file whose inner attribute is `#![cfg(test)]` is test-only as a whole.
+#[test]
+fn domain_facts_does_not_record_an_attribute_macro_in_a_test_only_file() {
+    assert_eq!(
+        sorted_reasons_at("#![cfg(test)]\n#[tokio::test]\nasync fn one() {}"),
+        ["conditional-compilation@1"]
+    );
+}
+
+/// Leaving a test-only module ends what it excludes: the item after it is part of the build again.
+#[test]
+fn domain_facts_records_an_attribute_macro_on_an_item_after_a_test_only_module() {
+    assert_eq!(
+        sorted_reasons_at("#[cfg(test)]\nmod tests {}\n#[my_attr]\npub struct A;"),
         ["attribute-macro@3", "conditional-compilation@1"]
+    );
+}
+
+/// The test-only distinction is the one the declaration walk draws, over `syn::Item`s and the file.
+/// A `#[cfg(test)]` method inside an impl is outside it, so an attribute macro there is recorded.
+#[test]
+fn domain_facts_records_an_attribute_macro_on_a_test_only_method_inside_an_impl() {
+    assert_eq!(
+        sorted_reasons_at(
+            "pub struct A;\nimpl A {\n    #[cfg(test)]\n    #[my_attr]\n    fn h(&self) {}\n}"
+        ),
+        ["attribute-macro@4", "conditional-compilation@3"]
+    );
+}
+
+/// Only `#[cfg(test)]` exactly is read as test-only. Any other predicate, one that merely mentions
+/// `test` included, names a build this protocol does not evaluate, so an attribute macro under it is
+/// recorded as before, and what `cfg_attr(test, ..)` would apply stays a conditional-compilation record.
+#[test]
+fn domain_facts_records_an_attribute_macro_under_any_other_configuration_predicate() {
+    assert_eq!(
+        sorted_reasons_at(
+            "#[cfg(feature = \"x\")]\nmod a { #[tokio::test] async fn one() {} }\n#[cfg(not(test))]\nmod b { #[my_attr] fn two() {} }\n#[cfg(any(test, feature = \"x\"))]\nmod c { #[my_attr] fn three() {} }\n#[cfg_attr(test, my_macro)]\npub struct D;"
+        ),
+        [
+            "attribute-macro@2",
+            "attribute-macro@4",
+            "attribute-macro@6",
+            "conditional-compilation@1",
+            "conditional-compilation@3",
+            "conditional-compilation@5",
+            "conditional-compilation@7",
+        ]
+    );
+}
+
+/// `async_trait` only rewrites the signatures of the async methods it annotates: it adds no public
+/// member for rule (a) and no getter for rule (d), so it is allow-listed, with or without arguments,
+/// on a trait or on an impl.
+#[test]
+fn domain_facts_does_not_record_an_allow_listed_attribute_macro() {
+    assert_eq!(
+        reasons_at(
+            "#[async_trait]\npub trait Clock { async fn now(&self) -> i64; }\n#[async_trait(?Send)]\npub trait Tick { async fn tick(&self); }\npub struct System;\n#[async_trait]\nimpl Clock for System { async fn now(&self) -> i64 { 0 } }\n"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+/// The allow list is matched on the last path segment, so the path-qualified spelling is allowed too.
+#[test]
+fn domain_facts_does_not_record_a_path_qualified_allow_listed_attribute_macro() {
+    assert_eq!(
+        reasons_at(
+            "pub trait Clock { fn now(&self) -> i64; }\npub struct System;\n#[async_trait::async_trait]\nimpl Clock for System { fn now(&self) -> i64 { 0 } }\n"
+        ),
+        Vec::<String>::new()
+    );
+}
+
+/// A path that merely starts with an allow-listed name names another macro.
+#[test]
+fn domain_facts_records_an_attribute_macro_whose_last_segment_is_not_allow_listed() {
+    assert_eq!(
+        reasons_at("#[async_trait::other]\npub trait Clock {}"),
+        ["attribute-macro@1"]
+    );
+}
+
+/// An attribute macro the allow list does not name is recorded in the build as before, path-qualified
+/// or not.
+#[test]
+fn domain_facts_records_an_attribute_macro_the_allow_list_does_not_name() {
+    assert_eq!(
+        sorted_reasons_at("#[tokio::main]\nasync fn main() {}\n#[tokio::test]\nasync fn one() {}"),
+        ["attribute-macro@1", "attribute-macro@3"]
     );
 }
 

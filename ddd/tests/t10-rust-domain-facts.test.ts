@@ -443,19 +443,59 @@ test("an attribute macro in a file no rule decides from is reported in the note 
   expect(noteParts(verdict)).toContain(`domain-facts.unresolved: ${tests}:1 attribute-macro`);
 });
 
-test("the same attribute macro inside a test module of a file rule (a) decides from stops the gate", () => {
-  // The module walk leaves a `#[cfg(test)]` module out of the program, but the file it is written in
-  // is one rule (a) reads every member of, so whether to stop is decided per file, not per item.
-  const lib = `${INVOICE}#[cfg(test)]
-mod tests {
-    #[tokio::test]
-    async fn one() {}
+/** The note parts that report an attribute-macro record, whichever file and line they name. */
+function attributeMacroNotes(verdict: SensorVerdict): string[] {
+  return noteParts(verdict).filter((part) => part.includes("attribute-macro"));
 }
-`;
-  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-inline-test", lib));
+
+/** The same `#[tokio::test]` function, wrapped by each case in a different module or none. */
+const TOKIO_TEST = "    #[tokio::test]\n    async fn one() {}\n";
+
+// A `#[cfg(test)]` item is not part of the build rules (a) and (d) decide on, so an attribute macro
+// inside it cannot change a declaration they read: the extractor does not record it, and the gate
+// answers. The same attribute macro in the build, or under any other configuration predicate, is
+// still recorded and still stops the gate.
+
+test("an attribute macro inside an inline test module of a file rule (a) decides from keeps the domain gate answering", () => {
+  const lib = `${INVOICE}#[cfg(test)]\nmod tests {\n${TOKIO_TEST}}\n`;
+  const verdict = answeredVerdict(spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-inline-test", lib)));
+  expect(verdict.pass, verdict.note).toBe(true);
+  expect(attributeMacroNotes(verdict)).toEqual([]);
+});
+
+test("the same attribute macro in the build of that file stops the domain gate", () => {
+  const lib = `${INVOICE}${TOKIO_TEST}`;
+  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-build", lib));
   expect(result.exitCode).toBe(127);
   expect(result.stdout).toBe("");
   expect(result.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[tokio::test]")} attribute-macro`);
+});
+
+test("the same attribute macro inside a module under another configuration predicate stops the domain gate", () => {
+  const lib = `${INVOICE}#[cfg(feature = "x")]\nmod tests {\n${TOKIO_TEST}}\n`;
+  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-feature-module", lib));
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[tokio::test]")} attribute-macro`);
+});
+
+// `async_trait` only rewrites the signatures of the async methods it annotates, so it adds neither the
+// public member rule (a) looks for nor the getter rule (d) looks for. It is allow-listed by its last
+// path segment; an attribute macro the allow list does not name still stops the gate.
+
+test("async_trait on a trait and a path-qualified async_trait on its impl keep the domain gate answering", () => {
+  const lib = `${INVOICE}#[async_trait]\npub trait Clock {\n    async fn now(&self) -> i64;\n}\npub struct SystemClock;\n#[async_trait::async_trait]\nimpl Clock for SystemClock {\n    async fn now(&self) -> i64 {\n        0\n    }\n}\n`;
+  const verdict = answeredVerdict(spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-async-trait", lib)));
+  expect(verdict.pass, verdict.note).toBe(true);
+  expect(attributeMacroNotes(verdict)).toEqual([]);
+});
+
+test("a path-qualified attribute macro the allow list does not name stops the domain gate", () => {
+  const lib = `${INVOICE}#[tokio::main]\nasync fn main() {}\n`;
+  const result = spawnSensor(toolsDir, domainCase("domain-facts-attribute-macro-not-allow-listed", lib));
+  expect(result.exitCode).toBe(127);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain(`${DOMAIN}:${lineOf(lib, "#[tokio::main]")} attribute-macro`);
 });
 
 /**
