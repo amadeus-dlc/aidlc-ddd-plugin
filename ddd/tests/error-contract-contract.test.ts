@@ -297,6 +297,7 @@ describe("a TypeScript request and its identity", () => {
 
   const conditionChanges: [string, unknown][] = [
     ["Compiler API version", { ...tsCondition(), compilerApiVersion: "6.0.4" }],
+    ["language target", { ...tsCondition(), target: "es2017" }],
     ["resolution conditions", { ...tsCondition(), resolutionConditions: ["production"] }],
     ["package name", { ...tsCondition(), packages: [tsPackage({ name: "billing-domain-fork" })] }],
     ["package version", { ...tsCondition(), packages: [tsPackage({ version: "0.2.0" })] }],
@@ -367,7 +368,7 @@ describe("a TypeScript request and its identity", () => {
       "unsupported module resolution",
       { ...tsInput(), typeScriptCondition: { ...tsCondition(), moduleResolution: "node16" } },
     ],
-    ["unsupported language target", { ...tsInput(), typeScriptCondition: { ...tsCondition(), target: "es2020" } }],
+    ["unsupported language target", { ...tsInput(), typeScriptCondition: { ...tsCondition(), target: "es2016" } }],
     ["a project that is not strict", { ...tsInput(), typeScriptCondition: { ...tsCondition(), strict: false } }],
     [
       "blank entry point subpath",

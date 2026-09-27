@@ -80,6 +80,15 @@ export function isViolation(testCase: GoldenCase): boolean {
  */
 export function materializeCase(testCase: GoldenCase): { root: string; outputPath: string } {
   const root = mkdtempSync(join(tmpdir(), "ddd-golden-"));
+  return { root, outputPath: writeCase(root, testCase) };
+}
+
+/**
+ * Writes a case into the existing project directory `root` — its record, workspace, links and
+ * modes — and returns the sensor's `--output-path`, so a project that has to exist before the gate
+ * runs (one whose packages are installed and built) is judged over the same fixture layout.
+ */
+export function writeCase(root: string, testCase: GoldenCase): string {
   const record = join(root, "aidlc", "spaces", "default", "intents", "i1");
   mkdirSync(record, { recursive: true });
   writeFileSync(
@@ -105,7 +114,7 @@ export function materializeCase(testCase: GoldenCase): { root: string; outputPat
   for (const [rel, mode] of Object.entries(testCase.modes ?? {})) {
     chmodSync(join(root, rel), mode);
   }
-  return { root, outputPath: join(record, testCase.output) };
+  return join(record, testCase.output);
 }
 
 export interface SensorRun {
@@ -125,14 +134,19 @@ export interface SensorRun {
 export function spawnSensor(toolsDir: string, testCase: GoldenCase): SensorRun {
   const { root, outputPath } = materializeCase(testCase);
   try {
-    const proc = Bun.spawnSync(
-      ["bun", join(toolsDir, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    return { exitCode: proc.exitCode, stdout: proc.stdout.toString().trim(), stderr: proc.stderr.toString() };
+    return spawnSensorAt(toolsDir, testCase, outputPath);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+}
+
+/** Runs the sensor of `testCase` in `toolsDir` over a case already written, with `outputPath` as `writeCase` returned it. */
+export function spawnSensorAt(toolsDir: string, testCase: GoldenCase, outputPath: string): SensorRun {
+  const proc = Bun.spawnSync(
+    ["bun", join(toolsDir, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  return { exitCode: proc.exitCode, stdout: proc.stdout.toString().trim(), stderr: proc.stderr.toString() };
 }
 
 export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {

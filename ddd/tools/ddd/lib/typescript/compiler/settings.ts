@@ -10,6 +10,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type ts from "typescript";
+import { TYPESCRIPT_LANGUAGE_TARGETS, type TypeScriptLanguageTarget } from "../../error-contract/contract.ts";
 
 export type CompilerApi = typeof ts;
 
@@ -77,20 +78,45 @@ function packageRoot(reference: string, subject: string): string {
 export interface CompilerSettings {
   readonly module: "esnext";
   readonly moduleResolution: "bundler";
-  readonly target: "esnext";
+  readonly target: TypeScriptLanguageTarget;
   readonly resolutionConditions: readonly string[];
 }
-/** Each setting has the one value the inspections model; a setting left unstated is refused too. */
+
+/**
+ * The compiler setting each supported target name stands for. The names are stated rather than read
+ * back from the enum, whose reverse mapping names the value ESNext shares with `Latest` as `Latest`.
+ */
+const SCRIPT_TARGET: Record<TypeScriptLanguageTarget, keyof typeof ts.ScriptTarget> = {
+  es2017: "ES2017",
+  es2018: "ES2018",
+  es2019: "ES2019",
+  es2020: "ES2020",
+  es2021: "ES2021",
+  es2022: "ES2022",
+  es2023: "ES2023",
+  es2024: "ES2024",
+  es2025: "ES2025",
+  esnext: "ESNext",
+};
+export function scriptTarget(api: CompilerApi, target: TypeScriptLanguageTarget): ts.ScriptTarget {
+  return api.ScriptTarget[SCRIPT_TARGET[target]];
+}
+
+/**
+ * Each setting has the one value — for the target, one of the range — the inspections model; a
+ * setting left unstated is refused too, rather than read under the compiler's default.
+ */
 export function compilerSettings(api: CompilerApi, options: ts.CompilerOptions, subject: string): CompilerSettings {
   if (options.module !== api.ModuleKind.ESNext) notModelled(`${subject}.module`, "Unsupported module kind.");
   if (options.moduleResolution !== api.ModuleResolutionKind.Bundler)
     notModelled(`${subject}.moduleResolution`, "Unsupported module resolution.");
-  if (options.target !== api.ScriptTarget.ESNext) notModelled(`${subject}.target`, "Unsupported language target.");
+  const target = TYPESCRIPT_LANGUAGE_TARGETS.find((name) => scriptTarget(api, name) === options.target);
+  if (target === undefined) notModelled(`${subject}.target`, "Unsupported language target.");
   if (options.strict !== true) notModelled(`${subject}.strict`, "Expected a project that type checks strictly.");
   return {
     module: "esnext",
     moduleResolution: "bundler",
-    target: "esnext",
+    target,
     resolutionConditions: (options.customConditions ?? []).map((name, index) =>
       text(name, `${subject}.customConditions.${index}`),
     ),

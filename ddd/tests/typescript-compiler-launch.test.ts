@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import ts from "typescript";
 import { runSensor, type SensorIO } from "../tools/ddd/lib/runtime/runtime.ts";
 import {
   classifyTypeScriptExtractor,
@@ -20,7 +21,10 @@ import {
   type TypeScriptExtractorIssue,
   typeScriptExtractorIssue,
 } from "../tools/ddd/lib/typescript/compiler/launch.ts";
-import { SUPPORTED_COMPILER_API_VERSION } from "../tools/ddd/lib/typescript/compiler/settings.ts";
+import {
+  readCompilerCondition,
+  SUPPORTED_COMPILER_API_VERSION,
+} from "../tools/ddd/lib/typescript/compiler/settings.ts";
 import { requireTypeScriptFacts } from "../tools/ddd/lib/typescript/domain-facts/index.ts";
 import { SUPPORTED_COMPILER_OPTIONS, writeTypeScriptProject } from "./fixtures/typescript-facts/project.ts";
 
@@ -202,6 +206,65 @@ test(
       `${JSON.stringify({ files: [], references: [{ path: "./billing-domain/tsconfig.json" }] })}\n`,
     );
     expect((await classifyTypeScriptExtractor(byFile, TYPESCRIPT_VENDOR_DIR)).kind).toBe("ready");
+  },
+  LAUNCH_TIMEOUT_MS,
+);
+
+/** A one-package project whose package states `target` as written, or leaves it out for `undefined`. */
+function projectWithTarget(target: string | undefined): string {
+  const { target: _supported, ...rest } = SUPPORTED_COMPILER_OPTIONS;
+  return writeTypeScriptProject(temporaryDir("ddd-typescript-project-"), [
+    { name: "billing-domain", compilerOptions: target === undefined ? rest : { ...rest, target } },
+  ]);
+}
+
+// ES2017 is the lower bound because it is what create-next-app writes; the spellings differ in case
+// the way a hand-written and a generated tsconfig.json do.
+test.each([
+  ["ES2017", "es2017"],
+  ["es2022", "es2022"],
+  ["ES2025", "es2025"],
+  ["ESNext", "esnext"],
+])(
+  "a project whose package states target %s is ready and records it as %s",
+  async (target, recorded) => {
+    const root = projectWithTarget(target);
+    expect((await classifyTypeScriptExtractor(root, TYPESCRIPT_VENDOR_DIR)).kind).toBe("ready");
+    const stated: string = readCompilerCondition(ts, root).target;
+    expect(stated).toBe(recorded);
+  },
+  LAUNCH_TIMEOUT_MS,
+);
+
+test.each([["ES2016"], ["ES2015"], ["ES5"], [undefined]])(
+  "a project whose package states target %p is refused at that setting",
+  async (target) => {
+    const outcome = await classifyTypeScriptExtractor(projectWithTarget(target), TYPESCRIPT_VENDOR_DIR);
+    if (outcome.kind === "ready") throw new Error(`target ${String(target)} was classified as ready`);
+    expect(outcome.kind).toBe("project-condition-mismatch");
+    expect(typeScriptExtractorIssue(outcome)).toMatchObject({
+      code: "unsupported-syntax",
+      subject: "typescript-extractor:project-condition-mismatch",
+    });
+    expect(outcome.detail).toContain("billing-domain/tsconfig.json.target");
+  },
+  LAUNCH_TIMEOUT_MS,
+);
+
+test(
+  "a project whose packages state different supported targets is refused rather than read under one of them",
+  async () => {
+    const root = writeTypeScriptProject(temporaryDir("ddd-typescript-project-"), [
+      { name: "billing-domain", compilerOptions: { ...SUPPORTED_COMPILER_OPTIONS, target: "ES2017" } },
+      { name: "billing-ledger", compilerOptions: { ...SUPPORTED_COMPILER_OPTIONS, target: "ESNext" } },
+    ]);
+    const outcome = await classifyTypeScriptExtractor(root, TYPESCRIPT_VENDOR_DIR);
+    if (outcome.kind === "ready") throw new Error("packages with different targets were classified as ready");
+    expect(typeScriptExtractorIssue(outcome)).toMatchObject({
+      code: "unsupported-syntax",
+      subject: "typescript-extractor:project-condition-mismatch",
+    });
+    expect(outcome.detail).toContain("tsconfig.json.compilerOptions");
   },
   LAUNCH_TIMEOUT_MS,
 );

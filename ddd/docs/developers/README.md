@@ -29,6 +29,8 @@ The layer designs define conventions for generated applications and the plugin. 
 | Test commands and fixture organization | [Test guide](../../tests/README.md) |
 | Positive, negative, and boundary evidence per sensor | [Sensor coverage matrix](sensor-coverage.md) |
 | Rust execution model, persistence strategy, and module layout combinations actually tested | [Rust execution and persistence verification](rust-execution-persistence-verification.md) |
+| TypeScript execution model and persistence strategy the shared behavior scenarios exercise, per code representation and module layout | [TypeScript execution and persistence verification](typescript-execution-persistence-verification.md) |
+| The ESM Next.js application on Node.js the TypeScript samples were built and run in, the versions, and the hosts not verified | [Next.js integration verification](nextjs-integration-verification.md) |
 | Native Rust parsing, comparison results, and semantic/distribution limits | [Rust + syn experiment](rust-syn-spike.md) |
 | Fresh installation, updates, and failure behavior | [Installation verification](installation-verification.md) |
 | Installed path, covered platforms, and launch failures of the native extractor | [Native extractor distribution](native-extractor-distribution.md) |

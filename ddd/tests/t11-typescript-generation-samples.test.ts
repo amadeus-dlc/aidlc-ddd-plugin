@@ -13,16 +13,16 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
+import { inspectedPassProblems, runLayoutCiEntry } from "./fixtures/typescript-generation/gate-runs.ts";
 import {
   type GenerationSample,
   generationSamples,
   otherParentModuleFile,
   parentModuleFile,
 } from "./fixtures/typescript-generation/samples.ts";
-import { type GoldenCase, materializeCase, runGoldenCase } from "./golden/runner.ts";
+import { runGoldenCase } from "./golden/runner.ts";
 
 const TOOLS = join(import.meta.dir, "../tools");
-const CI_ENTRY = join(TOOLS, "ddd-check-typescript-module-layout.ts");
 
 /** Every gate run loads the distributed multi-megabyte compiler in a process of its own. */
 const GATE_RUN_TIMEOUT_MS = 30_000;
@@ -79,35 +79,23 @@ function typeCheck(root: string): string[] {
   return diagnostics;
 }
 
-/**
- * Runs a gate that decides the sources of some layers and requires it to pass with no finding. Such
- * a gate also passes with no finding when it inspects nothing — no claimed TypeScript source in a
- * package of its layers — so the sample has to be inspected, not skipped.
- */
-function expectInspectedPass(gateCase: GoldenCase): void {
-  const result = runGoldenCase(TOOLS, gateCase);
-  expect(result.problems).toEqual([]);
-  expect(result.verdict?.findings).toEqual([]);
-  expect(result.verdict?.note ?? "").not.toContain("no typescript sources claimed");
-}
-
 for (const sample of generationSamples()) {
   describe(`generation sample: ${sample.representation} / ${sample.layout}`, () => {
     test(
       "passes the TypeScript domain gate with no finding",
-      () => expectInspectedPass(sample.domainCase),
+      () => expect(inspectedPassProblems(TOOLS, sample.domainCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
     test(
       "passes the TypeScript use-case gate with no finding",
-      () => expectInspectedPass(sample.useCaseCase),
+      () => expect(inspectedPassProblems(TOOLS, sample.useCaseCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
     test(
       "passes the TypeScript interface-adapter gate with no finding",
-      () => expectInspectedPass(sample.interfaceAdapterCase),
+      () => expect(inspectedPassProblems(TOOLS, sample.interfaceAdapterCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
@@ -122,13 +110,8 @@ for (const sample of generationSamples()) {
     );
 
     test("the module layout CI entry exits 0", () => {
-      const { root } = materializeCase(sample.layoutCase);
-      try {
-        const proc = Bun.spawnSync([process.execPath, CI_ENTRY, "--project", root], { stdout: "pipe", stderr: "pipe" });
-        expect(proc.exitCode, `${proc.stdout.toString()}${proc.stderr.toString()}`).toBe(0);
-      } finally {
-        rmSync(root, { recursive: true, force: true });
-      }
+      const run = runLayoutCiEntry(TOOLS, sample, false);
+      expect(run.exitCode, run.output).toBe(0);
     });
 
     test(

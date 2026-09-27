@@ -13,6 +13,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import ts from "typescript";
 import type { ReasonCode, SourceInput, TypeScriptCondition } from "../../error-contract/index.ts";
+import { scriptTarget } from "../compiler/settings.ts";
 import { compilerPath, INPUT_ROOT, packageOf } from "./context.ts";
 
 export const TS_ERROR_CONTRACT_TOOLCHAIN = [
@@ -25,7 +26,6 @@ const MODULE_KIND: Record<TypeScriptCondition["module"], ts.ModuleKind> = { esne
 const MODULE_RESOLUTION: Record<TypeScriptCondition["moduleResolution"], ts.ModuleResolutionKind> = {
   bundler: ts.ModuleResolutionKind.Bundler,
 };
-const LANGUAGE_TARGET: Record<TypeScriptCondition["target"], ts.ScriptTarget> = { esnext: ts.ScriptTarget.ESNext };
 
 export type SpecifierResolution =
   | { readonly kind: "same-package"; readonly file: string }
@@ -108,7 +108,7 @@ export function createInspectionProgram(sources: readonly SourceInput[], conditi
   for (const source of sources) files.set(compilerPath(source.path), source.content);
   const paths = new Set(sources.map((source) => source.path));
   const options: ts.CompilerOptions = {
-    target: LANGUAGE_TARGET[condition.target],
+    target: scriptTarget(ts, condition.target),
     module: MODULE_KIND[condition.module],
     moduleResolution: MODULE_RESOLUTION[condition.moduleResolution],
     customConditions: [...condition.resolutionConditions],

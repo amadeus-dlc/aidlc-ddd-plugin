@@ -35,17 +35,19 @@ bun run prepare:typescript
 
 ## 対応する Compiler API の版とプロジェクト設定
 
-版と設定は [`compiler/settings.ts`](../../tools/ddd/lib/typescript/compiler/settings.ts) の1か所で定める。error-contract の入口と事実抽出は、どちらもここから読む。
+版と設定は [`compiler/settings.ts`](../../tools/ddd/lib/typescript/compiler/settings.ts) の1か所で定める。error-contract の入口と事実抽出は、どちらもここから読む。例外は、受け入れる target の名前だけである。名前は共通の [`error-contract/contract.ts`](../../tools/ddd/lib/error-contract/contract.ts) の `TYPESCRIPT_LANGUAGE_TARGETS` に置く。error-contract の要求が target を記録し、言語に依存しない比較器が TypeScript のモジュールに届かずにその契約を読むためである。各名前をコンパイラの設定値へ対応させるのは `compiler/settings.ts` である。
 
 | 項目 | 対応範囲 |
 |---|---|
 | Compiler API | `6.0.3` ちょうど（開発用依存関係も同じ版に固定している） |
 | ルートの `tsconfig.json` | 存在し、解析でき、1件以上のパッケージを references で参照する |
-| 参照する各パッケージの `tsconfig.json`（継承する設定を含む） | `module: esnext`、`moduleResolution: bundler`、`target: esnext`、`strict: true` |
+| 参照する各パッケージの `tsconfig.json`（継承する設定を含む） | `module: esnext`、`moduleResolution: bundler`、`target` は `ES2017` 以上 `ESNext` 以下（`ES2017` 〜 `ES2025` と `ESNext`。大文字小文字は問わない）、`strict: true` |
 | `customConditions` | 空でない名前の任意の並び |
-| パッケージ間 | すべてのパッケージが、`customConditions` を含めて同じ設定を持つ |
+| パッケージ間 | すべてのパッケージが、`target` と `customConditions` を含めて同じ設定を持つ |
 
-書かれていない設定は、別の値を持つ設定と同じく拒否する。そのため、プロジェクトが一度も書いていない設定で検査することはない。
+書かれていない設定は、別の値を持つ設定と同じく拒否する。そのため、プロジェクトが一度も書いていない設定で検査することはない。`target` も同じで、コンパイラの既定値を補わない。
+
+`target` の範囲を `ES2017` からにしたのは、`create-next-app` が生成する `tsconfig.json` の target が `ES2017` であり、事実と規則が target に依存しないためである。それより低い target（`ES2016`、`ES2015`、`ES5` など）は、従来どおり `typescript-extractor:project-condition-mismatch`（`unsupported-syntax`）として拒否する。target はプロジェクトが書いたものを小文字（`es2017`、`esnext`）で記録し、範囲内の別の値に読み替えない。`ES2017` のプロジェクトでは、error-contract の条件にも `target: "es2017"` が記録される。残る3つの設定は1つの値のままで、これも `create-next-app` が生成する値と一致する。パッケージ間で設定が一致する必要があるため、`ES2017` と `ESNext` のパッケージが混在するプロジェクトは `tsconfig.json.compilerOptions` で拒否される。すべてのパッケージで同じ target を書くこと。`ES2017` のプロジェクトを検査し、ビルドした記録は [Next.js 統合の検証](nextjs-integration-verification.ja.md) にある。
 
 ## 抽出を起動できないとき
 
