@@ -14,7 +14,8 @@
 //!
 //! Two kinds of "cannot be read" are kept apart, because they are answered differently. `unresolved`
 //! notes name a construct that could hide a declaration from this answer (`cfg`, macro expansion,
-//! an attribute that may be an attribute macro); a record without `parsed: true` names a file that yielded no declarations at all. Neither is ever
+//! an attribute that may be an attribute macro, outside `#[cfg(test)]` and the attribute macro
+//! allow list); a record without `parsed: true` names a file that yielded no declarations at all. Neither is ever
 //! flattened into an empty declaration list, because "this file declares nothing" is the one answer
 //! an uninspected file must not give.
 use proc_macro2::TokenTree;
@@ -110,6 +111,15 @@ const DERIVE_HELPER_ALLOW_LIST: &[(&str, &[&str])] = &[
     ("backtrace", &["Error"]),
 ];
 
+/// Attribute macros whose expansion is known not to change a declaration rules (a) and (d) read,
+/// matched by their last path segment so `#[async_trait]` and `#[async_trait::async_trait]` are
+/// both allowed. Any other attribute macro is still recorded.
+const ATTRIBUTE_MACRO_ALLOW_LIST: &[&str] = &[
+    // async-trait rewrites the signatures of an `async fn` in a trait or impl; it adds no public
+    // member rule (a) reads and no getter rule (d) reads.
+    "async_trait",
+];
+
 fn is_built_in_attribute(path: &syn::Path) -> bool {
     if path.leading_colon.is_some() {
         return false;
@@ -148,6 +158,12 @@ fn allowed_derive_helpers(attrs: &[syn::Attribute]) -> Vec<&'static str> {
         .filter(|(_, derives)| derives.iter().any(|name| derived.iter().any(|d| d == name)))
         .map(|(helper, _)| *helper)
         .collect()
+}
+
+fn is_allowed_attribute_macro(path: &syn::Path) -> bool {
+    path.segments.last().is_some_and(|segment| {
+        ATTRIBUTE_MACRO_ALLOW_LIST.contains(&segment.ident.to_string().as_str())
+    })
 }
 
 #[derive(Deserialize)]
@@ -260,6 +276,10 @@ struct Notes {
     /// The derive helpers allowed on the item being visited, innermost item last. Every item opens
     /// its own entry, so a helper allowed on a struct is not allowed on an item nested inside it.
     derive_helpers: Vec<Vec<&'static str>>,
+    /// How many enclosing items carry `#[cfg(test)]`, counting a file that opens with
+    /// `#![cfg(test)]` as one: the same distinction `Walk::conditional_tests` and
+    /// `Walk::file_auxiliary` draw.
+    test_only: usize,
 }
 
 impl Notes {
@@ -267,7 +287,9 @@ impl Notes {
     /// attribute macro replaces the item it annotates, so it can add public members or methods, or
     /// rewrite an inline module, and the item a reader sees is not necessarily the one the program
     /// declares. A derive macro cannot change the item it annotates (it can only add items beside
-    /// it), so a derive and the allow-listed helpers it reads are not recorded.
+    /// it), so a derive and the allow-listed helpers it reads are not recorded. Nor is an attribute
+    /// macro under `#[cfg(test)]`, which the normal build never compiles, or one on the attribute
+    /// macro allow list, whose expansion is known not to add what these rules read.
     fn unresolved(&mut self, reason: &str, span: proc_macro2::Span) {
         self.unresolved
             .push(json!({"reason": reason, "line": line(span)}));
@@ -288,9 +310,16 @@ impl Notes {
 
 impl<'ast> Visit<'ast> for Notes {
     fn visit_item(&mut self, node: &'ast syn::Item) {
+        let test_only = attrs_of(node).is_some_and(has_cfg_test);
+        if test_only {
+            self.test_only += 1;
+        }
         self.derive_helpers.push(Vec::new());
         visit::visit_item(self, node);
         self.derive_helpers.pop();
+        if test_only {
+            self.test_only -= 1;
+        }
     }
 
     fn visit_item_enum(&mut self, node: &'ast syn::ItemEnum) {
@@ -342,7 +371,11 @@ impl<'ast> Visit<'ast> for Notes {
         let path = node.path();
         if path.is_ident("cfg") || path.is_ident("cfg_attr") {
             self.unresolved("conditional-compilation", node.span());
-        } else if !is_built_in_attribute(path) && !self.is_allowed_derive_helper(path) {
+        } else if self.test_only == 0
+            && !is_built_in_attribute(path)
+            && !self.is_allowed_derive_helper(path)
+            && !is_allowed_attribute_macro(path)
+        {
             self.unresolved("attribute-macro", node.span());
         }
         visit::visit_attribute(self, node);
@@ -1340,17 +1373,19 @@ fn analyze(path: &str, source: &str) -> Value {
                 "unresolved": [{"reason": "syntax-error", "line": error.span().start().line}]});
         }
     };
+    let file_auxiliary = parsed.attrs.iter().any(is_cfg_test);
     let mut notes = Notes {
         members: Vec::new(),
         unresolved: Vec::new(),
         derive_helpers: Vec::new(),
+        test_only: usize::from(file_auxiliary),
     };
     notes.visit_file(&parsed);
     // `parse_file` assigns spans from the text left after it drops a BOM and cuts a shebang, so a
     // span is read against that same text.
     let offset = usize::from(source.starts_with('\u{feff}')) * "\u{feff}".len()
         + parsed.shebang.as_ref().map_or(0, String::len);
-    let mut walk = Walk::new(&source[offset..], parsed.attrs.iter().any(is_cfg_test));
+    let mut walk = Walk::new(&source[offset..], file_auxiliary);
     walk.items(&parsed.items);
     let forwarded = walk.forwarded();
     let calls: Vec<Value> = walk
