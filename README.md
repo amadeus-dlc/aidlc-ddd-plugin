@@ -53,4 +53,4 @@ Report issues through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-p
 
 [MIT](LICENSE). The bundled native Rust extractor is built from third-party crates; see its [notice](ddd/tools/ddd/bin/NOTICE.md).
 
-Rust application projects must select one module layout in `.ddd.toml`. See the [configuration and enforcement contract](ddd/docs/users/rust-module-layout.md).
+Rust application projects must select one module layout in `.ddd.toml`. See the [configuration and enforcement contract](ddd/docs/users/rust-module-layout.md). TypeScript application projects select `named-file` or `index-file` the same way; see the [TypeScript layout contract](ddd/docs/users/typescript-module-layout.md).

@@ -29,6 +29,7 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-layer-structure | Required layer fields, dependency direction, naming, and restoration declarations. |
 | ddd-design-advisories | Multi-aggregate, repository-scope, and storage-declaration guidance. |
 | ddd-rust-module-layout | Enforce the selected file layout across all owned Cargo packages, including tests. |
+| ddd-typescript-module-layout | Enforce the selected TypeScript file layout across the `src` of every package. |
 | ddd-rust-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching. |
 | ddd-rust-use-case | g/h/i/d. |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
@@ -77,3 +78,5 @@ Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-
 [MIT](../LICENSE). The third-party crates the bundled native Rust extractor links, with their licenses, are listed in [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md). The bundled TypeScript Compiler API (`typescript@6.0.3`, Apache-2.0) and its notices are described in [tools/ddd/lib/typescript/vendor/NOTICE.md](tools/ddd/lib/typescript/vendor/NOTICE.md).
 
 For Rust projects, explicitly select `file` or `mod-rs` in the project-root `.ddd.toml` before generation. See the [module layout contract](docs/users/rust-module-layout.md) for configuration, mandatory gate checks, and the CI command.
+
+For TypeScript projects, explicitly select `named-file` or `index-file` in the same document. See the [TypeScript module layout contract](docs/users/typescript-module-layout.md) for the inspected source roots, gate checks, and the CI command.

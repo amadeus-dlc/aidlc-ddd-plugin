@@ -30,6 +30,10 @@ module_layout = "file"
 
 The alternative is `mod-rs`; mixed layouts and missing settings block approval. See the [layout contract](../ddd/docs/users/rust-module-layout.md) for both modes, migration, and the required CI command.
 
+## Select the TypeScript module layout
+
+Before placing TypeScript modules, name `typescript` in `languages` of the same `.ddd.toml` and set `module_layout` in its `[typescript]` table to `named-file` (a parent is `src/invoice.ts`) or `index-file` (a parent is `src/invoice/index.ts`); a leaf is `src/invoice/line.ts` either way. Only `src` directly under each package root is inspected, and missing settings, misplaced modules, and unresolved structure block approval. See the [TypeScript layout contract](../ddd/docs/users/typescript-module-layout.md) for what is inspected and the required CI command.
+
 ## Workflow responsibilities
 
 Compose registers the dedicated stage, contributions, sensors, and knowledge. The destination's composed plan and stage conditions determine execution.

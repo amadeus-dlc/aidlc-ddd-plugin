@@ -3,6 +3,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { CONTRACT_CASES } from "./golden/contract/cases.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
+import { TYPESCRIPT_MODULE_LAYOUT_CASES } from "./golden/module-layout/typescript-cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
 import { declaredRules, type GoldenCase, runGoldenCase, runGoldenCases } from "./golden/runner.ts";
 
@@ -28,7 +29,13 @@ describe("design golden cases", () => {
     );
     const declared = declaredRules(sensorsDir, manifests);
     const covered = new Set<string>();
-    for (const testCase of [...DESIGN_CASES, ...PACKAGING_CASES, ...CONTRACT_CASES]) {
+    // The TypeScript layout manifest is not Rust-prefixed, so its violation cases count here too.
+    for (const testCase of [
+      ...DESIGN_CASES,
+      ...PACKAGING_CASES,
+      ...CONTRACT_CASES,
+      ...TYPESCRIPT_MODULE_LAYOUT_CASES,
+    ]) {
       if (!testCase.name.startsWith("violation-")) continue;
       for (const rule of testCase.expect.rules) covered.add(`${testCase.sensor}:${rule}`);
     }

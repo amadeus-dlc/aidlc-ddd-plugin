@@ -30,6 +30,10 @@ module_layout = "file"
 
 もう一方の選択肢は `mod-rs` です。混在や設定漏れは承認を止めます。両形式の定義、移行方法、CIの必須コマンドは[配置契約](../ddd/docs/users/rust-module-layout.ja.md)を参照してください。
 
+## TypeScriptモジュールの配置を選ぶ
+
+TypeScriptのモジュールを置く前に、同じ `.ddd.toml` の `languages` に `typescript` を加え、`[typescript]` テーブルの `module_layout` を `named-file`（親が `src/invoice.ts`）か `index-file`（親が `src/invoice/index.ts`）にします。末端はどちらも `src/invoice/line.ts` です。検査するのは各パッケージのルート直下の `src` だけで、設定漏れ・誤配置・解決できない構成は承認を止めます。検査範囲とCIの必須コマンドは[TypeScriptの配置契約](../ddd/docs/users/typescript-module-layout.ja.md)を参照してください。
+
 ## ワークフローでの役割
 
 プラグインをcomposeすると、専用ステージ、既存ステージへの手順追加、センサー、ナレッジが登録されます。実行対象は、導入先で合成された計画と専用ステージの条件で決まります。

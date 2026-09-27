@@ -17,6 +17,7 @@ For users applying the DDD plugin to an application project. Start with the inst
 | Convert a project's settings, model, mapping and layer declarations in one step | [Artifact set migration](artifact-migration.md) |
 
 | Enforce one Rust module file layout across the project | [Rust module layout](rust-module-layout.md) |
+| Enforce one TypeScript module file layout across every package's `src` | [TypeScript module layout](typescript-module-layout.md) |
 
 ## Check support and limitations
 

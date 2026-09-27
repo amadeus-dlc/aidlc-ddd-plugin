@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は10センサー・63規則項目。61項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では387ケースを各環境で実行する。承認経路には、この表から選んだ142入力を各環境で通す。
+対象は11センサー・66規則項目。64項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では426ケースを各環境で実行する。承認経路には、この表から選んだ156入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -77,6 +77,9 @@
 | ddd-rust-use-case<br>`g` | `clean-g-use-case-to-infrastructure-use` | `violation-g-use-case-to-interface-adapter-use`<br>`violation-g-use-case-to-interface-adapter-cargo`<br>`violation-g-use-case-to-rmu-use`<br>`violation-g-use-case-to-rmu-cargo`<br>`violation-g-use-case-to-composition-root-use`<br>`violation-g-use-case-to-composition-root-cargo`<br>`violation-g-use-case-external-io-use`<br>`violation-g-use-case-external-io-cargo` | `clean-g-use-case-to-infrastructure-cargo`<br>独立した層の許可表をuseとCargoのみの依存で検証し、外部I/Oも含める。 |
 | ddd-rust-use-case<br>`h` | `clean-h-value-object` | `violation-h`<br>`violation-h-import-alias`<br>`violation-h-type-alias`<br>`violation-h-qualified`<br>`violation-h-grouped-alias`<br>`violation-h-imported-box` | `clean-h-domain-primitive`<br>VOとDomain Primitiveの引数は許可し、集約引数は拒否する。 |
 | ddd-rust-use-case<br>`i` | `clean-i-port-execute` | `violation-i`<br>`violation-i-field-use-case`<br>`violation-i-associated-call`<br>`violation-i-imported-use-case` | `clean-i-own-associated-call`<br>ポート呼出しと同型自身への呼出しを別ユースケースと混同しない。 |
+| ddd-typescript-module-layout<br>`module-layout.configuration` | `clean-named-file-parent` | `violation-config-no-typescript`<br>`violation-config-unknown-layout`<br>`violation-config-legacy`<br>`violation-config-missing`<br>`violation-nested-config`<br>`violation-config-missing-build-and-test`<br>`violation-config-missing-ci-pipeline` | `clean-index-file-parent`<br>明示した TypeScript の2形式を許可し、未設定・未知の値・旧版・入れ子・typescript を名指ししない設定を拒否する。 |
+| ddd-typescript-module-layout<br>`module-layout.unresolved` | `clean-multi-package-workspace` | `violation-missing-parent-named-file`<br>`violation-missing-parent-index-file`<br>`violation-ambiguous-parent-named-file`<br>`violation-ambiguous-parent-index-file`<br>`violation-ambiguous-leaf-named-file`<br>`violation-unplaceable-source-name`<br>`violation-invalid-directory-name`<br>`violation-nested-package-in-src`<br>`violation-no-package`<br>`violation-symlink-outside-package`<br>`violation-symlink-in-src` | `clean-sources-outside-src`<br>パッケージの src だけを検査し、欠落・曖昧・リンク・配置できないソースを検査済みとしない。 |
+| ddd-typescript-module-layout<br>`module-layout.violation` | `clean-named-file-parent` | `violation-index-parent-in-named-file`<br>`violation-named-parent-in-index-file`<br>`violation-index-parent-in-workspace-package`<br>`violation-index-leaf-named-file`<br>`violation-index-leaf-index-file`<br>`violation-index-parent-in-named-file-build-and-test`<br>`violation-index-parent-in-named-file-ci-pipeline` | `clean-index-file-leaf`<br>親は選択した規約に従い、末端はどちらの規約でも名前付きファイルとする。 |
 
 ## 承認経路と対象外
 
