@@ -20,9 +20,9 @@ Add these question topics, and follow the conventions while designing:
 
 - **Layer structure.** Which packages form the command side, the query side and
   the RMUs, and which package depends on which. A package is named by the
-  language that spells it together with its name, and Rust is the only language
-  generated and inspected today, so every package identity states
-  `language: rust`. The allowed directions are fixed by the layer rules; the
+  language that spells it together with its name: `language: rust` for a Cargo
+  crate and `language: typescript` for a TypeScript package with its
+  `package.json`. The allowed directions are fixed by the layer rules; the
   command and query sides must not depend on each other.
 - **Port conventions.** Classify each port as `repository`, `external-client`
   or `es-infrastructure` and name its verbs (`find_by_id`, `store`,

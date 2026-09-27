@@ -6,7 +6,7 @@ Updated: 2026-09-13. The plugin is still being completed. Check [known issues](.
 
 ## Prerequisites
 
-Use Bun and an AI-DLC-enabled Claude Code or Codex environment. Kimi/opencode are excluded. Sensor analysis does not need Cargo, but generated applications need a Rust toolchain for build and tests.
+Use Bun and an AI-DLC-enabled Claude Code or Codex environment. Kimi/opencode are excluded. Sensor analysis needs neither Cargo nor an installed TypeScript: the Rust analysis ships a native extractor and the TypeScript analysis ships the TypeScript Compiler API. Building and testing a generated application needs that language's own toolchain: a Rust toolchain for a Rust application, and Node.js with the project's own TypeScript toolchain (`typescript` for type checking, plus the project's build and test tools) for a TypeScript application.
 
 The installer uses AI-DLC tools in the destination. Preview installation from local source:
 
@@ -33,6 +33,8 @@ The alternative is `mod-rs`; mixed layouts and missing settings block approval. 
 ## Select the TypeScript module layout
 
 Before placing TypeScript modules, name `typescript` in `languages` of the same `.ddd.toml` and set `module_layout` in its `[typescript]` table to `named-file` (a parent is `src/invoice.ts`) or `index-file` (a parent is `src/invoice/index.ts`); a leaf is `src/invoice/line.ts` either way. Only `src` directly under each package root is inspected, and missing settings, misplaced modules, and unresolved structure block approval. See the [TypeScript layout contract](../ddd/docs/users/typescript-module-layout.md) for what is inspected and the required CI command.
+
+In the same `[typescript]` table, set `code_representation` to `class` (state in `#` fields) or `companion` (a type with a same-name companion object, state in a closure). Code generation writes every TypeScript domain type in the selected representation and layout, returns method-specific errors through a `Result` type kept in the infrastructure layer, and copies arrays and objects at the domain boundary. The TypeScript domain gate inspects both representations; see the [TypeScript domain sensor contract](../ddd/docs/users/typescript-sensor-contract.md). The TypeScript use-case and interface-adapter gates inspect the code of those layers with the rule ids of the Rust gates.
 
 ## Workflow responsibilities
 

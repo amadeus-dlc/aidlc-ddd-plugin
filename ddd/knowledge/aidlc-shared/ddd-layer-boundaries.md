@@ -10,7 +10,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 
 | Rule ID | Convention | Current coverage |
 |---|---|---|
-| K.layer-boundaries.1 | Determine layers from crate names and placement. | Layer diagnostics. |
+| K.layer-boundaries.1 | Determine layers from package names (a Cargo crate, or a TypeScript package with its `package.json`) and placement. | Layer diagnostics. |
 | K.layer-boundaries.2 | Do not introduce dependencies in prohibited directions. | g. Physical separation alone does not make every prohibited direction a compiler error. |
 | K.layer-boundaries.3 | Centralize wiring in the composition root. | Design convention. |
 | K.layer-boundaries.4 | Allow the Interface Adapter layer to depend on use-case, domain, and infrastructure. | g dependency checks. |
@@ -24,11 +24,11 @@ Conventions for DDD design and code generation. A check name does not imply that
 
 ## Rationale
 
-This infrastructure layer is for language extensions; DB/RPC clients belong in the Interface Adapter layer. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace.
+This infrastructure layer is for language extensions; DB/RPC clients belong in the Interface Adapter layer. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace. The TypeScript domain, use-case and interface-adapter sensors start from the same claims and apply these layer rules to TypeScript packages. In TypeScript, the language-extensions infrastructure package holds `Result`; see the [TypeScript domain conventions](../aidlc-developer-agent/ddd-typescript-domain-conventions.md).
 
 ## Examples
 
-The [design cases](../../tests/golden/design/cases.ts) and [Rust cases](../../tests/golden/rust/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
+The [design cases](../../tests/golden/design/cases.ts), [Rust cases](../../tests/golden/rust/cases.ts) and [TypeScript cases](../../tests/golden/typescript/cases.ts) contain real sensor inputs in the development repository. Find them by case name. These are test inputs, not complete business applications. A passing case without the relevant structure does not prove that structure is valid.
 
 The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 

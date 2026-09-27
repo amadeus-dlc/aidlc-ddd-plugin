@@ -15,7 +15,7 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
 | Rustセンサー4本 | 各層の構文・依存検査とプロジェクト全体のモジュール配置検査 |
 | TypeScriptセンサー1本 | Rustのドメインゲートと同じドメイン層の検査をTypeScriptで行う |
-| ナレッジ10本 | 言語横断の設計原則とRust規約 |
+| ナレッジ12本 | 言語横断の設計原則、Rust規約、両コード表現・両配置のTypeScript規約 |
 
 ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
 

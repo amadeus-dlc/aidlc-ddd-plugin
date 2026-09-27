@@ -4,6 +4,11 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — TypeScript のコード生成
+
+- **両コード表現・両配置の TypeScript のコード生成を指示する。** コード生成の手順を、言語共通の規約、Rust の規約、TypeScript の規約に分けた。Rust の文は移しただけで、言語共通の規約で `crate` を `package` と読み替えた箇所を除いて変えていない。TypeScript のパッケージは宣言と照合しないと述べていた古い重複の箇条は除いた。TypeScript の区分は `.ddd.toml` の `code_representation` と `module_layout` を読み、書くべきコードを次のように指示する。`class` では `#` フィールド、private constructor、static factory を使う。`companion` では同名の `type` と `const`、クロージャの状態、非公開の `unique symbol` ブランド1つ、型注釈つきのインスタンスリテラルを使う。状態を変えるのはコマンドのスラッグで名付けたメソッドだけにする。`Result` は infrastructure 層の言語拡張パッケージに宣言し、パッケージ名から `import type` する。操作ごとに、集約写像が名付けたエラー型を、そのケースの文字列リテラルだけの閉じた union として宣言し、戻り値の型を明記する。入力はコピーして保持し、出力はコピーで返し、業務エラーは状態を変える前に返す。依存はパッケージ名と `exports` だけで表し、`paths`・`baseUrl`・`export *` を使わない。配置ごとに、親と子を指す相対指定子の書き方を示す。新しい developer エージェントのナレッジ `ddd-typescript-domain-conventions.md` が、これらの規則を例とともに持つ。infrastructure-design の手順から「Rust だけが対象」という記述を除いた。共有ナレッジのレイヤー境界とドメインパッケージ構成は package で述べるようにし、TypeScript の範囲を加えた。Rust の規則は変えていない。
+- **TypeScript の例をゲートで確かめる。** 両表現・両配置の生成見本（`Result` を宣言する infrastructure のパッケージ、集約 `invoice` と子 `invoice/line` を持つドメインのパッケージ、リポジトリポート `InvoiceRepository` とユースケース `IssueInvoice` を持つユースケースのパッケージ、`InMemoryInvoiceRepository` で集約を復元するインターフェースアダプタのパッケージ）が、TypeScript のドメインゲート・ユースケースゲート・インターフェースアダプタゲートを、申告したソースを検査したうえで所見0件で、TypeScript のモジュール配置ゲートを所見0件で、その CI 用入口を終了コード0で、コンパイラを診断0件で通る（`t11-typescript-generation-samples.test.ts`）。実行用指示にある TypeScript の例は、どれも見本のファイルのいずれかと一致し、両表現を示す必要がある（`generation-instructions.test.ts`）。センサー、ツール、ゴールデンの期待値は変えていない。
+
 ## 未リリース — TypeScript のユースケースゲートとインターフェースアダプタゲート
 
 - **code-generation に TypeScript のユースケースゲート `ddd-typescript-use-case` を追加する。** ドメインの class 表現と companion 表現の両方について、規則 `g`（依存の方向と外部 I/O）、`h`（class のメソッドまたは最上位の関数である `execute` への集約の引き渡し）、`i`（ユースケースから別のユースケースの呼び出し）、`d`（getter の呼び出し）を TypeScript の事実で判定し、`ddd-rust-use-case` と同じ規則 ID と所見の意味で報告する。Rust のゲートと同じく、getter の結果を、直接または `const` の束縛を通して、リポジトリポートのメソッドへ変更せずに渡すことは `d` の所見にしない。

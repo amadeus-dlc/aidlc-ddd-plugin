@@ -15,7 +15,7 @@ Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plug
 | Six design sensors | Model loading/completeness/references, mappings, layers, and advisories. |
 | Four Rust sensors | Domain, use-case, and Interface Adapter checks, plus project-wide module layout. |
 | One TypeScript sensor | The domain-layer checks of the Rust domain gate, on TypeScript. |
-| Ten knowledge files | Language-independent design principles and Rust conventions. |
+| Twelve knowledge files | Language-independent design principles, Rust conventions, and TypeScript conventions for both code representations and both module layouts. |
 
 Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Implementation is divided into [schema](tools/ddd/lib/schema/), [Rust analysis](tools/ddd/lib/rust/), and [rules](tools/ddd/lib/rules/).
 
