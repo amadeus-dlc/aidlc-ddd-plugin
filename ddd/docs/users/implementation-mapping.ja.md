@@ -131,8 +131,8 @@ domain_packages:
 | domain-design の写像検査 | `ddd-mapping-declarations` | `mapping-declarations.document` |
 | domain-design の参照解決 | `ddd-reference-ids` | `reference-ids.document` |
 | functional-design の Process Manager 要否の判定 | `ddd-mapping-declarations` | 写像を対象とする `mapping-declarations.document` |
-| ドメインパッケージ検査 | `ddd-rust-domain` | `domain-packaging.declaration` |
-| 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
+| ドメインパッケージ検査 | `ddd-rust-domain`、`ddd-typescript-domain` | `domain-packaging.declaration` |
+| 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`、`ddd-typescript-domain` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
 
 写像が存在しないことと、存在するが読めないことは別の事実です。functional-design では、写像が存在しなければ Process Manager の要否を評価せずその旨を判定結果に注記しますが、存在して読めない写像はブロック要因になります。`ddd-layer-structure` は写像を読みません。集約のコードの置き場所は、そのコンテキストが集約を復元すべきかどうかを決めないためです。
 

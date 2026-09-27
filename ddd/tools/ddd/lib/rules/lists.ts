@@ -46,6 +46,41 @@ export const IO_CRATES: readonly ExternalCrateRule[] = [
   { pattern: "lapin", category: "message-broker" },
 ];
 
+/**
+ * The npm packages that are external I/O, in the same categories as `IO_CRATES`. Node's built-in
+ * modules are left out, as the Rust list leaves out `std`. A trailing `*` is a prefix match.
+ */
+export const IO_PACKAGES: readonly ExternalCrateRule[] = [
+  { pattern: "pg", category: "database" },
+  { pattern: "mysql", category: "database" },
+  { pattern: "mysql2", category: "database" },
+  { pattern: "sqlite3", category: "database" },
+  { pattern: "better-sqlite3", category: "database" },
+  { pattern: "mongodb", category: "database" },
+  { pattern: "mongoose", category: "database" },
+  { pattern: "@prisma/client", category: "database" },
+  { pattern: "typeorm", category: "database" },
+  { pattern: "sequelize", category: "database" },
+  { pattern: "knex", category: "database" },
+  { pattern: "drizzle-orm", category: "database" },
+  { pattern: "redis", category: "cache" },
+  { pattern: "ioredis", category: "cache" },
+  { pattern: "@aws-sdk/*", category: "cloud-sdk" },
+  { pattern: "aws-sdk", category: "cloud-sdk" },
+  { pattern: "axios", category: "http-client" },
+  { pattern: "node-fetch", category: "http-client" },
+  { pattern: "got", category: "http-client" },
+  { pattern: "undici", category: "http-client" },
+  { pattern: "express", category: "web-framework" },
+  { pattern: "fastify", category: "web-framework" },
+  { pattern: "koa", category: "web-framework" },
+  { pattern: "hono", category: "web-framework" },
+  { pattern: "@nestjs/*", category: "web-framework" },
+  { pattern: "@grpc/grpc-js", category: "rpc" },
+  { pattern: "kafkajs", category: "message-broker" },
+  { pattern: "amqplib", category: "message-broker" },
+];
+
 export function matchesIoRule(
   crateName: string,
   rules: readonly ExternalCrateRule[] = IO_CRATES,

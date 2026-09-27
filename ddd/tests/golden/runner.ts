@@ -136,8 +136,15 @@ export function spawnSensor(toolsDir: string, testCase: GoldenCase): SensorRun {
 }
 
 export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {
+  return judgeSensorRun(testCase, spawnSensor(toolsDir, testCase));
+}
+
+/**
+ * Compares one finished run of `testCase` with its expectation. Split from the spawn so a run made
+ * some other way — an entry evaluated inside the test process — is judged by exactly the same rules.
+ */
+export function judgeSensorRun(testCase: GoldenCase, run: SensorRun): CaseResult {
   const problems: string[] = [];
-  const run = spawnSensor(toolsDir, testCase);
   if ((run.exitCode ?? 0) !== 0) {
     return { sensor: testCase.sensor, name: testCase.name, ok: false, problems: [`exit code ${run.exitCode}`] };
   }

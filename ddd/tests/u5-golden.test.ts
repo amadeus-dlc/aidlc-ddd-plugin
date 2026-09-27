@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { ALL_CASES } from "./golden/catalog.ts";
 import { declaredRules, type GoldenCase, runGoldenCase } from "./golden/runner.ts";
 import { RUST_CASES } from "./golden/rust/cases.ts";
+import { TYPESCRIPT_CASES } from "./golden/typescript/cases.ts";
 
 const root = join(import.meta.dir, "..");
 const toolsDir = join(root, "tools");
@@ -48,4 +49,76 @@ describe("rust golden cases", () => {
     expect(runs[0]).toBe(runs[1]);
     expect(runs[1]).toBe(runs[2]);
   });
+});
+
+/** Every run loads the distributed multi-megabyte compiler in a process of its own. */
+const TYPESCRIPT_RUN_TIMEOUT_MS = 30_000;
+
+describe("typescript golden cases", () => {
+  for (const testCase of TYPESCRIPT_CASES) {
+    test(
+      `${testCase.sensor} / ${testCase.name}`,
+      () => {
+        const result = runGoldenCase(toolsDir, testCase);
+        expect(result.problems).toEqual([]);
+      },
+      TYPESCRIPT_RUN_TIMEOUT_MS,
+    );
+  }
+
+  test("a typescript domain manifest is shipped and every rule it declares has a violation case", () => {
+    const manifests = readdirSync(sensorsDir).filter(
+      (name) => name.startsWith("aidlc-ddd-typescript-") && name.endsWith(".md"),
+    );
+    const declared = declaredRules(sensorsDir, manifests);
+    expect([...declared.keys()]).toEqual(["ddd-typescript-domain"]);
+    // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
+    expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(
+      [
+        "a",
+        "b",
+        "c",
+        "d",
+        "g",
+        "domain-packaging.declaration",
+        "domain-packaging.technical-name",
+        "domain-packaging.coverage",
+        "domain-packaging.reference",
+        "domain-packaging.unresolved",
+        "layer.unknown",
+        "layer.conflict",
+        "layer.unowned",
+        "model.invalid",
+      ].sort(),
+    );
+    const covered = new Set<string>();
+    for (const testCase of ALL_CASES) {
+      if (!testCase.name.startsWith("violation-")) continue;
+      for (const rule of testCase.expect.rules) covered.add(`${testCase.sensor}:${rule}`);
+    }
+    const missing: string[] = [];
+    for (const [sensor, rules] of declared) {
+      for (const rule of rules) {
+        if (!covered.has(`${sensor}:${rule}`)) missing.push(`${sensor}:${rule}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test(
+    "a representative verdict is deterministic across three runs",
+    () => {
+      const testCase = TYPESCRIPT_CASES.find((entry: GoldenCase) => entry.name === "violation-d-companion");
+      if (!testCase) throw new Error("representative case missing");
+      const normalize = () => {
+        const verdict = { ...(runGoldenCase(toolsDir, testCase).verdict ?? {}) } as Record<string, unknown>;
+        delete verdict.output_path;
+        return JSON.stringify(verdict);
+      };
+      const runs = [normalize(), normalize(), normalize()];
+      expect(runs[0]).toBe(runs[1]);
+      expect(runs[1]).toBe(runs[2]);
+    },
+    TYPESCRIPT_RUN_TIMEOUT_MS,
+  );
 });

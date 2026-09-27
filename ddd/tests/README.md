@@ -29,6 +29,7 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths, including launching the TypeScript extraction from an installed and an updated tree. Network acquisition is opt-in. |
 | typescript-compiler-launch | Launch classification of the distributed TypeScript Compiler API: each blocking condition with its own subject and reason code, the fixed order when several hold, the sensor stopping as uninspectable, and the distributed compiler matching the pinned version and its recorded digest. |
 | t11-typescript-domain-facts | The TypeScript fact contract: declarations, members and visibility, imports and exports with type-only ones told apart, calls, constructions, positions, each unresolved reason, syntax errors, and launching from a copied tools tree with no TypeScript package in reach. |
+| t11-typescript-domain-sensor / u5-golden | The TypeScript domain gate on both the class and the companion representation: the TypeScript golden cases in process and through the entry, the member, method and line each finding names, the same meaning as the Rust domain gate's same scene, state hiding decided as the state-evidence inspection decides it, every construct the facts or the rules cannot decide stopping the gate, and a compiler that cannot be launched stopping it as T-11-01 does. |
 | framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
 | error-contract-contract | Business-error contract vocabulary, request identity including the Cargo and the TypeScript condition, and response validation. |
 | error-contract-cargo | Cargo condition resolution at the boundary and the lockfile left untouched. |
@@ -46,9 +47,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 387 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 435 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 387 distribution cases per harness, and normal approval integration. It sends 142 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 435 distribution cases per harness, and normal approval integration. It sends 166 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain, and a TypeScript domain gate that cannot decide is shown to keep the approval closed on each harness.
 
 ## Verified regressions and remaining checks
 

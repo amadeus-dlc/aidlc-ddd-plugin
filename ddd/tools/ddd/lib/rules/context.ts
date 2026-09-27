@@ -5,17 +5,16 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { rustSourcesUnder } from "../packaging/rust-modules.ts";
-import { readSourceClaims, readStageStatus, type SensorRunContext } from "../runtime/context.ts";
+import { isRustSource, rustSourcesUnder } from "../packaging/rust-modules.ts";
+import { readSourceClaims, type SensorRunContext } from "../runtime/context.ts";
 import { ToolUnavailableError } from "../runtime/runtime.ts";
 import { type DomainFactSet, type RustSourceFile, requireDomainFacts } from "../rust/domain-facts/index.ts";
 import type { NativeOutcome } from "../rust/native/launch.ts";
-import { MODEL_DATA_PATH } from "../schema/artifacts.ts";
-import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import { finding, relPath } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { assignLayers, classifyFile, type Layer, scanWorkspace } from "../workspace/resolver.ts";
 import { IO_CRATES } from "./lists.ts";
+import { readModelAvailability } from "./model.ts";
 import { buildEdges } from "./rust/edges.ts";
 import { loadRustMapping } from "./rust/mapping.ts";
 import { buildProgram, collectRustSources, PROGRAM_LAYERS } from "./rust/program.ts";
@@ -124,7 +123,11 @@ export function assembleContext(
     return { kind: "failed", findings: [finding("runtime.claims", ".", claimsResult.reason)] };
   }
   const findings: FindingInput[] = [...claimsResult.findings];
-  const rustClaims = claimsResult.claims.filter((claim) => !claim.repo || claim.repo.length > 0);
+  // A file claimed by name is claimed in whatever language it is written in; only a Rust source is
+  // this gate's to decide, the same as a claimed directory contributes only its Rust sources.
+  const rustClaims = claimsResult.claims.filter(
+    (claim) => (!claim.repo || claim.repo.length > 0) && isRustSource(claim.path),
+  );
   if (rustClaims.length === 0) return { kind: "empty", note: "no rust sources claimed" };
 
   const roots = new Map<string, string[]>();
@@ -160,30 +163,9 @@ export function assembleContext(
   const workspace = scanWorkspace(workspaceRoot);
   const assignments = assignLayers(workspace);
 
-  // Model availability (BR3.4).
-  const status = readStageStatus(run, "ddd-domain-modeling");
-  let model: ModelAvailability;
-  if (status.execution === "SKIP" || status.execution === "absent") {
-    model = {
-      status: status.execution === "SKIP" ? "skipped" : "absent",
-      note: `domain-modeling is ${status.execution}; model-dependent checks (b, h, c-model, n-model) skipped`,
-    };
-  } else {
-    const modelPath = join(run.record_dir, MODEL_DATA_PATH);
-    const loaded = loadDomainModel(modelPath, OPERATION_OWNED_SCHEMA_VERSION);
-    if (!loaded.ok) {
-      model = { status: "invalid" };
-      findings.push(
-        finding(
-          "model.invalid",
-          relPath(run, modelPath),
-          "domain-modeling ran but ddd-domain-model-yaml.md did not load",
-        ),
-      );
-    } else {
-      model = { status: "available", index: loaded.index };
-    }
-  }
+  const availability = readModelAvailability(run);
+  const model: ModelAvailability = availability.model;
+  findings.push(...availability.findings);
 
   const targets: InspectionTarget[] = [];
   const skipped: InspectionTarget[] = [];

@@ -29,7 +29,7 @@ This does not require one package per aggregate. Explain the term and placement 
 
 ## Declaration
 
-Add domain_packages to the canonical YAML in `ddd-aggregate-mapping.md`. A package is declared at a location: the language that spells it, the package name, and the module path below that package root as a list of segments — the root itself is the empty list `[]`. Rust is the only language generated and inspected today, so every location states `language: rust`. term, model_refs, and rationale are required. Renaming a reserved word alone does not resolve mixed responsibilities.
+Add domain_packages to the canonical YAML in `ddd-aggregate-mapping.md`. A package is declared at a location: the language that spells it, the package name, and the module path below that package root as a list of segments — the root itself is the empty list `[]`. Every location states the language its code is written in: `language: rust` for a Rust crate, and `language: typescript` for a TypeScript package that holds domain sources, which the TypeScript domain gate inspects. term, model_refs, and rationale are required. Renaming a reserved word alone does not resolve mixed responsibilities.
 
 ```yaml
 domain_packages:

@@ -78,6 +78,12 @@ Exclude `#[cfg(test)]` modules and contents under tests/benches/examples/vendor/
 
 Missing or ambiguous sources, paths escaping the crate, cycles, cfg_attr path switching, and module-generating item macros stop with domain-packaging.unresolved. The analyzer does not evaluate cfg generally, expand macros, or provide compiler-equivalent semantics. Claimed Rust files that cannot be reached are not treated as inspected.
 
+## TypeScript coverage
+
+The [TypeScript domain gate](typescript-sensor-contract.md) reports the same `domain-packaging.*` rule ids for each domain package a claimed domain source belongs to. It reads every non-test source below that package's `src/`, not only claimed files. A module path is read off the file placement: `src/index.ts` is the package root `[]`, `src/a.ts` and `src/a/index.ts` are `[a]`, and `src/a/b.ts` is `[a, b]`. Only declarations placed in TypeScript under the package's `package.json` name count; the scope of that name is not a business word.
+
+Segments are compared whole with `-` read as `_`, so `value-objects/` is a technical classification while `invoice-entities` is not. A file name that is not a module segment, such as `invoice.model.ts`, and two files naming one module path, such as `src/invoice.ts` beside `src/invoice/index.ts`, are `domain-packaging.unresolved`. A directory without a file of its own is not a module.
+
 ## Responsibilities and checks
 
 The normative rules live in [shared knowledge](../../knowledge/aidlc-shared/ddd-domain-packaging.md).

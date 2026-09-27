@@ -33,8 +33,9 @@ Add these question topics to this stage's question file:
   the `package`, the `module` path below that package root, the `type` that
   implements it, its `ports` and its `repository` — and the `reference_ids` (the
   model elements the mapping touches: entity / vo / primitive / invariant /
-  command) it must cite. Rust is the only language generated and inspected
-  today, so every `code` entry states `language: rust`.
+  command) it must cite. Every `code` entry states the language the code is
+  written in: `language: rust` for a Rust crate, and `language: typescript`
+  for a TypeScript package that holds domain sources.
 - **Operations and business errors.** For every Command and Factory Rule of the
   Aggregate ask for the `method` that performs it, the `error_type` it returns,
   and the case name each of the model's business errors is spelled as. The

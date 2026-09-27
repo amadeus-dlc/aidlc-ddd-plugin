@@ -14,6 +14,7 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | contribution 6本 | domain-design、functional-design、infrastructure-design、code-generation、build-and-test、ci-pipelineへの追加 |
 | 設計センサー6本 | モデルの読み込み・完全性・参照、写像、層構造、助言 |
 | Rustセンサー4本 | 各層の構文・依存検査とプロジェクト全体のモジュール配置検査 |
+| TypeScriptセンサー1本 | Rustのドメインゲートと同じドメイン層の検査をTypeScriptで行う |
 | ナレッジ10本 | 言語横断の設計原則とRust規約 |
 
 ソースは `stages/`、`contributions/`、`sensors/`、`knowledge/`、`tools/`。実装は [schema](tools/ddd/lib/schema/)、[Rust解析](tools/ddd/lib/rust/)、[規則](tools/ddd/lib/rules/) に分かれます。
@@ -32,10 +33,13 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
+| ddd-typescript-domain | TypeScriptでのa/b/c/d/g、層診断、パッケージ宣言と実配置の照合。class表現とcompanion表現の両方 |
 
 助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/users/artifact-contract.ja.md)を参照してください。
 
 Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/users/rust-sensor-contract.ja.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
+
+TypeScriptのドメイン検査は、同梱したTypeScriptの事実で判定し、同じく型推論を行いません。事実で決まらない箇所では検査不能として停止します。[TypeScriptセンサー契約](docs/users/typescript-sensor-contract.ja.md)に、各規則が読むものとゲートを止めるものをまとめています。
 
 パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/users/domain-packaging-design.ja.md)を参照してください。
 

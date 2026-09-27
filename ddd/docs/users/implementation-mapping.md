@@ -131,8 +131,8 @@ Every path that reads the mapping during a gate reads `schema_version: 2`, and a
 | Mapping check at domain-design | `ddd-mapping-declarations` | `mapping-declarations.document` |
 | Reference resolution at domain-design | `ddd-reference-ids` | `reference-ids.document` |
 | Process Manager requirement at functional-design | `ddd-mapping-declarations` | `mapping-declarations.document`, reported against the mapping |
-| Domain package check | `ddd-rust-domain` | `domain-packaging.declaration` |
-| Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
+| Domain package check | `ddd-rust-domain`, `ddd-typescript-domain` | `domain-packaging.declaration` |
+| Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter`, `ddd-typescript-domain` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
 
 A mapping that is absent is a different fact from one that cannot be read. At functional-design an absent mapping leaves the Process Manager requirement unevaluated and says so in the verdict's note; a mapping that is there and unreadable blocks. `ddd-layer-structure` no longer reads the mapping at all: where an aggregate's code lives does not decide whether its context has to rebuild it.
 

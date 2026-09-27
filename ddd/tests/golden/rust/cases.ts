@@ -12,7 +12,8 @@ import { domainFactsCases } from "./domain-facts-cases.ts";
 import { getterArgumentCases } from "./getter-argument-cases.ts";
 import { t2Cases } from "./t2-cases.ts";
 
-const MODEL = `schema_version: 2
+/** The canonical model the code gates are decided against; the TypeScript cases share it. */
+export const MODEL = `schema_version: 2
 bounded_contexts:
   - element_id: bc.billing
     name: Billing

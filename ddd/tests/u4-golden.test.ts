@@ -24,7 +24,11 @@ describe("design golden cases", () => {
 
   test("every declared rule has a violation case", () => {
     const manifests = readdirSync(sensorsDir).filter(
-      (name) => name.startsWith("aidlc-ddd-") && name.endsWith(".md") && !name.startsWith("aidlc-ddd-rust-"),
+      (name) =>
+        name.startsWith("aidlc-ddd-") &&
+        name.endsWith(".md") &&
+        !name.startsWith("aidlc-ddd-rust-") &&
+        !name.startsWith("aidlc-ddd-typescript-"),
     );
     const declared = declaredRules(sensorsDir, manifests);
     const covered = new Set<string>();
