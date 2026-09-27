@@ -4,6 +4,13 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — TypeScript のドメインゲート
+
+- **code-generation に TypeScript のドメインゲート `ddd-typescript-domain` を追加する。** class 表現と companion 表現の両方について、規則 `a`（公開された状態）、`b`（未宣言のミューテーション）、`c`（不完全な構築）、`d`（getter の呼び出し）、`g`（依存の方向）、`domain-packaging.*`、層の診断を TypeScript の事実で判定し、`ddd-rust-domain` と同じ規則 ID と所見の意味で報告する。状態隠蔽は state-evidence の検査に従う。状態を隠すのは `#` フィールドと companion のクロージャだけであり、companion には非公開の `unique symbol` のブランドが1つ必要である。依存は、パス、`imports`、`paths` エイリアス、パッケージ名を通して辿る。非公開パス、別パッケージへのエイリアス、`exports` が公開しないサブパス、公開入口での `export *` は、型だけの依存であっても所見になる。[TypeScript ドメインセンサー契約](docs/users/typescript-sensor-contract.ja.md)を参照。
+- **判定できない箇所では TypeScript のドメインゲートを止める。** 申告の有無を問わず構文エラーや未解決の構文を含むドメインのソース、規則がモデル化していない class・companion の形、名前付きの型が書かれていない getter の受け手、辿れない依存、起動できない compiler は、いずれも判定を出さずに終了コード 127 で終わる。そのため blocking のゲートは閉じたままになる。起動の失敗は、事実抽出と同じ報告になる。
+- **ゲートが判定に使う TypeScript の事実を拡張する。** メンバーは `ambient`、`abstract`、`computed_key`（1つの識別子で綴った計算名はメンバーになる）、`type_text`、`params`、`writes`、`returns_state_only` を持つ。class は `heritage`、型の別名は `type_literal`、変数は `type_text` と `initializer` を持つ。型付きのリテラルは `form`、`members`、`opaque` を持つ。`type-assertion` の構築、`keyed_literals`、メソッド呼び出しの `receiver_binding_type` を追加した。その他の未解決の理由と構文エラーの契約は変えていない。
+- Rust のドメインゲートの変更メソッドの分類、パッケージ構成の判定、層の割当を TypeScript のゲートと共通化した。Rust のゲートは申告した `.rs` ファイルだけを判定するようになった。これまで `layer.unowned` として報告していた他言語の申告ファイルは、その言語のゲートに任せる。その他の Rust の判定結果は変わらない。
+
 ## 未リリース — TypeScript の事実抽出
 
 - **TypeScript Compiler API を同梱し、それを使って TypeScript の事実を抽出する。** 配布物は `typescript@6.0.3` を `tools/ddd/lib/typescript/vendor/typescript.js` に同梱し、その sha256 を manifest に記録する。導入先のプロジェクトに `typescript` パッケージは不要になり、新規導入と `--update` のどちらでも配置される。`bun run prepare:typescript` は固定した開発用依存関係からこれを複製する。1つの抽出が、ファイルごとに宣言、メンバーと可視性、型だけのものを区別した import と export、呼び出し、構築を返す。構文から決められないもの（デコレータ、計算された名前、オブジェクトリテラルのスプレッド、分割代入、`import =`、`export =`、指定子の決まらない動的 import、namespace、動的な呼び出し先）は `domain-facts.unresolved` の note として返し、構文エラーのあるファイルには事実を返さない。起動できない場合は `typescript-extractor:compiler-missing`、`checksum-mismatch`、`load-failed`、`version-mismatch`、`project-condition-mismatch` のいずれかに分類し、ネイティブ抽出器と同じ形でセンサーを検査不能として止める。対応する Compiler API の版とプロジェクト設定は1か所で定め、error-contract のプロジェクト条件と共有する。error-contract の応答は変わらない。この事実を読むセンサーはまだ無い。[TypeScript の事実抽出](docs/developers/typescript-fact-extraction.ja.md)を参照。

@@ -79,7 +79,8 @@ function representativeTargets(context: InspectionContext): InspectionTarget[] {
   return out;
 }
 
-function dedupe(findings: readonly FindingInput[]): FindingInput[] {
+/** Each (file, line, rule) once, keeping the first finding reported for it. */
+export function dedupe(findings: readonly FindingInput[]): FindingInput[] {
   const seen = new Set<string>();
   const out: FindingInput[] = [];
   for (const item of findings) {

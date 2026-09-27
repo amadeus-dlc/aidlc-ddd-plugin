@@ -14,6 +14,7 @@ Adds canonical domain-modeling procedures and design/Rust checks to AI-DLC. Plug
 | Six contributions | Extend domain-design, functional-design, infrastructure-design, code-generation, build-and-test, and ci-pipeline. |
 | Six design sensors | Model loading/completeness/references, mappings, layers, and advisories. |
 | Four Rust sensors | Domain, use-case, and Interface Adapter checks, plus project-wide module layout. |
+| One TypeScript sensor | The domain-layer checks of the Rust domain gate, on TypeScript. |
 | Ten knowledge files | Language-independent design principles and Rust conventions. |
 
 Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Implementation is divided into [schema](tools/ddd/lib/schema/), [Rust analysis](tools/ddd/lib/rust/), and [rules](tools/ddd/lib/rules/).
@@ -32,10 +33,13 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-rust-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching. |
 | ddd-rust-use-case | g/h/i/d. |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
+| ddd-typescript-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching on TypeScript, for both the class and the companion representation. |
 
 All manifests except the advisory sensor are blocking. Canonical models use registered names, and added declarations are required sections of existing review artifacts connected to normal approval. See the [artifact contract](docs/users/artifact-contract.md) for standalone limits.
 
 Rust checks use syntax and names without type inference or execution. T-02 corrected value-object, port, cross-file, and replay evaluation. The [Rust contract](docs/users/rust-sensor-contract.md) describes explicit-type matching and coverage notes. It does not exhaustively verify invariant semantics, recovery flows, or interior mutability.
+
+The TypeScript domain checks decide from the distributed TypeScript facts, likewise without type inference, and stop as uninspectable wherever those facts do not decide. The [TypeScript contract](docs/users/typescript-sensor-contract.md) describes what each rule reads and what stops the gate.
 
 Package names must connect to ubiquitous language. Prohibit technical classifications such as aggregate/, impl/, vo/, and entities/. Sensors inspect declarations and actual modules; review assesses term meaning. See the [packaging contract](docs/users/domain-packaging-design.md).
 

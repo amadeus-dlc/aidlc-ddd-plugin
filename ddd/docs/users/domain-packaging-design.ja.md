@@ -78,6 +78,12 @@ vo vos entity entities value_object value_objects valueobject valueobjects
 
 参照先の欠落・複数候補、クレート外へのpath、循環、cfg_attrによるpath切替、項目マクロによるモジュール生成等は `domain-packaging.unresolved` で停止する。cfg全般の評価、マクロ展開、コンパイラと同等の意味解析は行わない。到達できない申告Rustファイルも検査済みとは扱わない。
 
+## TypeScriptの検査範囲
+
+[TypeScriptのドメインゲート](typescript-sensor-contract.ja.md)は、申告したドメインのソースが属する各ドメインパッケージについて、同じ `domain-packaging.*` の規則IDで報告する。申告ファイルだけでなく、そのパッケージの `src/` 配下にある試験以外のすべてのソースを読む。モジュールパスはファイルの配置から決める。`src/index.ts` はパッケージの根 `[]`、`src/a.ts` と `src/a/index.ts` は `[a]`、`src/a/b.ts` は `[a, b]` である。対象になるのは、そのパッケージの `package.json` の名前で TypeScript に置いた宣言だけである。名前のスコープは業務の言葉ではない。
+
+各要素は `-` を `_` と読んだうえで全体を照合する。そのため `value-objects/` は技術分類名だが、`invoice-entities` は技術分類名ではない。`invoice.model.ts` のようにモジュールの要素にならないファイル名と、`src/invoice.ts` と `src/invoice/index.ts` のように1つのモジュールパスを名指す2つのファイルは `domain-packaging.unresolved` になる。自身のファイルを持たないディレクトリはモジュールにしない。
+
 ## 担当と検査の分担
 
 規約の正文は [共有ナレッジ](../../knowledge/aidlc-shared/ddd-domain-packaging.md)に置く。

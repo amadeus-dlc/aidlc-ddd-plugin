@@ -4,22 +4,29 @@
  * fact depends on what a name resolves to: the extraction runs without a type checker.
  *
  * Declarations, members, static imports and exports are read from the statements at the top of the
- * file. Calls, constructions, dynamic imports and import types are read wherever they are written.
- * A construct that could hide one of these facts is returned as unresolved instead of being read
- * as if it declared nothing.
+ * file. Calls, constructions, keyed literals, dynamic imports and import types are read wherever
+ * they are written. A construct that could hide one of these facts is returned as unresolved
+ * instead of being read as if it declared nothing; inside a literal written in code, it marks that
+ * literal opaque instead, because the literal is the fact it hides members of.
  */
 
 import type ts from "typescript";
 import type { CompilerApi } from "../compiler/settings.ts";
+import { bindingTypeOf, bodyEffects } from "./bodies.ts";
 import type {
   CallFact,
   ConstructionFact,
   DeclarationFact,
   DeclarationKind,
   ExportFact,
+  HeritageFact,
   ImportBinding,
   ImportFact,
+  InitializerFact,
+  KeyedLiteralFact,
+  LiteralForm,
   MemberFact,
+  ParamFact,
   Span,
   TypeScriptFileFacts,
   UnresolvedFact,
@@ -28,12 +35,19 @@ import type {
   Visibility,
 } from "./contract.ts";
 
+/** Members a literal spells, and whether a spread or an unspellable computed name hides others. */
+interface LiteralMembers {
+  readonly members: MemberFact[];
+  readonly opaque: boolean;
+}
+
 export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScriptFileFacts {
   const declarations: DeclarationFact[] = [];
   const imports: ImportFact[] = [];
   const exports: ExportFact[] = [];
   const calls: CallFact[] = [];
   const constructions: ConstructionFact[] = [];
+  const keyedLiterals: KeyedLiteralFact[] = [];
   const unresolved: UnresolvedFact[] = [];
 
   const lineOf = (node: ts.Node) => file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
@@ -53,13 +67,34 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
   const hasModifier = (node: ts.Node, kind: ts.SyntaxKind) =>
     api.canHaveModifiers(node) && (api.getModifiers(node) ?? []).some((modifier) => modifier.kind === kind);
 
-  /** A member name as the source spells it; a computed name is decided only when the program runs. */
-  function memberName(name: ts.PropertyName): string | null {
+  /**
+   * What happens to a construct that hides a member. Members read for a declaration at the top of
+   * the file leave it unresolved; members read for a literal written inside code mark that literal
+   * opaque instead, so the literal carries the answer rather than the file.
+   */
+  type Hidden = (node: ts.Node, reason: UnresolvedReason) => void;
+  const unresolvedAt: Hidden = leaveUnresolved;
+
+  /**
+   * A member name as the source spells it. A computed name spelled by one identifier is kept with
+   * that identifier; what value the identifier holds is left to the rule that asks. Any other
+   * computed name is decided only when the program runs.
+   */
+  function memberName(name: ts.PropertyName, hidden: Hidden): { name: string; computed_key?: string } | null {
     if (api.isComputedPropertyName(name)) {
-      leaveUnresolved(name, "computed-name");
+      if (api.isIdentifier(name.expression))
+        return { name: `[${name.expression.text}]`, computed_key: name.expression.text };
+      hidden(name, "computed-name");
       return null;
     }
-    return name.text;
+    return { name: name.text };
+  }
+
+  function paramsOf(parameters: readonly ts.ParameterDeclaration[]): ParamFact[] {
+    return parameters.map((parameter) => ({
+      name: parameter.name.getText(file),
+      ...(parameter.type ? { type_text: parameter.type.getText(file) } : {}),
+    }));
   }
 
   function member(
@@ -67,12 +102,17 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
     name: ts.PropertyName,
     kind: MemberFact["kind"],
     visibility: Visibility | null,
+    hidden: Hidden,
   ): MemberFact[] {
-    const spelled = memberName(name);
+    const spelled = memberName(name, hidden);
     if (spelled === null) return [];
+    const typed = api.isPropertyDeclaration(node) || api.isPropertySignature(node) || api.isParameter(node);
+    const signature =
+      api.isMethodDeclaration(node) || api.isMethodSignature(node) || api.isConstructorDeclaration(node);
+    const body = api.isMethodDeclaration(node) && node.body ? bodyEffects(api, node) : null;
     return [
       {
-        name: spelled,
+        ...spelled,
         kind,
         visibility:
           visibility ??
@@ -85,6 +125,11 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
                 : "public"),
         static: hasModifier(node, api.SyntaxKind.StaticKeyword),
         readonly: hasModifier(node, api.SyntaxKind.ReadonlyKeyword),
+        ambient: hasModifier(node, api.SyntaxKind.DeclareKeyword),
+        abstract: hasModifier(node, api.SyntaxKind.AbstractKeyword),
+        ...(typed && node.type ? { type_text: node.type.getText(file) } : {}),
+        ...(signature ? { params: paramsOf(node.parameters) } : {}),
+        ...(body ? { writes: body.writes, returns_state_only: body.returns_state_only } : {}),
         span: spanOf(node),
       },
     ];
@@ -92,10 +137,12 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
 
   function classMembers(node: ts.ClassDeclaration): MemberFact[] {
     return node.members.flatMap((element): MemberFact[] => {
-      if (api.isPropertyDeclaration(element)) return member(element, element.name, "property", null);
-      if (api.isMethodDeclaration(element)) return member(element, element.name, "method", null);
-      if (api.isGetAccessorDeclaration(element)) return member(element, element.name, "get-accessor", null);
-      if (api.isSetAccessorDeclaration(element)) return member(element, element.name, "set-accessor", null);
+      if (api.isPropertyDeclaration(element)) return member(element, element.name, "property", null, unresolvedAt);
+      if (api.isMethodDeclaration(element)) return member(element, element.name, "method", null, unresolvedAt);
+      if (api.isGetAccessorDeclaration(element))
+        return member(element, element.name, "get-accessor", null, unresolvedAt);
+      if (api.isSetAccessorDeclaration(element))
+        return member(element, element.name, "set-accessor", null, unresolvedAt);
       if (api.isConstructorDeclaration(element)) {
         const constructorMember: MemberFact = {
           name: "constructor",
@@ -107,12 +154,15 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
               : "public",
           static: false,
           readonly: false,
+          ambient: false,
+          abstract: false,
+          params: paramsOf(element.parameters),
           span: spanOf(element),
         };
         const parameterProperties = element.parameters
           .filter((parameter) => api.isParameterPropertyDeclaration(parameter, element))
           .flatMap((parameter) =>
-            api.isIdentifier(parameter.name) ? member(parameter, parameter.name, "property", null) : [],
+            api.isIdentifier(parameter.name) ? member(parameter, parameter.name, "property", null, unresolvedAt) : [],
           );
         return [constructorMember, ...parameterProperties];
       }
@@ -123,26 +173,37 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
   function typeMembers(elements: readonly ts.TypeElement[]): MemberFact[] {
     return elements.flatMap((element): MemberFact[] => {
       if (!element.name) return [];
-      if (api.isPropertySignature(element)) return member(element, element.name, "property", "public");
-      if (api.isMethodSignature(element)) return member(element, element.name, "method", "public");
-      if (api.isGetAccessorDeclaration(element)) return member(element, element.name, "get-accessor", "public");
-      if (api.isSetAccessorDeclaration(element)) return member(element, element.name, "set-accessor", "public");
+      if (api.isPropertySignature(element)) return member(element, element.name, "property", "public", unresolvedAt);
+      if (api.isMethodSignature(element)) return member(element, element.name, "method", "public", unresolvedAt);
+      if (api.isGetAccessorDeclaration(element))
+        return member(element, element.name, "get-accessor", "public", unresolvedAt);
+      if (api.isSetAccessorDeclaration(element))
+        return member(element, element.name, "set-accessor", "public", unresolvedAt);
       return [];
     });
   }
 
   /** The members a literal spells; a spread brings in members only the running program knows. */
-  function objectMembers(literal: ts.ObjectLiteralExpression): MemberFact[] {
+  function objectMembers(literal: ts.ObjectLiteralExpression, hidden: Hidden): MemberFact[] {
     return literal.properties.flatMap((element): MemberFact[] => {
       if (api.isPropertyAssignment(element) || api.isShorthandPropertyAssignment(element))
-        return member(element, element.name, "property", "public");
-      if (api.isMethodDeclaration(element)) return member(element, element.name, "method", "public");
-      if (api.isGetAccessorDeclaration(element)) return member(element, element.name, "get-accessor", "public");
-      if (api.isSetAccessorDeclaration(element)) return member(element, element.name, "set-accessor", "public");
+        return member(element, element.name, "property", "public", hidden);
+      if (api.isMethodDeclaration(element)) return member(element, element.name, "method", "public", hidden);
+      if (api.isGetAccessorDeclaration(element)) return member(element, element.name, "get-accessor", "public", hidden);
+      if (api.isSetAccessorDeclaration(element)) return member(element, element.name, "set-accessor", "public", hidden);
       const spread: ts.SpreadAssignment = element;
-      leaveUnresolved(spread, "object-spread");
+      hidden(spread, "object-spread");
       return [];
     });
+  }
+
+  /** The members of a literal written inside code; what hides a member marks the literal opaque. */
+  function literalMembers(literal: ts.ObjectLiteralExpression): LiteralMembers {
+    let opaque = false;
+    const members = objectMembers(literal, () => {
+      opaque = true;
+    });
+    return { members, opaque };
   }
 
   /** The object literal an expression is, looking through parentheses and type assertions. */
@@ -159,25 +220,52 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
     return current && api.isObjectLiteralExpression(current) ? current : null;
   }
 
+  /** What only some kinds of declaration record: heritage, a type literal, a stated type, an initializer. */
+  type DeclarationDetail = Pick<DeclarationFact, "binding" | "heritage" | "type_literal" | "type_text" | "initializer">;
+
   function recordDeclaration(
     statement: ts.Statement,
     node: ts.Node,
     name: ts.Identifier | undefined,
     kind: DeclarationKind,
     members: readonly MemberFact[],
-    binding?: VariableBinding,
+    detail: DeclarationDetail = {},
   ): void {
     const exported = hasModifier(statement, api.SyntaxKind.ExportKeyword);
     declarations.push({
       name: name ? name.text : "default",
       kind,
-      ...(binding === undefined ? {} : { binding }),
+      ...detail,
       exported,
       default_export: exported && hasModifier(statement, api.SyntaxKind.DefaultKeyword),
       ambient: hasModifier(statement, api.SyntaxKind.DeclareKeyword),
       span: spanOf(node),
       members,
     });
+  }
+
+  function heritageOf(node: ts.ClassDeclaration): HeritageFact[] {
+    return (node.heritageClauses ?? []).flatMap((clause) =>
+      clause.types.map((type) => ({
+        kind: clause.token === api.SyntaxKind.ExtendsKeyword ? ("extends" as const) : ("implements" as const),
+        type_text: type.getText(file),
+      })),
+    );
+  }
+
+  function initializerOf(expression: ts.Expression): InitializerFact {
+    let current = expression;
+    while (api.isParenthesizedExpression(current)) current = current.expression;
+    if (api.isObjectLiteralExpression(current)) return { kind: "object-literal" };
+    if (api.isCallExpression(current) && api.isIdentifier(current.expression))
+      return {
+        kind: "call",
+        callee_text: current.expression.text,
+        arguments: current.arguments.map((argument) =>
+          api.isStringLiteral(argument) ? ("string-literal" as const) : ("other" as const),
+        ),
+      };
+    return { kind: "other" };
   }
 
   function variableBinding(list: ts.VariableDeclarationList): VariableBinding {
@@ -260,8 +348,12 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
         continue;
       }
       const literal = objectLiteralOf(declaration.initializer);
-      const members = literal ? objectMembers(literal) : [];
-      recordDeclaration(statement, declaration, declaration.name, "variable", members, binding);
+      const members = literal ? objectMembers(literal, unresolvedAt) : [];
+      recordDeclaration(statement, declaration, declaration.name, "variable", members, {
+        binding,
+        ...(declaration.type ? { type_text: declaration.type.getText(file) } : {}),
+        ...(declaration.initializer ? { initializer: initializerOf(declaration.initializer) } : {}),
+      });
     }
   }
 
@@ -278,14 +370,20 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
     } else if (api.isModuleDeclaration(statement) || api.isNamespaceExportDeclaration(statement)) {
       leaveUnresolved(statement, "namespace");
     } else if (api.isClassDeclaration(statement)) {
-      recordDeclaration(statement, statement, statement.name, "class", classMembers(statement));
+      recordDeclaration(statement, statement, statement.name, "class", classMembers(statement), {
+        heritage: heritageOf(statement),
+      });
     } else if (api.isInterfaceDeclaration(statement)) {
       recordDeclaration(statement, statement, statement.name, "interface", typeMembers(statement.members));
     } else if (api.isTypeAliasDeclaration(statement)) {
-      const members = api.isTypeLiteralNode(statement.type) ? typeMembers(statement.type.members) : [];
-      recordDeclaration(statement, statement, statement.name, "type-alias", members);
+      const aliased = statement.type;
+      const literal = api.isTypeLiteralNode(aliased);
+      const members = literal ? typeMembers(aliased.members) : [];
+      recordDeclaration(statement, statement, statement.name, "type-alias", members, { type_literal: literal });
     } else if (api.isEnumDeclaration(statement)) {
-      const members = statement.members.flatMap((element) => member(element, element.name, "enum-member", "public"));
+      const members = statement.members.flatMap((element) =>
+        member(element, element.name, "enum-member", "public", unresolvedAt),
+      );
       recordDeclaration(statement, statement, statement.name, "enum", members);
     } else if (api.isFunctionDeclaration(statement)) {
       recordDeclaration(statement, statement, statement.name, "function", []);
@@ -299,25 +397,62 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
       calls.push({ kind: "super-call", callee_text: "super", span: spanOf(node) });
     else if (api.isIdentifier(target))
       calls.push({ kind: "function-call", callee_text: target.text, span: spanOf(node) });
-    else if (api.isPropertyAccessExpression(target))
+    else if (api.isPropertyAccessExpression(target)) {
+      const receiver = target.expression;
+      const bound = api.isIdentifier(receiver) ? bindingTypeOf(api, file, node, receiver.text) : undefined;
       calls.push({
         kind: "method-call",
         callee_text: target.name.text,
-        receiver_text: target.expression.getText(file),
+        receiver_text: receiver.getText(file),
+        ...(bound === undefined ? {} : { receiver_binding_type: bound }),
         span: spanOf(node),
       });
-    else leaveUnresolved(node, "dynamic-callee");
+    } else leaveUnresolved(node, "dynamic-callee");
   }
 
   /** The type an object literal is written against, when an assertion or an annotation states one. */
-  function statedType(literal: ts.ObjectLiteralExpression): ts.TypeNode | null {
+  function statedType(literal: ts.ObjectLiteralExpression): { type: ts.TypeNode; form: LiteralForm } | null {
     let outer: ts.Node = literal;
     while (api.isParenthesizedExpression(outer.parent)) outer = outer.parent;
     const parent = outer.parent;
     if (api.isAsExpression(parent) || api.isSatisfiesExpression(parent) || api.isTypeAssertionExpression(parent))
-      return api.isConstTypeReference(parent.type) ? null : parent.type;
-    if (api.isVariableDeclaration(parent) && parent.initializer === outer && parent.type) return parent.type;
+      return api.isConstTypeReference(parent.type)
+        ? null
+        : { type: parent.type, form: api.isSatisfiesExpression(parent) ? "satisfies" : "assertion" };
+    if (api.isVariableDeclaration(parent) && parent.initializer === outer && parent.type)
+      return { type: parent.type, form: "annotation" };
     return null;
+  }
+
+  /**
+   * An assertion to a named type of anything but an object literal, which is recorded as a typed
+   * literal instead. An assertion to `const` or to a keyword type names no type to construct.
+   */
+  function typeAssertion(node: ts.AsExpression | ts.TypeAssertion): void {
+    let asserted = node.expression;
+    while (api.isParenthesizedExpression(asserted)) asserted = asserted.expression;
+    if (api.isObjectLiteralExpression(asserted)) return;
+    if (!api.isTypeReferenceNode(node.type) || api.isConstTypeReference(node.type)) return;
+    constructions.push({ kind: "type-assertion", type_text: node.type.getText(file), span: spanOf(node) });
+  }
+
+  function objectLiteral(node: ts.ObjectLiteralExpression): void {
+    const stated = statedType(node);
+    if (stated) {
+      constructions.push({
+        kind: "typed-object-literal",
+        type_text: stated.type.getText(file),
+        form: stated.form,
+        ...literalMembers(node),
+        span: spanOf(node),
+      });
+      return;
+    }
+    const keyed = node.properties.some(
+      (element) =>
+        element.name && api.isComputedPropertyName(element.name) && api.isIdentifier(element.name.expression),
+    );
+    if (keyed) keyedLiterals.push({ ...literalMembers(node), span: spanOf(node) });
   }
 
   function visit(node: ts.Node): void {
@@ -341,10 +476,9 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
       if (api.isIdentifier(node.expression) || api.isPropertyAccessExpression(node.expression))
         constructions.push({ kind: "new-expression", type_text: node.expression.getText(file), span: spanOf(node) });
       else leaveUnresolved(node, "dynamic-callee");
-    } else if (api.isObjectLiteralExpression(node)) {
-      const type = statedType(node);
-      if (type) constructions.push({ kind: "typed-object-literal", type_text: type.getText(file), span: spanOf(node) });
-    } else if (api.isImportTypeNode(node)) {
+    } else if (api.isObjectLiteralExpression(node)) objectLiteral(node);
+    else if (api.isAsExpression(node) || api.isTypeAssertionExpression(node)) typeAssertion(node);
+    else if (api.isImportTypeNode(node)) {
       const argument = node.argument;
       if (api.isLiteralTypeNode(argument) && api.isStringLiteral(argument.literal))
         imports.push({
@@ -360,5 +494,5 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
   }
 
   visit(file);
-  return { declarations, imports, exports, calls, constructions, unresolved };
+  return { declarations, imports, exports, calls, constructions, keyed_literals: keyedLiterals, unresolved };
 }

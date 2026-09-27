@@ -6,3 +6,5 @@ export { loadAggregateMapping } from "./loader.ts";
 export { packageAt, parentLocation } from "./location.ts";
 export type { MappingMigrationOutcome } from "./migration.ts";
 export { applyMappingMigration, previewMappingMigration } from "./migration.ts";
+export type { AggregateMappingView, MappingViewLoad } from "./view.ts";
+export { loadMappingView, mappingPathOf } from "./view.ts";

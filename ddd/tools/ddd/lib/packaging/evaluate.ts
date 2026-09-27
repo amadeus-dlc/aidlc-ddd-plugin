@@ -1,18 +1,59 @@
 /**
- * Domain packaging for the Rust code gate: every module the inspected crate reaches has a business
- * package declared for it, and no name below it is a technical classification.
+ * Domain packaging for the code gates: every module the inspected domain package reaches has a
+ * business package declared for it, and no name below it is a technical classification.
  *
  * Whether the mapping itself is sound is the mapping reader's decision, not this one's. A mapping
  * the reader refuses yields no packages at all, and its findings are reported here under the rule
- * ids this gate already declares, so the same defect is never judged twice by two checks.
+ * ids the gates already declare, so the same defect is never judged twice by two checks.
+ *
+ * `packagingFindings` decides for one package of any language; each gate hands it the modules its
+ * language's layout gives.
  */
 
-import { join } from "node:path";
-import { mappingPathOf } from "../rules/rust/mapping.ts";
-import type { InspectionContext, InspectionTarget } from "../rules/types.ts";
-import { finding, relPath } from "../sensors/common.ts";
+import { finding } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
-import { packageKey, packageWord, technicalName } from "./declarations.ts";
+import { packageKey } from "./declarations.ts";
+
+/** One module of the inspected package: its path below the package root and where it is written. */
+export interface PackagingModule {
+  readonly parts: readonly string[];
+  readonly file: string;
+  readonly line?: number;
+  /** The technical classification a segment of its path stands on, if any. */
+  readonly technical?: string;
+}
+
+/** A module whose place in the package the inspection could not decide. */
+export interface PackagingProblem {
+  readonly file: string;
+  readonly reason: string;
+  readonly line?: number;
+}
+
+/** The domain package one gate decides packaging for, as its language lays it out. */
+interface PackagingSubject {
+  /** The package name as the mapping spells it. */
+  readonly name: string;
+  /** Where a finding about the package name itself is reported. */
+  readonly manifestFile: string;
+  /** What the language calls the package in a message, and how it joins module segments. */
+  readonly unit: "crate" | "package";
+  readonly separator: string;
+  /** The technical classification the package name stands on, if any. */
+  readonly technicalName?: string;
+  readonly modules: readonly PackagingModule[];
+  readonly problems: readonly PackagingProblem[];
+}
+
+/** The packages a record's mapping declares in the subject's language, or why it declares none. */
+export type DeclaredPackages =
+  | { readonly kind: "absent" }
+  | { readonly kind: "invalid"; readonly findings: readonly FindingInput[] }
+  | {
+      readonly kind: "loaded";
+      /** Each module path spelled the way the subject's modules are, so equal paths name one package. */
+      readonly packages: readonly { readonly package: string; readonly module: readonly string[] }[];
+    };
 
 /** Which rule of this gate reports a refusal the mapping reader made. */
 function transcribedRule(ruleId: string): string {
@@ -21,84 +62,69 @@ function transcribedRule(ruleId: string): string {
   return "domain-packaging.declaration";
 }
 
-export function evaluateDomainPackaging(target: InspectionTarget, context: InspectionContext): FindingInput[] {
-  const crate = context.assignments.find((entry) => entry.crate_name === target.crate_name);
-  if (crate?.layer !== "domain") return [];
+/** The packaging findings for one domain package; `mappingFile` is where the mapping's findings go. */
+export function packagingFindings(
+  subject: PackagingSubject,
+  declared: DeclaredPackages,
+  mappingFile: string,
+): FindingInput[] {
   const findings: FindingInput[] = [];
-  // The program is built from every crate a layer is assigned to, this one included, so its module
-  // walk is the one this check reads rather than a second walk over the same declarations.
-  const inventory = context.program.moduleInventories.get(crate.crate_name);
-  if (!inventory) throw new Error(`the program carries no module walk for ${crate.crate_name}`);
-  const crateName = technicalName([packageWord(crate.crate_name)]);
-  if (crateName || crate.crate_name === "domain")
+  if (subject.technicalName)
     findings.push(
       finding(
         "domain-packaging.technical-name",
-        join(crate.path, "Cargo.toml"),
-        `crate name uses technical classification ${crateName ?? "domain"}`,
+        subject.manifestFile,
+        `${subject.unit} name uses technical classification ${subject.technicalName}`,
       ),
     );
-  const validModules = [];
-  for (const module of inventory.modules) {
-    const banned = technicalName([...module.parts, ...module.physical]);
-    if (banned)
+  const validModules: PackagingModule[] = [];
+  for (const module of subject.modules) {
+    if (module.technical)
       findings.push(
         finding(
           "domain-packaging.technical-name",
           module.file,
-          `domain package ${module.parts.join("::") || "crate"} uses technical classification ${banned}`,
+          `domain package ${module.parts.join(subject.separator) || subject.unit} uses technical classification ${module.technical}`,
           module.line,
         ),
       );
     else validModules.push(module);
   }
-  for (const issue of inventory.problems)
+  for (const issue of subject.problems)
     findings.push(finding("domain-packaging.unresolved", issue.file, issue.reason, issue.line));
-  for (const claim of context.targets.filter((entry) => entry.crate_name === crate.crate_name)) {
-    if (claim.claim.path.endsWith(".rs") && !inventory.files.has(claim.claim.path))
-      findings.push(
-        finding(
-          "domain-packaging.unresolved",
-          claim.claim.path,
-          "claimed Rust file is not reachable from this crate's module roots",
-        ),
-      );
-  }
-  const file = relPath(context.run, mappingPathOf(context.run.record_dir));
-  const mapping = context.rustMapping;
-  if (mapping.kind === "absent")
+  if (declared.kind === "absent")
     return [
       ...findings,
-      finding("domain-packaging.declaration", file, "a readable aggregate mapping with domain_packages is required"),
+      finding(
+        "domain-packaging.declaration",
+        mappingFile,
+        "a readable aggregate mapping with domain_packages is required",
+      ),
     ];
-  if (mapping.kind === "invalid")
+  if (declared.kind === "invalid")
     return [
       ...findings,
-      ...mapping.findings.map((entry) =>
-        finding(transcribedRule(entry.rule_id), file, `${entry.rule_id}: ${entry.message}`),
+      ...declared.findings.map((entry) =>
+        finding(transcribedRule(entry.rule_id), mappingFile, `${entry.rule_id}: ${entry.message}`),
       ),
     ];
-  // The raw prefix only lets a keyword be spelled, so it never distinguishes two modules here.
-  const declared = new Set(
-    mapping.view.packages.map((entry) =>
-      packageKey(
-        entry.crate,
-        entry.module.map((segment) => segment.replace(/^r#/, "")),
-      ),
-    ),
-  );
-  if (!declared.has(packageKey(crate.crate_name, [])))
+  const keys = new Set(declared.packages.map((entry) => packageKey(entry.package, entry.module)));
+  if (!keys.has(packageKey(subject.name, [])))
     findings.push(
-      finding("domain-packaging.coverage", file, `crate ${crate.crate_name} needs a root package declaration`),
+      finding(
+        "domain-packaging.coverage",
+        mappingFile,
+        `${subject.unit} ${subject.name} needs a root package declaration`,
+      ),
     );
   for (const module of validModules) {
     if (module.parts.length === 0) continue;
-    if (!declared.has(packageKey(crate.crate_name, module.parts)))
+    if (!keys.has(packageKey(subject.name, module.parts)))
       findings.push(
         finding(
           "domain-packaging.coverage",
           module.file,
-          `domain package ${crate.crate_name}/${module.parts.join("::")} has no term/model declaration`,
+          `domain package ${subject.name}/${module.parts.join(subject.separator)} has no term/model declaration`,
           module.line,
         ),
       );

@@ -291,7 +291,7 @@ test("positions are 1-based lines and 1-based UTF-16 columns", () => {
 
 const UNRESOLVED: [UnresolvedReason, string][] = [
   ["decorator", "@sealed class A {}"],
-  ["computed-name", "class A { [key]() {} }"],
+  ["computed-name", "class A { [keys.main]() {} }"],
   ["object-spread", "const policy = { ...defaults, limit: 1 };"],
   ["binding-pattern", "const { a } = source;"],
   ["import-equals", 'import fs = require("fs");'],
@@ -305,6 +305,157 @@ test.each(UNRESOLVED)("%s is returned as unresolved with its line and noted", (r
   const set = factSet([{ file: FILE, source: `// lead\n${snippet}\n` }]);
   expect(set.files.get(FILE)?.unresolved).toContainEqual({ line: 2, reason });
   expect(set.notes).toContain(`domain-facts.unresolved: ${FILE}:2 ${reason}`);
+});
+
+// Facts the TypeScript domain gate decides on (T-11-02)
+
+test("a computed name spelled by one identifier is a member carrying its key, not an unresolved name", () => {
+  const facts = factsOf(`const brand: unique symbol = Symbol("Invoice");
+type Invoice = { readonly [brand]: true; issue(): void };
+`);
+  const members = facts.declarations.find((entry) => entry.name === "Invoice")?.members ?? [];
+  expect(members[0]).toMatchObject({ name: "[brand]", computed_key: "brand", readonly: true });
+  expect(members[1]).toMatchObject({ name: "issue", kind: "method" });
+  expect(facts.unresolved).toEqual([]);
+});
+
+test("a variable records its stated type and whether it is initialized by a plain call", () => {
+  const source = `const brand: unique symbol = Symbol("Invoice");
+const bare = Symbol();
+const registered = Symbol.for("Invoice");
+const other = { limit: 1 };
+`;
+  expect(declared(source, "brand")).toMatchObject({
+    type_text: "unique symbol",
+    initializer: { kind: "call", callee_text: "Symbol", arguments: ["string-literal"] },
+  });
+  expect(declared(source, "bare")).toMatchObject({
+    initializer: { kind: "call", callee_text: "Symbol", arguments: [] },
+  });
+  expect((declared(source, "bare") as { type_text?: string }).type_text).toBeUndefined();
+  expect(declared(source, "registered")).toMatchObject({ initializer: { kind: "other" } });
+  expect(declared(source, "other")).toMatchObject({ initializer: { kind: "object-literal" } });
+});
+
+test("a class records what it extends and implements", () => {
+  expect(declared("class A extends B implements C {}\n", "A")).toMatchObject({
+    heritage: [
+      { kind: "extends", type_text: "B" },
+      { kind: "implements", type_text: "C" },
+    ],
+  });
+});
+
+test("a member records declare, abstract, its stated type and its parameters", () => {
+  const members = declared(
+    "abstract class A {\n  declare x: number;\n  abstract y: string;\n  amount: number = 0;\n  add(value: number, note) {}\n}\n",
+    "A",
+  ).members;
+  const member = (name: string) => members.find((entry) => entry.name === name);
+  expect(member("x")).toMatchObject({ ambient: true, abstract: false, type_text: "number" });
+  expect(member("y")).toMatchObject({ ambient: false, abstract: true, type_text: "string" });
+  expect(member("amount")).toMatchObject({ ambient: false, abstract: false, type_text: "number" });
+  expect(member("add")).toMatchObject({ params: [{ name: "value", type_text: "number" }, { name: "note" }] });
+});
+
+test("a method records the state it writes and whether it only returns state", () => {
+  const members = declared(
+    `class A {
+  #x = 0;
+  bump() { this.#x += 1; }
+  read() { return this.#x; }
+  local() { let n = 0; n = 1; return n; }
+}
+`,
+    "A",
+  ).members;
+  const member = (name: string) => members.find((entry) => entry.name === name) as unknown as Record<string, unknown>;
+  expect(member("bump").writes).toEqual([{ target: "this", name: "#x" }]);
+  expect(member("bump").returns_state_only).toBeFalsy();
+  expect(member("read").writes ?? []).toEqual([]);
+  expect(member("read").returns_state_only).toBe(true);
+  // A local of the method is not state the method keeps.
+  expect(member("local").writes ?? []).toEqual([]);
+  expect(member("local").returns_state_only).toBeFalsy();
+});
+
+test("a typed literal records how it is typed, its members and what its methods do to captured state", () => {
+  const facts = factsOf(`function open(): Invoice {
+  const state = { amount: 0, issued: false };
+  const instance: Invoice = {
+    issue() { state.issued = true; },
+    total() { return state.amount; },
+  };
+  return instance;
+}
+const m = { amount: 1 } as Money;
+const n = { amount: 2 } satisfies Money;
+`);
+  const typed = facts.constructions.filter((entry) => entry.kind === "typed-object-literal") as unknown as {
+    form: string;
+    members: { name: string; writes?: { target: string }[]; returns_state_only?: boolean }[];
+  }[];
+  expect(typed.map((entry) => entry.form)).toEqual(["annotation", "assertion", "satisfies"]);
+  const issue = typed[0].members.find((entry) => entry.name === "issue");
+  const total = typed[0].members.find((entry) => entry.name === "total");
+  expect(issue?.writes?.map((entry) => entry.target)).toEqual(["captured"]);
+  expect(total?.returns_state_only).toBe(true);
+});
+
+test("closure state is written through a collection method and returned whole; module state is not returned state", () => {
+  const facts = factsOf(`const LIMIT = 10;
+function open(amount: number): Invoice {
+  const lines: string[] = [];
+  const instance: Invoice = {
+    add(line: string) { lines.push(line); },
+    total() { return amount; },
+    limit() { return LIMIT; },
+  };
+  return instance;
+}
+`);
+  const typed = facts.constructions.find((entry) => entry.kind === "typed-object-literal") as unknown as {
+    members: { name: string; writes?: { target: string; name: string }[]; returns_state_only?: boolean }[];
+  };
+  const member = (name: string) => typed.members.find((entry) => entry.name === name);
+  expect(member("add")?.writes).toEqual([{ target: "captured", name: "lines" }]);
+  expect(member("total")?.returns_state_only).toBe(true);
+  expect(member("limit")?.returns_state_only).toBe(false);
+});
+
+test("an assertion to a type is a construction; an assertion to const or unknown is not", () => {
+  const facts = factsOf(`const a = value as Invoice;
+const b = [1] as const;
+const c = value as unknown;
+const d = <Invoice>value;
+`);
+  expect(facts.constructions.map((entry) => [entry.kind, entry.type_text, entry.span.start_line])).toEqual([
+    ["type-assertion", "Invoice", 1],
+    ["type-assertion", "Invoice", 4],
+  ]);
+});
+
+test("an untyped object literal keyed by an identifier is recorded with its members", () => {
+  const facts = factsOf(`function make() {
+  return { [brand]: true, issue() {} };
+}
+const plain = { limit: 1 };
+`) as unknown as { keyed_literals: { members: { name: string }[]; span: { start_line: number } }[] };
+  expect(facts.keyed_literals).toHaveLength(1);
+  expect(facts.keyed_literals[0].members.map((entry) => entry.name)).toEqual(["[brand]", "issue"]);
+  expect(facts.keyed_literals[0].span.start_line).toBe(2);
+});
+
+test("a method call on one identifier records the type the nearest binding states for it", () => {
+  const calls = factsOf(`function peek(invoice: Invoice) {
+  return invoice.total();
+}
+function other() {
+  const invoice = make();
+  return invoice.total();
+}
+`).calls.filter((entry) => entry.kind === "method-call") as unknown as { receiver_binding_type?: string }[];
+  expect(calls.map((entry) => entry.receiver_binding_type)).toEqual(["Invoice", undefined]);
 });
 
 test("a file with a syntax error has no facts and is noted, while the other files are read", () => {

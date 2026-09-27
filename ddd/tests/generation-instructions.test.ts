@@ -162,7 +162,7 @@ for (const example of examplesDeclaring("aggregate_mappings")) {
     expect(modules.some((module) => Array.isArray(module) && module.length === 0)).toBe(true);
   });
 
-  test(`${example.file}: the mapping example places code in Rust, the only language generated and inspected today`, () => {
+  test(`${example.file}: the mapping example places its code in Rust`, () => {
     const locations = [
       ...records(example.root.aggregate_mappings).map((aggregate) => aggregate.code),
       ...records(example.root.domain_packages).map((entry) => entry.code),
