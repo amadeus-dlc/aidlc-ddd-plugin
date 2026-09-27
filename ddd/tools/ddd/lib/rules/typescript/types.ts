@@ -1,18 +1,47 @@
 /**
- * What the TypeScript domain rules are evaluated over: the claimed domain sources, the packages of
- * the project, the facts of every source the rules decide from, and the domain types those facts
- * declare. Assembled once by `context.ts`; the rules only read it.
+ * What the TypeScript rules of one gate are evaluated over: the claimed sources of the layers the
+ * gate decides, the packages of the project, the facts of every source the rules decide from, the
+ * domain types and the declarations those facts declare. Assembled once by `context.ts`; the rules
+ * only read it.
  */
 
 import type { MappingViewLoad } from "../../aggregate-mapping/index.ts";
 import type { SensorRunContext } from "../../runtime/context.ts";
 import type { FindingInput } from "../../shared/findings.ts";
-import type { MemberFact, ParamFact, Span, TypeScriptFactSet, WriteFact } from "../../typescript/domain-facts/index.ts";
+import type {
+  DeclarationFact,
+  MemberFact,
+  ParamFact,
+  Span,
+  TypeScriptFactSet,
+  WriteFact,
+} from "../../typescript/domain-facts/index.ts";
+import type { Layer } from "../../workspace/resolver.ts";
 import type { ModelAvailability } from "../types.ts";
 import type { ProjectPackages } from "./edges.ts";
 import type { TsPackage } from "./packages.ts";
 
-/** A claimed domain source the per-file rules decide over; `file` is project-root relative. */
+/**
+ * Which claimed sources a gate decides and which sources its rules decide from, as the Rust gate of
+ * the same layer selects them.
+ */
+export interface TsGate {
+  /** How a message names the gate's rules: `domain`, `use-case` or `interface-adapter`. */
+  readonly label: string;
+  /** The layers whose claimed sources the per-file rules decide. */
+  readonly target_layers: readonly Layer[];
+  /** Whether a claimed source of a query-side package is decided whatever its layer. */
+  readonly includes_query_side: boolean;
+  /**
+   * The layers whose every source is read into the facts besides the claimed targets, because a
+   * rule resolves a name declared in any of them.
+   */
+  readonly described_layers: readonly Layer[];
+  /** Whether the layer diagnostics of the claimed packages are reported, as only the domain gate does. */
+  readonly reports_layer_diagnostics: boolean;
+}
+
+/** A claimed source the per-file rules decide over; `file` is project-root relative. */
 export interface TsTarget {
   readonly file: string;
   readonly pkg: TsPackage;
@@ -50,6 +79,13 @@ export interface TsDomainType {
   readonly methods: readonly TsMethod[];
 }
 
+/** A class or a port (an interface, or a type literal alias) a read source declares at its top, with its package. */
+export interface TsDeclared {
+  readonly file: string;
+  readonly pkg: TsPackage;
+  readonly declaration: DeclarationFact;
+}
+
 export interface TsSymbolTable {
   readonly types: readonly TsDomainType[];
   /** The instance methods of any domain type whose body only returns state. */
@@ -75,6 +111,8 @@ export interface TsInspection {
   readonly targets: readonly TsTarget[];
   readonly facts: TypeScriptFactSet;
   readonly symbols: TsSymbolTable;
+  /** Every class and port the read sources declare, whatever their layer. */
+  readonly declarations: readonly TsDeclared[];
   readonly model: ModelAvailability;
   readonly mapping: MappingViewLoad;
   /** Coverage notes the verdict carries, such as an ambiguous model binding. */

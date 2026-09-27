@@ -4,6 +4,14 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — TypeScript のユースケースゲートとインターフェースアダプタゲート
+
+- **code-generation に TypeScript のユースケースゲート `ddd-typescript-use-case` を追加する。** ドメインの class 表現と companion 表現の両方について、規則 `g`（依存の方向と外部 I/O）、`h`（class のメソッドまたは最上位の関数である `execute` への集約の引き渡し）、`i`（ユースケースから別のユースケースの呼び出し）、`d`（getter の呼び出し）を TypeScript の事実で判定し、`ddd-rust-use-case` と同じ規則 ID と所見の意味で報告する。Rust のゲートと同じく、getter の結果を、直接または `const` の束縛を通して、リポジトリポートのメソッドへ変更せずに渡すことは `d` の所見にしない。
+- **code-generation に TypeScript のインターフェースアダプタゲート `ddd-typescript-interface-adapter` を追加する。** インターフェースアダプタ層・rmu 層と、query 側のすべてのパッケージについて、規則 `k`（command／query の横断参照）、`l`（query 側からのドメイン型・リポジトリポートの参照）、`m`（リポジトリの命名）、`n`（復元のバイパス）、`g` を判定し、`ddd-rust-interface-adapter` と同じ規則 ID と所見の意味で報告する。型だけの依存も値の依存と同じく判定する。[TypeScript センサー契約](docs/users/typescript-sensor-contract.ja.md)を参照。
+- **判定できない箇所では両ゲートを止める。** 読むソースの構文エラーや未解決の構文、型が書かれていない `execute` の引数や受け手、query 側でのドメインの名前空間 import や `export *`、起動できない compiler は、いずれも判定を出さずに終了コード 127 で終わる。そのため blocking のゲートは閉じたままになる。
+- **TypeScript の事実を拡張する。** 関数宣言は `params` を持ち、結果を変更せずに別の呼び出しへ渡す呼び出しは `forwarded_to` を持つ。どちらも任意のフィールドであり、既存の事実は変わらない。
+- ドメインゲートの規則と判定結果は変わらない。検査の組み立ては新しいゲートと共通のゲート設定で行い、依存の辺は1回の実行につき1度だけ組み立てるようにした。
+
 ## 未リリース — TypeScript のドメインゲート
 
 - **code-generation に TypeScript のドメインゲート `ddd-typescript-domain` を追加する。** class 表現と companion 表現の両方について、規則 `a`（公開された状態）、`b`（未宣言のミューテーション）、`c`（不完全な構築）、`d`（getter の呼び出し）、`g`（依存の方向）、`domain-packaging.*`、層の診断を TypeScript の事実で判定し、`ddd-rust-domain` と同じ規則 ID と所見の意味で報告する。状態隠蔽は state-evidence の検査に従う。状態を隠すのは `#` フィールドと companion のクロージャだけであり、companion には非公開の `unique symbol` のブランドが1つ必要である。依存は、パス、`imports`、`paths` エイリアス、パッケージ名を通して辿る。非公開パス、別パッケージへのエイリアス、`exports` が公開しないサブパス、公開入口での `export *` は、型だけの依存であっても所見になる。[TypeScript ドメインセンサー契約](docs/users/typescript-sensor-contract.ja.md)を参照。

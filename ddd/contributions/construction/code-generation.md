@@ -11,6 +11,8 @@ adds:
     - ddd-rust-use-case
     - ddd-rust-interface-adapter
     - ddd-typescript-domain
+    - ddd-typescript-use-case
+    - ddd-typescript-interface-adapter
 fragments:
   - anchor: after-step:1
     order: 100
@@ -63,6 +65,16 @@ dependency through a path into another package, a `paths` alias into another pac
 construct the gate cannot decide — an accessor, a base class, a brand it cannot identify, a getter
 receiver without a stated type, a specifier it cannot follow, or a compiler that does not launch —
 stops the gate as uninspectable; resolve it rather than retrying.
+
+`ddd-typescript-use-case` (rules g, h, i, d) and `ddd-typescript-interface-adapter` (rules k, l, m,
+n, g, over the interface-adapter and rmu layers and every query-side package) fire on the same
+`code-summary.md` for claimed `.ts` / `.tsx` sources of those layers, with the rule ids and finding
+meanings of `ddd-rust-use-case` and `ddd-rust-interface-adapter`. State the type of every `execute`
+parameter and of every receiver a use case calls `execute` or a getter on, and restore aggregates in
+an adapter through the factory the domain type offers. A type-only dependency is judged as a value
+one. An `execute` parameter or receiver without a stated type, a query-side namespace import or
+`export *` of a domain package, or a compiler that does not launch stops the gate as uninspectable;
+resolve it rather than retrying.
 
 The domain sensor inspects the module structure of affected domain crates, in addition to changed files. Resolve technical-classification names, undeclared modules, broken references, and unresolved analysis. Review the correspondence between vocabulary and responsibilities in code review as well.
 

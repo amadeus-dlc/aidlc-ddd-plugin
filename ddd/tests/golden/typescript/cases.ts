@@ -265,6 +265,29 @@ const COMPANION_PUBLIC_ID = edit(
   "[brand]: true,\n      id,\n",
 );
 
+/** The aggregate of each representation with a getter `id` added, shared with the layer golden cases. */
+export const CLASS_WITH_ID_GETTER = edit(
+  CLASS_CLEAN,
+  "  total(): number {",
+  "  id(): string {\n    return this.#id;\n  }\n\n  total(): number {",
+);
+export const COMPANION_WITH_ID_GETTER = edit(
+  edit(COMPANION_CLEAN, "total(): number };", "total(): number; id(): string };"),
+  "      total() {",
+  "      id() {\n        return state.id;\n      },\n      total() {",
+);
+
+/** The repository port of the aggregate, shared with the layer golden cases. */
+export const INVOICE_REPOSITORY_PORT = "export interface InvoiceRepository {\n  remove(id: string): void;\n}\n";
+
+/**
+ * A domain function handing the result of the getter `id` unchanged to the repository port: the
+ * forwarding rule (d) permits in the use-case layer only.
+ */
+const FORWARDING_PORT = `\n${INVOICE_REPOSITORY_PORT}\nexport function forget(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`;
+const CLASS_FORWARDING = `${CLASS_WITH_ID_GETTER}${FORWARDING_PORT}`;
+const COMPANION_FORWARDING = `${COMPANION_WITH_ID_GETTER}${FORWARDING_PORT}`;
+
 /**
  * The cases whose Rust counterpart is the same scene of `golden/rust/cases.ts`, one per
  * representation. The keys are the Rust case names; the values the two TypeScript ones.
@@ -277,17 +300,22 @@ export const RUST_COUNTERPARTS: Readonly<Record<string, readonly [string, string
   "violation-d": ["violation-d-class", "violation-d-companion"],
   "violation-g": ["violation-g-class", "violation-g-companion"],
   "clean-model-skipped": ["clean-model-skipped-class", "clean-model-skipped-companion"],
+  "violation-d-repository-domain-layer": [
+    "violation-d-repository-domain-layer-class",
+    "violation-d-repository-domain-layer-companion",
+  ],
 };
 
 function representationCases(): GoldenCase[] {
   const out: GoldenCase[] = [];
-  for (const [representation, clean, publicId, renamed, forged] of [
+  for (const [representation, clean, publicId, renamed, forged, forwarding] of [
     [
       "class",
       CLASS_CLEAN,
       CLASS_PUBLIC_ID,
       edit(CLASS_CLEAN, "issue(): void {", "rename(): void {"),
       `${CLASS_CLEAN}\nexport function build(): Invoice {\n  return new Invoice("x", 0);\n}\n`,
+      CLASS_FORWARDING,
     ],
     [
       "companion",
@@ -295,6 +323,7 @@ function representationCases(): GoldenCase[] {
       COMPANION_PUBLIC_ID,
       edit(edit(COMPANION_CLEAN, "issue(): void;", "rename(): void;"), "issue() {", "rename() {"),
       `${COMPANION_CLEAN}\nexport function build(): Invoice {\n  const forged: Invoice = { [brand]: true, issue() {}, total() { return 0; } };\n  return forged;\n}\n`,
+      COMPANION_FORWARDING,
     ],
   ] as const) {
     out.push(
@@ -303,6 +332,12 @@ function representationCases(): GoldenCase[] {
       tsCase(`violation-b-${representation}`, { source: renamed }, { pass: false, rules: ["b"] }),
       tsCase(`violation-c-${representation}`, { source: forged }, { pass: false, rules: ["c"] }),
       tsCase(`violation-d-${representation}`, { source: `${clean}${PEEK}` }, { pass: false, rules: ["d"] }),
+      // Handing a getter result unchanged to a repository port is still a getter call in the domain layer.
+      tsCase(
+        `violation-d-repository-domain-layer-${representation}`,
+        { source: forwarding },
+        { pass: false, rules: ["d"] },
+      ),
       tsCase(
         `violation-g-${representation}`,
         { source: `${ADAPTER_IMPORT}${clean}`, others: [INTERFACE_ADAPTER] },

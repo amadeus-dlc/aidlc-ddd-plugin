@@ -34,12 +34,14 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
 | ddd-typescript-domain | TypeScriptでのa/b/c/d/g、層診断、パッケージ宣言と実配置の照合。class表現とcompanion表現の両方 |
+| ddd-typescript-use-case | TypeScriptでのg/h/i/d。ddd-rust-use-caseと同じ規則ID |
+| ddd-typescript-interface-adapter | TypeScriptでのk/l/m/n/gとquery側の検査。ddd-rust-interface-adapterと同じ規則ID |
 
 助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/users/artifact-contract.ja.md)を参照してください。
 
 Rust検査は構文と名前に基づき、型推論・実行を行いません。T-02でVO・ポート・別ファイル・replayの判定を修正しました。[Rustセンサー契約](docs/users/rust-sensor-contract.ja.md)に明示型の照合範囲と未検査の注記をまとめています。不変条件の意味、回復フロー全体、内部可変性を網羅的に検証するものではありません。
 
-TypeScriptのドメイン検査は、同梱したTypeScriptの事実で判定し、同じく型推論を行いません。事実で決まらない箇所では検査不能として停止します。[TypeScriptセンサー契約](docs/users/typescript-sensor-contract.ja.md)に、各規則が読むものとゲートを止めるものをまとめています。
+TypeScriptのドメイン・ユースケース・インターフェースアダプタの検査は、同梱したTypeScriptの事実で判定し、同じく型推論を行いません。事実で決まらない箇所では検査不能として停止します。[TypeScriptセンサー契約](docs/users/typescript-sensor-contract.ja.md)に、各規則が読むものと各ゲートを止めるものをまとめています。
 
 パッケージ名はユビキタス言語へ結び付け、aggregate/、impl/、vo/、entities/等の技術分類を禁止します。設計宣言と実モジュールを検査し、用語の意味はレビューします。[パッケージング契約](docs/users/domain-packaging-design.ja.md)を参照してください。
 

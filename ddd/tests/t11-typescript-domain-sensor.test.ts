@@ -883,6 +883,8 @@ describe("only the wrappings that build a type are removed from a constructed ty
       "export const result: { ok: true; value: Invoice } = { ok: true, value: undefined as never };\n",
     ],
     ["an application of another type", "export const byId = { a: undefined as never } as Record<string, Invoice>;\n"],
+    // An array hands the type over to a use case, but does not build it.
+    ["an array of the domain type", "export const all = { a: undefined as never } as Invoice[];\n"],
   ])("an object literal typed by %s is undecided rather than a construction", (_label, body) => {
     const billing = `import { Invoice } from "./invoice.ts";\n${body}`;
     const run = runInProcess(withBillingFile("containing-type", billing));

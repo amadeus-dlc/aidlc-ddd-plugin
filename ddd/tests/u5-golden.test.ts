@@ -5,6 +5,8 @@ import { ALL_CASES } from "./golden/catalog.ts";
 import { declaredRules, type GoldenCase, runGoldenCase } from "./golden/runner.ts";
 import { RUST_CASES } from "./golden/rust/cases.ts";
 import { TYPESCRIPT_CASES } from "./golden/typescript/cases.ts";
+import { TYPESCRIPT_INTERFACE_ADAPTER_CASES } from "./golden/typescript/interface-adapter-cases.ts";
+import { TYPESCRIPT_USE_CASE_CASES } from "./golden/typescript/use-case-cases.ts";
 
 const root = join(import.meta.dir, "..");
 const toolsDir = join(root, "tools");
@@ -55,7 +57,7 @@ describe("rust golden cases", () => {
 const TYPESCRIPT_RUN_TIMEOUT_MS = 30_000;
 
 describe("typescript golden cases", () => {
-  for (const testCase of TYPESCRIPT_CASES) {
+  for (const testCase of [...TYPESCRIPT_CASES, ...TYPESCRIPT_USE_CASE_CASES, ...TYPESCRIPT_INTERFACE_ADAPTER_CASES]) {
     test(
       `${testCase.sensor} / ${testCase.name}`,
       () => {
@@ -66,12 +68,21 @@ describe("typescript golden cases", () => {
     );
   }
 
-  test("a typescript domain manifest is shipped and every rule it declares has a violation case", () => {
+  test("the typescript manifests are shipped and every rule they declare has a violation case", () => {
     const manifests = readdirSync(sensorsDir).filter(
       (name) => name.startsWith("aidlc-ddd-typescript-") && name.endsWith(".md"),
     );
     const declared = declaredRules(sensorsDir, manifests);
-    expect([...declared.keys()]).toEqual(["ddd-typescript-domain"]);
+    expect([...declared.keys()].sort()).toEqual(
+      ["ddd-typescript-domain", "ddd-typescript-interface-adapter", "ddd-typescript-use-case"].sort(),
+    );
+    // The layer gates declare exactly the rule ids of their Rust counterparts.
+    for (const layer of ["use-case", "interface-adapter"]) {
+      const rust = declaredRules(sensorsDir, [`aidlc-ddd-rust-${layer}.md`]).get(`ddd-rust-${layer}`);
+      expect([...(declared.get(`ddd-typescript-${layer}`) ?? [])].sort()).toEqual([...(rust ?? [])].sort());
+    }
+    expect([...(declared.get("ddd-typescript-use-case") ?? [])].sort()).toEqual(["d", "g", "h", "i"]);
+    expect([...(declared.get("ddd-typescript-interface-adapter") ?? [])].sort()).toEqual(["g", "k", "l", "m", "n"]);
     // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
     expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(
       [

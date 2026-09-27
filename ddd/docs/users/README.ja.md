@@ -13,7 +13,7 @@
 | 集約・パッケージ・操作・エラーケースをRust/TypeScriptのコードへ対応付け、crate/module形式の写像を移行 | [実装写像](implementation-mapping.ja.md) |
 | 文脈の依存規約をcrateではなくパッケージで宣言し、crate固定のレイヤー宣言を移行 | [レイヤー宣言](layer-declaration.ja.md) |
 | Rustの型照合、replay宣言、未検査範囲の確認 | [Rustセンサー契約](rust-sensor-contract.ja.md) |
-| TypeScriptのドメインゲートが状態隠蔽・ミューテーション・構築・getter・依存・パッケージ構成をどう判定し、何で停止するかの確認 | [TypeScriptドメインセンサー契約](typescript-sensor-contract.ja.md) |
+| TypeScriptのドメイン・ユースケース・インターフェースアダプタの各ゲートが規則をどう判定し、何で停止するかの確認 | [TypeScriptセンサー契約](typescript-sensor-contract.ja.md) |
 | 使用言語の宣言と旧Rust設定の移行 | [プロジェクト設定](project-settings.ja.md) |
 | プロジェクトの設定・モデル・写像・レイヤー宣言を一度に変換 | [成果物一式の移行](artifact-migration.ja.md) |
 

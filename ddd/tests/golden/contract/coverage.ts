@@ -532,6 +532,80 @@ cover(
   "EXECUTE validates the model; SKIP records the model-dependent exclusion.",
   "EXECUTEのモデル検証と、SKIPによるモデル依存検査の対象外を区別する。",
 );
+const tsUse = "ddd-typescript-use-case";
+cover(
+  tsUse,
+  ["g"],
+  "clean-g-use-case-to-infrastructure-import-class",
+  "clean-g-use-case-to-infrastructure-package-json-class",
+  "Test the layer permission table through imports and package.json-only dependencies, including external I/O.",
+  "層の許可表をimportとpackage.jsonのみの依存で検証し、外部I/Oも含める。",
+);
+cover(
+  tsUse,
+  ["h"],
+  "clean-h-id-class",
+  "clean-h-value-object-class",
+  "Ids and value objects are valid execute arguments; aggregates are not.",
+  "IDと値オブジェクトの引数は許可し、集約引数は拒否する。",
+);
+cover(
+  tsUse,
+  ["i"],
+  "clean-i-port-execute-class",
+  "clean-i-own-call-class",
+  "Port and same-type calls are not another concrete use case.",
+  "ポート呼出しと同型自身への呼出しを別ユースケースと混同しない。",
+);
+cover(
+  tsUse,
+  ["d"],
+  "clean-d-repository-argument-class",
+  "violation-d-repository-local-business-use-class",
+  "Proven repository forwarding is allowed; business use, transformations, and unrelated recipients remain violations.",
+  "リポジトリ引数への受け渡しを許可し、業務判断・加工・別の利用先は拒否する。",
+);
+const tsAdapter = "ddd-typescript-interface-adapter";
+cover(
+  tsAdapter,
+  ["k"],
+  "clean-rmu-bridge-class",
+  "clean-k-commented-import-class",
+  "RMU bridge is allowed; an import spelled only in a comment or a string is no dependency.",
+  "RMUの橋渡しを許可し、コメントや文字列の中にだけ書かれたimportは依存として扱わない。",
+);
+cover(
+  tsAdapter,
+  ["l"],
+  "clean-query-dto-class",
+  "violation-l-type-only-class",
+  "A query DTO is allowed; a domain type is not, even when only its type is imported.",
+  "クエリDTOは許可し、型だけのimportでもドメイン型は拒否する。",
+);
+cover(
+  tsAdapter,
+  ["m"],
+  "clean-repository-class",
+  "clean-storage-implementation-name-class",
+  "Medium names may appear on implementations but not repository port interfaces.",
+  "実装名の媒体名は許可し、リポジトリポートのinterfaceでは拒否する。",
+);
+cover(
+  tsAdapter,
+  ["n"],
+  "clean-restoration-factory-class",
+  "violation-n-companion",
+  "Restoring through the type's own factory is allowed; a typed object literal of a companion is not.",
+  "型自身のfactoryによる復元を許可し、companionの型付きオブジェクトリテラルは拒否する。",
+);
+cover(
+  tsAdapter,
+  ["g"],
+  "clean-g-interface-adapter-to-infrastructure-import-class",
+  "clean-g-interface-adapter-to-infrastructure-package-json-class",
+  "Test the layer permission table through imports and package.json-only dependencies; external I/O is allowed here.",
+  "層の許可表をimportとpackage.jsonのみの依存で検証し、この層では外部I/Oを許可する。",
+);
 export const COVERAGE = rows;
 
 export function violations(row: CoverageRow, cases: readonly GoldenCase[] = ALL_CASES): GoldenCase[] {

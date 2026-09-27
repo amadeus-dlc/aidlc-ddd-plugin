@@ -4,6 +4,8 @@ import { MODULE_LAYOUT_CASES } from "./module-layout/cases.ts";
 import { PACKAGING_CASES } from "./packaging/cases.ts";
 import { RUST_CASES } from "./rust/cases.ts";
 import { TYPESCRIPT_CASES } from "./typescript/cases.ts";
+import { TYPESCRIPT_INTERFACE_ADAPTER_CASES } from "./typescript/interface-adapter-cases.ts";
+import { TYPESCRIPT_USE_CASE_CASES } from "./typescript/use-case-cases.ts";
 export const ALL_CASES = [
   ...DESIGN_CASES,
   ...RUST_CASES,
@@ -11,4 +13,6 @@ export const ALL_CASES = [
   ...CONTRACT_CASES,
   ...MODULE_LAYOUT_CASES,
   ...TYPESCRIPT_CASES,
+  ...TYPESCRIPT_USE_CASE_CASES,
+  ...TYPESCRIPT_INTERFACE_ADAPTER_CASES,
 ];

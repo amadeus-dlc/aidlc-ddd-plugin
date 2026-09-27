@@ -1,28 +1,36 @@
-# TypeScript ドメインセンサーの契約
+# TypeScript センサーの契約
 
 [English](typescript-sensor-contract.md) | 日本語
 
-更新: 2026-09-27、T-11-02。`ddd-typescript-domain` は、TypeScript のドメイン層に対するコード生成ゲートである。Rust のドメインゲート（`ddd-rust-domain`）と同じ規則 ID を同じ意味で報告し、[TypeScript の事実](../developers/typescript-fact-extraction.ja.md)から判定する。事実で決められない箇所では、検査不能として停止する。ユースケース層・インターフェースアダプタ層の規則（T-11-03）とモジュール配置の検査（T-11-04）は含まない。
+更新: 2026-09-27、T-11-03。TypeScript のソースは、3つのコード生成ゲートが判定する。各ゲートは、同じ層の Rust のゲートと同じ規則 ID を同じ意味で報告する。
+
+| ゲート | 判定するもの | 対応する Rust のゲート | 規則 |
+|---|---|---|---|
+| `ddd-typescript-domain`（T-11-02） | ドメインパッケージの申告したソース | `ddd-rust-domain` | a、b、c、d、g、ドメインパッケージング、層の診断 |
+| `ddd-typescript-use-case`（T-11-03） | ユースケースパッケージの申告したソース | `ddd-rust-use-case` | g、h、i、d |
+| `ddd-typescript-interface-adapter`（T-11-03） | インターフェースアダプタと rmu のパッケージ、および層を問わず query 側のすべてのパッケージの申告したソース | `ddd-rust-interface-adapter` | k、l、m、n、g |
+
+各ゲートは [TypeScript の事実](../developers/typescript-fact-extraction.ja.md)から判定し、事実で決められない箇所では検査不能として停止する。モジュール配置の検査（T-11-04）は含まない。
 
 ## 起動する条件と読むもの
 
-`code-generation` のゲートで、Rust のゲートと並んで `code-summary.md` に対して起動する。入口は `source-manifest.json` で申告した `.ts` / `.tsx` ファイル（`.d.ts` を除く）である。
+各ゲートは `code-generation` のゲートで、Rust のゲートと並んで `code-summary.md` に対して起動する。入口は `source-manifest.json` で申告した `.ts` / `.tsx` ファイル（`.d.ts` を除く）である。ゲートが判定するソースとは、上の表の層のパッケージのソースである。
 
 | 申告 | 応答 |
 |---|---|
 | TypeScript のファイルが無い | 合格。note は `no typescript sources claimed`。compiler は使わない |
-| TypeScript のファイルはあるが、ドメインのソースが無い | 所有者の無い申告、申告したパッケージの層診断、実行済みのドメインモデルの読み込み失敗が無ければ合格。compiler は使わない |
-| ドメインのソースが1件以上ある | 同梱した compiler を起動し、すべての規則を実行する |
+| TypeScript のファイルはあるが、ゲートが判定するソースが無い | 所有者の無い申告、実行済みのドメインモデルの読み込み失敗、ドメインゲートに限り申告したパッケージの層診断が無ければ合格。compiler は使わない |
+| ゲートが判定するソースが1件以上ある | 同梱した compiler を起動し、そのゲートのすべての規則を実行する |
 
 申告したファイルは、その上にある最も近い `package.json` のパッケージに属する。層は、スコープを除いたパッケージ名と配置から、Rust の crate と同じ規約で決める。規約は、`-domain` / `-use-case` / `-interface-adapter` / `-infrastructure` の接尾辞、`packages/<layer>/` または `modules/<layer>/`、`command` / `query` / `rmu` の区分、composition root の目印である。ドメインのソースとは、ドメインパッケージの `src/` 配下にある、試験ではない `.ts` / `.tsx` ファイルである。`*.test.ts`、`*.spec.ts`、`__tests__/` は補助ファイルとして扱う。
 
-申告したファイルのほかに、各パッケージの `package.json`、ルートの `tsconfig.json` が参照する各パッケージの `tsconfig.json`（`paths` と `baseUrl` のため）、正規モデル、状態ファイル、集約写像、すべてのドメインパッケージの `src/` 配下にある全ソースの事実を読む。どのソースで宣言した型も、申告したファイルで構築・呼び出し・replay されうるためである。
+各ゲートは、申告したファイルのほかに、各パッケージの `package.json`、ルートの `tsconfig.json` が参照する各パッケージの `tsconfig.json`（`paths` と `baseUrl` のため）、正規モデル、状態ファイル、集約写像、申告したか、ルートの `tsconfig.json` が参照するすべてのドメインパッケージの `src/` 配下にある全ソースの事実を読む。どのソースで宣言した型も、申告したファイルで構築・呼び出し・replay されうるためである。ユースケースゲートは、そうしたユースケースパッケージの全ソースも読む。申告したソースが名指すユースケース、ポート、リポジトリポートは、そのどれで宣言されていてもよいためである。それ以外のソース（ユースケースゲートにとってのインターフェースアダプタ層、インターフェースアダプタゲートにとってのユースケース層）は読まないので、ゲートを止めることもない。
 
 ## 2つのコード表現
 
 ドメイン型は、`class`、または companion である。companion は、同じファイルにある同名の `type T = { … }` の型リテラルと `const T = { … }` のオブジェクトリテラルの組である。companion のインスタンスは、そのオブジェクトの中で型に対して書かれたリテラルである。すなわち、その型で注釈したリテラルか、型のブランドをキーに持つ型の無いリテラルである。`interface` と `const` の組は companion として扱わない。
 
-## 規則
+## ドメインゲートの規則
 
 | 規則 | class | companion |
 |---|---|---|
@@ -59,22 +67,47 @@ command 側と query 側のパッケージ間の参照は、このドメイン�
 
 `layer.unknown` と `layer.conflict` は、申告したパッケージの `package.json` に報告する。どの `package.json` にも属さない申告した TypeScript ファイルは `layer.unowned` になり、Rust のゲートが所有者の無い申告を名指すのと同じく、記録ディレクトリからの相対パスで名指す。`layer.mixed-targets` は Cargo の診断であり、宣言していない。
 
+ユースケースゲートとインターフェースアダプタゲートは、対応する Rust のゲートと同じく、層の診断を報告しない。渡された申告についての `layer.unowned`、`runtime.claims`、`model.invalid` は報告する。
+
+## ユースケースゲートの規則
+
+| 規則 | 報告するもの | 文言 |
+|---|---|---|
+| g: 依存 | 申告したユースケースのソースと、そのパッケージの `package.json` の各依存。ドメインゲートと同じ順に辿る。`layer-forbidden` は層の許可表に従い（ユースケースが依存してよいのはドメイン層とインフラ層）、`external-io` はドメインゲートと同じく適用する。`private-path`、`alias`、`wildcard-reexport`、`type-only` の意味もドメインゲートと同じ | `dependency direction @acme/billing-use-case -> @acme/billing-interface-adapter via "@acme/billing-interface-adapter" (layer-forbidden)` |
+| h: 集約の引数 | `execute`（class のメソッド。static と abstract を含む。またはファイルの最上位で宣言した関数）の引数のうち、書かれた型が、モデルが集約に結び付けるドメイン型であるもの。`Readonly<T>`、`T` と `null` / `undefined` の共用型、`T[]`、`readonly T[]`、`Array<T>`、`ReadonlyArray<T>` は `T` を渡すものとして扱う。ID と値オブジェクトは許可する。ドメインモデルが SKIP または無いとき、h は判定せず、そのことを note に記録する | `execute receives aggregate Invoice directly; pass ids and value objects`。型は引数に書かれたとおりに綴る（import の別名はその名前のまま） |
+| i: ユースケースの連鎖 | 書かれた型が、`execute` を宣言するユースケースパッケージの class である受け手に対する `execute` の呼び出し。`this`、呼び出し元の class 自身の値、interface（ポート）に対する呼び出しと、同じファイルが宣言した関数 `execute` の呼び出しは許可する | `use case calls packages/use-case/billing-use-case/src/finish.ts#FinishInvoice.execute`。呼ばれた class を、宣言したファイルで名指す |
+| d: getter の呼び出し | ドメインゲートと同じ getter の呼び出しを、use-case 層からの呼び出しとして報告する。ただし、getter の結果を、リポジトリポートが宣言するメソッドへ変更せずに渡すことは許可する。渡し方は、その呼び出しの引数（括弧だけで囲んでもよい）か、すべての参照がそうした引数である `const` の束縛（そうした束縛の連鎖を含む）である。`case` 節または `default` 節の直下で宣言した `const` は、後の節から読めるため、この束縛に当たらない。節をブロックで囲めば、その中の `const` を通して渡せる。リポジトリポートとは、ドメインまたはユースケースのパッケージのポート（規則 m と同じく `interface` または型リテラルの型別名）で、名前が `…Repository` で終わり、呼んだメソッドを宣言しているものであり、受け手に書かれた型がそれを名指している必要がある。結果を計算・変換・分岐に使うことや、ほかのもの（関数、別のポート、`…Repository` という名前の class）へ渡すことは、引き続き所見になる | `getter total called from use-case layer (Tell, Don't Ask)` |
+
+Rust のゲートと同じく、リポジトリへの受け渡しを証明できないときは、ゲートを止めずに d の所見のままにする。
+
+## インターフェースアダプタゲートの規則
+
+| 規則 | 報告するもの | 文言 |
+|---|---|---|
+| k: 横断参照 | 申告したソースと、そのパッケージの `package.json` の依存のうち、command 側のパッケージと query 側のパッケージの間のもの。向きと、型だけかどうかは問わない。rmu のパッケージは両側を橋渡しし、どちらにも当たらない | `cross-side reference @acme/billing-command-api -> @acme/billing-query-dao via "@acme/billing-query-dao" (type-only)` |
+| l: query 側からのドメイン参照 | query 側のパッケージの申告したソースで、import または再公開が別のモジュールから受け取る名前のうち、ドメイン型であるもの、または名前が `…Repository` で終わるもの。`import type` を含む。判定する名前はモジュールが公開する名前なので、別名で import しても同じ参照である。query の DTO は許可する | `query side references domain type / repository port Invoice` |
+| m: リポジトリの命名 | 名前が `…Repository` で終わるポート（`interface`、または型リテラルの型別名）で、`<Aggregate>Repository` ではないもの、または保存媒体を名指すもの。名前が `…Repository` で終わる実装の `class` は媒体を名指してよい（`PostgresInvoiceRepository`）が、集約にちなんだ名前である必要はある。集約はモデルの集約とし、モデルが無ければすべてのドメイン型とする | `repository port DynamoDbInvoiceRepository names a storage medium`、`repository port CustomerRepository is not <Aggregate>Repository` |
+| n: 復元のバイパス | 型が提供する factory（`Invoice.open(…)`）で復元せず、アダプタ自身がドメイン型を構築すること。class の `new`、型を書いたリテラル、`x as T` が当たる | `adapter constructs Invoice via new-expression instead of a full constructor`（`typed-object-literal`、`type-assertion`） |
+| g: 依存 | ユースケースゲートと同じ。ただし外部の I/O パッケージは許可する。インターフェースアダプタ層が依存してよいのはユースケース層・ドメイン層・インフラ層、rmu 層が依存してよいのはドメイン層・インターフェースアダプタ層・インフラ層である | `dependency direction … (layer-forbidden)` |
+
 ## ゲートを止めるもの
 
-このゲートが決められないものは合格にしない。次のいずれも、終了コード 127、stdout に判定を出さず、stderr に該当する構文をすべて `<file>:<line> …`（`package.json` の依存は `<file> …`）として列挙して停止する。フレームワークは、blocking のゲートを閉じたままにする。
+ゲートが決められないものは合格にしない。次のいずれも、終了コード 127、stdout に判定を出さず、stderr に該当する構文をすべて `<file>:<line> …`（`package.json` の依存は `<file> …`）として列挙して停止する。フレームワークは、blocking のゲートを閉じたままにする。
 
-- 抽出が読めなかったドメインのソース（`syntax-error`）、または未解決の構文（`decorator`、`computed-name`、`object-spread`、`binding-pattern`、`import-equals`、`export-assignment`、`dynamic-import`、`namespace`、`dynamic-callee`）を含むドメインのソース。申告したかどうかを問わない
+- ゲートが読むソースのうち、抽出が読めなかったもの（`syntax-error`）、または未解決の構文（`decorator`、`computed-name`、`object-spread`、`binding-pattern`、`import-equals`、`export-assignment`、`dynamic-import`、`namespace`、`dynamic-callee`）を含むもの。申告したかどうかを問わない
 - アクセサ、基底クラス、実装する interface を持つ class、アンビエントな class、`declare`・`abstract`・計算名のメンバー
 - 次のいずれかに当たる companion。ブランドが、export されていない最上位の `unique symbol` 型の `const` で、グローバルの `Symbol()` / `Symbol("…")` で作ったもの1つではない。インスタンスを書いていない。インスタンスがメンバーを隠す（スプレッド）。インスタンスに型のメソッドが欠けている。インスタンスを `as` / `satisfies` で作っている
 - 受け手の型が注釈で書かれていない、または1つの名前付きの型以外（共用型、ジェネリクスの適用）で書かれている、getter と同名の呼び出し
+- ユースケースゲートでは次のもの。型を書いていない `execute` の引数、または h が見通す形以外で集約を含む型（`Map<string, Invoice>` など）を書いた `execute` の引数。受け手の型が書かれていない `execute` の呼び出し、または名前・`this`・`this` のフィールド以外を受け手とする `execute` の呼び出し。そのファイルが宣言していない関数 `execute` の名前による呼び出し
+- インターフェースアダプタゲートでは次のもの。query 側のソースにある、ドメインパッケージの名前空間 import、`export *` / `export * as ns`、動的 import、import 型。どのドメイン型にも届きうるため。別の型の中にドメイン型を含む型での構築（`{} as Record<string, Invoice>` など）
 - どのパッケージにも属さない場所へのパス、パッケージが対応付けていない `imports` 指定子、`exports` を持たない、またはモデル化していない形の `exports` を持つパッケージ、ちょうど1つのパッケージへ通じないエイリアス、ワークスペース内の複数の `package.json` が持つパッケージ名、`baseUrl` を設定したパッケージを通る依存
 - `exports` を持たない、モデル化していない形の `exports` を持つ、または `exports` がソースではないファイル（`./dist/index.js` など）だけを指すパッケージの、申告したドメインのソースにある `export *` または `export * as ns`。そのファイルが公開されているかを判定できないため
-- ルートの `tsconfig.json` が参照していないドメインパッケージへ import で解決される型名。そのパッケージのソースは読んでいないため
-- ルートの `tsconfig.json` が参照していない、申告したドメインパッケージ。起動時にその compiler 設定を確認していないため
-- 起動できない compiler。報告は[事実抽出](../developers/typescript-fact-extraction.ja.md#抽出を起動できないとき)と同じく `ddd-typescript-domain: tool unavailable: <起動の報告の message>` である
+- ルートの `tsconfig.json` が参照していないドメインパッケージ（ユースケースゲートではユースケースパッケージも）へ import で解決される型名。そのパッケージのソースは読んでいないため
+- ルートの `tsconfig.json` が参照していない、ゲートが判定する申告したパッケージ。起動時にその compiler 設定を確認していないため
+- 起動できない compiler。報告は[事実抽出](../developers/typescript-fact-extraction.ja.md#抽出を起動できないとき)と同じく `<センサー ID>: tool unavailable: <起動の報告の message>` である
 
 ## 判定しないこと
 
-このゲートは、Rust のゲートの明示的な型の照合と同じく、型チェッカーを使わない。受け手の型は、引数、変数、class のフィールドに書かれた型である。初期化式から推論はしない。型名は、同じファイルの宣言に、それが無ければ名指す import を通して、import 先パッケージのドメイン型に解決する。別の場所で保持する値（`this` の別名、型を書いていないコレクションのフィールド）を通した状態の変更は見えない。companion の外で書かれた、ブランドをキーに持つリテラルは構築として報告しない。TypeScript のすべての構文の網羅は保証しない。生成したコードには引き続き型検査と試験が必要である。
+各ゲートは、Rust のゲートの明示的な型の照合と同じく、型チェッカーを使わない。受け手の型は、引数、変数、class のフィールドに書かれた型である。初期化式から推論はしない。型名は、同じファイルの宣言に、それが無ければ名指す import を通して、import 先パッケージのドメイン型（ユースケースとポートについては class と interface）に解決する。別の場所で保持する値（`this` の別名、型を書いていないコレクションのフィールド）を通した状態の変更は見えない。companion の外で書かれた、ブランドをキーに持つリテラルは構築として報告しない。変数に保持したアロー関数、オブジェクトリテラルのメソッド、interface のメソッドシグネチャとして書いた `execute` は h で判定しない。Rust のゲートが判定するのも impl のメソッドと自由関数だけである。TypeScript のすべての構文の網羅は保証しない。生成したコードには引き続き型検査と試験が必要である。
 
 Rust のゲート（`ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`）が判定するのは、申告した `.rs` ファイルだけである。申告した `.ts` ファイルは判定の対象外なので、TypeScript のソースだけを申告するプロジェクトは、注記 `no rust sources claimed` 付きでこれらのゲートに合格する。どの Cargo workspace にも属さない申告した `.rs` ファイルは、引き続き `layer.unowned` になる。
