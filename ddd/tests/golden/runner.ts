@@ -141,12 +141,24 @@ export function spawnSensor(toolsDir: string, testCase: GoldenCase): SensorRun {
 }
 
 /** Runs the sensor of `testCase` in `toolsDir` over a case already written, with `outputPath` as `writeCase` returned it. */
+/** How long one direct sensor run may take before it is killed and reported as timed out. */
+export const SENSOR_RUN_TIMEOUT_MS = 5 * 60_000;
+/** The exit status a killed run is reported with, so no caller reads the missing status as success. */
+export const TIMED_OUT_EXIT_CODE = 124;
+
 export function spawnSensorAt(toolsDir: string, testCase: GoldenCase, outputPath: string): SensorRun {
   const proc = Bun.spawnSync(
     ["bun", join(toolsDir, scriptNameFor(testCase.sensor)), "--stage", testCase.stage, "--output-path", outputPath],
-    { stdout: "pipe", stderr: "pipe" },
+    { stdout: "pipe", stderr: "pipe", timeout: SENSOR_RUN_TIMEOUT_MS, killSignal: "SIGKILL" },
   );
-  return { exitCode: proc.exitCode, stdout: proc.stdout.toString().trim(), stderr: proc.stderr.toString() };
+  const stderr = proc.stderr.toString();
+  return proc.exitedDueToTimeout
+    ? {
+        exitCode: TIMED_OUT_EXIT_CODE,
+        stdout: proc.stdout.toString().trim(),
+        stderr: `${stderr}killed after ${SENSOR_RUN_TIMEOUT_MS} ms\n`,
+      }
+    : { exitCode: proc.exitCode, stdout: proc.stdout.toString().trim(), stderr };
 }
 
 export function runGoldenCase(toolsDir: string, testCase: GoldenCase): CaseResult {

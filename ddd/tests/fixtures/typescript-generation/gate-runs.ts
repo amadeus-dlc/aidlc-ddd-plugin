@@ -15,6 +15,8 @@ import {
   materializeCase,
   runGoldenCase,
   spawnSensorAt,
+  SENSOR_RUN_TIMEOUT_MS,
+  TIMED_OUT_EXIT_CODE,
 } from "../../golden/runner.ts";
 import { type GenerationSample, otherParentModuleFile } from "./samples.ts";
 
@@ -74,6 +76,11 @@ export function runLayoutCiEntryAt(toolsDir: string, root: string): CiEntryRun {
   const proc = Bun.spawnSync([process.execPath, join(toolsDir, TYPESCRIPT_LAYOUT_CI_ENTRY), "--project", root], {
     stdout: "pipe",
     stderr: "pipe",
+    timeout: SENSOR_RUN_TIMEOUT_MS,
+    killSignal: "SIGKILL",
   });
-  return { exitCode: proc.exitCode, output: `${proc.stdout.toString()}${proc.stderr.toString()}` };
+  const output = `${proc.stdout.toString()}${proc.stderr.toString()}`;
+  return proc.exitedDueToTimeout
+    ? { exitCode: TIMED_OUT_EXIT_CODE, output: `${output}killed after ${SENSOR_RUN_TIMEOUT_MS} ms\n` }
+    : { exitCode: proc.exitCode, output };
 }
