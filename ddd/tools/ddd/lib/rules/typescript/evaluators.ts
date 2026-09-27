@@ -2,13 +2,17 @@
  * TypeScript rule evaluators of the domain gate: undeclared mutation (b), incomplete construction
  * (c), getter calls (d) and domain packaging, each in the words the Rust domain gate reports them
  * in. State hiding (a) is in `state-hiding.ts` and the dependency direction (g) in `edges.ts`.
+ * Getter calls (d) are decided the same way over a use-case source, where a getter result handed
+ * unchanged to a repository port is the one call the rule permits. What the rules of every gate read
+ * off a file's facts is in `file-facts.ts`, and the binding of a type to a model aggregate in
+ * `aggregate-binding.ts`.
  *
  * Nothing here infers a type. A receiver or a constructed type is what a declaration, an import or
  * an annotation spells, and what those do not decide is left undecided rather than passed.
  */
 
 import { join } from "node:path";
-import { type AggregateMappingView, mappingPathOf } from "../../aggregate-mapping/index.ts";
+import { mappingPathOf } from "../../aggregate-mapping/index.ts";
 import { SPELLINGS } from "../../aggregate-mapping/language.ts";
 import {
   type DeclaredPackages,
@@ -18,19 +22,20 @@ import {
 } from "../../packaging/evaluate.ts";
 import { relPath } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
-import { type CallFact, COLLECTION_MUTATORS, type TypeScriptFileFacts } from "../../typescript/domain-facts/index.ts";
+import {
+  type CallFact,
+  COLLECTION_MUTATORS,
+  type Span,
+  type TypeScriptFileFacts,
+} from "../../typescript/domain-facts/index.ts";
 import { toKebab } from "../lists.ts";
-import { bindAggregate, classifyMutation, declaredReplayEventNames } from "../mutations.ts";
+import { classifyMutation, declaredReplayEventNames } from "../mutations.ts";
 import type { MutatorSymbol } from "../types.ts";
+import { aggregateBinding, aggregateMappings, locatedAt } from "./aggregate-binding.ts";
+import { factsOf, receiverType } from "./file-facts.ts";
 import { modulePathOf, PACKAGE_MANIFEST, packageSources, posixRelative, type TsPackage } from "./packages.ts";
-import { resolveConstructedType, resolveTypeName, within } from "./symbols.ts";
+import { isPortDeclaration, resolveConstructedType, resolveDeclaredType, resolveTypeName, within } from "./symbols.ts";
 import type { TsDomainType, TsInspection, TsMethod, TsTarget } from "./types.ts";
-
-function factsOf(inspection: TsInspection, file: string): TypeScriptFileFacts {
-  const facts = inspection.facts.files.get(file);
-  if (!facts) throw new Error(`the TypeScript facts carry no record for ${file}`);
-  return facts;
-}
 
 // --- (b) undeclared mutation and (c) post-init --------------------------------------------------
 
@@ -50,15 +55,6 @@ function mutates(type: TsDomainType, method: TsMethod, calls: readonly CallFact[
     const member = field === undefined ? undefined : type.members.find((entry) => entry.name === field);
     return member?.kind === "property" && COLLECTION_TYPE.test((member.type_text ?? "").trim());
   });
-}
-
-function aggregateMappings(inspection: TsInspection): readonly AggregateMappingView[] {
-  return inspection.mapping.kind === "loaded" ? inspection.mapping.view.aggregates : [];
-}
-
-function locatedAt(type: TsDomainType) {
-  return (mapping: AggregateMappingView) =>
-    mapping.package === type.pkg.name && mapping.module.join("/") === type.module.join("/");
 }
 
 /** Whether the one parameter of a declared replay method is the declared event's domain type. */
@@ -99,12 +95,10 @@ interface TypeMutators {
 /** The mutating methods of the domain types declared in `file`, each classified against the model. */
 function mutatorsIn(inspection: TsInspection, file: string): TypeMutators[] {
   const calls = factsOf(inspection, file).calls;
-  const mappings = aggregateMappings(inspection);
   return inspection.symbols.types
     .filter((type) => type.file === file)
     .map((type) => {
-      const sameNames = inspection.symbols.types.filter((entry) => entry.name === type.name).length;
-      const binding = bindAggregate(type, sameNames, inspection.model, mappings, locatedAt(type), inspection.notes);
+      const binding = aggregateBinding(inspection, type);
       const mutators = type.methods
         .filter((method) => mutates(type, method, calls))
         .map((method) =>
@@ -176,18 +170,43 @@ export function ruleC(inspection: TsInspection, target: TsTarget): FindingInput[
 
 // --- (d) getter call -----------------------------------------------------------------------------
 
-/** The type a receiver is stated to have: an annotated binding, or a field of the enclosing class. */
-function receiverType(inspection: TsInspection, file: string, call: CallFact): string | undefined {
-  const receiver = (call.receiver_text ?? "").replace(/\s+/g, "");
-  if (/^[A-Za-z_$][\w$]*$/.test(receiver)) return call.receiver_binding_type;
-  const field = /^this\.(#?[A-Za-z_$][\w$]*)$/.exec(receiver)?.[1];
-  if (field === undefined) return undefined;
-  const owner = inspection.symbols.types.find(
-    (type) => type.file === file && type.kind === "class" && within(call.span, type.home),
-  );
-  return owner?.members.find((member) => member.name === field && member.kind === "property")?.type_text;
+function sameSpan(a: Span, b: Span): boolean {
+  return within(a, b) && within(b, a);
 }
 
+/**
+ * Whether the result of a getter call written in a use-case source reaches nothing but repository
+ * ports: every call it is handed to unchanged is a method a port declares — an interface or a type
+ * literal alias of the domain or use-case layer named `…Repository` — called on a receiver stated to
+ * be that port. What
+ * cannot be proven so leaves the getter call a finding rather than undecided, as the Rust gate
+ * leaves an unproven forwarding.
+ */
+function isRepositoryForwarding(
+  inspection: TsInspection,
+  target: TsTarget,
+  facts: TypeScriptFileFacts,
+  call: CallFact,
+): boolean {
+  if (target.pkg.assignment.layer !== "use-case" || !call.forwarded_to?.length) return false;
+  return call.forwarded_to.every((span) => {
+    const consumer = facts.calls.find((candidate) => sameSpan(candidate.span, span));
+    if (consumer?.kind !== "method-call") return false;
+    const stated = receiverType(facts, consumer);
+    if (stated === undefined) return false;
+    const port = resolveDeclaredType(inspection.packages, inspection.declarations, target.file, facts, stated);
+    if (port.kind !== "found") return false;
+    const { declaration, pkg } = port.entry;
+    return (
+      isPortDeclaration(declaration) &&
+      (pkg.assignment.layer === "domain" || pkg.assignment.layer === "use-case") &&
+      declaration.name.endsWith("Repository") &&
+      declaration.members.some((member) => member.kind === "method" && member.name === consumer.callee_text)
+    );
+  });
+}
+
+/** Getter calls of a claimed source, reported from the layer of its package. */
 export function ruleD(inspection: TsInspection, target: TsTarget): FindingInput[] {
   const findings: FindingInput[] = [];
   const facts = factsOf(inspection, target.file);
@@ -195,7 +214,7 @@ export function ruleD(inspection: TsInspection, target: TsTarget): FindingInput[
     if (call.kind !== "method-call" || !inspection.symbols.getter_names.has(call.callee_text)) continue;
     if ((call.receiver_text ?? "").trim() === "this") continue;
     const line = call.span.start_line;
-    const stated = receiverType(inspection, target.file, call);
+    const stated = receiverType(facts, call);
     if (stated === undefined) {
       inspection.undecided.add(
         target.file,
@@ -211,12 +230,13 @@ export function ruleD(inspection: TsInspection, target: TsTarget): FindingInput[
     }
     if (
       resolved.kind === "domain" &&
-      resolved.type.methods.some((method) => method.name === call.callee_text && method.returns_state_only)
+      resolved.type.methods.some((method) => method.name === call.callee_text && method.returns_state_only) &&
+      !isRepositoryForwarding(inspection, target, facts, call)
     )
       findings.push({
         rule_id: "d",
         file: target.file,
-        message: `getter ${call.callee_text} called from domain layer (Tell, Don't Ask)`,
+        message: `getter ${call.callee_text} called from ${target.pkg.assignment.layer} layer (Tell, Don't Ask)`,
         line,
       });
   }

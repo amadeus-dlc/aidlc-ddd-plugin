@@ -29,8 +29,9 @@
 | t10-rust-domain-decision-base | ネイティブ抽出器で判定する規則b・c・gとdomain-packaging。所見が持つ行、マクロ本体・文字列・コメント内の同じ字面が何も宣言しないこと、モジュール解決の解決・未解決の対、判定元プログラムのソースを抽出器が読めない場合に空として読まずゲートを停止すること |
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。導入後と更新後のツリーからTypeScriptの事実抽出を起動できること。ネットワーク取得は任意実行 |
 | typescript-compiler-launch | 同梱したTypeScript Compiler APIの起動分類。起動できない各条件が固有のsubjectと理由コードを持つこと、複数成立時の固定順、センサーを検査不能として止めること、同梱したcompilerが固定した版と記録したdigestに一致すること |
-| t11-typescript-domain-facts | TypeScriptの事実の契約。宣言、メンバーと可視性、型だけのものを区別したimportとexport、呼び出し、構築、位置、未解決の各理由、構文エラー、TypeScriptパッケージに届かない場所へ複製したtoolsツリーからの起動 |
+| t11-typescript-domain-facts | TypeScriptの事実の契約。宣言、メンバーと可視性、型だけのものを区別したimportとexport、呼び出し、構築、位置、未解決の各理由、構文エラー、関数宣言の引数、getterの結果を変更せずに渡した先の呼び出しと、どこにも渡さない各使い方、TypeScriptパッケージに届かない場所へ複製したtoolsツリーからの起動 |
 | t11-typescript-domain-sensor / u5-golden | class表現とcompanion表現の両方でのTypeScriptドメインゲート。TypeScriptのゴールデンケースを同一プロセスと入口の両方で判定し、各所見が名指すメンバー・メソッド・行、Rustのドメインゲートの同じ場面と同じ意味になること、state-evidenceの検査と同じ状態隠蔽の判定、事実や規則で決まらない構文によるゲートの停止、起動できないcompilerによるT-11-01と同じ停止を確認する。 |
+| t11-typescript-layer-sensors / u5-golden | ドメインのclass表現とcompanion表現の両方でのTypeScriptのユースケースゲートとインターフェースアダプタゲート。ゴールデンケースを同一プロセスと入口の両方で判定し、各所見が名指すファイル・行・文言、各場面が`ddd-rust-use-case`・`ddd-rust-interface-adapter`の同じ場面と同じ意味になること、command/queryの境界と型だけの依存、各ゲートが規則の判定に使うソースだけを読むこと、どちらのゲートも決められない構文で停止すること、起動できないcompilerで停止することを確認する。 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
 | error-contract-contract | 業務エラー契約の語彙、Cargo条件とTypeScript条件を含む要求識別、応答検証 |
 | error-contract-cargo | 境界でのCargo条件解決と、ロックファイルを変更しないこと |
@@ -48,9 +49,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-配布物の検査は各474ケースを実行します。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
+配布物の検査は各620ケースを実行します。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
 
-`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各474件の配布物検査、通常承認の統合検査を順に実行します。規則表から選んだ180入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持し、判定できないTypeScriptドメインゲートが各環境で承認を閉じたままにすることも確認します。
+`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各620件の配布物検査、通常承認の統合検査を順に実行します。規則表から選んだ207入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持し、判定できないTypeScriptのドメイン・ユースケース・インターフェースアダプタの各ゲートが各環境で承認を閉じたままにすることも確認します。
 
 ## 回帰で確認した範囲と残る検証
 

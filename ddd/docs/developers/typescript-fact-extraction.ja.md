@@ -2,7 +2,7 @@
 
 [English](typescript-fact-extraction.md) | [ネイティブ抽出器の配布](native-extractor-distribution.ja.md)
 
-TypeScript の事実抽出は、TypeScript のソースを、TypeScript の規則が判定に使う事実へ変換する。事実は、各ファイルの宣言、そのメンバーと可視性、import と export（型だけのものを区別する）、呼び出し、構築である。この文書は、Compiler API が導入先へどう届くか、対応する Compiler API の版とプロジェクト設定、抽出を起動できないときに何を報告するか、返す事実の契約を記録する。TypeScript のドメインゲート `ddd-typescript-domain`（T-11-02）がこの事実で判定する。その[契約](../users/typescript-sensor-contract.ja.md)を参照。ユースケース層・インターフェースアダプタ層の規則は T-11 の後続作業である。
+TypeScript の事実抽出は、TypeScript のソースを、TypeScript の規則が判定に使う事実へ変換する。事実は、各ファイルの宣言、そのメンバーと可視性、import と export（型だけのものを区別する）、呼び出し、構築である。この文書は、Compiler API が導入先へどう届くか、対応する Compiler API の版とプロジェクト設定、抽出を起動できないときに何を報告するか、返す事実の契約を記録する。TypeScript のゲート、すなわちドメインゲート `ddd-typescript-domain`（T-11-02）と、ユースケースゲート `ddd-typescript-use-case`・インターフェースアダプタゲート `ddd-typescript-interface-adapter`（T-11-03）がこの事実で判定する。それらの[契約](../users/typescript-sensor-contract.ja.md)を参照。
 
 ## 配布する Compiler API
 
@@ -73,11 +73,11 @@ bun run prepare:typescript
 
 | フィールド | 記録 |
 |---|---|
-| `declarations` | ファイル先頭の各文について `{name, kind, binding?, exported, default_export, ambient, span, members}`。`kind` は `class`、`interface`、`type-alias`、`enum`、`function`、`variable` のいずれか。変数は `binding`（`const`、`let`、`var`、`using`、`await-using`）も持つ。名前の無い default export のクラスや関数の名前は `default`。`exported`、`default_export`、`ambient` は、宣言に書かれた `export`、`default`、`declare` から決まる。class は `heritage` も持ち、名指す型ごとに `{kind: extends \| implements, type_text}` を記録する。型の別名は、`{ … }` の型リテラルを名指すかどうかを `type_literal` に持つ。変数は、型を書いたときに `type_text` を、初期化式があるときに `initializer` を持つ。`initializer` は、1つの識別子で名指す関数の呼び出しなら `{kind: call, callee_text, arguments}`（各引数は `string-literal` か `other`）、オブジェクトリテラルなら `{kind: object-literal}`、それ以外は `{kind: other}` である |
+| `declarations` | ファイル先頭の各文について `{name, kind, binding?, exported, default_export, ambient, span, members}`。`kind` は `class`、`interface`、`type-alias`、`enum`、`function`、`variable` のいずれか。変数は `binding`（`const`、`let`、`var`、`using`、`await-using`）も持つ。名前の無い default export のクラスや関数の名前は `default`。`exported`、`default_export`、`ambient` は、宣言に書かれた `export`、`default`、`declare` から決まる。class は `heritage` も持ち、名指す型ごとに `{kind: extends \| implements, type_text}` を記録する。型の別名は、`{ … }` の型リテラルを名指すかどうかを `type_literal` に持つ。変数は、型を書いたときに `type_text` を、初期化式があるときに `initializer` を持つ。`initializer` は、1つの識別子で名指す関数の呼び出しなら `{kind: call, callee_text, arguments}`（各引数は `string-literal` か `other`）、オブジェクトリテラルなら `{kind: object-literal}`、それ以外は `{kind: other}` である。関数は、メソッドと同じく各引数の `{name, type_text?}` を `params` に持つ |
 | `members` | `{name, kind, visibility, static, readonly, ambient, abstract, span}`。該当する場合は `computed_key`、`type_text`、`params`、`writes`、`returns_state_only` も持つ。クラスのメンバー（プロパティ、メソッド、アクセサ、コンストラクタ、コンストラクタのパラメータプロパティ）、interface と型リテラルのメンバー、enum のメンバー、変数を初期化するオブジェクトリテラルのメンバー。`visibility` は `public`、`protected`、`private`、`private-name`（`#name`。名前は `#` 付きで綴る）のいずれか。`ambient` と `abstract` はメンバーに書かれた `declare` と `abstract` から決まる。1つの識別子で綴った計算名は、`computed_key: "key"` を持つメンバー `[key]` になる。その識別子がどの値を持つかは規則が判断する。`type_text` はプロパティ（またはパラメータプロパティ）に書かれた型、`params` はメソッド、メソッドシグネチャ、コンストラクタの `{name, type_text?}` である。本体を持つメソッドは `writes` と `returns_state_only` を記録する。`writes` は、代入・更新・削除する `this` のメンバーを `{target: this, name}`、自身で宣言していない束縛を `{target: captured, name}` として持つ。閉包の状態（囲む関数が宣言した束縛）を配列・`Map`・`Set` の変更メソッドで変える呼び出しもこれに含む。`returns_state_only` は、本体が `this` の1つのメンバー、閉包の状態の1つのメンバー、または閉包の状態そのものを `return` するだけかどうかである。ファイル先頭の束縛は閉包の状態ではない。呼び出しシグネチャ、構築シグネチャ、インデックスシグネチャ、static ブロックはメンバーにしない。そのオブジェクトリテラル内のスプレッドはメンバーにせず、未解決（`object-spread`）として返す |
 | `imports` | `{specifier, kind, type_only, bindings, line}`。`kind` は `named`、`default`、`namespace`、`side-effect`、`dynamic`（`import("…")`）、`type-query`（`import("…").T` のような import 型）のいずれか。`bindings` は `{name, imported, type_only}` で、default import の `imported` は `default`、名前空間 import では `*` |
 | `exports` | export 文ごとに `{kind, specifier?, type_only, names, line}`。`kind` は `named`、`all`、`namespace`、`default-expression` のいずれか。`names` は `{name, local, type_only}`。宣言に書かれた `export` は export 文ではなく、宣言の `exported` が表す |
-| `calls` | `{kind, callee_text, receiver_text?, receiver_binding_type?, span}`。`kind` は `function-call`、`method-call`（受け手を綴りのまま持つ）、`super-call` のいずれか。タグ付きテンプレートは、そのタグの呼び出しとして扱う。1つの識別子に対するメソッド呼び出しは、その識別子の最も近い束縛（引数か変数）に書かれた型を `receiver_binding_type` に記録する。その束縛が型を書いていない、または束縛が見つからないときは持たない |
+| `calls` | `{kind, callee_text, receiver_text?, receiver_binding_type?, forwarded_to?, span}`。`kind` は `function-call`、`method-call`（受け手を綴りのまま持つ）、`super-call` のいずれか。タグ付きテンプレートは、そのタグの呼び出しとして扱う。1つの識別子に対するメソッド呼び出しは、その識別子の最も近い束縛（引数か変数）に書かれた型を `receiver_binding_type` に記録する。その束縛が型を書いていない、または束縛が見つからないときは持たない。`forwarded_to` は、この呼び出しの結果を変更せずに渡した先の呼び出しの span を、ソース順に並べる。渡し方は、呼び出しの引数（括弧だけで囲んでもよい）か、すべての参照がそのように渡される `const` の束縛（そうした束縛の連鎖を含み、64段まで）である。参照とは、最も近い束縛がその束縛である識別子であり、プロパティ名、メンバー名、宣言する名前、型の中に書いた名前は参照ではない。結果をほかの形（演算の項、受け手、型アサーション、条件、`let`、参照の1つをほかに使う束縛、`case` 節または `default` 節の直下で宣言した `const`（有効範囲が case ブロック全体になるため））で使う場合と、使わない場合は持たない |
 | `constructions` | `{kind, type_text, span}`。`new-expression` は構築するクラスを綴りのまま持つ。`type-assertion` は、`x` がオブジェクトリテラルではないときの、`const` 以外の名前付きの型 `T` への `x as T` または `<T>x` である。`typed-object-literal` は、`as T`、`satisfies T`、`<T>`、または初期化する変数の型注釈によって型が書かれたオブジェクトリテラルである。これは `form`（`annotation`、`assertion`、`satisfies`）、`members`、`opaque`（スプレッドや1つの識別子ではない計算名がメンバーの一部を隠すかどうか）も持つ。`as const` は型を書いていない |
 | `keyed_literals` | 型が書かれていないオブジェクトリテラルのうち、計算名 `[identifier]` をキーに持つメンバーを含むものごとに `{members, opaque, span}` |
 | `unresolved` | `{line, reason}`。各項目は `domain-facts.unresolved: <file>:<line> <reason>` の note にもなる |
@@ -104,7 +104,7 @@ bun run prepare:typescript
 
 ### 抽出が決めないこと
 
-抽出は型チェッカーを使わない。すべての事実は構文ノードから作るため、コメント、文字列、置換の無いテンプレート、正規表現の中の綴りは事実にならず、名前が何に解決されるかに依存する事実も無い。型が必要な区別はこの事実集合に含まれない。例えば、値として import したが型としてしか使わない名前、呼び出しが到達する宣言、型の無いオブジェクトリテラルの型である。[言語非依存の設計](language-independent-design.ja.md)は、そうした規則が Program と TypeChecker で確立することを想定している。TypeScript のドメインゲートはそうせず、Rust のゲートが明示的な型で照合するのと同じく、書かれた型と構文で決まることだけを判定し、決まらない箇所では検査不能として停止する。配布物は、TypeChecker が必要とするライブラリの宣言を同梱しないためである。
+抽出は型チェッカーを使わない。すべての事実は構文ノードから作るため、コメント、文字列、置換の無いテンプレート、正規表現の中の綴りは事実にならず、名前が何に解決されるかに依存する事実も無い（構文から見える最も近い束縛を使う `receiver_binding_type` と `forwarded_to` を除く）。型が必要な区別はこの事実集合に含まれない。例えば、値として import したが型としてしか使わない名前、呼び出しが到達する宣言、型の無いオブジェクトリテラルの型である。[言語非依存の設計](language-independent-design.ja.md)は、そうした規則が Program と TypeChecker で確立することを想定している。TypeScript のゲートはそうせず、Rust のゲートが明示的な型で照合するのと同じく、書かれた型と構文で決まることだけを判定し、決まらない箇所では検査不能として停止する。配布物は、TypeChecker が必要とするライブラリの宣言を同梱しないためである。
 
 ### ゲートが読むプロジェクト
 
@@ -112,4 +112,4 @@ bun run prepare:typescript
 
 ## 対象外
 
-ユースケース層・インターフェースアダプタ層の規則（T-11-03）とモジュール配置の検査（T-11-04）、TypeScript 以外の言語、neverthrow・Effect・fp-ts との個別統合は対象外である。error-contract と state-evidence の入口は、引き続き開発用依存関係を import する。これらはどのセンサーからも到達しない検証用の経路であり、同梱した compiler への移行はこの変更に含めない。Linux、Windows、x86_64 での実測は行っていない。同梱する compiler は JavaScript であり、プラットフォームに依存しない。
+モジュール配置の検査（T-11-04）、TypeScript 以外の言語、neverthrow・Effect・fp-ts との個別統合は対象外である。error-contract と state-evidence の入口は、引き続き開発用依存関係を import する。これらはどのセンサーからも到達しない検証用の経路であり、同梱した compiler への移行はこの変更に含めない。Linux、Windows、x86_64 での実測は行っていない。同梱する compiler は JavaScript であり、プラットフォームに依存しない。

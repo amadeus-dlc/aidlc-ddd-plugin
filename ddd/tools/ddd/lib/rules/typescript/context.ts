@@ -1,16 +1,18 @@
 /**
- * Assembles what the TypeScript domain rules are evaluated over from one run of the gate.
+ * Assembles what the TypeScript rules of one gate are evaluated over from one run of it.
  *
- * The claimed `.ts` / `.tsx` sources name the packages the change touches; the domain sources among
- * them are the files the per-file rules decide. Only once there is one is the compiler classified:
- * a run with no TypeScript claim, or with no domain source among its claims, answers without it.
+ * The claimed `.ts` / `.tsx` sources name the packages the change touches; the sources among them
+ * of the layers the gate decides are the files the per-file rules decide. Only once there is one is
+ * the compiler classified: a run with no TypeScript claim, or with no such source among its claims,
+ * answers without it.
  *
  * The rules decide from more than the claimed files — a type declared in any domain source can be
- * constructed, called or replayed in a claimed one — so the facts are read for every source of
- * every domain package claimed or referenced by the root `tsconfig.json`, and a source among them
- * the extraction could not read, or read with a construct left unresolved, stops the gate: the
- * answer would otherwise be given over a program the facts do not describe. A dependency is judged
- * against every package of the workspace, referenced or not.
+ * constructed, called or replayed in a claimed one, and a use case or a port declared in any
+ * use-case source can be called from one — so the facts are read for every source of every package
+ * of the layers the gate describes that is claimed or referenced by the root `tsconfig.json`, and a
+ * source among them the extraction could not read, or read with a construct left unresolved, stops
+ * the gate: the answer would otherwise be given over a program the facts do not describe. A
+ * dependency is judged against every package of the workspace, referenced or not.
  */
 
 import { readFileSync } from "node:fs";
@@ -39,8 +41,8 @@ import {
   type TsPackage,
   workspacePackages,
 } from "./packages.ts";
-import { buildSymbolTable } from "./symbols.ts";
-import { type TsInspection, type TsTarget, Undecided } from "./types.ts";
+import { buildDeclarationTable, buildSymbolTable } from "./symbols.ts";
+import { type TsGate, type TsInspection, type TsTarget, Undecided } from "./types.ts";
 
 const NO_TYPESCRIPT_CLAIM = "no typescript sources claimed";
 
@@ -80,7 +82,7 @@ function readSources(files: readonly string[], workspaceRoot: string): TypeScrip
 }
 
 /** Stops the gate when a source the rules decide from was not read, or was read with a construct left unresolved. */
-function requireDecisionBase(facts: TypeScriptFactSet, decidedFrom: readonly string[]): void {
+function requireDecisionBase(gate: TsGate, facts: TypeScriptFactSet, decidedFrom: readonly string[]): void {
   const unread = decidedFrom.filter(
     (file) =>
       !facts.files.has(file) && !facts.notes.some((note) => note.startsWith(`domain-facts.unresolved: ${file}:`)),
@@ -88,11 +90,19 @@ function requireDecisionBase(facts: TypeScriptFactSet, decidedFrom: readonly str
   const reasons = [...facts.notes, ...unread.map((file) => `${file} was not read`)];
   if (reasons.length > 0)
     throw new ToolUnavailableError(
-      `the TypeScript facts do not describe every domain source, so the domain rules cannot be decided: ${reasons.join("; ")}`,
+      `the TypeScript facts do not describe every source the ${gate.label} rules decide from, so they cannot be decided: ${reasons.join("; ")}`,
     );
 }
 
-export function assembleTypeScriptInspection(run: SensorRunContext): InspectionResult {
+/** Whether the gate's per-file rules decide the sources of `pkg`. */
+function decides(gate: TsGate, pkg: TsPackage): boolean {
+  return (
+    gate.target_layers.includes(pkg.assignment.layer) ||
+    (gate.includes_query_side && pkg.assignment.cqrs_side === "query")
+  );
+}
+
+export function assembleTypeScriptInspection(run: SensorRunContext, gate: TsGate): InspectionResult {
   const claimed = readSourceClaims(run, { extensions: [".ts", ".tsx"] });
   if (!claimed.ok) return { kind: "findings-only", findings: [finding("runtime.claims", ".", claimed.reason)] };
   const findings: FindingInput[] = [...claimed.findings];
@@ -112,7 +122,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
       continue;
     }
     packages.set(pkg.root, pkg);
-    if (roleOf(pkg, path) === "source" && pkg.assignment.layer === "domain")
+    if (roleOf(pkg, path) === "source" && decides(gate, pkg))
       targets.push({ file: posixRelative(workspaceRoot, path), pkg });
     else skipped++;
   }
@@ -121,13 +131,13 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
   const availability = readModelAvailability(run);
   findings.push(...availability.findings);
   if (targets.length === 0) {
-    const reported = [...findings, ...layerDiagnostics(claimedPackages)];
+    const reported = [...findings, ...(gate.reports_layer_diagnostics ? layerDiagnostics(claimedPackages) : [])];
     if (reported.length === 0) return { kind: "empty", note: NO_TYPESCRIPT_CLAIM };
     return { kind: "findings-only", findings: reported, ...(skippedNote ? { note: skippedNote } : {}) };
   }
 
-  // Every rule of this gate decides on the extracted facts, so the compiler is required exactly
-  // where those rules have a domain source to decide.
+  // Every rule of the gate decides on the extracted facts, so the compiler is required exactly
+  // where those rules have a claimed source to decide.
   const extractor = classifyTypeScriptExtractor(workspaceRoot);
   const project = readTypeScriptProject(extractor, workspaceRoot);
   for (const config of project.packages) {
@@ -141,7 +151,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
   const configs = new Map(project.packages.map((config) => [resolve(config.root), config]));
   const described = new Set(
     [...packages.values()]
-      .filter((pkg) => pkg.assignment.layer === "domain" && !pkg.assignment.is_composition_root)
+      .filter((pkg) => gate.described_layers.includes(pkg.assignment.layer) && !pkg.assignment.is_composition_root)
       .map((pkg) => pkg.root),
   );
   // A dependency is judged by the package it names wherever that package is in the workspace; only
@@ -159,7 +169,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
   const unreferenced = [...new Set(targets.map((target) => target.pkg))].filter((pkg) => !configs.has(pkg.root));
   if (unreferenced.length > 0)
     throw new ToolUnavailableError(
-      `the root tsconfig.json does not reference ${unreferenced.map((pkg) => pkg.path).join(", ")}, so the settings its domain sources are compiled with are not known`,
+      `the root tsconfig.json does not reference ${unreferenced.map((pkg) => pkg.path).join(", ")}, so the settings its ${gate.label} sources are compiled with are not known`,
     );
 
   const decidedFrom = new Set(targets.map((target) => target.file));
@@ -168,7 +178,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
       for (const source of packageSources(pkg)) decidedFrom.add(posixRelative(workspaceRoot, source));
   const decided = [...decidedFrom].sort((a, b) => a.localeCompare(b, "en"));
   const facts = requireTypeScriptFacts(extractor, readSources(decided, workspaceRoot));
-  requireDecisionBase(facts, decided);
+  requireDecisionBase(gate, facts, decided);
 
   const mapping = loadMappingView(run.record_dir, "typescript");
   const notes = new Set<string>();
@@ -182,6 +192,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext): InspectionR
       targets: targets.sort((a, b) => a.file.localeCompare(b.file, "en")),
       facts,
       symbols: buildSymbolTable(projectPackages, facts.files),
+      declarations: buildDeclarationTable(projectPackages, facts.files),
       model: availability.model,
       mapping,
       notes,

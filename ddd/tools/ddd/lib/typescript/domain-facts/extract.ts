@@ -34,6 +34,7 @@ import type {
   VariableBinding,
   Visibility,
 } from "./contract.ts";
+import { forwardedTo } from "./forwarding.ts";
 
 /** Members a literal spells, and whether a spread or an unspellable computed name hides others. */
 interface LiteralMembers {
@@ -221,7 +222,10 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
   }
 
   /** What only some kinds of declaration record: heritage, a type literal, a stated type, an initializer. */
-  type DeclarationDetail = Pick<DeclarationFact, "binding" | "heritage" | "type_literal" | "type_text" | "initializer">;
+  type DeclarationDetail = Pick<
+    DeclarationFact,
+    "binding" | "heritage" | "type_literal" | "type_text" | "initializer" | "params"
+  >;
 
   function recordDeclaration(
     statement: ts.Statement,
@@ -386,17 +390,21 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
       );
       recordDeclaration(statement, statement, statement.name, "enum", members);
     } else if (api.isFunctionDeclaration(statement)) {
-      recordDeclaration(statement, statement, statement.name, "function", []);
+      recordDeclaration(statement, statement, statement.name, "function", [], {
+        params: paramsOf(statement.parameters),
+      });
     } else if (api.isVariableStatement(statement)) {
       variables(statement);
     }
   }
 
   function callee(node: ts.CallExpression | ts.TaggedTemplateExpression, target: ts.Expression): void {
+    const reached = api.isCallExpression(node) ? forwardedTo(api, node) : undefined;
+    const forwarded = reached ? { forwarded_to: reached.map(spanOf) } : {};
     if (target.kind === api.SyntaxKind.SuperKeyword)
-      calls.push({ kind: "super-call", callee_text: "super", span: spanOf(node) });
+      calls.push({ kind: "super-call", callee_text: "super", ...forwarded, span: spanOf(node) });
     else if (api.isIdentifier(target))
-      calls.push({ kind: "function-call", callee_text: target.text, span: spanOf(node) });
+      calls.push({ kind: "function-call", callee_text: target.text, ...forwarded, span: spanOf(node) });
     else if (api.isPropertyAccessExpression(target)) {
       const receiver = target.expression;
       const bound = api.isIdentifier(receiver) ? bindingTypeOf(api, file, node, receiver.text) : undefined;
@@ -405,6 +413,7 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
         callee_text: target.name.text,
         receiver_text: receiver.getText(file),
         ...(bound === undefined ? {} : { receiver_binding_type: bound }),
+        ...forwarded,
         span: spanOf(node),
       });
     } else leaveUnresolved(node, "dynamic-callee");

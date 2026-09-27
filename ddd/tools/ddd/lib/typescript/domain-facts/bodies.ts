@@ -214,7 +214,7 @@ function hoistedVar(api: CompilerApi, fn: ts.SignatureDeclaration, name: string)
  * The nearest binding of `name` seen from `from`, and the scope that holds it. A name bound through
  * destructuring is found as well; its binding is the parameter or declaration that destructures.
  */
-function nearestBinding(
+export function nearestBinding(
   api: CompilerApi,
   from: ts.Node,
   name: string,
