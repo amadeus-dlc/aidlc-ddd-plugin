@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { legacySetFiles, RECORD_DIR, SUPPLEMENT_FILE } from "./fixtures/artifact-set/workspace.ts";
+import { PROBE, PROBE_CONSTRUCTED_TYPE, writeTypeScriptProject } from "./fixtures/typescript-facts/project.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { runGoldenCase } from "./golden/runner.ts";
 
@@ -175,6 +176,46 @@ for (const harness of ["claude", "codex"] as const)
     expect(existsSync(installed)).toBe(true);
     expect(protocolOf(installed, "--error-contract-version")).toBe(3);
     expect(protocolOf(installed, "--state-exposure-version")).toBe(2);
+  }, 60_000);
+
+const TYPESCRIPT_COMPILER_PAYLOAD = "tools/ddd/lib/typescript/vendor/typescript.js";
+const TYPESCRIPT_MANIFEST_PAYLOAD = "tools/ddd/lib/typescript/vendor/manifest.json";
+
+/** Launches the TypeScript extractor of an installed tools tree in a process that cannot install packages. */
+function typeScriptLaunchOf(tools: string, project: string, cwd: string): unknown {
+  const result = Bun.spawnSync([process.execPath, "--no-install", PROBE, tools, project], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  expect(result.exitCode, result.stderr.toString()).toBe(0);
+  return JSON.parse(result.stdout.toString());
+}
+
+for (const harness of ["claude", "codex"] as const)
+  test(`${harness}: the TypeScript extractor is installed, launches, and still launches after an update`, () => {
+    const f = fixture(harness);
+    const first = f.invoke();
+    expect(first.code, first.output).toBe(0);
+    const receiptPath = join(f.project, f.leaf, "tools/data/ddd-install.json");
+    const owned = Object.keys(JSON.parse(readFileSync(receiptPath, "utf8")).owned_files);
+    expect(owned).toContain(TYPESCRIPT_COMPILER_PAYLOAD);
+    expect(owned).toContain(TYPESCRIPT_MANIFEST_PAYLOAD);
+    const tools = join(f.project, f.leaf, "tools");
+    const inspected = join(f.root, "inspected");
+    mkdirSync(inspected);
+    writeTypeScriptProject(inspected);
+    const launched = { kind: "ready", constructions: [PROBE_CONSTRUCTED_TYPE] };
+    expect(typeScriptLaunchOf(tools, inspected, f.root)).toEqual(launched);
+
+    const manifest = join(f.source, "ddd/.aidlc-plugin/plugin.json");
+    const value = JSON.parse(readFileSync(manifest, "utf8"));
+    value.version = "0.1.1";
+    writeFileSync(manifest, JSON.stringify(value));
+    const updated = f.invoke(["--update"]);
+    expect(updated.code, updated.output).toBe(0);
+    expect(JSON.parse(readFileSync(receiptPath, "utf8")).version).toBe("0.1.1");
+    expect(typeScriptLaunchOf(tools, inspected, f.root)).toEqual(launched);
   }, 60_000);
 
 for (const harness of ["claude", "codex"] as const)

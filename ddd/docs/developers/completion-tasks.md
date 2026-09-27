@@ -188,7 +188,7 @@ Completion: updated Rust declarations, migration, knowledge, stages, sensors, ex
 
 ## T-11: Add TypeScript against the same contracts
 
-Status: agreed work for the following release; full implementation pending. Depends on T-09/T-10.
+Status: agreed work for the following release; full implementation pending. Depends on T-09/T-10. T-11-01 ships the TypeScript Compiler API with the distribution, records the supported version and project settings, extracts the per-file facts TypeScript rules will read, and stops an inspection whose extraction cannot start; see [TypeScript fact extraction](typescript-fact-extraction.md). No TypeScript rule reads those facts yet.
 
 Use the TypeScript Compiler API for syntax, symbols, and type resolution; record the supported API version and project compatibility range. Implement package/exports and type-only dependency inspection, both domain source representations, closure/brand and # field privacy, method-specific Result errors, ownership checks, and both file layouts. Use infrastructure for Result support; library-specific neverthrow/Effect/fp-ts integration is outside scope. Verify ESM Next.js integration on server-side Node.js.
 

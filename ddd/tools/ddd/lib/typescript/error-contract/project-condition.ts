@@ -8,15 +8,21 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
-import type {
-  EntryPoint,
-  Issue,
-  ReasonCode,
-  TypeScriptCondition,
-  TypeScriptPackage,
-} from "../../error-contract/index.ts";
+import type { EntryPoint, Issue, TypeScriptCondition, TypeScriptPackage } from "../../error-contract/index.ts";
+import {
+  type CompilerSettings,
+  compilerSettings,
+  notModelled,
+  parseConfig,
+  Refusal,
+  referencedPackageRoots,
+  SUPPORTED_COMPILER_API_VERSION,
+  sharedCompilerSettings,
+  text,
+  unreadable,
+} from "../compiler/settings.ts";
 
 /** Names the language-support result inside its own package, before package identities exist. */
 export interface ResultDefinitionSelector {
@@ -31,31 +37,6 @@ export interface TypeScriptConditionOptions {
 export type TypeScriptConditionResolution =
   | { readonly kind: "resolved"; readonly condition: TypeScriptCondition }
   | { readonly kind: "unavailable"; readonly reasons: readonly Issue[] };
-
-const SUPPORTED_COMPILER_API_VERSION = "6.0.3";
-
-/** The compiler settings this condition models, each as the one value it accepts. */
-const SUPPORTED_MODULE = new Map<ts.ModuleKind, TypeScriptCondition["module"]>([[ts.ModuleKind.ESNext, "esnext"]]);
-const SUPPORTED_MODULE_RESOLUTION = new Map<ts.ModuleResolutionKind, TypeScriptCondition["moduleResolution"]>([
-  [ts.ModuleResolutionKind.Bundler, "bundler"],
-]);
-const SUPPORTED_TARGET = new Map<ts.ScriptTarget, TypeScriptCondition["target"]>([[ts.ScriptTarget.ESNext, "esnext"]]);
-
-class Refusal extends Error {
-  constructor(
-    readonly code: ReasonCode,
-    readonly subject: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-function unreadable(subject: string, message: string): never {
-  throw new Refusal("tool-unavailable", subject, message);
-}
-function notModelled(subject: string, message: string): never {
-  throw new Refusal("unsupported-syntax", subject, message);
-}
 
 /**
  * The path invariant the request contract states, applied where a path first
@@ -83,58 +64,6 @@ function readJson(path: string, subject: string): Record<string, unknown> {
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) unreadable(subject, "Expected a JSON object.");
   return parsed as Record<string, unknown>;
-}
-
-function text(value: unknown, subject: string): string {
-  if (typeof value !== "string" || !value.length) notModelled(subject, "Expected a nonempty string.");
-  return value;
-}
-
-const parseHost: ts.ParseConfigHost = {
-  useCaseSensitiveFileNames: true,
-  readDirectory: (path, extensions, exclude, include, depth) =>
-    ts.sys.readDirectory(path, extensions, exclude, include, depth),
-  fileExists: (path) => existsSync(path),
-  readFile: (path) => (existsSync(path) ? readFileSync(path, "utf8") : undefined),
-};
-
-interface ParsedConfig {
-  readonly options: ts.CompilerOptions;
-  readonly references: readonly string[];
-}
-function parseConfig(path: string, subject: string): ParsedConfig {
-  if (!existsSync(path)) unreadable(subject, `${path} is not there.`);
-  const read = ts.readConfigFile(path, (file) => parseHost.readFile(file));
-  if (read.error) unreadable(subject, ts.flattenDiagnosticMessageText(read.error.messageText, " "));
-  const parsed = ts.parseJsonConfigFileContent(read.config, parseHost, dirname(path), undefined, path);
-  if (parsed.errors.length) unreadable(subject, ts.flattenDiagnosticMessageText(parsed.errors[0].messageText, " "));
-  return { options: parsed.options, references: (parsed.projectReferences ?? []).map((entry) => entry.path) };
-}
-
-/** The compiler settings a package states, including everything its config inherits. */
-interface CompilerSettings {
-  readonly module: TypeScriptCondition["module"];
-  readonly moduleResolution: TypeScriptCondition["moduleResolution"];
-  readonly target: TypeScriptCondition["target"];
-  readonly resolutionConditions: readonly string[];
-}
-function compilerSettings(options: ts.CompilerOptions, subject: string): CompilerSettings {
-  const module = options.module === undefined ? undefined : SUPPORTED_MODULE.get(options.module);
-  if (!module) notModelled(`${subject}.module`, "Unsupported module kind.");
-  const moduleResolution =
-    options.moduleResolution === undefined ? undefined : SUPPORTED_MODULE_RESOLUTION.get(options.moduleResolution);
-  if (!moduleResolution) notModelled(`${subject}.moduleResolution`, "Unsupported module resolution.");
-  const target = options.target === undefined ? undefined : SUPPORTED_TARGET.get(options.target);
-  if (!target) notModelled(`${subject}.target`, "Unsupported language target.");
-  if (options.strict !== true) notModelled(`${subject}.strict`, "Expected a project that type checks strictly.");
-  return {
-    module,
-    moduleResolution,
-    target,
-    resolutionConditions: (options.customConditions ?? []).map((name, index) =>
-      text(name, `${subject}.customConditions.${index}`),
-    ),
-  };
 }
 
 function entryPoints(manifest: Record<string, unknown>, packageRoot: string, subject: string): EntryPoint[] {
@@ -173,7 +102,7 @@ function readPackage(workspaceRoot: string, root: string): ReadPackage {
   const name = text(manifest.name, `${packageRoot}/package.json.name`);
   const version = text(manifest.version, `${packageRoot}/package.json.version`);
   const tsconfigPath = join(root, "tsconfig.json");
-  const config = parseConfig(tsconfigPath, `${packageRoot}/tsconfig.json`);
+  const config = parseConfig(ts, tsconfigPath, `${packageRoot}/tsconfig.json`);
   const dependencies = manifest.dependencies;
   if (
     dependencies !== undefined &&
@@ -196,7 +125,7 @@ function readPackage(workspaceRoot: string, root: string): ReadPackage {
       name: entry,
       selector: text(selector, `${packageRoot}/package.json.dependencies.${entry}`),
     })),
-    settings: compilerSettings(config.options, `${packageRoot}/tsconfig.json`),
+    settings: compilerSettings(ts, config.options, `${packageRoot}/tsconfig.json`),
   };
 }
 
@@ -219,20 +148,11 @@ function requireSelectorAccepts(selector: string, version: string, subject: stri
   if (stated !== version) notModelled(subject, `Expected the version this project carries, which is ${version}.`);
 }
 
-function oneSetting<T>(values: readonly T[], subject: string, spell: (value: T) => string): T {
-  const distinct = new Set(values.map(spell));
-  if (distinct.size !== 1) notModelled(subject, "The packages of this project state different compiler settings.");
-  return values[0];
-}
-
 function condition(options: TypeScriptConditionOptions): TypeScriptCondition {
   if (ts.version !== SUPPORTED_COMPILER_API_VERSION)
     unreadable("compilerApiVersion", `Compiler API ${SUPPORTED_COMPILER_API_VERSION} is required.`);
   const workspaceRoot = resolve(options.workspaceRoot);
-  const root = parseConfig(join(workspaceRoot, "tsconfig.json"), "tsconfig.json");
-  if (!root.references.length) notModelled("tsconfig.json.references", "The project references no package.");
-
-  const read = root.references.map((reference) => readPackage(workspaceRoot, reference));
+  const read = referencedPackageRoots(ts, workspaceRoot).map((reference) => readPackage(workspaceRoot, reference));
   const byRoot = new Map(read.map((entry) => [entry.root, entry.package.packageId]));
   const identities = new Set(byRoot.values());
   if (identities.size !== read.length) notModelled("tsconfig.json.references", "Two packages share one identity.");
@@ -258,11 +178,7 @@ function condition(options: TypeScriptConditionOptions): TypeScriptCondition {
     }),
   }));
 
-  const settings = oneSetting(
-    read.map((entry) => entry.settings),
-    "tsconfig.json.compilerOptions",
-    (value) => JSON.stringify(value),
-  );
+  const settings = sharedCompilerSettings(read.map((entry) => entry.settings));
 
   const owner = read.find((entry) => entry.package.name === options.resultDefinition.packageName);
   if (!owner || (byName.get(options.resultDefinition.packageName) ?? []).length !== 1)

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "tools/ddd/lib/typescript/compiler/**/*.ts",
+    "tools/ddd/lib/typescript/domain-facts/**/*.ts",
+    "tools/ddd/lib/typescript/error-contract/project-condition.ts",
+    "scripts/prepare-typescript-compiler.ts",
+    "tests/typescript-compiler-launch.test.ts",
+    "tests/t11-typescript-domain-facts.test.ts",
+    "tests/fixtures/typescript-facts/*.ts"
+  ]
+}

@@ -28,6 +28,8 @@ Tag/latest acquisition uses archive fixtures at the HTTP boundary, including ver
 
 The installer builds a projection and prepares a candidate copy of the managed harness, shared skills, and AI-DLC records. It composes through the projection's standard hook, grants the execute bit to the [native extractor](native-extractor-distribution.md) inside the candidate, checks plugin drops, compiles the graph, and compares installed payload bytes with the selected projection before publishing changes. Dry-run stops before publication.
 
+The [TypeScript Compiler API](typescript-fact-extraction.md) the fact extraction runs on is part of the `tools/` payload and needs no step of its own. The sandbox tests install it for Claude and Codex, check that `owned_files` records the compiler and its manifest, and launch the extraction from the installed tree — after a fresh installation and again after an `--update` — in a process that cannot install packages.
+
 Only changed files are published. The installer checks destination contents against the candidate's starting state, refuses writes through symbolic links, and keeps rollback copies for the publication step. Compose and validation failures leave the destination unchanged. The tests do not inject process termination or storage failure during publication; this is not a claim of whole-filesystem atomicity.
 
 An installation lock prevents overlapping installer publications. A caught publication failure attempts to restore prior file contents; if restoration itself fails, the error names the retained recovery directory.

@@ -32,6 +32,7 @@ The layer designs define conventions for generated applications and the plugin. 
 | Native Rust parsing, comparison results, and semantic/distribution limits | [Rust + syn experiment](rust-syn-spike.md) |
 | Fresh installation, updates, and failure behavior | [Installation verification](installation-verification.md) |
 | Installed path, covered platforms, and launch failures of the native extractor | [Native extractor distribution](native-extractor-distribution.md) |
+| Distributed Compiler API, supported project settings, launch failures, and the fact contract of the TypeScript extraction | [TypeScript fact extraction](typescript-fact-extraction.md) |
 | Provenance of earlier Codex host results | [Historical host verification](codex-host-verification.md) |
 | Machine-readable execution records | [Evidence](evidence/) |
 

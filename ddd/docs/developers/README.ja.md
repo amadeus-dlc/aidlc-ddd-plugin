@@ -32,6 +32,7 @@
 | Rustによる構文解析の比較結果と型解決・配布の限界 | [Rust＋synの試作](rust-syn-spike.ja.md) |
 | 新規導入、更新、失敗時の挙動 | [導入検証](installation-verification.ja.md) |
 | ネイティブ抽出器の設置先、対応プラットフォーム、起動失敗時の応答 | [ネイティブ抽出器の配布](native-extractor-distribution.ja.md) |
+| TypeScript の事実抽出が同梱する Compiler API、対応するプロジェクト設定、起動失敗時の応答、事実の契約 | [TypeScript の事実抽出](typescript-fact-extraction.ja.md) |
 | 以前のCodexホスト検証の根拠 | [過去のホスト検証](codex-host-verification.ja.md) |
 | 機械可読な実行記録 | [検証記録](evidence/) |
 

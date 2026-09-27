@@ -4,6 +4,10 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — TypeScript の事実抽出
+
+- **TypeScript Compiler API を同梱し、それを使って TypeScript の事実を抽出する。** 配布物は `typescript@6.0.3` を `tools/ddd/lib/typescript/vendor/typescript.js` に同梱し、その sha256 を manifest に記録する。導入先のプロジェクトに `typescript` パッケージは不要になり、新規導入と `--update` のどちらでも配置される。`bun run prepare:typescript` は固定した開発用依存関係からこれを複製する。1つの抽出が、ファイルごとに宣言、メンバーと可視性、型だけのものを区別した import と export、呼び出し、構築を返す。構文から決められないもの（デコレータ、計算された名前、オブジェクトリテラルのスプレッド、分割代入、`import =`、`export =`、指定子の決まらない動的 import、namespace、動的な呼び出し先）は `domain-facts.unresolved` の note として返し、構文エラーのあるファイルには事実を返さない。起動できない場合は `typescript-extractor:compiler-missing`、`checksum-mismatch`、`load-failed`、`version-mismatch`、`project-condition-mismatch` のいずれかに分類し、ネイティブ抽出器と同じ形でセンサーを検査不能として止める。対応する Compiler API の版とプロジェクト設定は1か所で定め、error-contract のプロジェクト条件と共有する。error-contract の応答は変わらない。この事実を読むセンサーはまだ無い。[TypeScript の事実抽出](docs/developers/typescript-fact-extraction.ja.md)を参照。
+
 ## 未リリース — ゲートが言語共通の成果物を読む
 
 - **操作エラー集合の照合は、TypeScript の観測が写像のモジュールのファイルを指しているかを検査するようにした。** 従来、照合器は TypeScript の観測のファイルを写像の `code.module` と比べなかったため、パッケージ・型・メソッドが同じ別モジュールのファイルを指す観測も受理していた。実装写像の形式と `schema_version` は変えず、置き場所は観測側のプロジェクト設定が述べる契約とした。照合器は、観測の `packageRoot`、設定の `typescript.moduleLayout`、写像の `code.module` から許すファイルを求め、`target.file` と完全一致で比べる。ソースルートはパッケージのルート直下の `src` で、`named-file` では `<module>.ts`、`index-file` では `<module>/index.ts` と `<module>.ts` を許す。設定が TypeScript の配置を名指ししない観測、`code.module` が空か TypeScript のモジュール名として綴れない要素を持つ写像、宣言パスが型の1要素だけではない観測も拒否する。これで観測を写像へ結ぶ検査の強さが Rust とそろう。Rust の検査は変えていない。TypeScript の検証経路も両配置で観測するようにし、class とコンパニオンの両プロジェクトに `index-file` で書いた `billing-domain-index-file` を追加した。両表現・両配置で同じ判定になり、[証跡](docs/developers/evidence/operation-error-set.json)の `typescript_module_layouts` に記録する。証跡の未検証項目から TypeScript の `index-file` が外れ、[操作エラー集合の照合](docs/developers/operation-error-set.ja.md)の「限界」からこの項目を外した。置き場所の規約は[プロジェクト設定](docs/users/project-settings.ja.md)と[実装写像](docs/users/implementation-mapping.ja.md)に記載した。
