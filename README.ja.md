@@ -53,4 +53,4 @@ Claude Codeでは `--harness claude` を指定します。新規導入・更新C
 
 [MIT](LICENSE)。同梱するネイティブRust抽出器は第三者クレートから構築しています。[notice](ddd/tools/ddd/bin/NOTICE.md) を参照してください。
 
-Rustアプリケーションでは `.ddd.toml` で配置形式を選択します。[設定と検査の契約](ddd/docs/users/rust-module-layout.ja.md)を参照してください。
+Rustアプリケーションでは `.ddd.toml` で配置形式を選択します。[設定と検査の契約](ddd/docs/users/rust-module-layout.ja.md)を参照してください。TypeScriptアプリケーションも同じ文書で `named-file` か `index-file` を選択します。[TypeScriptの配置契約](ddd/docs/users/typescript-module-layout.ja.md)を参照してください。

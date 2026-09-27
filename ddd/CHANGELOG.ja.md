@@ -12,6 +12,10 @@ dddプラグインの主な変更を記録します。形式は[Keep a Changelog
 - **TypeScript の事実を拡張する。** 関数宣言は `params` を持ち、結果を変更せずに別の呼び出しへ渡す呼び出しは `forwarded_to` を持つ。どちらも任意のフィールドであり、既存の事実は変わらない。
 - ドメインゲートの規則と判定結果は変わらない。検査の組み立ては新しいゲートと共通のゲート設定で行い、依存の辺は1回の実行につき1度だけ組み立てるようにした。
 
+## 未リリース — TypeScript のモジュール配置
+
+- **TypeScript のモジュール配置を、両配置で、ゲートと CI で検査する。** 新しい `ddd-typescript-module-layout` ゲートセンサーと `ddd-check-typescript-module-layout.ts` CI 用入口は同じ検査を呼ぶため、検査が適用されるプロジェクトでは同じ所見と同じ判定を返す。対象外のプロジェクト（後述）では、センサーは合格にし、CI 用入口は検査したパッケージが0件のため 0 以外を返す。検査はプロジェクト直下の `.ddd.toml` の `typescript.module_layout` を読み、各パッケージのルート（`package.json` のあるディレクトリ）直下の `src` にあるモジュールをすべて判定する。`named-file` では親を `src/<m>.ts`、`index-file` では親を `src/<m>/index.ts` に置き、末端はどちらも `src/<m>/<leaf>.ts` とする。`src/index.ts` はパッケージの入口として扱う。`module-layout.configuration`・`module-layout.violation`・`module-layout.unresolved` の意味は Rust と同じである。もう一方の規約で置いた親や、子の無いディレクトリに残った `index.ts` は、必要なファイルを示す violation になる。1つのモジュールを両方のファイルに置いた構成、モジュールファイルの無いモジュールディレクトリ、シンボリックリンク、モジュールファイルの名前にならないソース（`*.test.ts`、`*.d.ts`、`.tsx`、`.mts`、`.cts`）、別のパッケージの `src` の中のパッケージ、読めないディレクトリ、設定があるのに `src` を持つパッケージが無いプロジェクトは unresolved とし、合格にしない。typescript を名指しせず、`tsconfig.json` も TypeScript ソースも持たないプロジェクトには何も報告しないため、Rust だけのプロジェクトは新しいセンサーを通過する。接続先は Rust の配置検査と同じ code-generation・build-and-test・ci-pipeline である。Rust の配置検査は、設定の読込と、走査中の入れ子の設定・シンボリックリンク・読めないディレクトリの報告を TypeScript の検査と共有するようにした。所見は変わらない。[TypeScript モジュール配置契約](docs/users/typescript-module-layout.ja.md)を参照。
+
 ## 未リリース — TypeScript のドメインゲート
 
 - **code-generation に TypeScript のドメインゲート `ddd-typescript-domain` を追加する。** class 表現と companion 表現の両方について、規則 `a`（公開された状態）、`b`（未宣言のミューテーション）、`c`（不完全な構築）、`d`（getter の呼び出し）、`g`（依存の方向）、`domain-packaging.*`、層の診断を TypeScript の事実で判定し、`ddd-rust-domain` と同じ規則 ID と所見の意味で報告する。状態隠蔽は state-evidence の検査に従う。状態を隠すのは `#` フィールドと companion のクロージャだけであり、companion には非公開の `unique symbol` のブランドが1つ必要である。依存は、パス、`imports`、`paths` エイリアス、パッケージ名を通して辿る。非公開パス、別パッケージへのエイリアス、`exports` が公開しないサブパス、公開入口での `export *` は、型だけの依存であっても所見になる。[TypeScript ドメインセンサー契約](docs/users/typescript-sensor-contract.ja.md)を参照。

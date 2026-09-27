@@ -74,7 +74,12 @@ describe("typescript golden cases", () => {
     );
     const declared = declaredRules(sensorsDir, manifests);
     expect([...declared.keys()].sort()).toEqual(
-      ["ddd-typescript-domain", "ddd-typescript-interface-adapter", "ddd-typescript-use-case"].sort(),
+      [
+        "ddd-typescript-domain",
+        "ddd-typescript-interface-adapter",
+        "ddd-typescript-module-layout",
+        "ddd-typescript-use-case",
+      ].sort(),
     );
     // The layer gates declare exactly the rule ids of their Rust counterparts.
     for (const layer of ["use-case", "interface-adapter"]) {

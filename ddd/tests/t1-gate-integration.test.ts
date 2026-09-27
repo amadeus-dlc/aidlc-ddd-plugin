@@ -26,6 +26,7 @@ import {
 import { gateCases } from "./golden/contract/coverage.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { layoutConfig } from "./golden/module-layout/cases.ts";
+import { typescriptLayoutConfig } from "./golden/module-layout/typescript-cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
 import type { GoldenCase } from "./golden/runner.ts";
 import { DOMAIN_FILE, TYPESCRIPT_CASES, TYPESCRIPT_SENSOR } from "./golden/typescript/cases.ts";
@@ -583,6 +584,8 @@ for (const harness of ["claude", "codex"] as const) {
         }
         for (const [path, content] of Object.entries(entry.files)) write(join(f.record, path), content);
         for (const [path, content] of Object.entries(entry.workspace)) write(join(f.root, path), content);
+        // The TypeScript module layout gate fires on the same stage, so the project states its layout.
+        write(join(f.root, ".ddd.toml"), typescriptLayoutConfig("named-file"));
         const result = openGate(f, "code-generation");
         expect(result.output).toContain("Recorded awaiting-approval");
         const auditRoot = join(f.record, "audit");
