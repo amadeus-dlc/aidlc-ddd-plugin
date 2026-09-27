@@ -7,6 +7,7 @@ adds:
       required: false
   sensors:
     - ddd-rust-module-layout
+    - ddd-typescript-module-layout
     - ddd-rust-domain
     - ddd-rust-use-case
     - ddd-rust-interface-adapter
@@ -26,6 +27,8 @@ Before planning, read the naming and placement conventions and carry them into
 the plan:
 
 - **Rust module layout.** Read `ddd-rust-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Establish one explicit layout before generating Rust. Follow it across all packages; do not infer it from edition or introduce `mod.rs` when `file` is selected.
+- **TypeScript module layout.** Read `ddd-typescript-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Place every TypeScript module under a package's `src` following the one selected layout: `named-file` or `index-file` for modules with children, and the named file for leaves. Do not infer it from existing files.
+- **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Every declaration states the language that spells the package, its name, and the module path below its root; only the ones placed in Rust reach the Rust code checks. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included. TypeScript packages are not yet matched against these declarations, so a mapping that places code there has nothing to match against here.
 - **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Every declaration states the language that spells the package, its name, and the module path below its root; only the ones placed in Rust reach the Rust code checks. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included. TypeScript is not generated yet; when the change claims TypeScript domain sources, the declarations placed in TypeScript are matched against the module paths of each affected domain package's `src/` (`src/index.ts` is the package root, `src/a.ts` and `src/a/index.ts` are `[a]`).
 - **Naming and placement.** Crate suffixes (`-domain`, `-use-case`,
   `-interface-adapter`, `-infrastructure`), the `packages/<layer>/` or
@@ -67,5 +70,7 @@ stops the gate as uninspectable; resolve it rather than retrying.
 The domain sensor inspects the module structure of affected domain crates, in addition to changed files. Resolve technical-classification names, undeclared modules, broken references, and unresolved analysis. Review the correspondence between vocabulary and responsibilities in code review as well.
 
 The independent `ddd-rust-module-layout` sensor also fires on code-summary and checks every owned Cargo package, even with no source claims or a skipped domain model. For standalone completion, run `bun <project-root>/<harness-dir>/tools/ddd-check-rust-module-layout.ts --project <project-root>` and require exit status 0 before reporting completion.
+
+The independent `ddd-typescript-module-layout` sensor also fires on code-summary and checks the `src` source root of every package holding TypeScript. For standalone completion of a TypeScript project, run `bun <project-root>/<harness-dir>/tools/ddd-check-typescript-module-layout.ts --project <project-root>` and require exit status 0 before reporting completion.
 
 In these commands, `<harness-dir>` is `.claude` for Claude Code or `.codex` for Codex; replace both path placeholders with the installed project paths.

@@ -41,6 +41,8 @@ Rust モジュール配置検査は、`ddd-check-rust-module-layout.ts` と `ddd
 
 プロジェクトが名指しした言語が、配置検査のすべきことを決めます。`rust` を名指しせず、Cargo マニフェストも `.rs` ファイルも持たないプロジェクトには検査すべき Rust の配置がなく、検査は何も報告しません。`rust` を名指ししていないのにそのどちらかを持つプロジェクトは `module-layout.configuration` になります。設定が説明していない Rust を持っているためです。
 
+TypeScript モジュール配置検査も、`ddd-check-typescript-module-layout.ts` と `ddd-typescript-module-layout` ゲートセンサーの両方の入口で同じ形式を読み、`typescript` に同じ扱いを適用します。`typescript` を名指しせず、`tsconfig.json` も TypeScript ソースも持たないプロジェクトには検査すべきものがなく、そのどちらかを持つプロジェクトは `module-layout.configuration` になります。検査の内容は [TypeScript モジュール配置契約](typescript-module-layout.ja.md)が説明します。
+
 1つの記録の正規モデル・実装写像・レイヤー宣言とあわせて設定を変換する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、プロジェクト一式を一度に移行してください。
 
 ## 読込と検証

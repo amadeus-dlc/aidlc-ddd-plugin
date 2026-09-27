@@ -41,6 +41,8 @@ The Rust module layout check reads this format through both of its entry points,
 
 Which languages the project names decides what the layout check has to do. A project that does not name `rust` and holds no Cargo manifest and no `.rs` file has no Rust layout to check, and the check reports nothing. A project that does not name `rust` but holds either is reported as `module-layout.configuration`: it holds Rust its settings do not account for.
 
+The TypeScript module layout check reads the same format through `ddd-check-typescript-module-layout.ts` and the `ddd-typescript-module-layout` gate sensor, and applies the same rule to `typescript`: a project that does not name `typescript` and holds no `tsconfig.json` and no TypeScript source has nothing to check, and one that holds either is reported as `module-layout.configuration`. The [TypeScript module layout contract](typescript-module-layout.md) describes what it enforces.
+
 Convert the whole project in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts these settings together with the canonical model, the implementation mapping and the layer declarations of one record.
 
 ## Read and validate

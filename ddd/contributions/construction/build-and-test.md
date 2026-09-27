@@ -4,6 +4,7 @@ plugin: ddd
 adds:
   sensors:
     - ddd-rust-module-layout
+    - ddd-typescript-module-layout
 fragments:
   - anchor: after-step:1
     order: 100
@@ -16,5 +17,11 @@ fragments:
 Read shared `ddd-rust-module-layout.md` knowledge. For a Rust project, run `bun <project-root>/<harness-dir>/tools/ddd-check-rust-module-layout.ts --project <project-root>` and require exit status 0. Record the selected mode, inspected crate/file counts, and result in build-and-test-summary. This check covers all owned packages and targets, independent of source claims and domain-modeling status. Run it on every build/test cycle, including deletion-only and configuration-only changes. It does not replace cargo check or tests.
 
 The blocking `ddd-rust-module-layout` sensor repeats the check at admission on build-and-test-summary. For standalone completion, run the direct command before reporting completion; the standard framework does not perform general sensor checks on that path.
+
+### Verify the selected TypeScript module layout
+
+Read shared `ddd-typescript-module-layout.md` knowledge. For a TypeScript project, run `bun <project-root>/<harness-dir>/tools/ddd-check-typescript-module-layout.ts --project <project-root>` and require exit status 0. Record the selected mode, inspected package/file counts, and result in build-and-test-summary. This check covers the `src` source root of every package, independent of source claims and domain-modeling status. Run it on every build/test cycle, including deletion-only and configuration-only changes. It does not replace type checking or tests.
+
+The blocking `ddd-typescript-module-layout` sensor repeats the check at admission on build-and-test-summary. For standalone completion, run the direct command before reporting completion.
 
 In these commands, `<harness-dir>` is `.claude` for Claude Code or `.codex` for Codex; replace both path placeholders with the installed project paths.

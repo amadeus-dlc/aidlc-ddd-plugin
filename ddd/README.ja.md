@@ -30,6 +30,7 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-layer-structure | 層構造の必須項目、依存方向、命名、復元宣言 |
 | ddd-design-advisories | 複数集約、リポジトリ範囲、保存宣言への助言 |
 | ddd-rust-module-layout | テストを含む全Cargoパッケージで、選択したファイル配置を強制 |
+| ddd-typescript-module-layout | 全パッケージの `src` で、選択したTypeScriptのファイル配置を強制 |
 | ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
@@ -81,3 +82,5 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 [MIT](../LICENSE)。同梱するネイティブRust抽出器がリンクする第三者クレートとそのライセンスは [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md) に一覧があります。同梱するTypeScript Compiler API（`typescript@6.0.3`、Apache-2.0）とその通知は [tools/ddd/lib/typescript/vendor/NOTICE.md](tools/ddd/lib/typescript/vendor/NOTICE.md) に記載しています。
 
 Rustプロジェクトでは、生成前にプロジェクト直下の `.ddd.toml` で `file` か `mod-rs` を選択してください。設定、承認時の必須検査、CIコマンドは[モジュール配置契約](docs/users/rust-module-layout.ja.md)を参照してください。
+
+TypeScriptプロジェクトでは、同じ文書で `named-file` か `index-file` を選択してください。検査するソースルート、承認時の検査、CIコマンドは[TypeScriptモジュール配置契約](docs/users/typescript-module-layout.ja.md)を参照してください。

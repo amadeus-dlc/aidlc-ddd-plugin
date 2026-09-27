@@ -1,15 +1,15 @@
-import type { Dirent } from "node:fs";
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { inspectModules, isRustSource } from "../packaging/rust-modules.ts";
-import { DOCUMENT_NAME, type ProjectSelection } from "../project-settings/contract.ts";
-import { validateProjectSettings } from "../project-settings/settings.ts";
+import { DOCUMENT_NAME } from "../project-settings/contract.ts";
 import { type DomainFactSet, type RustSourceFile, requireDomainFacts } from "../rust/domain-facts/index.ts";
 import type { NativeOutcome } from "../rust/native/launch.ts";
 import { finding } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import { isExcludedFromProjectScan } from "../shared/project-scope.ts";
 import { scanWorkspace } from "../workspace/resolver.ts";
+import { readLayoutSelection } from "./settings.ts";
+import { admitLayoutEntry, readLayoutDirectory } from "./walk.ts";
 
 export type ModuleLayout = "file" | "mod-rs";
 const posix = (path: string) => path.split(sep).join("/");
@@ -31,29 +31,6 @@ export interface LayoutResult {
   crates: number;
   files: number;
   mode?: ModuleLayout;
-}
-
-/**
- * The project settings of the document at `configPath`, or why they cannot be read. Only the root
- * document is validated here: the walk above already reports every nested one, and reading them a
- * second time would report the same defect under two rules.
- */
-function readSelection(configPath: string): ProjectSelection | { readonly detail: string } {
-  let table: unknown;
-  try {
-    table = Bun.TOML.parse(readFileSync(configPath, "utf8"));
-  } catch (error) {
-    return { detail: error instanceof Error ? error.message : String(error) };
-  }
-  const outcome = validateProjectSettings(table as Record<string, unknown>, configPath);
-  if (outcome.kind === "validated") return outcome.selection;
-  const { rejection } = outcome;
-  // A document still in the Rust-only format is not a defect of its own wording; it has to be converted.
-  const guidance =
-    rejection.reason === "legacy-modern-mixed"
-      ? "; convert the whole project with `ddd-artifact-set migrate`, or this document alone with `ddd-project-settings migrate`"
-      : "";
-  return { detail: `${rejection.reason}: ${rejection.detail}${guidance}` };
 }
 
 /**
@@ -96,32 +73,12 @@ export function checkModuleLayout(
   const sources: string[] = [];
   function discover(directory: string): void {
     checkBudget();
-    let entries: Dirent[];
-    try {
-      entries = readdirSync(directory, { withFileTypes: true });
-    } catch (error) {
-      // The project settings search refuses a tree it cannot list; this check reports the same fact in
-      // its own vocabulary, beside the symbolic links it already declines to inspect, so an unreadable
-      // directory yields a finding the caller can act on instead of an exception from the walk.
-      report(
-        "unresolved",
-        directory,
-        `cannot inspect this directory: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return;
-    }
+    const entries = readLayoutDirectory(directory, report);
+    if (!entries) return;
     for (const entry of entries) {
-      if (entry.name === DOCUMENT_NAME && directory !== root)
-        report(
-          "configuration",
-          join(directory, entry.name),
-          "nested layout configuration is not allowed; use the project-root .ddd.toml",
-        );
-      if (isExcludedFromProjectScan(entry.name)) continue;
+      if (!admitLayoutEntry(root, directory, entry, report)) continue;
       const path = join(directory, entry.name);
-      if (entry.isSymbolicLink()) {
-        report("unresolved", path, "symbolic links in the inspected project are not supported");
-      } else if (entry.isDirectory()) discover(path);
+      if (entry.isDirectory()) discover(path);
       else if (entry.isFile()) {
         if (entry.name === "Cargo.toml") manifests.push(path);
         if (entry.name.endsWith(".rs")) sources.push(path);
@@ -132,9 +89,9 @@ export function checkModuleLayout(
   const configPath = join(root, DOCUMENT_NAME);
   const holdsRust = manifests.length > 0 || sources.length > 0;
   if (!holdsRust && !existsSync(configPath)) return result;
-  const selection = readSelection(configPath);
-  if ("detail" in selection) {
-    report("configuration", configPath, `Choose one project-wide layout in ${DOCUMENT_NAME}: ${selection.detail}`);
+  const selection = readLayoutSelection(configPath);
+  if ("message" in selection) {
+    report("configuration", configPath, selection.message);
     return result;
   }
   if (selection.rust === null) {

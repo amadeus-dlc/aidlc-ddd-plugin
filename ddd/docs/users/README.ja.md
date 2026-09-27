@@ -18,6 +18,7 @@
 | プロジェクトの設定・モデル・写像・レイヤー宣言を一度に変換 | [成果物一式の移行](artifact-migration.ja.md) |
 
 | Rustモジュールの配置をプロジェクト全体で統一 | [モジュール配置契約](rust-module-layout.ja.md) |
+| TypeScriptモジュールの配置を全パッケージの `src` で統一 | [TypeScriptモジュール配置契約](typescript-module-layout.ja.md) |
 
 ## 対応状況と制約の確認
 

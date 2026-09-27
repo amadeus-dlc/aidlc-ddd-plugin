@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は11センサー・77規則項目。75項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では435ケースを各環境で実行する。承認経路には、この表から選んだ166入力を各環境で通す。
+対象は12センサー・80規則項目。78項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では474ケースを各環境で実行する。承認経路には、この表から選んだ180入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -91,6 +91,9 @@
 | ddd-typescript-domain<br>`layer.unknown` | `clean-class` | `violation-layer-unknown` | `violation-layer-unknown`<br>layer.*を一括除外せず、具体的な診断ごとに検証する。 |
 | ddd-typescript-domain<br>`layer.unowned` | `clean-class` | `violation-layer-unowned` | `violation-layer-unowned`<br>layer.*を一括除外せず、具体的な診断ごとに検証する。 |
 | ddd-typescript-domain<br>`model.invalid` | `clean-class` | `violation-model-invalid` | `clean-model-skipped-class`<br>EXECUTEのモデル検証と、SKIPによるモデル依存検査の対象外を区別する。 |
+| ddd-typescript-module-layout<br>`module-layout.configuration` | `clean-named-file-parent` | `violation-config-no-typescript`<br>`violation-config-unknown-layout`<br>`violation-config-legacy`<br>`violation-config-missing`<br>`violation-nested-config`<br>`violation-config-missing-build-and-test`<br>`violation-config-missing-ci-pipeline` | `clean-index-file-parent`<br>明示した TypeScript の2形式を許可し、未設定・未知の値・旧版・入れ子・typescript を名指ししない設定を拒否する。 |
+| ddd-typescript-module-layout<br>`module-layout.unresolved` | `clean-multi-package-workspace` | `violation-missing-parent-named-file`<br>`violation-missing-parent-index-file`<br>`violation-ambiguous-parent-named-file`<br>`violation-ambiguous-parent-index-file`<br>`violation-ambiguous-leaf-named-file`<br>`violation-unplaceable-source-name`<br>`violation-invalid-directory-name`<br>`violation-nested-package-in-src`<br>`violation-no-package`<br>`violation-symlink-outside-package`<br>`violation-symlink-in-src` | `clean-sources-outside-src`<br>パッケージの src だけを検査し、欠落・曖昧・リンク・配置できないソースを検査済みとしない。 |
+| ddd-typescript-module-layout<br>`module-layout.violation` | `clean-named-file-parent` | `violation-index-parent-in-named-file`<br>`violation-named-parent-in-index-file`<br>`violation-index-parent-in-workspace-package`<br>`violation-index-leaf-named-file`<br>`violation-index-leaf-index-file`<br>`violation-index-parent-in-named-file-build-and-test`<br>`violation-index-parent-in-named-file-ci-pipeline` | `clean-index-file-leaf`<br>親は選択した規約に従い、末端はどちらの規約でも名前付きファイルとする。 |
 
 ## 承認経路と対象外
 

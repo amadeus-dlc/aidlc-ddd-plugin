@@ -11,6 +11,7 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | t1-model-artifacts / t1-gate-integration | Direct canonical-artifact checks and Claude/Codex normal approval admission. |
 | t7-domain-packaging | Vocabulary-based declaration/layout matching; technical names and unresolved analysis. |
 | t10-rust-module-layout | Project-wide configuration, both layout policies, direct sensors, CI exit statuses, shared logical module resolution, and what the gate and the CI entry each do when the extractor cannot be launched. |
+| t11-typescript-module-layout | TypeScript layout settings, both layout policies over package `src` roots, unresolved structure (ambiguous, missing, linked, unplaceable, nested packages, unreadable directories), the direct sensor and the CI entry returning the same verdict, CI exit statuses, and a project without TypeScript left unreported. |
 | t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
@@ -47,9 +48,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-Distribution checks run 435 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
+Distribution checks run 474 cases per harness. The runner creates a temporary directory and executes actual sensor scripts as child processes. These direct checks do not execute normal approval or model-driven generation.
 
-`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 435 distribution cases per harness, and normal approval integration. It sends 166 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain, and a TypeScript domain gate that cannot decide is shown to keep the approval closed on each harness.
+`bun run test:sandbox` runs heading compatibility, contract cases/report checks, Claude/Codex builds, disposable compose/graph/idempotency checks, 474 distribution cases per harness, and normal approval integration. It sends 180 selected matrix inputs through admission per harness and checks audit records and finding rule IDs. The existing 40 combined integration cases remain, and a TypeScript domain gate that cannot decide is shown to keep the approval closed on each harness.
 
 ## Verified regressions and remaining checks
 

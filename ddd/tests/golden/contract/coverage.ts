@@ -434,6 +434,30 @@ cover(
   "Explicit paths resolve; stale, missing, ambiguous, and opaque modules cannot pass as inspected.",
   "明示パスを解決し、残骸・欠落・曖昧・解析不能なモジュールを検査済みとしない。",
 );
+cover(
+  "ddd-typescript-module-layout",
+  ["module-layout.configuration"],
+  "clean-named-file-parent",
+  "clean-index-file-parent",
+  "Both explicit TypeScript layouts are supported; missing, unknown, legacy, nested, and TypeScript-less settings fail.",
+  "明示した TypeScript の2形式を許可し、未設定・未知の値・旧版・入れ子・typescript を名指ししない設定を拒否する。",
+);
+cover(
+  "ddd-typescript-module-layout",
+  ["module-layout.violation"],
+  "clean-named-file-parent",
+  "clean-index-file-leaf",
+  "Parents follow the selected policy, while a leaf is the named file in both policies.",
+  "親は選択した規約に従い、末端はどちらの規約でも名前付きファイルとする。",
+);
+cover(
+  "ddd-typescript-module-layout",
+  ["module-layout.unresolved"],
+  "clean-multi-package-workspace",
+  "clean-sources-outside-src",
+  "Only package src roots are inspected; missing, ambiguous, linked, and unplaceable sources cannot pass as inspected.",
+  "パッケージの src だけを検査し、欠落・曖昧・リンク・配置できないソースを検査済みとしない。",
+);
 const ts = "ddd-typescript-domain";
 cover(
   ts,
@@ -584,6 +608,8 @@ export function coverageProblems(
   }
   return issues;
 }
+/** The layout sensors whose per-stage copies every admission run carries, since each gates three stages. */
+const LAYOUT_SENSORS: ReadonlySet<string> = new Set(["ddd-rust-module-layout", "ddd-typescript-module-layout"]);
 export function gateCases(): GoldenCase[] {
   const keys = new Set<string>();
   for (const row of COVERAGE) {
@@ -591,7 +617,6 @@ export function gateCases(): GoldenCase[] {
       if (name) keys.add(`${row.sensor}/${name}`);
   }
   return ALL_CASES.filter(
-    (entry) =>
-      keys.has(caseKey(entry)) || (entry.sensor === "ddd-rust-module-layout" && entry.stage !== "code-generation"),
+    (entry) => keys.has(caseKey(entry)) || (LAYOUT_SENSORS.has(entry.sensor) && entry.stage !== "code-generation"),
   );
 }
