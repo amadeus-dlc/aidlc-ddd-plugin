@@ -85,6 +85,11 @@ done
 CONFIG_DIR="$(cd "${CONFIG_DIR}" && pwd)"
 
 command -v takt >/dev/null 2>&1 || die "takt が PATH にありません (mise の設定を確認してください)"
+# claude-sdk プロバイダ (.takt/runtime.yaml で coder に割り当てている) は、TAKT_CLAUDE_CLI_PATH が無いと
+# Claude Agent SDK に同梱された Claude Code を使う。同梱版は新しいモデルに追いつかないことがあり、
+# Claude Opus 5.5 は 2.1.280 以上を要求する。そのため PATH 上の claude を明示的に渡す。
+CLAUDE_CLI="$(command -v claude 2>/dev/null || true)"
+[ -n "${CLAUDE_CLI}" ] || die "claude が PATH にありません (mise の設定を確認してください)"
 
 if [ "$#" -eq 0 ]; then
   set -- run
@@ -96,9 +101,11 @@ TAKT_GLOBAL_DIR="${REPO_ROOT}/.takt/global"
 unset CLAUDE_CODE_OAUTH_TOKEN
 export CLAUDE_CONFIG_DIR="${CONFIG_DIR}"
 export TAKT_CONFIG_DIR="${TAKT_GLOBAL_DIR}"
+export TAKT_CLAUDE_CLI_PATH="${CLAUDE_CLI}"
 
 cd "${REPO_ROOT}"
 printf '==> CLAUDE_CONFIG_DIR=%s (CLAUDE_CODE_OAUTH_TOKEN は unset 済み)\n' "${CLAUDE_CONFIG_DIR}"
 printf '==> TAKT_CONFIG_DIR=%s (~/.takt は読まない)\n' "${TAKT_CONFIG_DIR}"
+printf '==> TAKT_CLAUDE_CLI_PATH=%s (%s)\n' "${TAKT_CLAUDE_CLI_PATH}" "$("${TAKT_CLAUDE_CLI_PATH}" --version 2>/dev/null | head -1)"
 printf '==> takt %s\n' "$*"
 exec takt "$@"

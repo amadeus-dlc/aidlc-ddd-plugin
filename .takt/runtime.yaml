@@ -9,7 +9,25 @@ provider:
     opus-5-5:
       provider: claude
       model: claude-opus-5-5
+    # 同じ Claude Opus 5.5 を、Claude Agent SDK 経由で呼ぶ。
+    opus-5-5-sdk:
+      provider: claude-sdk
+      model: claude-opus-5-5
   # すべてのステップ（レビュアー群・companion・その moderator を含む）を Claude Opus 5.5 で動かす。
   # Claude Opus 5 と Claude Fable 5.1 は使わない。
   defaults:
     profile: opus-5-5
+  targets:
+    # coder（implement・write_tests・fix・reimplement など、長く動くステップ）だけは claude-sdk で動かす。
+    #
+    # provider: claude は Claude CLI の stdout を文字列に溜め、10MB を超えるとステップを失敗させる
+    # （takt 0.66 の claude-headless/headless-spawn.js。上限は設定で変えられない）。長い実装ステップが
+    # 87 分動いた後にこれで失敗した実績がある（#70）。claude-sdk は出力を逐次受け取るため、この上限が無い。
+    #
+    # takt はセッションをプロバイダ名込みで管理する。coder のステップは同じ claude-sdk を使うので、
+    # coder 同士ではセッションが続く。一方、plan など claude のままのステップとはセッションを共有せず、
+    # coder は新しいセッションで始まる。各ステップは Report Directory のレポートから文脈を読むため、
+    # 前のステップの会話が無くても作業は続けられる。
+    personas:
+      coder:
+        profile: opus-5-5-sdk
