@@ -12,6 +12,7 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | t7-domain-packaging | Vocabulary-based declaration/layout matching; technical names and unresolved analysis. |
 | t10-rust-module-layout | Project-wide configuration, both layout policies, direct sensors, CI exit statuses, shared logical module resolution, and what the gate and the CI entry each do when the extractor cannot be launched. |
 | t11-typescript-module-layout | TypeScript layout settings, both layout policies over package `src` roots, unresolved structure (ambiguous, missing, linked, unplaceable, nested packages, unreadable directories), the direct sensor and the CI entry returning the same verdict, CI exit statuses, and a project without TypeScript left unreported. |
+| t11-typescript-generation-samples | The TypeScript generation samples in both code representations and both module layouts: the domain gate and the module layout gate with no finding, the module layout CI entry exiting 0, the compiler with no diagnostic, and the parent module placed as the layout requires. |
 | t9-sensor-contract | Sensor/rule coverage, positive/negative/boundary cases, dependency table, all reserved names, and report drift. |
 | t8-declaration-language | English markers, legacy Japanese markers, and rejection of cross-language duplicate sections. |
 | u1-sensor-foundation | Model loading, IDs/references, completeness, findings, and runtime contracts. |
@@ -20,7 +21,7 @@ Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract m
 | layer-declaration-contract / layer-declaration-migration | Reading, refusing and inspecting the language-neutral layer declaration for Rust and TypeScript, at both the Unit and the stage-direct location, and preview/apply migration of the one YAML block below the DDD section marker of `cicd-pipeline.md`, including the surrounding prose and CI fence left byte-for-byte alone, the production gate refusing the declaration before the migration and accepting it after, and the use-case declarations left untouched. |
 | artifact-set-migration | Preview, apply, re-run and partway write failure of one project's whole artifact set, and the gates and CI command that refused the record accepting it once migrated. |
 | rust-mapping-view | Projecting the language-neutral mapping onto the crate name, module path and replay methods the Rust source sensors compare, leaving other languages out. |
-| generation-instructions | Reading every YAML/TOML example of the runtime instruction directories through the same readers the gates use, and keeping those directories in English. |
+| generation-instructions | Reading every YAML/TOML example of the runtime instruction directories through the same readers the gates use, holding every TypeScript example to a file of the generation samples with both code representations shown, and keeping those directories in English. |
 | u2-rust-analysis-foundation | Cargo workspace scanning, crate layer and CQRS-side assignment, file classification, and the dependency permission table. |
 | u3-plugin-scaffold | Plugin structure, prefixes, commands, and extension declarations. |
 | u4-design-sensors / u4-golden | Valid/invalid design inputs and comparison of declared rules with outputs. |

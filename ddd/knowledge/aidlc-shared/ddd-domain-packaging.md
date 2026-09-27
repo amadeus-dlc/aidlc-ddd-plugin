@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Name domain crates and internal packages in ubiquitous language and group them by business concept. Designers and implementers use the same convention.
+Name domain packages (Cargo crates and TypeScript packages) and their internal modules in ubiquitous language and group them by business concept. Designers and implementers use the same convention.
 
 ## Rules
 
@@ -19,7 +19,7 @@ Name domain crates and internal packages in ubiquitous language and group them b
 
 Reserved names are `aggregate`, `aggregates`, `impl`, `impls`, `implementation`, `implementations`, `vo`, `vos`, `entity`, `entities`, `value_object`, `value_objects`, `valueobject`, and `valueobjects`. Normalize case and Rust raw identifiers and compare complete name components, not substrings. Review the suitability of names such as common, shared, and utils.
 
-Keep the existing layer markers `-domain` in `billing-domain` and `packages/domain`. Internal `invoice/vo` is a technical classification, not a layer marker, and is prohibited. Distinguish layout markers such as `src`, `lib.rs`, and `mod.rs` from business package names.
+Keep the existing layer markers `-domain` in `billing-domain` and `packages/domain`. Internal `invoice/vo` is a technical classification, not a layer marker, and is prohibited. Distinguish layout markers such as `src`, `lib.rs`, `mod.rs`, and `index.ts` from business package names.
 
 ## Examples
 
@@ -43,11 +43,17 @@ domain_packages:
     code: { language: rust, package: billing-domain, module: [invoice] }
 ```
 
-Packages may be declared before implementation. Code checks require actual modules in affected domain crates to have declarations; they do not require a current Unit to implement every package planned for a future Unit.
+Packages may be declared before implementation. Code checks require actual modules in affected domain packages to have declarations; they do not require a current Unit to implement every package planned for a future Unit.
 
 ## Scope
 
+### Rust
+
 Follow mod declarations from domain crate lib/bin roots. Do not indiscriminately inspect `#[cfg(test)]` modules, contents under tests/benches/examples/vendor/target, or external dependency namespaces as business code. Application-owned wrapper mod declarations remain subject to checks. Item macros, ambiguous path attributes, and unresolved targets stop with unresolved rather than being marked checked.
+
+### TypeScript
+
+Read the module path of each source off its placement below `src/` of the package root, the directory holding `package.json`: `src/index.ts` is the package root `[]`, `src/a.ts` and `src/a/index.ts` are `[a]`, and `src/a/b.ts` is `[a, b]`. Every source below `src/` of a domain package a claim touches is matched, claimed or not. Test files (`*.test.ts`, `*.spec.ts`, `__tests__/`) are not business code. A file name that is not a module segment (`invoice.model.ts`) and two files naming one module path (`src/invoice.ts` and `src/invoice/index.ts`) stop with unresolved.
 
 ## Sources
 
@@ -56,4 +62,4 @@ Follow mod declarations from domain crate lib/bin roots. Do not indiscriminately
 
 Links target the development repository. All conventions needed by installed agents remain in this file.
 
-Read [Rust module layout](ddd-rust-module-layout.md) for the project-wide file-placement policy. Treat mod.rs as a Rust layout marker for vocabulary matching, then enforce whether it is allowed through the selected file convention.
+Read [Rust module layout](ddd-rust-module-layout.md) for the project-wide file-placement policy. Treat mod.rs as a Rust layout marker for vocabulary matching, then enforce whether it is allowed through the selected file convention. For TypeScript, read [TypeScript module layout](ddd-typescript-module-layout.md) and treat `index.ts` the same way.

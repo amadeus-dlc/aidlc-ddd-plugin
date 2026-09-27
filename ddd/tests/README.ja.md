@@ -12,6 +12,7 @@
 | t7-domain-packaging | 業務語彙による宣言と実モジュールの照合、技術分類・解析不能の検出 |
 | t10-rust-module-layout | プロジェクト設定、両配置規約、センサー直接実行、CI終了コード、共通の論理モジュール解決、抽出器を起動できない場合のゲートとCI用入口それぞれの挙動 |
 | t11-typescript-module-layout | TypeScriptの配置設定、パッケージの `src` に対する両配置規約、解決できない構成（曖昧・欠落・リンク・配置できない名前・入れ子のパッケージ・読めないディレクトリ）、センサー直接実行とCI用入口が同じ判定を返すこと、CI終了コード、TypeScriptを持たないプロジェクトに何も報告しないこと |
+| t11-typescript-generation-samples | 両コード表現・両配置のTypeScript生成見本。ドメインゲートとモジュール配置ゲートが所見0件で通ること、モジュール配置のCI用入口が終了コード0で終わること、コンパイラの診断が0件であること、親モジュールを配置どおりのファイルに置くこと |
 | t9-sensor-contract | センサー×規則の網羅性、正常・異常・境界例、依存方向表、予約名全件、対応表の更新漏れ |
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
@@ -20,7 +21,7 @@
 | layer-declaration-contract / layer-declaration-migration | Rust/TypeScriptの言語共通のレイヤー宣言の読込・拒否・構造検査（Unit配下とステージ直下の両方）、`cicd-pipeline.md` のDDD節の見出しの下のYAMLブロック1つのpreview・適用による移行、バイト単位で保たれる周囲の本文とCI設定のフェンス、移行前は宣言を拒否し移行後は受理する本番ゲート、変更されないユースケース宣言 |
 | artifact-set-migration | プロジェクト1件の成果物一式のpreview・適用・再実行・書込の途中失敗、移行前に記録を拒否していたゲートとCIコマンドが移行後に受理すること |
 | rust-mapping-view | 言語共通の写像を、Rustソースセンサーが照合するcrate名・モジュール列・replayメソッドへ投影し、他言語を渡さないこと |
-| generation-instructions | 実行用指示ディレクトリの全YAML/TOML例を、ゲートと同じ読込処理で読むこと、およびそれらのディレクトリを英語に保つこと |
+| generation-instructions | 実行用指示ディレクトリの全YAML/TOML例を、ゲートと同じ読込処理で読むこと、TypeScriptの例をすべて生成見本のファイルと一致させ、両コード表現を示すこと、およびそれらのディレクトリを英語に保つこと |
 | u2-rust-analysis-foundation | Cargoワークスペースの走査、crateの層・CQRS側の判定、ファイル分類、依存許可表 |
 | u3-plugin-scaffold | プラグインの構成、接頭辞、コマンド、拡張宣言 |
 | u4-design-sensors / u4-golden | 設計センサーの正常・違反入力、宣言規則と出力の比較 |

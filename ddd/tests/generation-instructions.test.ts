@@ -18,6 +18,7 @@ import { validateProjectSettings } from "../tools/ddd/lib/project-settings/setti
 import { MODEL_DATA_FILE } from "../tools/ddd/lib/schema/artifacts.ts";
 import { OPERATION_OWNED_SCHEMA_VERSION } from "../tools/ddd/lib/schema/loader.ts";
 import { isRecord } from "../tools/ddd/lib/shared/yaml-read.ts";
+import { generationSamples, parentModuleFile } from "./fixtures/typescript-generation/samples.ts";
 
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 const RUNTIME_DIRECTORIES = ["knowledge", "sensors", "stages", "contributions"] as const;
@@ -241,6 +242,53 @@ test("every project settings example is a valid language-neutral settings file",
     const validated = validateProjectSettings({ ...example.root }, example.file);
     expect({ file: example.file, kind: validated.kind }).toEqual({ file: example.file, kind: "validated" });
     if (validated.kind === "validated") expect(validated.selection.languages).toContain("rust");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// TypeScript code examples
+// ---------------------------------------------------------------------------
+
+/**
+ * A TypeScript example teaches the code an agent generates, so it has to be code the TypeScript
+ * gates pass. The generation samples are run through those gates and the compiler in
+ * `t11-typescript-generation-samples.test.ts`; an example is held to being one of their files, so an
+ * example the gates were never run on fails here with the file that shows it.
+ */
+const TYPESCRIPT_INFO = new Set(["ts", "typescript"]);
+
+function typescriptExamples(): { file: string; body: string }[] {
+  return RUNTIME_FILES.flatMap((path) =>
+    partition(readFileSync(path, "utf8"))
+      .blocks.filter((block) => TYPESCRIPT_INFO.has(block.info.split(/\s+/)[0]))
+      .map((block) => ({ file: relative(PLUGIN_ROOT, path), body: block.body.trim() })),
+  );
+}
+
+const SAMPLES = generationSamples();
+
+test("every TypeScript example in the instructions is a file of a generation sample", () => {
+  const sampleFiles = new Set(SAMPLES.flatMap((sample) => Object.values(sample.sources).map((text) => text.trim())));
+  const unmatched = typescriptExamples()
+    .filter((example) => !sampleFiles.has(example.body))
+    .map((example) => example.file);
+  expect(unmatched).toEqual([]);
+});
+
+test("the instructions show the aggregate module in both code representations", () => {
+  const bodies = new Set(typescriptExamples().map((example) => example.body));
+  for (const representation of ["class", "companion"] as const) {
+    const modules = SAMPLES.filter((sample) => sample.representation === representation).map((sample) => {
+      const file = parentModuleFile(sample.layout);
+      const module = sample.sources[file];
+      if (module === undefined)
+        throw new Error(`the ${sample.representation}/${sample.layout} sample has no parent module ${file}`);
+      return module.trim();
+    });
+    expect({ representation, shown: modules.some((module) => bodies.has(module)) }).toEqual({
+      representation,
+      shown: true,
+    });
   }
 });
 
