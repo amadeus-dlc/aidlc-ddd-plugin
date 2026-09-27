@@ -32,6 +32,8 @@ const dddRoot = resolve(import.meta.dir, "..");
 const toolsDir = join(dddRoot, "tools");
 const lockfile = join(dddRoot, "tests/fixtures/nextjs-integration/package-lock.json");
 const SERVER_READY_MS = 60_000;
+/** How long one command (`npm ci`, `next build`, a gate) may run before it is killed and failed. */
+const COMMAND_TIMEOUT_MS = 15 * 60_000;
 const SERVER_STOP_MS = 10_000;
 
 interface StepResult {
@@ -69,8 +71,22 @@ function seconds(since: number): number {
   return Math.round((performance.now() - since) / 10) / 100;
 }
 
-async function run(command: readonly string[], cwd: string): Promise<{ exitCode: number; output: string }> {
-  const child = Bun.spawn([...command], { cwd, stdout: "pipe", stderr: "pipe" });
+/**
+ * Runs `command` to its end. Bun kills a command that outlives `COMMAND_TIMEOUT_MS`, and the run still
+ * waits for its output streams and its exit, so no process or stream outlives the step that started
+ * it and the project is removed only once nothing is writing into it.
+ */
+async function run(
+  command: readonly string[],
+  cwd: string,
+): Promise<{ exitCode: number; output: string; timedOut: boolean }> {
+  const child = Bun.spawn([...command], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: COMMAND_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+  });
   running.add(child);
   try {
     const [stdout, stderr, exitCode] = await Promise.all([
@@ -78,7 +94,7 @@ async function run(command: readonly string[], cwd: string): Promise<{ exitCode:
       new Response(child.stderr).text(),
       child.exited,
     ]);
-    return { exitCode, output: `${stdout}${stderr}` };
+    return { exitCode, output: `${stdout}${stderr}`, timedOut: child.signalCode === "SIGKILL" };
   } finally {
     running.delete(child);
   }
@@ -86,7 +102,14 @@ async function run(command: readonly string[], cwd: string): Promise<{ exitCode:
 
 async function commandStep(step: string, command: readonly string[], cwd: string): Promise<StepResult> {
   const started = performance.now();
-  const { exitCode, output } = await run(command, cwd);
+  const { exitCode, output, timedOut } = await run(command, cwd);
+  if (timedOut)
+    return {
+      step,
+      ok: false,
+      seconds: seconds(started),
+      detail: `killed after ${COMMAND_TIMEOUT_MS} ms: ${output.slice(-4000)}`,
+    };
   return exitCode === 0
     ? { step, ok: true, seconds: seconds(started) }
     : { step, ok: false, seconds: seconds(started), detail: `exit ${exitCode}: ${output.slice(-4000)}` };

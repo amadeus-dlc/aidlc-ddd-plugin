@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { artifactFilename } from "../../.codex/tools/aidlc-artifact-vocabulary.ts";
 import type { GraphStage } from "../../.codex/tools/aidlc-graph.ts";
 import { filterProducesByKind } from "../../.codex/tools/aidlc-lib.ts";
@@ -648,7 +648,7 @@ for (const harness of ["claude", "codex"] as const) {
           // be a pass that inspected the sample, as on the other paths.
           const toolsDir = join(f.root, `.${harness}`, "tools");
           for (const gateCase of sampleGateCases(sample)) {
-            const outputPath = gateOutputPath(auditText, gateCase.sensor).replace("<project-dir>", f.root);
+            const outputPath = projectPath(f.root, gateOutputPath(auditText, gateCase.sensor));
             expect(inspectedPassProblemsAt(toolsDir, gateCase, outputPath)).toEqual([]);
           }
         },
@@ -659,6 +659,16 @@ for (const harness of ["claude", "codex"] as const) {
 }
 
 /** The output path the gate's audit records for the passing run of `sensor`. */
+/**
+ * The recorded output path as an absolute path under `root`. The audit records it relative to the
+ * project, which some platforms spell with a `<project-dir>` prefix (where the temporary directory is
+ * reached through a symbolic link, as `/tmp` is on macOS) and others as a bare relative path.
+ */
+function projectPath(root: string, recorded: string): string {
+  if (recorded.startsWith("<project-dir>")) return recorded.replace("<project-dir>", root);
+  return isAbsolute(recorded) ? recorded : join(root, recorded);
+}
+
 function gateOutputPath(auditText: string, sensor: string): string {
   for (const entry of auditText.split("\n---\n")) {
     const lines = new Map(
