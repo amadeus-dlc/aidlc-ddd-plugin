@@ -66,12 +66,12 @@ describe("typescript golden cases", () => {
     );
   }
 
-  test("a typescript domain manifest is shipped and every rule it declares has a violation case", () => {
+  test("the typescript manifests are shipped and every rule they declare has a violation case", () => {
     const manifests = readdirSync(sensorsDir).filter(
       (name) => name.startsWith("aidlc-ddd-typescript-") && name.endsWith(".md"),
     );
     const declared = declaredRules(sensorsDir, manifests);
-    expect([...declared.keys()]).toEqual(["ddd-typescript-domain"]);
+    expect([...declared.keys()].sort()).toEqual(["ddd-typescript-domain", "ddd-typescript-module-layout"]);
     // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
     expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(
       [
