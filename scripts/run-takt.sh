@@ -90,6 +90,20 @@ command -v takt >/dev/null 2>&1 || die "takt が PATH にありません (mise �
 # Claude Opus 5.5 は 2.1.280 以上を要求する。そのため PATH 上の claude を明示的に渡す。
 CLAUDE_CLI="$(command -v claude 2>/dev/null || true)"
 [ -n "${CLAUDE_CLI}" ] || die "claude が PATH にありません (mise の設定を確認してください)"
+CLAUDE_CLI_MIN_VERSION="2.1.280"
+CLAUDE_CLI_VERSION="$("${CLAUDE_CLI}" --version 2>/dev/null | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -1)"
+[ -n "${CLAUDE_CLI_VERSION}" ] || die "claude のバージョンを取得できません: ${CLAUDE_CLI}"
+# 2 つの x.y.z を数値として比べ、左が右以上なら真を返す (bash 3.2 互換のため配列を使わない)。
+version_at_least() {
+  local IFS=.
+  # shellcheck disable=SC2086
+  set -- $1 $2
+  [ "$1" -gt "$4" ] && return 0; [ "$1" -lt "$4" ] && return 1
+  [ "$2" -gt "$5" ] && return 0; [ "$2" -lt "$5" ] && return 1
+  [ "$3" -ge "$6" ]
+}
+version_at_least "${CLAUDE_CLI_VERSION}" "${CLAUDE_CLI_MIN_VERSION}" \
+  || die "claude ${CLAUDE_CLI_VERSION} は古すぎます。${CLAUDE_CLI_MIN_VERSION} 以上が必要です (${CLAUDE_CLI})"
 
 if [ "$#" -eq 0 ]; then
   set -- run
@@ -106,6 +120,6 @@ export TAKT_CLAUDE_CLI_PATH="${CLAUDE_CLI}"
 cd "${REPO_ROOT}"
 printf '==> CLAUDE_CONFIG_DIR=%s (CLAUDE_CODE_OAUTH_TOKEN は unset 済み)\n' "${CLAUDE_CONFIG_DIR}"
 printf '==> TAKT_CONFIG_DIR=%s (~/.takt は読まない)\n' "${TAKT_CONFIG_DIR}"
-printf '==> TAKT_CLAUDE_CLI_PATH=%s (%s)\n' "${TAKT_CLAUDE_CLI_PATH}" "$("${TAKT_CLAUDE_CLI_PATH}" --version 2>/dev/null | head -1)"
+printf '==> TAKT_CLAUDE_CLI_PATH=%s (%s, %s 以上)\n' "${TAKT_CLAUDE_CLI_PATH}" "${CLAUDE_CLI_VERSION}" "${CLAUDE_CLI_MIN_VERSION}"
 printf '==> takt %s\n' "$*"
 exec takt "$@"
