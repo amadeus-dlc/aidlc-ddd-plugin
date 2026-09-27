@@ -38,9 +38,13 @@ State is held in `#` fields. The private constructor takes the whole state and i
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 
-export type OpenInvoiceError = "missing-customer";
-export type AddInvoiceLineError = "already-issued";
+export type OpenInvoiceError = "missing-customer" | "negative-total";
+export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
+
+function sumOf(lines: readonly InvoiceLine[]): number {
+  return lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+}
 
 export class Invoice {
   #customer: string;
@@ -55,16 +59,19 @@ export class Invoice {
 
   static open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
+    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
     return { ok: true, value: new Invoice(customer, lines, false) };
   }
 
   static restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+      throw new Error("corrupt invoice state");
     return new Invoice(customer, lines, issued);
   }
 
   addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
+    if (line.addTo(sumOf(this.#lines)) < 0) return { ok: false, error: "negative-total" };
     this.#lines = [...this.#lines, line];
     return { ok: true, value: undefined };
   }
@@ -81,7 +88,7 @@ export class Invoice {
   }
 
   total(): number {
-    return this.#lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+    return sumOf(this.#lines);
   }
 
   lines(): readonly InvoiceLine[] {
@@ -100,9 +107,13 @@ A `type` literal and a `const` object share the name of the domain type in one f
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 
-export type OpenInvoiceError = "missing-customer";
-export type AddInvoiceLineError = "already-issued";
+export type OpenInvoiceError = "missing-customer" | "negative-total";
+export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
+
+function sumOf(lines: readonly InvoiceLine[]): number {
+  return lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+}
 
 const brand: unique symbol = Symbol("Invoice");
 
@@ -118,16 +129,19 @@ export type Invoice = {
 export const Invoice = {
   open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
+    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
     return { ok: true, value: Invoice.restore(customer, lines, false) };
   },
   restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+      throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
     const state = { customer, lines: kept, issued };
     const instance: Invoice = {
       [brand]: true,
       addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
+        if (line.addTo(sumOf(state.lines)) < 0) return { ok: false, error: "negative-total" };
         state.lines = [...state.lines, line];
         return { ok: true, value: undefined };
       },
@@ -141,7 +155,7 @@ export const Invoice = {
         return state.customer === customer;
       },
       total(): number {
-        return state.lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+        return sumOf(state.lines);
       },
       lines(): readonly InvoiceLine[] {
         return [...state.lines];

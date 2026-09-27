@@ -101,8 +101,8 @@ export const InvoiceLine = {
 };
 `;
 
-const ERROR_TYPES = `export type OpenInvoiceError = "missing-customer";
-export type AddInvoiceLineError = "already-issued";
+const ERROR_TYPES = `export type OpenInvoiceError = "missing-customer" | "negative-total";
+export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
 `;
 
@@ -112,9 +112,16 @@ import type { InvoiceLine } from "${lineSpecifier}";
 `;
 }
 
+/** The invoice total both representations check: the invariant forbids a negative one. */
+const SUM_OF = `function sumOf(lines: readonly InvoiceLine[]): number {
+  return lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+}
+`;
+
 function classInvoice(lineSpecifier: string): string {
   return `${imports(lineSpecifier)}
 ${ERROR_TYPES}
+${SUM_OF}
 export class Invoice {
   #customer: string;
   #lines: readonly InvoiceLine[];
@@ -128,16 +135,19 @@ export class Invoice {
 
   static open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
+    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
     return { ok: true, value: new Invoice(customer, lines, false) };
   }
 
   static restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+      throw new Error("corrupt invoice state");
     return new Invoice(customer, lines, issued);
   }
 
   addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
+    if (line.addTo(sumOf(this.#lines)) < 0) return { ok: false, error: "negative-total" };
     this.#lines = [...this.#lines, line];
     return { ok: true, value: undefined };
   }
@@ -154,7 +164,7 @@ export class Invoice {
   }
 
   total(): number {
-    return this.#lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+    return sumOf(this.#lines);
   }
 
   lines(): readonly InvoiceLine[] {
@@ -167,6 +177,7 @@ export class Invoice {
 function companionInvoice(lineSpecifier: string): string {
   return `${imports(lineSpecifier)}
 ${ERROR_TYPES}
+${SUM_OF}
 const brand: unique symbol = Symbol("Invoice");
 
 export type Invoice = {
@@ -181,16 +192,19 @@ export type Invoice = {
 export const Invoice = {
   open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
+    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
     return { ok: true, value: Invoice.restore(customer, lines, false) };
   },
   restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+      throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
     const state = { customer, lines: kept, issued };
     const instance: Invoice = {
       [brand]: true,
       addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
+        if (line.addTo(sumOf(state.lines)) < 0) return { ok: false, error: "negative-total" };
         state.lines = [...state.lines, line];
         return { ok: true, value: undefined };
       },
@@ -204,7 +218,7 @@ export const Invoice = {
         return state.customer === customer;
       },
       total(): number {
-        return state.lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+        return sumOf(state.lines);
       },
       lines(): readonly InvoiceLine[] {
         return [...state.lines];
@@ -326,6 +340,7 @@ bounded_contexts:
             state_effect: none
             domain_errors:
               - { element_id: error.invoice.add-line.already-issued, name: AlreadyIssued, operation: command.invoice.add-line, condition: the invoice is issued }
+              - { element_id: error.invoice.add-line.negative-total, name: NegativeTotal, operation: command.invoice.add-line, condition: the line would make the total negative }
             idempotency: { strategy: none }
           - element_id: command.invoice.issue
             name: Issue
@@ -349,6 +364,7 @@ bounded_contexts:
             preconditions: [invariant.invoice.total-positive]
             domain_errors:
               - { element_id: error.invoice.open.missing-customer, name: MissingCustomer, operation: factory.invoice.open, condition: no customer is given }
+              - { element_id: error.invoice.open.negative-total, name: NegativeTotal, operation: factory.invoice.open, condition: the lines add up to a negative total }
 lineage: []
 `;
 
@@ -373,10 +389,12 @@ const MAPPING = [
   "        code: { method: open, error_type: OpenInvoiceError }",
   "        errors:",
   "          - { error_ref: error.invoice.open.missing-customer, code: { case: missing-customer } }",
+  "          - { error_ref: error.invoice.open.negative-total, code: { case: negative-total } }",
   "      - operation_ref: command.invoice.add-line",
   "        code: { method: addLine, error_type: AddInvoiceLineError }",
   "        errors:",
   "          - { error_ref: error.invoice.add-line.already-issued, code: { case: already-issued } }",
+  "          - { error_ref: error.invoice.add-line.negative-total, code: { case: negative-total } }",
   "      - operation_ref: command.invoice.issue",
   "        code: { method: issue, error_type: IssueInvoiceError }",
   "        errors:",

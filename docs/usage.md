@@ -6,7 +6,7 @@ Updated: 2026-09-13. The plugin is still being completed. Check [known issues](.
 
 ## Prerequisites
 
-Use Bun and an AI-DLC-enabled Claude Code or Codex environment. Kimi/opencode are excluded. Sensor analysis does not need Cargo, but generated applications need a Rust toolchain for build and tests.
+Use Bun and an AI-DLC-enabled Claude Code or Codex environment. Kimi/opencode are excluded. Sensor analysis needs neither Cargo nor an installed TypeScript: the Rust analysis ships a native extractor and the TypeScript analysis ships the TypeScript Compiler API. Building and testing a generated application needs that language's own toolchain: a Rust toolchain for a Rust application, and Node.js with the project's own TypeScript toolchain (`typescript` for type checking, plus the project's build and test tools) for a TypeScript application.
 
 The installer uses AI-DLC tools in the destination. Preview installation from local source:
 

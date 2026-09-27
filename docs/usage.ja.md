@@ -6,7 +6,7 @@
 
 ## 導入前の条件
 
-BunとAI-DLC導入済みのClaude CodeまたはCodex環境を使います。kimi・opencodeは対象外。Rustセンサーの解析自体にはCargoを使いませんが、生成アプリケーションのビルド・テストにはRust環境が必要です。
+BunとAI-DLC導入済みのClaude CodeまたはCodex環境を使います。kimi・opencodeは対象外。センサーの解析には、CargoもインストールされたTypeScriptも使いません。Rustの解析はネイティブ抽出器を、TypeScriptの解析はTypeScript Compiler APIを同梱しているためです。生成アプリケーションのビルド・テストには、その言語のツールチェーンが必要です。RustのアプリケーションにはRust環境、TypeScriptのアプリケーションにはNode.jsと、プロジェクト自身のTypeScriptのツールチェーン（型検査のための `typescript` と、プロジェクトのビルド・テストの道具）が必要です。
 
 導入スクリプトは利用先のAI-DLCツールを参照します。ローカルソースの事前確認:
 
