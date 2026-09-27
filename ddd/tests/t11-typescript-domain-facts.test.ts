@@ -527,6 +527,103 @@ test("a request without sources answers with no files and no notes", () => {
   expect(set.notes).toEqual([]);
 });
 
+// Function parameters and forwarded getter results (T-11-03)
+
+test("a function declaration records its parameters with the types they state; other declarations record none", () => {
+  const facts = factsOf(`export function execute(invoice: Invoice, count, ...rest: readonly Invoice[]): void {}
+export class IssueInvoice {}
+export const limit = 1;
+`);
+  const byName = new Map(
+    (facts.declarations as unknown as { name: string; params?: { name: string; type_text?: string }[] }[]).map(
+      (entry) => [entry.name, entry],
+    ),
+  );
+  expect(byName.get("execute")?.params).toEqual([
+    { name: "invoice", type_text: "Invoice" },
+    { name: "count" },
+    { name: "rest", type_text: "readonly Invoice[]" },
+  ]);
+  expect(byName.get("IssueInvoice")?.params).toBeUndefined();
+  expect(byName.get("limit")?.params).toBeUndefined();
+});
+
+type ForwardingCall = { callee_text: string; span: { start_line: number }; forwarded_to?: unknown[] };
+
+/** The calls of `body`, written as the statements of a function handed an invoice and a repository. */
+function forwardingCalls(body: string): ForwardingCall[] {
+  return factsOf(`export function run(invoice: Invoice, repo: InvoiceRepository): void {\n${body}\n}\n`)
+    .calls as unknown as ForwardingCall[];
+}
+
+function callNamed(calls: readonly ForwardingCall[], callee: string, nth = 0): ForwardingCall {
+  const found = calls.filter((entry) => entry.callee_text === callee)[nth];
+  if (!found) throw new Error(`no call of ${callee} #${nth}`);
+  return found;
+}
+
+test.each([
+  ["an argument", "repo.remove(invoice.id());", 1],
+  ["a parenthesized argument", "repo.remove((invoice.id()));", 1],
+  ["a const binding used only as an argument", "const id = invoice.id();\nrepo.remove(id);", 1],
+  ["a const chain", "const id = invoice.id();\nconst key = id;\nrepo.remove(key);", 1],
+  ["a const binding used as two arguments", "const id = invoice.id();\nrepo.remove(id);\nrepo.remove(id);", 2],
+  [
+    "a const binding whose name is also spelled as a property and a member",
+    "const id = invoice.id();\nrepo.remove(id);\nconst shape = { id: 1 };\nshape.id;",
+    1,
+  ],
+  [
+    "a const binding shadowed in an inner block used for something else",
+    'const id = invoice.id();\n{\n  const id = "0";\n  if (id === "42") {}\n}\nrepo.remove(id);',
+    1,
+  ],
+  [
+    "a const binding in a block of a case clause",
+    'switch (mode) {\ncase "a": {\n  const id = invoice.id();\n  repo.remove(id);\n}\n}',
+    1,
+  ],
+])("a getter result forwarded through %s names every call it reaches", (_label, body, reached) => {
+  const calls = forwardingCalls(body);
+  const forwarded = callNamed(calls, "id").forwarded_to;
+  const consumers = calls.filter((entry) => entry.callee_text === "remove").map((entry) => entry.span);
+  expect(forwarded).toHaveLength(reached);
+  expect(forwarded).toEqual(consumers.slice(0, reached));
+});
+
+test.each([
+  ["an operand", "repo.remove(invoice.id() + 1);"],
+  ["a receiver", "repo.remove(invoice.id().trim());"],
+  ["an assertion", "repo.remove(invoice.id() as string);"],
+  ["a condition", 'if (invoice.id() === "42") {}'],
+  ["a let binding", "let id = invoice.id();\nrepo.remove(id);"],
+  ["an unused const binding", "const id = invoice.id();"],
+  ["a const binding also used in a condition", 'const id = invoice.id();\nrepo.remove(id);\nif (id === "42") {}'],
+  [
+    "a const binding shadowed where it is forwarded and used in a condition outside",
+    'const id = invoice.id();\n{\n  const id = "0";\n  repo.remove(id);\n}\nif (id === "42") {}',
+  ],
+  ["a statement of its own", "invoice.id();"],
+  [
+    "a const binding of a case clause read by a later case clause",
+    'switch (mode) {\ncase "a":\n  const id = invoice.id();\n  repo.remove(id);\ncase "b":\n  if (id === "42") {}\n}',
+  ],
+  [
+    "a const binding of a case clause read by the default clause",
+    'switch (mode) {\ncase "a":\n  const id = invoice.id();\n  repo.remove(id);\ndefault:\n  if (id === "42") {}\n}',
+  ],
+  [
+    "a const binding of a case clause forwarded within that clause alone",
+    'switch (mode) {\ncase "a":\n  const id = invoice.id();\n  repo.remove(id);\n}',
+  ],
+  [
+    "a const chain whose later link is declared in a case clause",
+    'const id = invoice.id();\nswitch (mode) {\ncase "a":\n  const key = id;\n  repo.remove(key);\n}',
+  ],
+])("a getter result used as %s is forwarded nowhere", (_label, body) => {
+  expect(callNamed(forwardingCalls(body), "id").forwarded_to).toBeUndefined();
+});
+
 // Launch from the distributed tree alone
 
 test(

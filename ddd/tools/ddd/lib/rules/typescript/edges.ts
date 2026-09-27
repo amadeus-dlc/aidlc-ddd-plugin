@@ -1,18 +1,23 @@
 /**
- * The dependency edges of the TypeScript domain gate (g): where each module specifier of a claimed
- * domain source leads, and what about that edge the dependency rule forbids.
+ * The dependency edges of the TypeScript gates: where each module specifier of a claimed source
+ * leads, and what about that edge the dependency direction (g) and the cross-side rule (k) forbid.
+ * The edges of one run are built once, and each rule takes the ones it reports.
  *
  * A specifier is classified in the order the project resolves it: a path, an `imports` specifier
  * (`#…`) of the package, a `paths` alias of the package's `tsconfig.json`, the name of a package
  * of the workspace with an optional subpath, and otherwise a package from outside the project. One
- * edge is one finding, naming every decision that makes it one:
+ * edge is one finding of (g), naming every decision that makes it one:
  *
  * - `layer-forbidden`: the layer permission table forbids the target package's layer;
- * - `external-io`: an external package on the I/O list;
+ * - `external-io`: an external package on the I/O list, depended on from the domain or use-case
+ *   layer — the layers the Rust gates forbid it in;
  * - `private-path`: a path into another package's directory, or a subpath its `exports` withholds;
  * - `alias`: a `paths` alias that leads into another package;
  * - `wildcard-reexport`: `export *` in a file the package's `exports` publish;
  * - `type-only` accompanies the others when the dependency is erased: it is judged all the same.
+ *
+ * An edge between the command side and the query side is one finding of (k) instead, type-only or
+ * not; the rmu side bridges the two and is neither.
  *
  * What cannot be followed from the project's files — a path out of every package, a specifier the
  * package does not map, a package that states no `exports` or states them in a form not modelled,
@@ -42,14 +47,14 @@ import type { TsInspection, TsTarget } from "./types.ts";
 
 /**
  * The packages of the project — every `package.json` of the workspace that states a name — the
- * `tsconfig.json` settings of those the root references, and the domain packages whose sources the
- * facts describe.
+ * `tsconfig.json` settings of those the root references, and the packages whose sources the facts
+ * describe.
  */
 export interface ProjectPackages {
   readonly workspaceRoot: string;
   readonly list: readonly TsPackage[];
   readonly configs: ReadonlyMap<string, TypeScriptPackageConfig>;
-  /** The directories of the domain packages whose every source was read into the facts. */
+  /** The directories of the packages of the layers the gate describes whose every source was read into the facts. */
   readonly described: ReadonlySet<string>;
 }
 
@@ -207,30 +212,36 @@ function accessDecisions(
   return isExported(exported, target.subpath ?? ".") ? [] : ["private-path"];
 }
 
-function edgeFinding(
-  from: TsPackage,
-  to: string,
-  via: string,
-  decisions: readonly string[],
-  file: string,
-  line?: number,
-): FindingInput {
-  return {
-    rule_id: "g",
-    file,
-    message: `dependency direction ${from.name} -> ${to} via ${via} (${decisions.join(", ")})`,
-    ...(line === undefined ? {} : { line }),
-  };
+/**
+ * One dependency of a claimed source or of its package's `package.json`, with what (g) forbids about
+ * it and whether (k) does.
+ */
+export interface TsEdge {
+  readonly from: TsPackage;
+  /** The package it leads to, by the name it states, or the external package's name. */
+  readonly to: string;
+  /** The specifier as written, quoted, or `package.json`. */
+  readonly via: string;
+  readonly file: string;
+  /** Absent for a `package.json` dependency, which has no line of its own. */
+  readonly line?: number;
+  /** The decisions of (g), `type-only` included when the dependency is erased. */
+  readonly decisions: readonly string[];
+  readonly cross_side: boolean;
+  readonly type_only: boolean;
 }
 
 const VIOLATIONS = new Set(["layer-forbidden", "external-io", "private-path", "alias", "wildcard-reexport"]);
 
-/** The findings of rule (g) over the claimed domain sources and the `package.json` of their packages. */
-export function ruleG(inspection: TsInspection): FindingInput[] {
-  const findings: FindingInput[] = [];
+/**
+ * The edges of every claimed source and of the `package.json` of each package holding one. A
+ * `package.json` dependency an import of the same package already stands for is not a second edge.
+ */
+export function buildEdges(inspection: TsInspection): TsEdge[] {
+  const edges: TsEdge[] = [];
   /** `<package dir> -> <target>` for every edge an import already stands for. */
   const imported = new Set<string>();
-  for (const target of inspection.targets) findings.push(...fileEdges(inspection, target, imported));
+  for (const target of inspection.targets) edges.push(...fileEdges(inspection, target, imported));
   const fromPackages = [...new Map(inspection.targets.map((target) => [target.pkg.root, target.pkg])).values()];
   for (const from of fromPackages) {
     const manifest = from.path === "." ? PACKAGE_MANIFEST : `${from.path}/${PACKAGE_MANIFEST}`;
@@ -242,31 +253,37 @@ export function ruleG(inspection: TsInspection): FindingInput[] {
       }
       const to = named.kind === "one" ? named.pkg : undefined;
       if (to?.root === from.root || imported.has(`${from.root} -> ${to ? to.root : name}`)) continue;
-      const decisions = to
-        ? isAllowed(from.assignment, to.assignment).reason === "layer-forbidden"
-          ? ["layer-forbidden"]
-          : []
-        : ioDecisions(name);
-      if (decisions.length > 0) findings.push(edgeFinding(from, name, PACKAGE_MANIFEST, decisions, manifest));
+      const reason = to ? isAllowed(from.assignment, to.assignment).reason : undefined;
+      edges.push({
+        from,
+        to: name,
+        via: PACKAGE_MANIFEST,
+        file: manifest,
+        decisions: to ? (reason === "layer-forbidden" ? ["layer-forbidden"] : []) : ioDecisions(from, name),
+        cross_side: reason === "cross-side",
+        type_only: false,
+      });
     }
   }
-  return findings;
+  return edges;
 }
 
-/** Every edge this gate judges starts in a domain package, where an external I/O package is forbidden. */
-function ioDecisions(name: string): string[] {
-  return matchesIoRule(name, IO_PACKAGES) ? ["external-io"] : [];
+/** An external I/O package is forbidden where the edge starts in the domain or the use-case layer. */
+function ioDecisions(from: TsPackage, name: string): string[] {
+  const layer = from.assignment.layer;
+  return (layer === "domain" || layer === "use-case") && matchesIoRule(name, IO_PACKAGES) ? ["external-io"] : [];
 }
 
-function fileEdges(inspection: TsInspection, target: TsTarget, imported: Set<string>): FindingInput[] {
-  const findings: FindingInput[] = [];
+function fileEdges(inspection: TsInspection, target: TsTarget, imported: Set<string>): TsEdge[] {
+  const edges: TsEdge[] = [];
   const from = target.pkg;
   const absolute = join(inspection.packages.workspaceRoot, target.file);
   for (const dependency of dependenciesOf(inspection, target.file)) {
     const resolved = resolveSpecifier(inspection.packages, from, absolute, dependency.specifier);
     const via = `"${dependency.specifier}"`;
     let to = from.name;
-    let decisions: string[] = [];
+    let crossSide = false;
+    const decisions: string[] = [];
     if (resolved.kind === "unresolved") {
       inspection.undecided.add(target.file, dependency.line, `dependency ${via}: ${resolved.reason}`);
       continue;
@@ -274,12 +291,13 @@ function fileEdges(inspection: TsInspection, target: TsTarget, imported: Set<str
     if (resolved.kind === "external") {
       to = resolved.name;
       imported.add(`${from.root} -> ${resolved.name}`);
-      decisions = ioDecisions(resolved.name);
+      decisions.push(...ioDecisions(from, resolved.name));
     } else if (resolved.kind === "package" && resolved.pkg.root !== from.root) {
       to = resolved.pkg.name;
       imported.add(`${from.root} -> ${resolved.pkg.root}`);
-      if (isAllowed(from.assignment, resolved.pkg.assignment).reason === "layer-forbidden")
-        decisions.push("layer-forbidden");
+      const reason = isAllowed(from.assignment, resolved.pkg.assignment).reason;
+      if (reason === "layer-forbidden") decisions.push("layer-forbidden");
+      crossSide = reason === "cross-side";
       decisions.push(...accessDecisions(inspection, resolved, target.file, dependency.line));
     }
     if (dependency.wildcard) {
@@ -294,9 +312,41 @@ function fileEdges(inspection: TsInspection, target: TsTarget, imported: Set<str
       }
       if (entry.kind === "entry") decisions.push("wildcard-reexport");
     }
-    if (!decisions.some((decision) => VIOLATIONS.has(decision))) continue;
     if (dependency.type_only) decisions.push("type-only");
-    findings.push(edgeFinding(from, to, via, decisions, target.file, dependency.line));
+    edges.push({
+      from,
+      to,
+      via,
+      file: target.file,
+      line: dependency.line,
+      decisions,
+      cross_side: crossSide,
+      type_only: dependency.type_only,
+    });
   }
-  return findings;
+  return edges;
+}
+
+/** The findings of rule (g): each edge a decision of the dependency direction forbids. */
+export function ruleG(edges: readonly TsEdge[]): FindingInput[] {
+  return edges
+    .filter((edge) => edge.decisions.some((decision) => VIOLATIONS.has(decision)))
+    .map((edge) => ({
+      rule_id: "g",
+      file: edge.file,
+      message: `dependency direction ${edge.from.name} -> ${edge.to} via ${edge.via} (${edge.decisions.join(", ")})`,
+      ...(edge.line === undefined ? {} : { line: edge.line }),
+    }));
+}
+
+/** The findings of rule (k): each edge between the command side and the query side. */
+export function ruleK(edges: readonly TsEdge[]): FindingInput[] {
+  return edges
+    .filter((edge) => edge.cross_side)
+    .map((edge) => ({
+      rule_id: "k",
+      file: edge.file,
+      message: `cross-side reference ${edge.from.name} -> ${edge.to} via ${edge.via}${edge.type_only ? " (type-only)" : ""}`,
+      ...(edge.line === undefined ? {} : { line: edge.line }),
+    }));
 }

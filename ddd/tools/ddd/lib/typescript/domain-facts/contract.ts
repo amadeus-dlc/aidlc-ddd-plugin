@@ -103,6 +103,8 @@ export interface DeclarationFact {
   readonly type_text?: string;
   /** How a variable is initialized; present on variables that have an initializer. */
   readonly initializer?: InitializerFact;
+  /** The parameters of a function declaration; present on function declarations only. */
+  readonly params?: readonly ParamFact[];
 }
 
 export interface ImportBinding {
@@ -152,6 +154,12 @@ export interface CallFact {
    * a parameter or a variable annotation. Absent when that binding states none or is not found.
    */
   readonly receiver_binding_type?: string;
+  /**
+   * The calls the result of this call is handed to unchanged: as an argument of a call, with only
+   * parentheses around it, or through a `const` binding every reference of which is handed on so —
+   * a chain of such bindings included. Absent when the result is used any other way, or not at all.
+   */
+  readonly forwarded_to?: readonly Span[];
   readonly span: Span;
 }
 

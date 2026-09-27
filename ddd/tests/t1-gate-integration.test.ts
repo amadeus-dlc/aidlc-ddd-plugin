@@ -28,7 +28,15 @@ import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { layoutConfig } from "./golden/module-layout/cases.ts";
 import { typescriptLayoutConfig } from "./golden/module-layout/typescript-cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
+import type { GoldenCase } from "./golden/runner.ts";
 import { DOMAIN_FILE, TYPESCRIPT_CASES, TYPESCRIPT_SENSOR } from "./golden/typescript/cases.ts";
+import {
+  TYPESCRIPT_INTERFACE_ADAPTER_CASES,
+  TYPESCRIPT_INTERFACE_ADAPTER_SENSOR,
+} from "./golden/typescript/interface-adapter-cases.ts";
+import { TYPESCRIPT_USE_CASE_CASES, TYPESCRIPT_USE_CASE_SENSOR } from "./golden/typescript/use-case-cases.ts";
+
+const SOURCE_MANIFEST_PATH = "construction/u1/code-generation/source-manifest.json";
 
 const repository = resolve(import.meta.dir, "../..");
 const roots: string[] = [];
@@ -493,6 +501,61 @@ for (const harness of ["claude", "codex"] as const) {
       },
       UNINSPECTABLE_TIMEOUT_MS,
     );
+  });
+}
+
+// The TypeScript use-case and interface-adapter gates stop the same way on a claimed source they
+// cannot parse, and the approval stays closed for each of them.
+const UNINSPECTABLE_LAYER_GATES: readonly [string, GoldenCase][] = [
+  [TYPESCRIPT_USE_CASE_SENSOR, cleanLayerCase(TYPESCRIPT_USE_CASE_CASES, "clean-h-id-class")],
+  [TYPESCRIPT_INTERFACE_ADAPTER_SENSOR, cleanLayerCase(TYPESCRIPT_INTERFACE_ADAPTER_CASES, "clean-repository-class")],
+];
+
+function cleanLayerCase(cases: readonly GoldenCase[], name: string): GoldenCase {
+  const found = cases.find((candidate) => candidate.name === name);
+  if (!found?.workspace) throw new Error(`the clean TypeScript fixture ${name} is missing`);
+  return found;
+}
+
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: an uninspectable TypeScript layer gate`, () => {
+    for (const [sensor, source] of UNINSPECTABLE_LAYER_GATES) {
+      test(
+        `a claimed ${sensor} source the extractor cannot parse keeps the approval closed`,
+        () => {
+          const entry = structuredClone(source);
+          const workspace = entry.workspace ?? {};
+          const claimed = Object.keys(workspace).find(
+            (path) => path.endsWith("/src/index.ts") && entry.files[SOURCE_MANIFEST_PATH]?.includes(path),
+          );
+          if (!claimed) throw new Error(`${entry.name} claims no source`);
+          workspace[claimed] = `${workspace[claimed]}const = ;\n`;
+          const f = fixture(harness, sensor);
+          const stage = f.graph.find((candidate) => candidate.slug === "code-generation");
+          expect(stage?.sensors_applicable.some((candidate) => candidate.id === sensor)).toBe(true);
+          const phase = stage?.phase ?? "construction";
+          f.state("code-generation", phase, "feature");
+          appendFileSync(join(f.record, "aidlc-state.md"), "- [x] ddd-domain-modeling — EXECUTE\n");
+          for (const artifact of stage?.produces ?? []) {
+            write(
+              join(f.record, `${phase}/u1/code-generation/${artifactFilename(artifact)}`),
+              "# Supporting artifact\n",
+            );
+          }
+          for (const [path, content] of Object.entries(entry.files)) write(join(f.record, path), content);
+          for (const [path, content] of Object.entries(workspace)) write(join(f.root, path), content);
+          expectRejected(openGate(f, "code-generation"), sensor);
+          const auditRoot = join(f.record, "audit");
+          const auditText = readdirSync(auditRoot, { recursive: true })
+            .filter((path) => String(path).endsWith(".md"))
+            .map((path) => readFileSync(join(auditRoot, String(path)), "utf8"))
+            .join("\n");
+          expect(auditText).toContain(sensor);
+          expect(auditText).toContain("tool-unavailable");
+        },
+        UNINSPECTABLE_TIMEOUT_MS,
+      );
+    }
   });
 }
 
