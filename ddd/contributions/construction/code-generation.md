@@ -11,6 +11,7 @@ adds:
     - ddd-rust-domain
     - ddd-rust-use-case
     - ddd-rust-interface-adapter
+    - ddd-typescript-domain
 fragments:
   - anchor: after-step:1
     order: 100
@@ -28,6 +29,7 @@ the plan:
 - **Rust module layout.** Read `ddd-rust-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Establish one explicit layout before generating Rust. Follow it across all packages; do not infer it from edition or introduce `mod.rs` when `file` is selected.
 - **TypeScript module layout.** Read `ddd-typescript-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Place every TypeScript module under a package's `src` following the one selected layout: `named-file` or `index-file` for modules with children, and the named file for leaves. Do not infer it from existing files.
 - **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Every declaration states the language that spells the package, its name, and the module path below its root; only the ones placed in Rust reach the Rust code checks. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included. TypeScript packages are not yet matched against these declarations, so a mapping that places code there has nothing to match against here.
+- **Domain package names.** Read the shared `ddd-domain-packaging.md` knowledge and domain_packages in the aggregate mapping. Every declaration states the language that spells the package, its name, and the module path below its root; only the ones placed in Rust reach the Rust code checks. Match actual modules in affected domain crates to those declarations; do not introduce technical classifications such as aggregate/, impl/, vo/, or entities/. Resolve missing declarations upstream rather than inventing terms during code generation. Empty, private, inline modules and path-attribute layouts are included. TypeScript is not generated yet; when the change claims TypeScript domain sources, the declarations placed in TypeScript are matched against the module paths of each affected domain package's `src/` (`src/index.ts` is the package root, `src/a.ts` and `src/a/index.ts` are `[a]`).
 - **Naming and placement.** Crate suffixes (`-domain`, `-use-case`,
   `-interface-adapter`, `-infrastructure`), the `packages/<layer>/` or
   `modules/<layer>/` placement, the command / query / rmu segments, and the
@@ -55,6 +57,15 @@ The three layer-specific Rust sensors fire on `code-summary.md`: `ddd-rust-domai
 (rules g, h, i, d) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
 every query-side file). Fix the code as the finding names the rule; a repeated
 failure means the plan did not carry the conventions above.
+
+`ddd-typescript-domain` fires on the same `code-summary.md` for claimed `.ts` / `.tsx` domain
+sources and reports the rule ids of `ddd-rust-domain` (a, b, c, d, g, domain packaging and the
+layer diagnostics). Only a `#` field or a companion's closure hides state; `private` does not. A
+dependency through a path into another package, a `paths` alias into another package, a subpath its
+`exports` withholds, or `export *` in a published entry is a finding (g), type-only or not. A
+construct the gate cannot decide — an accessor, a base class, a brand it cannot identify, a getter
+receiver without a stated type, a specifier it cannot follow, or a compiler that does not launch —
+stops the gate as uninspectable; resolve it rather than retrying.
 
 The domain sensor inspects the module structure of affected domain crates, in addition to changed files. Resolve technical-classification names, undeclared modules, broken references, and unresolved analysis. Review the correspondence between vocabulary and responsibilities in code review as well.
 

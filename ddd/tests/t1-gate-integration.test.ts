@@ -27,6 +27,7 @@ import { gateCases } from "./golden/contract/coverage.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
 import { layoutConfig } from "./golden/module-layout/cases.ts";
 import { PACKAGING_CASES } from "./golden/packaging/cases.ts";
+import { DOMAIN_FILE, TYPESCRIPT_CASES, TYPESCRIPT_SENSOR } from "./golden/typescript/cases.ts";
 
 const repository = resolve(import.meta.dir, "../..");
 const roots: string[] = [];
@@ -451,5 +452,85 @@ for (const harness of ["claude", "codex"] as const) {
         }
       });
     }
+  });
+}
+
+// A TypeScript domain gate that cannot decide stops as uninspectable rather than answering. The
+// framework records that run as a pass carrying the tool-unavailable note, and a blocking binding
+// admits only a verified pass, so the approval stays closed exactly as it does for a failed verdict.
+const UNINSPECTABLE_TIMEOUT_MS = 60_000;
+
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: an uninspectable TypeScript domain gate`, () => {
+    test(
+      "a claimed domain file the extractor cannot parse keeps the approval closed",
+      () => {
+        const source = TYPESCRIPT_CASES.find((candidate) => candidate.name === "clean-class");
+        if (!source?.workspace) throw new Error("the clean TypeScript fixture is missing");
+        const entry = structuredClone(source);
+        const workspace = entry.workspace ?? {};
+        workspace[DOMAIN_FILE] = `${workspace[DOMAIN_FILE]}const = ;\n`;
+        const f = fixture(harness, TYPESCRIPT_SENSOR);
+        const stage = f.graph.find((candidate) => candidate.slug === "code-generation");
+        expect(stage?.sensors_applicable.some((sensor) => sensor.id === TYPESCRIPT_SENSOR)).toBe(true);
+        const phase = stage?.phase ?? "construction";
+        f.state("code-generation", phase, "feature");
+        appendFileSync(join(f.record, "aidlc-state.md"), "- [x] ddd-domain-modeling — EXECUTE\n");
+        for (const artifact of stage?.produces ?? []) {
+          write(join(f.record, `${phase}/u1/code-generation/${artifactFilename(artifact)}`), "# Supporting artifact\n");
+        }
+        for (const [path, content] of Object.entries(entry.files)) write(join(f.record, path), content);
+        for (const [path, content] of Object.entries(workspace)) write(join(f.root, path), content);
+        expectRejected(openGate(f, "code-generation"), TYPESCRIPT_SENSOR);
+        const auditRoot = join(f.record, "audit");
+        const auditText = readdirSync(auditRoot, { recursive: true })
+          .filter((path) => String(path).endsWith(".md"))
+          .map((path) => readFileSync(join(auditRoot, String(path)), "utf8"))
+          .join("\n");
+        expect(auditText).toContain(TYPESCRIPT_SENSOR);
+        expect(auditText).toContain("tool-unavailable");
+      },
+      UNINSPECTABLE_TIMEOUT_MS,
+    );
+  });
+}
+
+// A TypeScript-only project runs every DDD sensor bound to the gate, the Rust ones included. A
+// Rust sensor decides Rust sources only, so a claimed TypeScript file is none of its business and
+// a clean TypeScript domain source is admitted with every sensor on.
+const ALL_SENSORS_TIMEOUT_MS = 60_000;
+
+for (const harness of ["claude", "codex"] as const) {
+  describe(`${harness}: a TypeScript-only project under every DDD sensor`, () => {
+    test(
+      "a clean TypeScript domain source opens the code-generation gate",
+      () => {
+        const entry = TYPESCRIPT_CASES.find((candidate) => candidate.name === "clean-class");
+        if (!entry?.workspace) throw new Error("the clean TypeScript fixture is missing");
+        const f = fixture(harness);
+        const stage = f.graph.find((candidate) => candidate.slug === "code-generation");
+        const sensors = stage?.sensors_applicable.map((sensor) => sensor.id) ?? [];
+        expect(sensors).toContain(TYPESCRIPT_SENSOR);
+        expect(sensors).toContain("ddd-rust-domain");
+        const phase = stage?.phase ?? "construction";
+        f.state("code-generation", phase, "feature");
+        appendFileSync(join(f.record, "aidlc-state.md"), "- [x] ddd-domain-modeling — EXECUTE\n");
+        for (const artifact of stage?.produces ?? []) {
+          write(join(f.record, `${phase}/u1/code-generation/${artifactFilename(artifact)}`), "# Supporting artifact\n");
+        }
+        for (const [path, content] of Object.entries(entry.files)) write(join(f.record, path), content);
+        for (const [path, content] of Object.entries(entry.workspace)) write(join(f.root, path), content);
+        const result = openGate(f, "code-generation");
+        expect(result.output).toContain("Recorded awaiting-approval");
+        const auditRoot = join(f.record, "audit");
+        const auditText = readdirSync(auditRoot, { recursive: true })
+          .filter((path) => String(path).endsWith(".md"))
+          .map((path) => readFileSync(join(auditRoot, String(path)), "utf8"))
+          .join("\n");
+        for (const sensor of sensors) expect(auditText).toContain(sensor);
+        expect(auditText).not.toMatch(/script-error|tool-unavailable|SENSOR_FAILED/);
+      },
+      ALL_SENSORS_TIMEOUT_MS,
+    );
   });
 }

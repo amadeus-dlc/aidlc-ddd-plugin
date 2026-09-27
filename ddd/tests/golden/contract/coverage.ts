@@ -458,6 +458,104 @@ cover(
   "Only package src roots are inspected; missing, ambiguous, linked, and unplaceable sources cannot pass as inspected.",
   "パッケージの src だけを検査し、欠落・曖昧・リンク・配置できないソースを検査済みとしない。",
 );
+const ts = "ddd-typescript-domain";
+cover(
+  ts,
+  ["a"],
+  "clean-class",
+  "violation-a-class-private",
+  "Only a # field hides state at run time; the private keyword is erased and does not.",
+  "実行時に状態を隠すのは # フィールドだけで、消去される private キーワードは隠蔽にならない。",
+);
+cover(
+  ts,
+  ["b"],
+  "clean-class",
+  "clean-b-declared-replay",
+  "A declared command and a replay method the mapping declares are both permitted.",
+  "宣言済みコマンドと、写像が宣言したreplayメソッドを許可する。",
+);
+cover(
+  ts,
+  ["c"],
+  "clean-class",
+  "clean-c-spelling-in-comments",
+  "Construction in code outside the type versus the same spelling in comments, strings and regular expressions.",
+  "型の外のコードでの生成と、コメント・文字列・正規表現内の同じ綴りを区別する。",
+);
+cover(
+  ts,
+  ["d"],
+  "clean-d-self-getter",
+  "violation-d-companion",
+  "Calls on this remain allowed; a getter of the companion representation is still resolved.",
+  "thisへの呼出しは許可し、companion表現のgetterも照合する。",
+);
+cover(
+  ts,
+  ["g"],
+  "clean-g-domain-to-infrastructure-import",
+  "clean-g-domain-to-infrastructure-package-json",
+  "Test the layer permission table through imports and package.json-only dependencies, including external I/O.",
+  "層の許可表をimportとpackage.jsonのみの依存で検証し、外部I/Oも含める。",
+);
+cover(
+  ts,
+  ["domain-packaging.declaration"],
+  "clean-class",
+  "violation-packaging-no-mapping",
+  "Distinguish an absent mapping from one that declares the packages.",
+  "写像の欠落と、パッケージを宣言した写像を区別する。",
+);
+cover(
+  ts,
+  ["domain-packaging.technical-name"],
+  "clean-class",
+  "clean-packaging-word-substring",
+  "Match whole module names, not substrings.",
+  "モジュール名は要素全体で照合し、部分文字列では判定しない。",
+);
+cover(
+  ts,
+  ["domain-packaging.coverage"],
+  "clean-class",
+  "clean-packaging-index-file",
+  "A named file and a directory index file name the same module path.",
+  "名前付きファイルとディレクトリのindexファイルを同じモジュールパスとして扱う。",
+);
+cover(
+  ts,
+  ["domain-packaging.reference"],
+  "clean-class",
+  "violation-model-invalid",
+  "An unreadable canonical model is not treated as valid package references.",
+  "正規モデルを読めなければパッケージ参照も検証済みと扱わない。",
+);
+cover(
+  ts,
+  ["domain-packaging.unresolved"],
+  "clean-packaging-index-file",
+  "violation-packaging-invalid-segment",
+  "A file name that is not a module segment cannot pass as an inspected module.",
+  "モジュールの要素にならないファイル名を検査済みのモジュールとしない。",
+);
+for (const rule of ["layer.unknown", "layer.conflict", "layer.unowned"])
+  cover(
+    ts,
+    [rule],
+    "clean-class",
+    `violation-${rule.replaceAll(".", "-")}`,
+    "Exercise the concrete diagnostic rather than exempting the layer.* family.",
+    "layer.*を一括除外せず、具体的な診断ごとに検証する。",
+  );
+cover(
+  ts,
+  ["model.invalid"],
+  "clean-class",
+  "clean-model-skipped-class",
+  "EXECUTE validates the model; SKIP records the model-dependent exclusion.",
+  "EXECUTEのモデル検証と、SKIPによるモデル依存検査の対象外を区別する。",
+);
 export const COVERAGE = rows;
 
 export function violations(row: CoverageRow, cases: readonly GoldenCase[] = ALL_CASES): GoldenCase[] {

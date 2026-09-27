@@ -392,12 +392,17 @@ function nameSide(crateName: string): Exclude<CqrsSide, "none"> | "conflict" | u
 }
 
 export function assignLayers(workspace: CargoWorkspace): CrateLayerAssignment[] {
-  return workspace.members.map((member) => assignOne(member));
+  return workspace.members.map((member) => assignLayer(member, "Cargo.toml"));
 }
 
-function assignOne(member: CrateManifest): CrateLayerAssignment {
+/**
+ * The layer, CQRS side and composition-root marker of one package, from its name and placement.
+ * `manifestName` is the file that declares the package — `Cargo.toml` for a crate, `package.json`
+ * for a TypeScript package — and is where each diagnostic about the package is reported.
+ */
+export function assignLayer(member: CrateManifest, manifestName: string): CrateLayerAssignment {
   const diagnostics: LayerDiagnostic[] = [];
-  const cargoFile = member.path === "." ? "Cargo.toml" : `${member.path}/Cargo.toml`;
+  const manifestFile = member.path === "." ? manifestName : `${member.path}/${manifestName}`;
   const kinds = new Set(member.targets.map((t) => t.kind));
   const hasBin = kinds.has("bin");
   const hasLib = kinds.has("lib");
@@ -417,7 +422,7 @@ function assignOne(member: CrateManifest): CrateLayerAssignment {
 
   if (hasBin && hasLib) {
     diagnostics.push(
-      blocking("layer.mixed-targets", cargoFile, `${member.name} has both bin and lib targets`, member.name),
+      blocking("layer.mixed-targets", manifestFile, `${member.name} has both bin and lib targets`, member.name),
     );
   }
 
@@ -435,13 +440,13 @@ function assignOne(member: CrateManifest): CrateLayerAssignment {
   const dirSide = placement.cqrsDir;
   if (segSide === "conflict") {
     diagnostics.push(
-      blocking("cqrs.conflict", cargoFile, `${member.name} carries more than one CQRS side marker`, member.name),
+      blocking("cqrs.conflict", manifestFile, `${member.name} carries more than one CQRS side marker`, member.name),
     );
   } else if (segSide !== undefined && dirSide !== undefined && segSide !== dirSide) {
     diagnostics.push(
       blocking(
         "cqrs.conflict",
-        cargoFile,
+        manifestFile,
         `${member.name} names CQRS side ${segSide} but sits under ${dirSide}/`,
         member.name,
       ),
@@ -472,7 +477,7 @@ function assignOne(member: CrateManifest): CrateLayerAssignment {
     diagnostics.push(
       blocking(
         "layer.conflict",
-        cargoFile,
+        manifestFile,
         `${member.name} suffix says ${suffix} but placement says ${dirLayer}`,
         member.name,
       ),
@@ -490,13 +495,13 @@ function assignOne(member: CrateManifest): CrateLayerAssignment {
     assignment.layer = "unknown";
     assignment.layer_source = "none";
     diagnostics.push(
-      blocking("layer.unknown", cargoFile, `${member.name} matches no layer suffix or placement`, member.name),
+      blocking("layer.unknown", manifestFile, `${member.name} matches no layer suffix or placement`, member.name),
     );
   }
 
   if (assignment.cqrs_side === "query" && assignment.layer === "domain") {
     diagnostics.push(
-      blocking("cqrs.query-domain", cargoFile, `${member.name} is a query-side domain crate`, member.name),
+      blocking("cqrs.query-domain", manifestFile, `${member.name} is a query-side domain crate`, member.name),
     );
   }
 

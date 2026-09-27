@@ -4,12 +4,12 @@
  * compiler inference, trait solving or macro expansion.
  */
 
-import { evaluateDomainPackaging } from "../../packaging/evaluate.ts";
 import type { CallFact, ParamFact, RustFileFacts, Span } from "../../rust/domain-facts/index.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
 import type { DomainTypeSymbol, InspectionContext, InspectionTarget } from "../types.ts";
+import { evaluateDomainPackaging } from "./packaging.ts";
 import { within as withinSpan } from "./program.ts";
 
 function within(span: Span, outer: Span): boolean {

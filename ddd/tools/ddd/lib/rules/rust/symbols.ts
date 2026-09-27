@@ -1,8 +1,8 @@
 /** Domain summaries joined across explicitly resolved Rust declarations and impls. */
 import type { MethodFact } from "../../rust/domain-facts/index.ts";
-import type { Aggregate } from "../../schema/model.ts";
-import { POST_INIT, snakeToKebab, toKebab, toPascal } from "../lists.ts";
-import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability, MutatorSymbol } from "../types.ts";
+import { toKebab } from "../lists.ts";
+import { bindAggregate, classifyMutation, declaredReplayEventNames } from "../mutations.ts";
+import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability } from "../types.ts";
 import type { RustAggregateMapping } from "./mapping.ts";
 import type { LocatedMethod, RustProgram, RustType } from "./program.ts";
 
@@ -29,23 +29,15 @@ function aggregateFor(
   model: ModelAvailability,
   mappings: readonly RustAggregateMapping[],
 ): { aggregate?: string; ambiguous: boolean } {
-  if (!model.index) return { ambiguous: false };
-  const matches = model.index.elements("aggregate").filter((entry) => {
-    const aggregate = entry.node as Aggregate;
-    const root = model.index?.byId(aggregate.root_element);
-    return root && (root.name === type.name || toPascal(root.id.segments.join("-")) === type.name);
-  });
-  if (matches.length === 0) return { ambiguous: false };
   const sameNames = program.types.filter((candidate) => candidate.layer === "domain" && candidate.name === type.name);
-  const explicit = matches.filter((entry) =>
-    mappings.some((mapping) => mapping.aggregate_ref === entry.id.value && matchesLocation(type, mapping)),
+  return bindAggregate(
+    type,
+    sameNames.length,
+    model,
+    mappings,
+    (mapping) => matchesLocation(type, mapping),
+    program.notes,
   );
-  if (explicit.length === 1) return { aggregate: explicit[0].id.value, ambiguous: false };
-  if (matches.length !== 1 || sameNames.length !== 1) {
-    program.notes.add(`model.unresolved: ${type.key} has an ambiguous model/type binding`);
-    return { ambiguous: true };
-  }
-  return { aggregate: matches[0].id.value, ambiguous: false };
 }
 
 export function buildSymbolTable(
@@ -69,8 +61,8 @@ export function buildSymbolTable(
     const mutators = type.methods
       .filter((entry) => entry.method.receiver === "mut-self")
       .map((entry) =>
-        classifyMutator(
-          entry,
+        classifyMutation(
+          { name: entry.method.name, file: entry.file, line: entry.method.line },
           aggregate,
           model,
           isReplay(entry, type, aggregate, model, program, mappings),
@@ -121,15 +113,15 @@ function isReplay(
   program: RustProgram,
   mappings: readonly RustAggregateMapping[],
 ): boolean {
-  if (!aggregate || !model.index || entry.method.params.length !== 1) return false;
-  const declarations = mappings.filter((mapping) => mapping.aggregate_ref === aggregate);
-  if (declarations.length !== 1) return false;
-  const mapping = declarations[0];
-  if (mapping.persistence_method !== "event-sourcing" || !matchesLocation(type, mapping)) return false;
-  const methods = mapping.replay_methods.filter((replay) => replay.method === entry.method.name);
-  if (methods.length !== 1) return false;
-  const event = model.index.resolve(methods[0].event_ref, "event");
-  if (!event.ok || event.element.owner !== aggregate) return false;
+  const eventNames = declaredReplayEventNames(
+    entry.method.name,
+    entry.method.params.length,
+    aggregate,
+    model,
+    mappings,
+    (mapping) => matchesLocation(type, mapping),
+  );
+  if (!eventNames) return false;
   const eventType = program.resolveType(entry.file, entry.module, entry.method.params[0].type_text);
   return (
     eventType !== undefined &&
@@ -140,32 +132,6 @@ function isReplay(
       (candidate) =>
         candidate.layer === "domain" && candidate.crate === eventType.crate && candidate.name === eventType.name,
     ).length === 1 &&
-    (eventType.name === event.element.name || eventType.name === toPascal(event.element.id.segments.join("-")))
+    eventNames.includes(eventType.name)
   );
-}
-
-function classifyMutator(
-  entry: LocatedMethod,
-  aggregate: string | undefined,
-  model: ModelAvailability,
-  replay: boolean,
-  ambiguous: boolean,
-): MutatorSymbol {
-  const method = entry.method;
-  const command_slug = snakeToKebab(method.name);
-  const base = { method_name: method.name, command_slug, line: method.line, file: entry.file };
-  if (ambiguous) return { ...base, classification: "unknown" };
-  if (replay) return { ...base, classification: "replay-exempt" };
-  if (POST_INIT.has(method.name)) return { ...base, classification: "post-init" };
-  if (model.status !== "available" || !model.index) return { ...base, classification: "unknown" };
-  const declared =
-    aggregate !== undefined &&
-    model.index
-      .commandsOf(aggregate)
-      .some(
-        (command) =>
-          command.element_id.split(".").slice(2).join("-") === command_slug ||
-          command.element_id.endsWith(`.${command_slug}`),
-      );
-  return { ...base, classification: declared ? "declared-command" : "undeclared" };
 }
