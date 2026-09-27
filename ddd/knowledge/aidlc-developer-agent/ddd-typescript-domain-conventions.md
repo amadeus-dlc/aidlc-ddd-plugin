@@ -4,7 +4,7 @@ Updated: 2026-09-27. Design conventions and automated coverage are documented se
 
 ## Purpose
 
-Conventions for generating TypeScript domain code that the TypeScript gates pass: both code representations, method-specific Result errors, state ownership, and both module layouts. A check name does not imply that the entire convention is enforced automatically. The conventions shared with Rust are in the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md) and the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) knowledge; the file placement is in the [TypeScript module layout](../aidlc-shared/ddd-typescript-module-layout.md) knowledge.
+Conventions for generating TypeScript code that the TypeScript gates pass: both code representations, method-specific Result errors, state ownership, and both module layouts in the domain layer, and the use-case and Interface Adapter layers that call it. A check name does not imply that the entire convention is enforced automatically. The conventions shared with Rust are in the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md) and the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) knowledge; the file placement is in the [TypeScript module layout](../aidlc-shared/ddd-typescript-module-layout.md) knowledge.
 
 ## Rules
 
@@ -22,6 +22,7 @@ Conventions for generating TypeScript domain code that the TypeScript gates pass
 | K.typescript-domain-conventions.10 | Share no mutable array or object with the outside of the domain: copy what comes in, return copies or readonly values, and return a business failure before changing any state. | Review and behavior tests. |
 | K.typescript-domain-conventions.11 | Name another package only by its package name and an entry its `exports` publish; write no `paths` alias into another package, no `baseUrl`, and no `export *` in a published entry. | g |
 | K.typescript-domain-conventions.12 | Place modules by the selected layout and write the relative specifiers that layout gives them. | `ddd-typescript-module-layout` checks the placement; the compiler checks the specifiers. |
+| K.typescript-domain-conventions.13 | In the use-case layer, give `execute` IDs and value objects with stated types, and state one named type on every receiver of `execute` or of a domain method. In the Interface Adapter layer, restore aggregates through `restore` and keep the command and query sides apart. | `ddd-typescript-use-case` (g, h, i, d) and `ddd-typescript-interface-adapter` (k, l, m, n, g). |
 
 ## Rationale
 
@@ -194,15 +195,98 @@ export { InvoiceLine } from "./invoice/line.ts";
 
 When a module file moves between the layouts, update every specifier that names it. The declarations placed in TypeScript under `domain_packages` follow the placement: `src/index.ts` is the package root `[]`, `src/invoice.ts` and `src/invoice/index.ts` are `[invoice]`, and `src/invoice/line.ts` is `[invoice, line]`.
 
+## Use-case and Interface Adapter layers
+
+The use-case package `@acme/billing-use-case` (`packages/command/billing-use-case`) and the interface-adapter package `@acme/billing-interface-adapter` (`packages/command/billing-interface-adapter`) follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md). Both list the domain and language-extensions packages in `dependencies`, and the adapter also lists the use-case package. Their sources are the same in both code representations and both module layouts: they call only `restore`, `of` and the command `issue`, which both representations spell alike, and they hold leaf modules only.
+
+The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package; it may also be declared in a domain package. Its lookup returns its own error type through `Result`:
+
+```ts
+import type { Invoice } from "@acme/billing-domain";
+import type { Result } from "@acme/language-extensions";
+
+export type InvoiceNotFound = "invoice-not-found";
+
+export interface InvoiceRepository {
+  findById(invoiceId: string): Result<Invoice, InvoiceNotFound>;
+  store(invoiceId: string, invoice: Invoice): void;
+}
+```
+
+`execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port, states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
+
+```ts
+import type { Invoice, IssueInvoiceError } from "@acme/billing-domain";
+import type { Result } from "@acme/language-extensions";
+import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
+
+export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
+
+export class IssueInvoice {
+  readonly #invoices: InvoiceRepository;
+
+  constructor(invoices: InvoiceRepository) {
+    this.#invoices = invoices;
+  }
+
+  execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
+    const found: Result<Invoice, InvoiceNotFound> = this.#invoices.findById(invoiceId);
+    if (!found.ok) return found;
+    const invoice: Invoice = found.value;
+    const issued: Result<void, IssueInvoiceError> = invoice.issue();
+    if (!issued.ok) return issued;
+    this.#invoices.store(invoiceId, invoice);
+    return { ok: true, value: undefined };
+  }
+}
+```
+
+The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
+
+```ts
+import { Invoice, InvoiceLine } from "@acme/billing-domain";
+import type { InvoiceNotFound, InvoiceRepository } from "@acme/billing-use-case";
+import type { Result } from "@acme/language-extensions";
+
+export type InvoiceRecord = {
+  readonly customer: string;
+  readonly amounts: readonly number[];
+  readonly issued: boolean;
+};
+
+export class InMemoryInvoiceRepository implements InvoiceRepository {
+  readonly #records: ReadonlyMap<string, InvoiceRecord>;
+  readonly #stored: Map<string, Invoice>;
+
+  constructor(records: ReadonlyMap<string, InvoiceRecord>) {
+    this.#records = records;
+    this.#stored = new Map();
+  }
+
+  findById(invoiceId: string): Result<Invoice, InvoiceNotFound> {
+    const stored: Invoice | undefined = this.#stored.get(invoiceId);
+    if (stored !== undefined) return { ok: true, value: stored };
+    const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
+    if (record === undefined) return { ok: false, error: "invoice-not-found" };
+    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(amount));
+    return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
+  }
+
+  store(invoiceId: string, invoice: Invoice): void {
+    this.#stored.set(invoiceId, invoice);
+  }
+}
+```
+
 ## What stops the gate
 
 A syntax error, destructuring, an object spread, a decorator, a computed name not spelled by one identifier, `import =`, `export =`, a dynamic import, a namespace or a dynamic callee in any source below `src/` of a domain package stops the domain gate as uninspectable, claimed or not. The only computed name to write is a companion's brand key, `[brand]`, spelled by the brand's identifier as in the example above; any other computed member of a companion, and any computed member of a class, stops the gate too. So do a dependency it cannot follow, a dependency on a package that states no `exports`, a package whose settings state `baseUrl`, and a domain package the root `tsconfig.json` does not reference. In a claimed domain source, an object literal whose type is stated by an annotation, `as`, `<T>` or `satisfies` also stops the gate when that type, once `Readonly<…>` and a union with `null` or `undefined` are removed, names a domain type but is not one named type, such as `{ lines: readonly InvoiceLine[] }` or `Record<string, Invoice>`. For a companion's closure state, write it as the example above does: state the readonly type on the collection's own variable and leave the state object unannotated, `const kept: readonly InvoiceLine[] = [...lines];` and `const state = { customer, lines: kept, issued };`. Keep test files, declaration files, and `.tsx`, `.mts` or `.cts` sources outside `src`, where the layout gate cannot place them.
 
-No TypeScript gate inspects the use-case or Interface Adapter layer yet. Follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md) and check those sources in code review.
+In a claimed use-case source, an `execute` parameter without a stated type and a receiver of `execute` or of a getter-named method without an annotation naming one type stop the use-case gate. In a query-side source, a namespace import or an `export *` of a domain package stops the interface-adapter gate. When a claimed source of their layers is to be decided, a compiler that does not launch stops the domain, use-case and interface-adapter gates; the module layout gate reads the directory tree only.
 
 ## Examples
 
-The [generation samples](../../tests/fixtures/typescript-generation/samples.ts) hold the complete projects these examples come from, in both representations and both layouts, with the model, the aggregate mapping and the source claims; the development repository runs them through the TypeScript domain gate, the module layout gate, its CI entry, and the compiler. These are test inputs, not complete business applications.
+The [generation samples](../../tests/fixtures/typescript-generation/samples.ts) hold the complete projects these examples come from, in both representations and both layouts, with the model, the aggregate mapping and the source claims; the development repository runs them through the TypeScript domain gate, the use-case gate, the interface-adapter gate, the module layout gate, its CI entry, and the compiler. These are test inputs, not complete business applications.
 
 The distribution does not include tests or docs, so these links are for the development repository. All conventions needed at the destination are retained in this file.
 

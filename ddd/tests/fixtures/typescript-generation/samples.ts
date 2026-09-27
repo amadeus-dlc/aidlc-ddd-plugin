@@ -3,11 +3,16 @@
  * (`class`, `companion`) and module layout (`named-file`, `index-file`), with the record the
  * code-generation gate reads.
  *
- * Each sample is a project of two packages: the language-extensions package of the infrastructure
- * layer, which declares `Result`, and a command-side domain package holding the `invoice` aggregate
- * with its child module `invoice/line`. The parent module has a child so the two layouts place it in
- * different files; only the file of that parent and the specifiers that name it change with the
- * layout. The TypeScript examples of the runtime instructions are copies of these sources.
+ * Each sample is a project of four packages: the language-extensions package of the infrastructure
+ * layer, which declares `Result`; a command-side domain package holding the `invoice` aggregate with
+ * its child module `invoice/line`; a use-case package declaring the repository port and the use case
+ * that issues an invoice; and an interface-adapter package implementing that port. The parent module
+ * has a child so the two layouts place it in different files; only the file of that parent and the
+ * specifiers that name it change with the layout. The use-case and interface-adapter sources are the
+ * same in every sample: they reach the aggregate only through calls both representations share and
+ * hold leaf modules alone, so the domain package is what differs. The repository port lives in the
+ * use-case package so the domain package, its model and its mapping stay those the domain gate
+ * already decides. The TypeScript examples of the runtime instructions are copies of these sources.
  */
 
 import { SUPPORTED_COMPILER_OPTIONS } from "../typescript-facts/project.ts";
@@ -22,6 +27,8 @@ const LAYOUTS: readonly Layout[] = ["named-file", "index-file"];
 
 const DOMAIN_SENSOR = "ddd-typescript-domain";
 const LAYOUT_SENSOR = "ddd-typescript-module-layout";
+const USE_CASE_SENSOR = "ddd-typescript-use-case";
+const INTERFACE_ADAPTER_SENSOR = "ddd-typescript-interface-adapter";
 
 const OUTPUT = "construction/u1/code-generation/code-summary.md";
 const SOURCE_MANIFEST = "construction/u1/code-generation/source-manifest.json";
@@ -33,6 +40,10 @@ const RESULT_DIR = "packages/infrastructure/language-extensions";
 const RESULT_NAME = "@acme/language-extensions";
 const DOMAIN_DIR = "packages/command/billing-domain";
 const DOMAIN_NAME = "@acme/billing-domain";
+const USE_CASE_DIR = "packages/command/billing-use-case";
+const USE_CASE_NAME = "@acme/billing-use-case";
+const INTERFACE_ADAPTER_DIR = "packages/command/billing-interface-adapter";
+const INTERFACE_ADAPTER_NAME = "@acme/billing-interface-adapter";
 
 /** The project-relative file of the `invoice` parent module under `layout`. */
 export function parentModuleFile(layout: Layout): string {
@@ -212,6 +223,85 @@ export { InvoiceLine } from "./invoice/line.ts";
 `;
 }
 
+const INVOICE_REPOSITORY_PORT = `import type { Invoice } from "${DOMAIN_NAME}";
+import type { Result } from "${RESULT_NAME}";
+
+export type InvoiceNotFound = "invoice-not-found";
+
+export interface InvoiceRepository {
+  findById(invoiceId: string): Result<Invoice, InvoiceNotFound>;
+  store(invoiceId: string, invoice: Invoice): void;
+}
+`;
+
+const ISSUE_INVOICE = `import type { Invoice, IssueInvoiceError } from "${DOMAIN_NAME}";
+import type { Result } from "${RESULT_NAME}";
+import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
+
+export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
+
+export class IssueInvoice {
+  readonly #invoices: InvoiceRepository;
+
+  constructor(invoices: InvoiceRepository) {
+    this.#invoices = invoices;
+  }
+
+  execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
+    const found: Result<Invoice, InvoiceNotFound> = this.#invoices.findById(invoiceId);
+    if (!found.ok) return found;
+    const invoice: Invoice = found.value;
+    const issued: Result<void, IssueInvoiceError> = invoice.issue();
+    if (!issued.ok) return issued;
+    this.#invoices.store(invoiceId, invoice);
+    return { ok: true, value: undefined };
+  }
+}
+`;
+
+const USE_CASE_INDEX = `export type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
+export type { IssueInvoiceFailure } from "./issue-invoice.ts";
+export { IssueInvoice } from "./issue-invoice.ts";
+`;
+
+const IN_MEMORY_INVOICE_REPOSITORY = `import { Invoice, InvoiceLine } from "${DOMAIN_NAME}";
+import type { InvoiceNotFound, InvoiceRepository } from "${USE_CASE_NAME}";
+import type { Result } from "${RESULT_NAME}";
+
+export type InvoiceRecord = {
+  readonly customer: string;
+  readonly amounts: readonly number[];
+  readonly issued: boolean;
+};
+
+export class InMemoryInvoiceRepository implements InvoiceRepository {
+  readonly #records: ReadonlyMap<string, InvoiceRecord>;
+  readonly #stored: Map<string, Invoice>;
+
+  constructor(records: ReadonlyMap<string, InvoiceRecord>) {
+    this.#records = records;
+    this.#stored = new Map();
+  }
+
+  findById(invoiceId: string): Result<Invoice, InvoiceNotFound> {
+    const stored: Invoice | undefined = this.#stored.get(invoiceId);
+    if (stored !== undefined) return { ok: true, value: stored };
+    const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
+    if (record === undefined) return { ok: false, error: "invoice-not-found" };
+    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(amount));
+    return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
+  }
+
+  store(invoiceId: string, invoice: Invoice): void {
+    this.#stored.set(invoiceId, invoice);
+  }
+}
+`;
+
+const INTERFACE_ADAPTER_INDEX = `export type { InvoiceRecord } from "./in-memory-invoice-repository.ts";
+export { InMemoryInvoiceRepository } from "./in-memory-invoice-repository.ts";
+`;
+
 /** The canonical model: `open` is a factory, `addLine` and `issue` are commands, each with its own errors. */
 const MODEL = `schema_version: 2
 bounded_contexts:
@@ -338,6 +428,10 @@ export interface GenerationSample {
   readonly domainCase: GoldenCase;
   /** The run of the TypeScript module layout gate (T-11-04) over the same project and record. */
   readonly layoutCase: GoldenCase;
+  /** The run of the TypeScript use-case gate (T-11-03) over the same project and record. */
+  readonly useCaseCase: GoldenCase;
+  /** The run of the TypeScript interface-adapter gate (T-11-03) over the same project and record. */
+  readonly interfaceAdapterCase: GoldenCase;
 }
 
 /** The generated project for one code representation and one module layout. */
@@ -352,14 +446,28 @@ function generationSample(representation: Representation, layout: Layout): Gener
     [parentModuleFile(layout)]:
       representation === "class" ? classInvoice(lineSpecifier) : companionInvoice(lineSpecifier),
     [`${DOMAIN_DIR}/src/invoice/line.ts`]: representation === "class" ? CLASS_LINE : COMPANION_LINE,
+    [`${USE_CASE_DIR}/src/index.ts`]: USE_CASE_INDEX,
+    [`${USE_CASE_DIR}/src/invoice-repository.ts`]: INVOICE_REPOSITORY_PORT,
+    [`${USE_CASE_DIR}/src/issue-invoice.ts`]: ISSUE_INVOICE,
+    [`${INTERFACE_ADAPTER_DIR}/src/index.ts`]: INTERFACE_ADAPTER_INDEX,
+    [`${INTERFACE_ADAPTER_DIR}/src/in-memory-invoice-repository.ts`]: IN_MEMORY_INVOICE_REPOSITORY,
   };
+  const references = [RESULT_DIR, DOMAIN_DIR, USE_CASE_DIR, INTERFACE_ADAPTER_DIR].map((dir) => ({ path: `./${dir}` }));
   const workspace: Record<string, string> = {
     ".ddd.toml": settings(representation, layout),
-    "tsconfig.json": `${JSON.stringify({ files: [], references: [{ path: `./${RESULT_DIR}` }, { path: `./${DOMAIN_DIR}` }] }, null, 2)}\n`,
+    "tsconfig.json": `${JSON.stringify({ files: [], references }, null, 2)}\n`,
     [`${RESULT_DIR}/package.json`]: packageManifest(RESULT_NAME),
     [`${RESULT_DIR}/tsconfig.json`]: PACKAGE_TSCONFIG,
     [`${DOMAIN_DIR}/package.json`]: packageManifest(DOMAIN_NAME, { [RESULT_NAME]: "0.1.0" }),
     [`${DOMAIN_DIR}/tsconfig.json`]: PACKAGE_TSCONFIG,
+    [`${USE_CASE_DIR}/package.json`]: packageManifest(USE_CASE_NAME, { [DOMAIN_NAME]: "0.1.0", [RESULT_NAME]: "0.1.0" }),
+    [`${USE_CASE_DIR}/tsconfig.json`]: PACKAGE_TSCONFIG,
+    [`${INTERFACE_ADAPTER_DIR}/package.json`]: packageManifest(INTERFACE_ADAPTER_NAME, {
+      [DOMAIN_NAME]: "0.1.0",
+      [USE_CASE_NAME]: "0.1.0",
+      [RESULT_NAME]: "0.1.0",
+    }),
+    [`${INTERFACE_ADAPTER_DIR}/tsconfig.json`]: PACKAGE_TSCONFIG,
     ...sources,
   };
   const files: Record<string, string> = {
@@ -384,7 +492,16 @@ function generationSample(representation: Representation, layout: Layout): Gener
     state: STATE,
     expect: { pass: true, rules: [] },
   };
-  return { representation, layout, workspace, sources, domainCase, layoutCase: { ...domainCase, sensor: LAYOUT_SENSOR } };
+  return {
+    representation,
+    layout,
+    workspace,
+    sources,
+    domainCase,
+    layoutCase: { ...domainCase, sensor: LAYOUT_SENSOR },
+    useCaseCase: { ...domainCase, sensor: USE_CASE_SENSOR },
+    interfaceAdapterCase: { ...domainCase, sensor: INTERFACE_ADAPTER_SENSOR },
+  };
 }
 
 /** Every sample, one per code representation and module layout. */

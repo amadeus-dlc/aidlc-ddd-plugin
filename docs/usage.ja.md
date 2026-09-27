@@ -34,7 +34,7 @@ module_layout = "file"
 
 TypeScriptのモジュールを置く前に、同じ `.ddd.toml` の `languages` に `typescript` を加え、`[typescript]` テーブルの `module_layout` を `named-file`（親が `src/invoice.ts`）か `index-file`（親が `src/invoice/index.ts`）にします。末端はどちらも `src/invoice/line.ts` です。検査するのは各パッケージのルート直下の `src` だけで、設定漏れ・誤配置・解決できない構成は承認を止めます。検査範囲とCIの必須コマンドは[TypeScriptの配置契約](../ddd/docs/users/typescript-module-layout.ja.md)を参照してください。
 
-同じ `[typescript]` テーブルの `code_representation` を、`class`（状態を `#` フィールドに置く）か `companion`（型と同名のコンパニオンオブジェクトを組み合わせ、状態をクロージャに置く）にします。コード生成は、TypeScriptのドメインの型をすべて選んだ表現と配置で書き、メソッド固有のエラーをinfrastructure層に置いた `Result` 型で返し、ドメインの境界で配列とオブジェクトをコピーします。TypeScriptのドメインゲートは両表現を検査します。[TypeScriptドメインセンサー契約](../ddd/docs/users/typescript-sensor-contract.ja.md)を参照してください。ユースケース層・インターフェースアダプタ層を検査するTypeScriptのゲートはまだ無いため、そのコードはレビューで確認してください。
+同じ `[typescript]` テーブルの `code_representation` を、`class`（状態を `#` フィールドに置く）か `companion`（型と同名のコンパニオンオブジェクトを組み合わせ、状態をクロージャに置く）にします。コード生成は、TypeScriptのドメインの型をすべて選んだ表現と配置で書き、メソッド固有のエラーをinfrastructure層に置いた `Result` 型で返し、ドメインの境界で配列とオブジェクトをコピーします。TypeScriptのドメインゲートは両表現を検査します。[TypeScriptドメインセンサー契約](../ddd/docs/users/typescript-sensor-contract.ja.md)を参照してください。ユースケース層・インターフェースアダプタ層のコードは、TypeScriptのユースケースゲートとインターフェースアダプタゲートが、Rustのゲートと同じ規則IDで検査します。
 
 ## ワークフローでの役割
 

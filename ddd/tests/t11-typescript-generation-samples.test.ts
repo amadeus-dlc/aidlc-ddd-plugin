@@ -3,10 +3,9 @@
  *
  * One sample per code representation (`class`, `companion`) and module layout (`named-file`,
  * `index-file`) is written into a fresh project and run through the real entries, as the framework
- * and a CI step run them: the domain gate (T-11-02), the module layout gate and its CI entry
- * (T-11-04). Each sample also has to compile, since it stands for generated code. The use-case and
- * interface-adapter gate of T-11-03 does not exist yet, so the samples hold no such layer and nothing
- * here claims they pass it.
+ * and a CI step run them: the domain gate (T-11-02), the use-case and interface-adapter gates
+ * (T-11-03), and the module layout gate and its CI entry (T-11-04). Each sample also has to compile,
+ * since it stands for generated code.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -20,7 +19,7 @@ import {
   otherParentModuleFile,
   parentModuleFile,
 } from "./fixtures/typescript-generation/samples.ts";
-import { materializeCase, runGoldenCase } from "./golden/runner.ts";
+import { type GoldenCase, materializeCase, runGoldenCase } from "./golden/runner.ts";
 
 const TOOLS = join(import.meta.dir, "../tools");
 const CI_ENTRY = join(TOOLS, "ddd-check-typescript-module-layout.ts");
@@ -80,18 +79,35 @@ function typeCheck(root: string): string[] {
   return diagnostics;
 }
 
+/**
+ * Runs a gate that decides the sources of some layers and requires it to pass with no finding. Such
+ * a gate also passes with no finding when it inspects nothing — no claimed TypeScript source in a
+ * package of its layers — so the sample has to be inspected, not skipped.
+ */
+function expectInspectedPass(gateCase: GoldenCase): void {
+  const result = runGoldenCase(TOOLS, gateCase);
+  expect(result.problems).toEqual([]);
+  expect(result.verdict?.findings).toEqual([]);
+  expect(result.verdict?.note ?? "").not.toContain("no typescript sources claimed");
+}
+
 for (const sample of generationSamples()) {
   describe(`generation sample: ${sample.representation} / ${sample.layout}`, () => {
     test(
       "passes the TypeScript domain gate with no finding",
-      () => {
-        const result = runGoldenCase(TOOLS, sample.domainCase);
-        expect(result.problems).toEqual([]);
-        expect(result.verdict?.findings).toEqual([]);
-        // The gate also passes with no finding when it inspects nothing: no claimed TypeScript
-        // source, or none in a domain package. The sample has to be inspected, not skipped.
-        expect(result.verdict?.note ?? "").not.toContain("no typescript sources claimed");
-      },
+      () => expectInspectedPass(sample.domainCase),
+      GATE_RUN_TIMEOUT_MS,
+    );
+
+    test(
+      "passes the TypeScript use-case gate with no finding",
+      () => expectInspectedPass(sample.useCaseCase),
+      GATE_RUN_TIMEOUT_MS,
+    );
+
+    test(
+      "passes the TypeScript interface-adapter gate with no finding",
+      () => expectInspectedPass(sample.interfaceAdapterCase),
       GATE_RUN_TIMEOUT_MS,
     );
 

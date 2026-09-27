@@ -24,7 +24,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 
 ## Rationale
 
-This infrastructure layer is for language extensions; DB/RPC clients belong in the Interface Adapter layer. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace. The TypeScript domain sensor starts from the same claims and applies these layer rules to TypeScript packages; no TypeScript sensor inspects the use-case or Interface Adapter layer yet. In TypeScript, the language-extensions infrastructure package holds `Result`; see the [TypeScript domain conventions](../aidlc-developer-agent/ddd-typescript-domain-conventions.md).
+This infrastructure layer is for language extensions; DB/RPC clients belong in the Interface Adapter layer. Layer names and responsibilities are this plugin's conventions. Rust sensors use declared source claims as their entry point instead of unconditionally inspecting the entire workspace. The TypeScript domain, use-case and interface-adapter sensors start from the same claims and apply these layer rules to TypeScript packages. In TypeScript, the language-extensions infrastructure package holds `Result`; see the [TypeScript domain conventions](../aidlc-developer-agent/ddd-typescript-domain-conventions.md).
 
 ## Examples
 
