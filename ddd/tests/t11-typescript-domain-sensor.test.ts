@@ -864,6 +864,99 @@ describe("a type name is resolved through the import that names it", () => {
   });
 });
 
+describe("only the wrappings that build a type are removed from a constructed type", () => {
+  test.each([
+    ["Readonly<Invoice>", 'export const draft: Readonly<Invoice> = { id: "x" };\n'],
+    ["Invoice | null", 'export const draft: Invoice | null = { id: "x" };\n'],
+    ["Readonly<Invoice> | undefined", 'export const draft: Readonly<Invoice> | undefined = { id: "x" };\n'],
+  ])("an object literal typed as %s builds the domain type (c)", (_label, body) => {
+    const billing = `import { Invoice } from "./invoice.ts";\n${body}`;
+    const verdict = verdictOf(withBillingFile("wrapped-construction", billing));
+    expect(verdict.findings.filter((entry) => entry.rule_id === "c").map((entry) => [entry.file, entry.line])).toEqual([
+      [BILLING_FILE, lineOf(billing, "export const draft")],
+    ]);
+  });
+
+  test.each([
+    [
+      "a type literal holding the domain type",
+      "export const result: { ok: true; value: Invoice } = { ok: true, value: undefined as never };\n",
+    ],
+    ["an application of another type", "export const byId = { a: undefined as never } as Record<string, Invoice>;\n"],
+  ])("an object literal typed by %s is undecided rather than a construction", (_label, body) => {
+    const billing = `import { Invoice } from "./invoice.ts";\n${body}`;
+    const run = runInProcess(withBillingFile("containing-type", billing));
+    expectStopped(run);
+    expect(run.stderr).toContain("constructed type");
+  });
+});
+
+/** The companion with its `issue` renamed, so a write in it is an undeclared mutation (b). */
+const COMPANION_RENAMED = edit(edit(COMPANION_CLEAN, "issue(): void;", "rename(): void;"), "issue() {", "rename() {");
+
+describe("closure state is found where the name is written, through destructuring too", () => {
+  test("a callback parameter of the same name elsewhere in the method does not hide the write (b)", () => {
+    const source = edit(
+      COMPANION_RENAMED,
+      "state.issued = true;",
+      "state.issued = true;\n        [0].forEach((state) => state);",
+    );
+    expect(verdictOf(withDomainSource("shadowed-callback", source)).findings.map((entry) => entry.rule_id)).toContain(
+      "b",
+    );
+  });
+
+  test("a write through destructured closure state is a write (b)", () => {
+    const source = edit(
+      edit(
+        edit(COMPANION_CLEAN, "issue(): void;", "issue(): void; rename(): void;"),
+        "const state = { id, amount, issued: false };",
+        "const state = { id, amount, issued: false };\n    const { lines } = { lines: [] as string[] };",
+      ),
+      "[brand]: true,\n",
+      '[brand]: true,\n      rename() {\n        lines.push("x");\n      },\n',
+    );
+    expect(verdictOf(withDomainSource("destructured-write", source)).findings.map((entry) => entry.rule_id)).toContain(
+      "b",
+    );
+  });
+
+  test("returning destructured closure state is a getter, and calling it is a getter call (d)", () => {
+    const source = `${edit(
+      edit(
+        COMPANION_CLEAN,
+        "const state = { id, amount, issued: false };",
+        "const state = { id, amount, issued: false };\n    const { amount: owed } = state;",
+      ),
+      "return state.amount;",
+      "return owed;",
+    )}${PEEK_CALL}`;
+    expect(verdictOf(withDomainSource("destructured-getter", source)).findings.map((entry) => entry.rule_id)).toContain(
+      "d",
+    );
+  });
+});
+
+describe("an imports specifier is resolved through the key Node selects", () => {
+  test("an exact key written after a matching pattern decides, not the pattern", () => {
+    // The pattern would place `#internal/special` inside the package; the exact key sends it out of
+    // the package, where this gate does not follow it, so the dependency stops the gate.
+    const run = runInProcess(
+      tsCase(
+        "imports-exact-key",
+        {
+          source: `import { X } from "#internal/special";\n${CLASS_CLEAN}`,
+          addFiles: { "src/internal/special.ts": "export class X {}\n" },
+          manifest: { imports: { "#internal/*": "./src/internal/*.ts", "#internal/special": "../../shared/x.ts" } },
+          extra: { "shared/x.ts": "export class X {}\n" },
+        },
+        { pass: true, rules: [] },
+      ),
+    );
+    expectStopped(run);
+  });
+});
+
 // --- a compiler that cannot be launched --------------------------------------------------------------
 
 const PRODUCT_VENDOR_DIR = join(PRODUCT_TOOLS_DIR, "ddd/lib/typescript/vendor");

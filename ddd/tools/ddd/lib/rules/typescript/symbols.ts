@@ -211,11 +211,64 @@ export function resolveTypeName(
 
 const TYPE_NAMES = /[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?/g;
 
+/** Splits `text` at the `|` that stand outside any bracket, or returns it whole. */
+function topLevelUnion(text: string): string[] {
+  const members: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if ("<([{".includes(char)) depth++;
+    else if (">)]}".includes(char)) depth--;
+    else if (char === "|" && depth === 0) {
+      members.push(text.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  members.push(text.slice(start).trim());
+  return members.filter((member) => member.length > 0);
+}
+
+/** `inner` when `text` is `Readonly<inner>` as a whole, with its brackets balanced. */
+function readonlyInner(text: string): string | undefined {
+  if (!text.startsWith("Readonly<") || !text.endsWith(">")) return undefined;
+  const inner = text.slice("Readonly<".length, -1);
+  let depth = 0;
+  for (const char of inner) {
+    if ("<([{".includes(char)) depth++;
+    else if (">)]}".includes(char) && --depth < 0) return undefined;
+  }
+  return depth === 0 ? inner.trim() : undefined;
+}
+
 /**
- * The domain type a construction is written against. A type spelled by one name is resolved as
- * `resolveTypeName` resolves it; any other type — `Readonly<Invoice>`, `Invoice | null` — builds a
- * domain type when a name it spells is one, so the first such name decides, rather than the
- * construction passing because its type is not one name.
+ * The type a construction builds, once the wrappings that build that same type are removed:
+ * `Readonly<T>`, and a union of `T` with `null` or `undefined`. Any other type is left as written.
+ */
+function builtType(text: string): string {
+  let current = text.trim();
+  for (;;) {
+    const inner = readonlyInner(current);
+    if (inner !== undefined) {
+      current = inner;
+      continue;
+    }
+    const members = topLevelUnion(current);
+    const kept = members.filter((member) => member !== "null" && member !== "undefined");
+    if (members.length > 1 && kept.length === 1) {
+      current = kept[0];
+      continue;
+    }
+    return current;
+  }
+}
+
+/**
+ * The domain type a construction is written against. The type is resolved as `resolveTypeName`
+ * resolves it once `Readonly<…>` and a union with `null` or `undefined` are removed, since those
+ * build the type they wrap. Any other type that still names a domain type — an application such as
+ * `Record<string, Invoice>`, a type literal holding one — does not build it, and cannot be told
+ * from one that does without a type checker, so it is undecided rather than passed or reported.
  */
 export function resolveConstructedType(
   packages: ProjectPackages,
@@ -224,10 +277,13 @@ export function resolveConstructedType(
   facts: TypeScriptFileFacts,
   text: string,
 ): TypeResolution {
-  if (SIMPLE_REFERENCE.test(text.trim())) return resolveTypeName(packages, symbols, file, facts, text);
-  for (const name of text.match(TYPE_NAMES) ?? []) {
+  const built = builtType(text);
+  if (SIMPLE_REFERENCE.test(built)) return resolveTypeName(packages, symbols, file, facts, built);
+  for (const name of built.match(TYPE_NAMES) ?? []) {
     const resolved = resolveTypeName(packages, symbols, file, facts, name);
-    if (resolved.kind !== "other") return resolved;
+    if (resolved.kind === "domain")
+      return { kind: "undecided", reason: `the type ${built} names ${name} but is not one it builds` };
+    if (resolved.kind === "undecided") return resolved;
   }
   return { kind: "other" };
 }

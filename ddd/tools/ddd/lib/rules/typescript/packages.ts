@@ -195,11 +195,24 @@ function keyPrefix(key: string): string {
  * whole), the longer key on a tie. A `null` target of that key withholds the subpath.
  */
 export function isExported(entries: PackageExports & { kind: "map" }, subpath: string): boolean {
-  const matching = entries.entries.filter(([key]) => matchesSubpath(key, subpath));
-  const decisive =
-    matching.find(([key]) => key === subpath) ??
-    [...matching].sort(([a], [b]) => keyPrefix(b).length - keyPrefix(a).length || b.length - a.length)[0];
+  const decisive = decisiveEntry(entries.entries, subpath);
   return decisive !== undefined && decisive[1] !== null;
+}
+
+/**
+ * The one entry of an `exports` or `imports` map that decides `subpath`, as Node selects it: the key
+ * equal to the subpath, else the matching key with the longest part before its `*`, the longer key on
+ * a tie. The order the keys are written in never decides.
+ */
+function decisiveEntry(
+  entries: readonly (readonly [string, unknown])[],
+  subpath: string,
+): readonly [string, unknown] | undefined {
+  const matching = entries.filter(([key]) => matchesSubpath(key, subpath));
+  return (
+    matching.find(([key]) => key === subpath) ??
+    [...matching].sort(([a], [b]) => keyPrefix(b).length - keyPrefix(a).length || b.length - a.length)[0]
+  );
 }
 
 function targetStrings(value: unknown): string[] {
@@ -241,13 +254,14 @@ export function publicEntryOf(pkg: TsPackage, file: string): PublicEntry {
 export function importTarget(pkg: TsPackage, specifier: string): string | undefined {
   const imports = pkg.manifest.imports;
   if (imports === null || typeof imports !== "object" || Array.isArray(imports)) return undefined;
-  for (const [key, value] of Object.entries(imports as Record<string, unknown>)) {
-    if (!matchesSubpath(key, specifier) || typeof value !== "string" || !value.startsWith("./")) continue;
-    const star = key.indexOf("*");
-    const matched = star < 0 ? "" : specifier.slice(star, specifier.length - (key.length - star - 1));
-    return resolve(pkg.root, value.replace("*", matched));
-  }
-  return undefined;
+  // The key Node selects decides, so a more specific key written after a pattern still wins.
+  const decisive = decisiveEntry(Object.entries(imports as Record<string, unknown>), specifier);
+  if (decisive === undefined) return undefined;
+  const [key, value] = decisive;
+  if (typeof value !== "string" || !value.startsWith("./")) return undefined;
+  const star = key.indexOf("*");
+  const matched = star < 0 ? "" : specifier.slice(star, specifier.length - (key.length - star - 1));
+  return resolve(pkg.root, value.replace("*", matched));
 }
 
 /** The names of the packages `package.json` depends on, in every dependency section. */

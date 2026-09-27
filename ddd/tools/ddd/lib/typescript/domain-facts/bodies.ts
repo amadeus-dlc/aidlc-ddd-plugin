@@ -3,8 +3,10 @@
  * bindings it writes, whether it is nothing but the return of one of them, and which type the
  * nearest binding of a name states.
  *
- * A binding is captured when the body does not declare it: a parameter, a local, a nested function
- * or class, or a caught error declared anywhere inside the body is the body's own. A captured binding
+ * A name is captured when its nearest binding, seen from where the name is written, lies outside the
+ * body: a parameter, a local, a nested function or class, or a caught error of the body is its own
+ * only where it is visible, so a callback parameter of the same name elsewhere in the body does not
+ * hide a captured binding, and a name bound through destructuring is found too. A captured binding
  * an enclosing function declares is closure state; one declared at the top of the file is module
  * state. A write to any captured binding is recorded; a call of an array, `Map` or `Set` changing
  * method on closure state is recorded as a write to it; and only a member of `this` or closure state,
@@ -22,28 +24,26 @@ interface BodyEffects {
   readonly returns_state_only: boolean;
 }
 
-/** Every name a binding inside `node` declares, nested functions included. */
-function declaredNames(api: CompilerApi, node: ts.Node): Set<string> {
-  const names = new Set<string>();
-  const bind = (name: ts.BindingName): void => {
-    if (api.isIdentifier(name)) {
-      names.add(name.text);
-      return;
-    }
-    for (const element of name.elements) if (!api.isOmittedExpression(element)) bind(element.name);
-  };
-  const visit = (current: ts.Node): void => {
-    if (api.isParameter(current) || api.isVariableDeclaration(current) || api.isBindingElement(current))
-      bind(current.name);
-    else if (
-      (api.isFunctionDeclaration(current) || api.isClassDeclaration(current) || api.isFunctionExpression(current)) &&
-      current.name
-    )
-      names.add(current.name.text);
-    api.forEachChild(current, visit);
-  };
-  visit(node);
-  return names;
+/** Whether the binding pattern `name` binds `text`, through any destructuring. */
+function bindsName(api: CompilerApi, name: ts.BindingName, text: string): boolean {
+  if (api.isIdentifier(name)) return name.text === text;
+  return name.elements.some((element) => !api.isOmittedExpression(element) && bindsName(api, element.name, text));
+}
+
+/** Whether `scope` is `fn` itself or lies inside it: a binding held there belongs to `fn`. */
+function within(fn: ts.Node, scope: ts.Node): boolean {
+  for (let current: ts.Node | undefined = scope; current; current = current.parent) if (current === fn) return true;
+  return false;
+}
+
+/**
+ * Whether `identifier`, as written inside `fn`, names a binding `fn` itself holds: a parameter, a
+ * local, a nested function or class, or a caught error that is visible where the name is written.
+ * A binding of the same name in a nested callback that does not enclose the name is not one.
+ */
+function isOwnBinding(api: CompilerApi, fn: ts.Node, identifier: ts.Identifier): boolean {
+  const found = nearestBinding(api, identifier, identifier.text);
+  return found !== undefined && within(fn, found.scope);
 }
 
 function unwrap(api: CompilerApi, expression: ts.Expression): ts.Expression {
@@ -56,7 +56,7 @@ function unwrap(api: CompilerApi, expression: ts.Expression): ts.Expression {
  * The state a written expression reaches: `this.x…` writes member `x` of `this`, and `name…` writes
  * the binding `name` when the body captures it.
  */
-function writtenState(api: CompilerApi, target: ts.Expression, locals: ReadonlySet<string>): WriteFact | null {
+function writtenState(api: CompilerApi, fn: ts.Node, target: ts.Expression): WriteFact | null {
   let current = unwrap(api, target);
   let member: string | null = null;
   while (api.isPropertyAccessExpression(current) || api.isElementAccessExpression(current)) {
@@ -69,7 +69,7 @@ function writtenState(api: CompilerApi, target: ts.Expression, locals: ReadonlyS
     current = unwrap(api, current.expression);
   }
   if (current.kind === api.SyntaxKind.ThisKeyword) return member === null ? null : { target: "this", name: member };
-  if (api.isIdentifier(current) && !locals.has(current.text)) return { target: "captured", name: current.text };
+  if (api.isIdentifier(current) && !isOwnBinding(api, fn, current)) return { target: "captured", name: current.text };
   return null;
 }
 
@@ -106,35 +106,31 @@ function rootIdentifier(api: CompilerApi, expression: ts.Expression): ts.Identif
 }
 
 /**
- * Whether `name`, seen from `fn`, is closure state: bound by an enclosing function rather than by
- * `fn` itself or at the top of the file, where it is module state shared by every instance.
+ * Whether `identifier`, as written inside `fn`, is closure state: bound by an enclosing function
+ * rather than by `fn` itself or at the top of the file, where it is module state shared by every
+ * instance.
  */
-function isClosureState(api: CompilerApi, fn: ts.Node, name: string, locals: ReadonlySet<string>): boolean {
-  if (locals.has(name)) return false;
-  const found = nearestBinding(api, fn, name);
-  return found !== undefined && !api.isSourceFile(found.scope);
+function isClosureState(api: CompilerApi, fn: ts.Node, identifier: ts.Identifier): boolean {
+  const found = nearestBinding(api, identifier, identifier.text);
+  return found !== undefined && !api.isSourceFile(found.scope) && !within(fn, found.scope);
 }
 
 /** Whether `expression` is state read off `this` or off closure state, or closure state itself. */
-function isStateRead(api: CompilerApi, fn: ts.Node, expression: ts.Expression, locals: ReadonlySet<string>): boolean {
+function isStateRead(api: CompilerApi, fn: ts.Node, expression: ts.Expression): boolean {
   const read = unwrap(api, expression);
-  if (api.isIdentifier(read)) return isClosureState(api, fn, read.text, locals);
+  if (api.isIdentifier(read)) return isClosureState(api, fn, read);
   if (!api.isPropertyAccessExpression(read)) return false;
   const owner = unwrap(api, read.expression);
-  return (
-    owner.kind === api.SyntaxKind.ThisKeyword ||
-    (api.isIdentifier(owner) && isClosureState(api, fn, owner.text, locals))
-  );
+  return owner.kind === api.SyntaxKind.ThisKeyword || (api.isIdentifier(owner) && isClosureState(api, fn, owner));
 }
 
 /** What the body of `fn` writes, and whether it only returns state. A function without a body does neither. */
 export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): BodyEffects {
   const body = fn.body;
   if (!body) return { writes: [], returns_state_only: false };
-  const locals = declaredNames(api, fn);
   const writes = new Map<string, WriteFact>();
   const record = (target: ts.Expression) => {
-    const written = writtenState(api, target, locals);
+    const written = writtenState(api, fn, target);
     if (written) writes.set(`${written.target}\u0000${written.name}`, written);
   };
   const visit = (node: ts.Node): void => {
@@ -151,7 +147,7 @@ export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): B
       COLLECTION_MUTATORS.has(node.expression.name.text)
     ) {
       const root = rootIdentifier(api, node.expression.expression);
-      if (root && isClosureState(api, fn, root.text, locals))
+      if (root && isClosureState(api, fn, root))
         writes.set(`captured\u0000${root.text}`, { target: "captured", name: root.text });
     }
     api.forEachChild(node, visit);
@@ -164,7 +160,7 @@ export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): B
     : body;
   return {
     writes: [...writes.values()],
-    returns_state_only: returned !== undefined && isStateRead(api, fn, returned, locals),
+    returns_state_only: returned !== undefined && isStateRead(api, fn, returned),
   };
 }
 
@@ -172,8 +168,8 @@ export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): B
 function scopeBinding(api: CompilerApi, statements: readonly ts.Statement[], name: string): ts.Node | undefined {
   for (const statement of statements) {
     if (api.isVariableStatement(statement)) {
-      const found = statement.declarationList.declarations.find(
-        (declaration) => api.isIdentifier(declaration.name) && declaration.name.text === name,
+      const found = statement.declarationList.declarations.find((declaration) =>
+        bindsName(api, declaration.name, name),
       );
       if (found) return found;
     } else if (
@@ -187,10 +183,37 @@ function scopeBinding(api: CompilerApi, statements: readonly ts.Statement[], nam
 
 function listBinding(api: CompilerApi, list: ts.ForInitializer | undefined, name: string): ts.Node | undefined {
   if (!list || !api.isVariableDeclarationList(list)) return undefined;
-  return list.declarations.find((declaration) => api.isIdentifier(declaration.name) && declaration.name.text === name);
+  return list.declarations.find((declaration) => bindsName(api, declaration.name, name));
 }
 
-/** The nearest binding of `name` seen from `from`, and the scope that holds it. */
+/**
+ * A `var` of `name` anywhere in the body of `fn` outside its nested functions: `var` is hoisted to
+ * the function, so it binds the name throughout the body even when written in a nested block.
+ */
+function hoistedVar(api: CompilerApi, fn: ts.SignatureDeclaration, name: string): ts.Node | undefined {
+  const body = (fn as ts.FunctionLikeDeclaration).body;
+  if (!body) return undefined;
+  let found: ts.Node | undefined;
+  const visit = (node: ts.Node): void => {
+    if (found || (node !== body && api.isFunctionLike(node))) return;
+    if (
+      api.isVariableDeclarationList(node) &&
+      !(node.flags & (api.NodeFlags.Let | api.NodeFlags.Const)) &&
+      node.declarations.some((declaration) => bindsName(api, declaration.name, name))
+    ) {
+      found = node.declarations.find((declaration) => bindsName(api, declaration.name, name));
+      return;
+    }
+    api.forEachChild(node, visit);
+  };
+  visit(body);
+  return found;
+}
+
+/**
+ * The nearest binding of `name` seen from `from`, and the scope that holds it. A name bound through
+ * destructuring is found as well; its binding is the parameter or declaration that destructures.
+ */
 function nearestBinding(
   api: CompilerApi,
   from: ts.Node,
@@ -198,14 +221,19 @@ function nearestBinding(
 ): { binding: ts.Node; scope: ts.Node } | undefined {
   for (let scope: ts.Node | undefined = from.parent; scope; scope = scope.parent) {
     let binding: ts.Node | undefined;
-    if (api.isFunctionLike(scope))
-      binding = scope.parameters.find((parameter) => api.isIdentifier(parameter.name) && parameter.name.text === name);
-    else if (api.isBlock(scope) || api.isSourceFile(scope) || api.isModuleBlock(scope) || api.isCaseClause(scope))
+    if (api.isFunctionLike(scope)) {
+      binding =
+        scope.parameters.find((parameter) => bindsName(api, parameter.name, name)) ??
+        ((api.isFunctionExpression(scope) || api.isClassExpression(scope)) && scope.name?.text === name
+          ? scope
+          : undefined) ??
+        hoistedVar(api, scope, name);
+    } else if (api.isBlock(scope) || api.isSourceFile(scope) || api.isModuleBlock(scope) || api.isCaseClause(scope))
       binding = scopeBinding(api, scope.statements, name);
     else if (api.isForStatement(scope) || api.isForOfStatement(scope) || api.isForInStatement(scope))
       binding = listBinding(api, scope.initializer, name);
-    else if (api.isCatchClause(scope) && scope.variableDeclaration && api.isIdentifier(scope.variableDeclaration.name))
-      binding = scope.variableDeclaration.name.text === name ? scope.variableDeclaration : undefined;
+    else if (api.isCatchClause(scope) && scope.variableDeclaration)
+      binding = bindsName(api, scope.variableDeclaration.name, name) ? scope.variableDeclaration : undefined;
     if (binding) return { binding, scope };
   }
   return undefined;
@@ -220,6 +248,8 @@ export function bindingTypeOf(api: CompilerApi, file: ts.SourceFile, from: ts.No
   const found = nearestBinding(api, from, name);
   if (!found) return undefined;
   const binding = found.binding;
-  const stated = api.isParameter(binding) || api.isVariableDeclaration(binding) ? binding.type : undefined;
-  return stated?.getText(file);
+  if (!api.isParameter(binding) && !api.isVariableDeclaration(binding)) return undefined;
+  // A name bound through destructuring takes one part of the stated type, not the type itself.
+  if (!api.isIdentifier(binding.name)) return undefined;
+  return binding.type?.getText(file);
 }
