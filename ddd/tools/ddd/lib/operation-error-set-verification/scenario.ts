@@ -14,7 +14,7 @@ import type { AggregateMapping, MappingLanguage } from "../aggregate-mapping/con
 import { loadAggregateMapping } from "../aggregate-mapping/loader.ts";
 import type { SourceInput } from "../error-contract/contract.ts";
 import type { OperationExecution, OperationObservation } from "../operation-error-set/contract.ts";
-import type { RustModuleLayout } from "../project-settings/contract.ts";
+import type { RustModuleLayout, TypeScriptModuleLayout } from "../project-settings/contract.ts";
 import { loadDomainModel, OPERATION_OWNED_SCHEMA_VERSION } from "../schema/loader.ts";
 import type { DomainModel } from "../schema/model.ts";
 
@@ -44,6 +44,15 @@ export type ScenarioProject = keyof typeof PROJECT_ROOTS;
 export const RUST_PACKAGE_LAYOUT: ReadonlyMap<string, RustModuleLayout> = new Map([
   ["billing-domain", "file"],
   ["billing-domain-mod-rs", "mod-rs"],
+]);
+
+/**
+ * Each TypeScript project writes one package in each project module layout, for the same reason and
+ * under the same refusal to guess as the Rust workspace.
+ */
+export const TYPESCRIPT_PACKAGE_LAYOUT: ReadonlyMap<string, TypeScriptModuleLayout> = new Map([
+  ["billing-domain", "named-file"],
+  ["billing-domain-index-file", "index-file"],
 ]);
 
 const SOURCE_EXTENSION: Readonly<Record<ScenarioProject, string>> = {

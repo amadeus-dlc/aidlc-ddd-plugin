@@ -21,6 +21,8 @@
 
 モジュールの位置は要素のリストなので、特定の言語の区切り記号を形式に組み込みません。Rust の要素は綴りをそのまま保ちます。raw 識別子の `r#type` も同様で、`r#type` と `type` は同じモジュールを指します。
 
+`code.module` はモジュールパスだけを述べ、ソースルートもファイルの置き場所も述べません。TypeScript では、モジュールを置くファイルを[プロジェクト設定](project-settings.ja.md)が述べます（パッケージのルート直下の `src` と `typescript.module_layout`）。この写像の形式と `schema_version: 2` は、そのために変わりません。
+
 ## Rust と TypeScript の例
 
 正規モデルは `schema_version: 2` である必要があります（[操作ごとのエラー](domain-model-operation-errors.ja.md)を参照）。生成操作が自身の業務エラーを持てるのは、この形式だけだからです。

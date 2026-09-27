@@ -24,7 +24,11 @@ import {
   scenarioSources,
 } from "../tools/ddd/lib/operation-error-set-verification/scenario.ts";
 import { observeTypeScriptOperations } from "../tools/ddd/lib/operation-error-set-verification/typescript.ts";
-import type { RustModuleLayout } from "../tools/ddd/lib/project-settings/contract.ts";
+import type {
+  RustModuleLayout,
+  TypeScriptCodeRepresentation,
+  TypeScriptModuleLayout,
+} from "../tools/ddd/lib/project-settings/contract.ts";
 import { projectSettingsPayload } from "../tools/ddd/lib/project-settings/payload.ts";
 import {
   ALREADY_ISSUED,
@@ -497,6 +501,121 @@ describe("the Rust path writes each scenario package in the module layout that p
     TIMEOUT,
   );
 });
+
+// ---------------------------------------------------------------------------
+// The TypeScript projects written in both project module layouts
+// ---------------------------------------------------------------------------
+
+/**
+ * Each TypeScript scenario project owns one package per project module layout, and the mapping
+ * reaches either by naming its package. The file is written from the layout the project settings
+ * state, not read from the path under test: `named-file` writes a module as `<module>.ts`, and
+ * `index-file` writes a module with children as `<module>/index.ts`, which is what the scenario
+ * gives every module of that package.
+ */
+const TYPESCRIPT_LAYOUTS: [layout: TypeScriptModuleLayout, packageName: string, file: (module: string) => string][] = [
+  ["named-file", "billing-domain", (module) => `billing-domain/src/${module}.ts`],
+  ["index-file", "billing-domain-index-file", (module) => `billing-domain-index-file/src/${module}/index.ts`],
+];
+const INDEX_FILE_PACKAGE = "billing-domain-index-file";
+const TYPESCRIPT_PROJECTS: [string, Project, TypeScriptCodeRepresentation][] = [
+  [TYPESCRIPT_CLASS.name, TYPESCRIPT_CLASS, "class"],
+  [TYPESCRIPT_COMPANION.name, TYPESCRIPT_COMPANION, "companion"],
+];
+
+/** The TypeScript mapping pointed at one module of one package of the scenario project. */
+function typeScriptMappingAt(project: Project, packageName: string, module: string): AggregateMapping {
+  return atPackage(mappingAt(project, module), packageName);
+}
+
+describe.each(TYPESCRIPT_PROJECTS)(
+  "the %s path writes each scenario package in the module layout that package is written in",
+  (_name, project, representation) => {
+    test.each(TYPESCRIPT_LAYOUTS)(
+      "%s: the mapped module is observed where that layout places it, and the observation names that layout",
+      async (layout, packageName, file) => {
+        const observed = await project.observe(
+          typeScriptMappingAt(project, packageName, "invoice"),
+          scenarioSources(project.name),
+        );
+        const settings = projectSettingsPayload({
+          languages: ["typescript"],
+          rust: null,
+          typescript: { moduleLayout: layout, codeRepresentation: representation },
+        });
+        expect(
+          sortedByJson(
+            observed.observations.map(({ operationRef, request }) => ({
+              operationRef,
+              file: request.target.file,
+              declarationPath: request.target.declarationPath,
+              settings: request.settings,
+            })),
+          ),
+        ).toEqual(
+          sortedByJson(
+            [ISSUE, OPEN].map((operationRef) => ({
+              operationRef,
+              file: file("invoice"),
+              declarationPath: ["Invoice"],
+              settings,
+            })),
+          ),
+        );
+      },
+      TIMEOUT,
+    );
+
+    test(
+      "the mapped closed sets of the index-file package pass",
+      async () => {
+        const { result } = await run(
+          project,
+          typeScriptMappingAt(project, INDEX_FILE_PACKAGE, "invoice"),
+          scenarioSources(project.name),
+        );
+        expect({ issue: judgement(result, ISSUE), open: judgement(result, OPEN) }).toEqual(both(PASS, PASS));
+      },
+      TIMEOUT,
+    );
+
+    test(
+      "a case each operation of the index-file package leaves out is a violation",
+      async () => {
+        // A pass on its own would also be reported by a path that never reached the module; the same
+        // project and the same layout have to tell the two answers of a judged module apart.
+        const { result } = await run(
+          project,
+          typeScriptMappingAt(project, INDEX_FILE_PACKAGE, "missing"),
+          scenarioSources(project.name),
+        );
+        expect({ issue: judgement(result, ISSUE), open: judgement(result, OPEN) }).toEqual(
+          both(
+            judged("violation", [missing(ISSUE, EMPTY_LINES)]),
+            judged("violation", [missing(OPEN, MISSING_CUSTOMER)]),
+          ),
+        );
+      },
+      TIMEOUT,
+    );
+
+    test(
+      "a mapping that names a package the project does not own is refused rather than observed",
+      async () => {
+        // Which package the mapping names decides both the package root and the layout the module is
+        // looked for in. A name the project does not answer for leaves neither to be guessed, so the
+        // path stops with its reason instead of producing an observation nothing could have resolved.
+        await expect(
+          project.observe(
+            typeScriptMappingAt(project, "billing-domain-absent", "invoice"),
+            scenarioSources(project.name),
+          ),
+        ).rejects.toThrow("the project does not own one package");
+      },
+      TIMEOUT,
+    );
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Changed mapping, model or snapshot

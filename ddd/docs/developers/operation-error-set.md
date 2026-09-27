@@ -41,10 +41,27 @@ Input matching any row below is refused as `input-rejected` without being compar
 | An observation is not a valid `error-contract/1` request, including an edited identity | The observation cannot be trusted |
 | An observation's language, `target.operation`, last `target.declarationPath` entry, or the name of the package `target.packageId` names differs from the mapped language, method, type or package | It observes another target |
 | The entries of a Rust observation's `target.declarationPath` before the type differ from the mapped `module`, reading `r#name` and `name` as one segment | It observes a type of the same name in another module |
+| A TypeScript observation's `target.file` is not a file the project settings place the mapped `module` in | It observes a type of the same name in another module |
+| A TypeScript observation's `target.declarationPath` is not the type alone, such as a type inside a namespace | It observes a type of the same name somewhere other than directly in the module |
+| A TypeScript observation's `settings` name no TypeScript module layout | The file the mapped module sits in cannot be decided |
+| A TypeScript mapping's `module` is empty, or has an entry TypeScript cannot spell as a module name, such as `..` or one containing `/` | The project settings state no file for that module |
 | Two observations differ in their sources, analysis condition, settings or tool versions | Different analysis snapshots are never mixed |
 | An observation is missing, an operation is observed twice, or an observation names an operation the mapping does not name | Operations and observations cannot be paired one to one |
 
-A Rust declaration path is the module path from the crate root followed by the type, whichever file layout the project uses, so the comparator compares its leading entries with the mapped `module`. A TypeScript module is a file, and the mapping fixes no source root to place it under, so the comparator does not compare a TypeScript observation's file with the mapped `module`; the TypeScript verification path decides the placement.
+A Rust declaration path is the module path from the crate root followed by the type, whichever file layout the project uses, so the comparator compares its leading entries with the mapped `module`.
+
+A TypeScript module is a file. The mapping states the module path alone, not where its file sits; that placement is a contract of the observing side, the [project settings](../users/project-settings.md). The source root is `src` directly under the package root, and `typescript.moduleLayout` decides the layout. From what the request already carries, the comparator derives the files the mapped `module` may sit in, and compares the observation's `target.file` with them exactly:
+
+- the `typeScriptCondition.packages[].packageRoot` the observation's `target.packageId` names
+- the `typescript.moduleLayout` of the observation's `settings`
+- the mapped `module`
+
+| Layout | Accepted files (for a `module` of `[m1, …, mn]`) |
+|---|---|
+| `named-file` | `<packageRoot>/src/m1/…/mn.ts` |
+| `index-file` | `<packageRoot>/src/m1/…/mn/index.ts` (a module with children) and `<packageRoot>/src/m1/…/mn.ts` (a leaf module) |
+
+Both `index-file` places are accepted because whether a module has children is the module layout check's to judge. The path is joined without being normalised, and letter case and extensions (`.tsx`, `.mts`, `.d.ts`) are not read as the same. The declaration path is limited to the one entry `[type]`. The binding of an observation to the mapping is therefore as strong as in Rust: another module, a module below the mapped one, and a type not directly in the module are refused in either language. The implementation mapping's format and `schema_version` are unchanged.
 
 ## Request identity
 
@@ -98,7 +115,7 @@ Each path turns the mapping into `error-contract/1` targets, runs the extractor,
 | Path | Entry point | How the target is decided |
 |---|---|---|
 | Rust | [`observeRustOperations`](../../tools/ddd/lib/operation-error-set-verification/rust.ts) | Runs `resolveCargoCondition` with no features for the target triple the [distribution manifest](native-extractor-distribution.md) records for this platform, so the path needs no `rustc` of its own. Places the mapped module where the module layout its package is written in puts it, beside the library crate root: `<module>.rs` under `file`, and `<module>/mod.rs` under `mod-rs`. The declaration path is `[...module, type]` in either layout. A package the scenario records no layout for is refused rather than placed under a guessed one |
-| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | Runs `resolveTypeScriptCondition` for the project. Places the mapped module as `<packageRoot>/src/<module>.ts`. The declaration path is `[type]`, the module layout is `named-file`, and the code representation is `class` or `companion` |
+| TypeScript | [`observeTypeScriptOperations`](../../tools/ddd/lib/operation-error-set-verification/typescript.ts) | Runs `resolveTypeScriptCondition` for the project. Places the mapped module where the module layout its package is written in puts it, under `<packageRoot>/src`: `<module>.ts` under `named-file`; under `index-file`, whichever of `<module>/index.ts` (a module with children) and `<module>.ts` (a leaf) the sources hold, refusing the module when they hold neither or both. It records that layout in the settings. The declaration path is `[type]`, and the code representation is `class` or `companion`. A package the scenario records no layout for is refused rather than placed under a guessed one |
 
 [`scenario.ts`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts) reads the model and the mappings through the production loaders.
 
@@ -109,6 +126,8 @@ The canonical model gives the aggregate `aggregate.invoice` the command `command
 Each module of a project is one scenario, reached by pointing the mapping's `module` at it. The expectations are written from the scenario, not copied from a run.
 
 The Rust workspace owns one package per project module layout, reached by pointing the mapping's `package` at it: `billing-domain` is written in `file` and carries every module of the table below, and `billing-domain-mod-rs` is written in `mod-rs` and carries `invoice` and `missing`. The table below is read from the `file` package; the two modules written in both are judged the same from either, and the evidence records that under `rust_module_layouts`.
+
+Both TypeScript projects are built the same way: `billing-domain` is written in `named-file` and carries every module of the table below, and `billing-domain-index-file` is written in `index-file` and carries `invoice` and `missing`, each as the `index.ts` of a directory that also holds a child (`line.ts`). The table below is read from the `named-file` package; the two modules written in both are judged the same in either representation and either layout, and the evidence records that under `typescript_module_layouts`.
 
 | Module | Content | Rust | TypeScript (both representations) |
 |---|---|---|---|
@@ -137,10 +156,9 @@ The checks across a change run on each of the three paths.
 ## Limits
 
 - The spelling of the mapping's `code.error_type` is not compared with the name of the resolved error type declaration. `error-contract/1` returns the error type only as a `symbolId` whose internal form is not relied on. Comparing them needs `error-contract/1` to publish the declaration name; this is recorded on the parent issue as prerequisite work for T-10/T-11.
-- Whether a TypeScript observation names the file of the mapped `module` is not checked. The mapping does not define the source root a TypeScript module sits under, so only the verification path, which places the module at `<packageRoot>/src/<module>.ts`, binds the file to the module. An observation prepared elsewhere that names another module's file with the same package, type and method is accepted. Checking this in the comparator needs the mapping or the observation to state that placement.
 - Whether two operations share one error type is not checked. A union that includes another operation's errors is found case by case as `foreign-error`.
 - The production sensors and the approval gate are not connected.
 - Whether a compiler accepts the scenario modules is not measured. Several modules are written not to compile.
-- This scenario uses both Rust module layouts, but of the TypeScript layouts only `named-file`; the TypeScript `index-file` layout is covered by the `error-contract/1` verification.
+- The only TypeScript source root handled is `src` directly under the package root; an observation of a module placed under any other source root is refused.
 - Matching types and cases does not prove state preservation or invariants on each failure path.
 - The verified environment is the one the evidence records: darwin-arm64, rustc 1.95.0, cargo 1.95.0, Bun 1.3.13, TypeScript 6.0.3 and syn 3.0.5.

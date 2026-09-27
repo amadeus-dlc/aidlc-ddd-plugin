@@ -24,6 +24,15 @@ List a language in `languages` only when the project uses it, and declare every 
 | `typescript.module_layout` | `named-file` / `index-file` | parent `src/invoice.ts` / parent `src/invoice/index.ts`; a leaf is `src/invoice/line.ts` either way |
 | `typescript.code_representation` | `class` / `companion` | a class, or a type with a same-name companion object |
 
+The TypeScript source root is `src` directly under the package root, the directory holding `package.json`. These settings, not the implementation mapping, decide the file a module sits in; the mapping's `code.module` states the module path alone. The file of the module path `[m1, …, mn]` is:
+
+| `typescript.module_layout` | The module's file |
+|---|---|
+| `named-file` | `src/m1/…/mn.ts` |
+| `index-file` | `src/m1/…/mn/index.ts` for a module with children, and `src/m1/…/mn.ts` for a leaf module |
+
+The [operation error-set comparison](../developers/operation-error-set.md) (`operation-error-set/1`) checks against this convention that the file an observation names is the file of the mapped module. No source root other than `src` is handled.
+
 The aggregate execution model and persistence method stay in `ddd-aggregate-mapping.md`. Writing `programming_model` or `persistence_method` here is rejected, and the `class` execution model of an aggregate is unrelated to the `class` code representation of TypeScript code.
 
 ## What the checks do with each format
