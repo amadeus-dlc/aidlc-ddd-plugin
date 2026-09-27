@@ -11,6 +11,11 @@ coveragePathIgnorePatterns = [
   # The AI-DLC framework's own tools. Loaded by our tests, but third-party
   # code this repository is not allowed to modify, so not ours to cover.
   "**/.codex/tools/**",
+  # The vendored TypeScript Compiler API, loaded by the fact extraction but
+  # copied verbatim from the typescript package.
+  "**/lib/typescript/vendor/**",
+  # Stand-in compilers the launch tests write to temporary vendor directories.
+  "**/ddd-typescript-vendor-*/**",
   # Test fixtures and helpers. coverageSkipTestFiles drops the *.test.ts
   # entry points; these are the support files behind them, and counting code
   # that runs by definition during a test run only inflates the figure.

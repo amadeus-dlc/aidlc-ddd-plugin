@@ -15,9 +15,11 @@
       "tsconfig.json",
       "tsconfig.state-exposure.json",
       "tsconfig.error-contract.json",
+      "tsconfig.typescript-facts.json",
       "biome.json",
       "!!src/entries/data",
-      "!!tests/fixtures"
+      "!!tests/fixtures",
+      "!!tools/ddd/lib/typescript/vendor"
     ]
   },
   "formatter": {

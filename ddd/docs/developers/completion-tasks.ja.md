@@ -188,7 +188,7 @@ T-10-04では、この5領域について現在の判定の不足を洗い出し
 
 ## T-11: 同じ契約でTypeScriptへ対応する
 
-状態: 次のリリースで行う方針に合意済み。全面実装は未完了。T-09/T-10に依存する。
+状態: 次のリリースで行う方針に合意済み。全面実装は未完了。T-09/T-10に依存する。T-11-01でTypeScript Compiler APIを配布物に同梱し、対応する版とプロジェクト設定を記録し、TypeScriptの規則が読むファイルごとの事実を抽出し、抽出を起動できない検査を止めるようにした。[TypeScriptの事実抽出](typescript-fact-extraction.ja.md)を参照。この事実を読むTypeScriptの規則はまだ無い。
 
 構文・シンボル・型の解決にTypeScript Compiler APIを使い、対応APIバージョンとプロジェクトの互換範囲を記録する。パッケージ・exports・型だけの依存、両ドメイン表現、クロージャ・ブランドと#フィールドによる状態隠蔽、メソッド固有のResultエラー、所有の検査、両ファイル配置を実装する。Resultはinfrastructureに置き、neverthrow・Effect・fp-tsとの個別統合は対象外とする。サーバー側のNode.jsでESMのNext.js統合を検証する。
 

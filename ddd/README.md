@@ -74,6 +74,6 @@ Report defects through [GitHub Issues](https://github.com/amadeus-dlc/aidlc-ddd-
 
 ## License
 
-[MIT](../LICENSE). The third-party crates the bundled native Rust extractor links, with their licenses, are listed in [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md).
+[MIT](../LICENSE). The third-party crates the bundled native Rust extractor links, with their licenses, are listed in [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md). The bundled TypeScript Compiler API (`typescript@6.0.3`, Apache-2.0) and its notices are described in [tools/ddd/lib/typescript/vendor/NOTICE.md](tools/ddd/lib/typescript/vendor/NOTICE.md).
 
 For Rust projects, explicitly select `file` or `mod-rs` in the project-root `.ddd.toml` before generation. See the [module layout contract](docs/users/rust-module-layout.md) for configuration, mandatory gate checks, and the CI command.

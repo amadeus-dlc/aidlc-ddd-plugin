@@ -97,3 +97,7 @@ coverage/
 # ignored and that has to be true.
 mise.local.toml
 mise.*.local.toml
+
+# The TypeScript Compiler API the distribution carries. A remote install fetches the git
+# source, so these files must be committed even where a global ignore excludes `vendor/`.
+!/ddd/tools/ddd/lib/typescript/vendor/

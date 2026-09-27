@@ -23,6 +23,7 @@ const CHECK_STEPS = [
   "bun run validate",
   "bun run test:development-scopes",
   "bun run prepare:native",
+  "bun run prepare:typescript",
   "bun run test",
   "bun run test:state-exposure:native",
   "bun run test:domain-facts:native",
@@ -33,6 +34,7 @@ const CHECK_STEPS = [
   "bun run verify:operation-error-set",
   "bun run typecheck:state-exposure",
   "bun run typecheck:error-contract",
+  "bun run typecheck:typescript-facts",
 ];
 
 /** FR11.5 forbids relying on these: `adds.required_sections` is not enforced and `adds.requires_stage` is deferred. */

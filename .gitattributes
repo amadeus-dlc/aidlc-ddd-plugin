@@ -1,2 +1,4 @@
 # Unified diffs use a single-space context marker for blank lines.
 ddd/patches/*.patch -whitespace
+# The vendored compiler is verified against its recorded sha256, so its bytes stay as copied.
+ddd/tools/ddd/lib/typescript/vendor/** -text

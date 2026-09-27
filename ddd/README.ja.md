@@ -74,6 +74,6 @@ bun ddd/scripts/install.ts --project /path/to/project --from /path/to/aidlc-ddd-
 
 ## ライセンス
 
-[MIT](../LICENSE)。同梱するネイティブRust抽出器がリンクする第三者クレートとそのライセンスは [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md) に一覧があります。
+[MIT](../LICENSE)。同梱するネイティブRust抽出器がリンクする第三者クレートとそのライセンスは [tools/ddd/bin/NOTICE.md](tools/ddd/bin/NOTICE.md) に一覧があります。同梱するTypeScript Compiler API（`typescript@6.0.3`、Apache-2.0）とその通知は [tools/ddd/lib/typescript/vendor/NOTICE.md](tools/ddd/lib/typescript/vendor/NOTICE.md) に記載しています。
 
 Rustプロジェクトでは、生成前にプロジェクト直下の `.ddd.toml` で `file` か `mod-rs` を選択してください。設定、承認時の必須検査、CIコマンドは[モジュール配置契約](docs/users/rust-module-layout.ja.md)を参照してください。

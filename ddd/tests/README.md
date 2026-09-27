@@ -2,7 +2,7 @@
 
 English | [Japanese](README.ja.md)
 
-Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/developers/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
+Updated: 2026-09-27. Run `bun test tests/` from the plugin root. The [contract matrix](../docs/developers/sensor-coverage.md) tracks per-rule coverage. Normal runs skip the optional standalone-guard reproduction and two network installation cases. Each has an explicit opt-in command.
 
 ## Test responsibilities
 
@@ -26,7 +26,9 @@ Updated: 2026-09-24. Run `bun test tests/` from the plugin root. The [contract m
 | u5-rust-code-sensors / u5-golden | Valid/invalid Rust sensor inputs, and the line each finding of rules (h), (l), (m) and (n) sends a reader to. |
 | t10-rust-domain-facts / t10-domain-facts-contract | Rules decided on the native extractor: reported member names, ordinals and declaration lines, the functions a file declares outside an impl block, what each gate does when the extractor cannot be launched, what each gate does when a file rules (a) and (d) decide from carries a possible attribute macro, the attribute-macro lines carried on a file's facts, and the answers the adapter refuses rather than reading as an empty fact set. |
 | t10-rust-domain-decision-base | Rules (b), (c), (g) and domain-packaging decided on the native extractor: the line each finding carries, the same spelling in a macro body, a literal or a comment declaring nothing, module resolution's resolved and unresolved pairs, and a program source the extractor cannot read stopping the gate instead of being read as empty. |
-| install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths. Network acquisition is opt-in. |
+| install / install-sandbox | Acquisition helpers and real installation/update/dry-run/failure CLI paths, including launching the TypeScript extraction from an installed and an updated tree. Network acquisition is opt-in. |
+| typescript-compiler-launch | Launch classification of the distributed TypeScript Compiler API: each blocking condition with its own subject and reason code, the fixed order when several hold, the sensor stopping as uninspectable, and the distributed compiler matching the pinned version and its recorded digest. |
+| t11-typescript-domain-facts | The TypeScript fact contract: declarations, members and visibility, imports and exports with type-only ones told apart, calls, constructions, positions, each unresolved reason, syntax errors, and launching from a copied tools tree with no TypeScript package in reach. |
 | framework-compatibility | Standard-tool compose, graph compilation, and repeat-compose idempotency for Claude/Codex. |
 | error-contract-contract | Business-error contract vocabulary, request identity including the Cargo and the TypeScript condition, and response validation. |
 | error-contract-cargo | Cargo condition resolution at the boundary and the lockfile left untouched. |

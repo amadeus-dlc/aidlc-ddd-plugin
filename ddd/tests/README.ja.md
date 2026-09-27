@@ -2,7 +2,7 @@
 
 [English](README.md) | 日本語
 
-更新: 2026-09-24。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/developers/sensor-coverage.ja.md)で管理します。通常実行では、標準側の単独完了ガードの再現1件と、ネットワークを使う導入2件をskipします。それぞれ明示的な実行オプションがあります。
+更新: 2026-09-27。プラグインルートで `bun test tests/` を実行します。規則ごとの網羅性は[契約対応表](../docs/developers/sensor-coverage.ja.md)で管理します。通常実行では、標準側の単独完了ガードの再現1件と、ネットワークを使う導入2件をskipします。それぞれ明示的な実行オプションがあります。
 
 ## 各テストの役割
 
@@ -26,7 +26,9 @@
 | u5-rust-code-sensors / u5-golden | Rustセンサーの正常・違反入力、規則h・l・m・nの各所見が読み手を送る行 |
 | t10-rust-domain-facts / t10-domain-facts-contract | ネイティブ抽出器で判定する規則。報告するメンバー名・序数・宣言行、implブロックの外で宣言された関数、抽出器を起動できない場合の各ゲートの挙動、規則a・dの判定元に属性マクロの可能性がある属性がある場合の各ゲートの挙動、ファイルの事実に載る属性マクロの行、空の事実集合として読まずに拒否する応答 |
 | t10-rust-domain-decision-base | ネイティブ抽出器で判定する規則b・c・gとdomain-packaging。所見が持つ行、マクロ本体・文字列・コメント内の同じ字面が何も宣言しないこと、モジュール解決の解決・未解決の対、判定元プログラムのソースを抽出器が読めない場合に空として読まずゲートを停止すること |
-| install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。ネットワーク取得は任意実行 |
+| install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。導入後と更新後のツリーからTypeScriptの事実抽出を起動できること。ネットワーク取得は任意実行 |
+| typescript-compiler-launch | 同梱したTypeScript Compiler APIの起動分類。起動できない各条件が固有のsubjectと理由コードを持つこと、複数成立時の固定順、センサーを検査不能として止めること、同梱したcompilerが固定した版と記録したdigestに一致すること |
+| t11-typescript-domain-facts | TypeScriptの事実の契約。宣言、メンバーと可視性、型だけのものを区別したimportとexport、呼び出し、構築、位置、未解決の各理由、構文エラー、TypeScriptパッケージに届かない場所へ複製したtoolsツリーからの起動 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
 | error-contract-contract | 業務エラー契約の語彙、Cargo条件とTypeScript条件を含む要求識別、応答検証 |
 | error-contract-cargo | 境界でのCargo条件解決と、ロックファイルを変更しないこと |
