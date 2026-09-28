@@ -788,6 +788,76 @@ for (const [label, change] of BROKEN_REFERENCES)
   });
 
 // ---------------------------------------------------------------------------
+// The read-model updater's ordering unit and duplicate handling
+// ---------------------------------------------------------------------------
+
+const RMU_PACKAGE = 2;
+
+/** The declaration with the read-model updater stating `fields` beside its role and identity. */
+function updaterStating(language: LayerLanguage, fields: Record<string, unknown>): LayerSource {
+  return variant(language, (s) => {
+    Object.assign(loose(structureOf(s).packages[RMU_PACKAGE]), fields);
+  });
+}
+
+for (const language of ["rust", "typescript"] as const)
+  for (const [orderingScope, dedup] of [
+    ["aggregate", "version-check"],
+    ["item", "event-id"],
+    ["none", "idempotent-write"],
+  ] as const)
+    test(`a ${language} read-model updater stating ordering_scope ${orderingScope} and dedup ${dedup} loads with both kept`, () => {
+      const source = updaterStating(language, { ordering_scope: orderingScope, dedup });
+      expect(declarationOf(loadSource(source))).toEqual(source as unknown as LoadedDeclaration);
+    });
+
+test("a read-model updater that states neither item still loads, and the loaded package carries neither", () => {
+  const loaded = declarationOf(loadSource(layerSource("rust")));
+  const updater = loose(structureOf(loaded as unknown as LayerSource).packages[RMU_PACKAGE]);
+  expect(Object.keys(updater).sort()).toEqual(["code", "role"]);
+});
+
+test("a read-model updater may state one item without the other", () => {
+  for (const fields of [{ ordering_scope: "aggregate" }, { dedup: "event-id" }]) {
+    const source = updaterStating("rust", fields);
+    expect(declarationOf(loadSource(source))).toEqual(source as unknown as LoadedDeclaration);
+  }
+});
+
+const RMU_ITEM_SHAPE_VIOLATIONS: readonly (readonly [string, Record<string, unknown>])[] = [
+  ["an ordering scope outside aggregate, item and none", { ordering_scope: "global" }],
+  ["a duplicate handling outside version-check, event-id and idempotent-write", { dedup: "sequence-number" }],
+  ["an ordering scope spelled in another case", { ordering_scope: "Aggregate" }],
+  ["an empty duplicate handling", { dedup: "" }],
+  ["an ordering scope written as a list", { ordering_scope: ["aggregate"] }],
+];
+
+for (const [label, fields] of RMU_ITEM_SHAPE_VIOLATIONS)
+  test(`a read-model updater stating ${label} is refused by the shape`, () => {
+    expectRefusedOnlyBy(loadSource(updaterStating("rust", fields)), RULE.structure);
+  });
+
+for (const [role, index] of [
+  ["command", 0],
+  ["query", 1],
+] as const)
+  for (const key of ["ordering_scope", "dedup"] as const)
+    test(`a ${role}-side package stating ${key} is refused by the shape: only the updater keeps an order`, () => {
+      const value = key === "ordering_scope" ? "item" : "event-id";
+      const source = variant("rust", (s) => {
+        loose(structureOf(s).packages[index])[key] = value;
+      });
+      expectRefusedOnlyBy(loadSource(source), RULE.structure);
+    });
+
+test("the ordering scope stated beside the context rather than on the updater is an unknown key", () => {
+  const source = variant("rust", (s) => {
+    loose(structureOf(s)).ordering_scope = "none";
+  });
+  expectRefusedOnlyBy(loadSource(source), RULE.unknownKey);
+});
+
+// ---------------------------------------------------------------------------
 // The structural inspection, run on its own against a declaration that loaded
 // ---------------------------------------------------------------------------
 

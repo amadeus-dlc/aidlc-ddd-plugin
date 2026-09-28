@@ -21,11 +21,19 @@
 | `invalid-value-rejected`（不正値の生成拒否） | `open` は `missing-customer` と `negative-total` を返す。`restore` は、顧客が空、明細の無い発行済み、合計が負のいずれでも `corrupt invoice state` で throw する | `:125-135` |
 | `restore-after-persistence`（永続化後の復元） | `findById` で記録から復元した集約が記録の状態を持つ。`execute` で保存した後の `findById` は、元の記録ではなく保存した発行済みの集約を返す。未知の ID は `invoice-not-found` を返す | `:136-161` |
 
+2026-09-28の追記（T-03-02）: シナリオを3件追加し、共通シナリオは7件になった。7件であることは `t11-typescript-behavior.test.ts:129-139` が確かめる。見本には、コマンド `recordPayment`（`command-id-memory`、保持 `multiple`）、成功値 `CommandOutcome`（イベントを持つ `applied`、または `already-applied`）、期待バージョンを一度だけ照合してコマンドのイベントをまとめて追記するリポジトリの `store` が加わった。上の4シナリオの表とその行番号は基準コミット時点の測定であり、書き換えていない。追加したシナリオは、現在の[`fixtures/typescript-behavior/scenarios.ts`](../../tests/fixtures/typescript-behavior/scenarios.ts)の次の行にあり、同じシナリオをRustでは[`fixtures/rust-behavior/scenarios.rs`](../../tests/fixtures/rust-behavior/scenarios.rs)に書いている。
+
+| シナリオ | 確認する内容 | 定義 |
+|---|---|---|
+| `duplicate-command-already-applied`（繰り返したコマンドは適用済み） | 同じコマンドIDで繰り返した `recordPayment` は、金額が違っても適用済みを返し、イベントも変更も保存もない。新しいIDは適用される。支払済み額と記憶中のIDを持つ状態から、`restore` で直接、または記録から `RecordPayment` 経由で復元した請求書は、記憶中のIDを適用済みとして答えて何も保存せず、復元した支払済み額に対する超過払いを拒否する。IDを記憶していない記録では、その支払いが適用される | `scenarios.ts:244-287`。Rustは `scenarios.rs:219` |
+| `rejected-command-keeps-state`（拒否したコマンドは状態を保つ） | `not-issued` や `overpayment` で拒否した `recordPayment` は何も変えず、何も保存せず、IDも記憶しない。そのため同じIDは、適用できるようになった時点で適用される | `:288-315`。Rustは `scenarios.rs:261` |
+| `multiple-events-one-append`（複数イベントを1回の追記で保存） | 合計に達する支払いは2件のイベントを返し、`RecordPayment` はそれらを1回の追記で保存してバージョンを1つだけ進める。読み込んだ後に別の保存があった請求書の `store` は、間に別の読み込みがあっても `version-conflict` を返し、バージョンと保存イベントを変えない。読み直した請求書は拒否した変更を含まない | `:316-360`。Rustは `scenarios.rs:290` |
+
 ## 各軸を読むのはどこか
 
 | 軸 | 判定のために読む箇所 | 位置 |
 |---|---|---|
-| `programming_model` | 言語共通の宣言ゲートのみ。2つ以上の集約を対象とし、それがすべて `actor` であるユースケースに Process Manager を要求する | [`ddd-sensor-mapping-declarations.ts:111`](../../tools/ddd-sensor-mapping-declarations.ts) |
+| `programming_model` | 言語共通の宣言ゲートのみ。2つ以上の集約を対象とし、そのいずれか一つでも `actor` であるユースケースに Process Manager を要求する（2026-09-28に「すべて `actor`」から変更。T-03-01）。写像が対象の一部を写像していないまま2つ以上の集約をまたいで再実行するユースケースは、`mapping-declarations.execution-model-undetermined` で拒否する | [`ddd-sensor-mapping-declarations.ts:127`](../../tools/ddd-sensor-mapping-declarations.ts)（Process Managerの条件）、`:110-118`（実行モデルの未確定） |
 | `persistence_method` | TypeScriptのドメインゲートの replay 例外。`event-sourcing` 以外では例外が成立しない | [`rules/mutations.ts:81`](../../tools/ddd/lib/rules/mutations.ts)。TypeScriptの評価器は[`rules/typescript/evaluators.ts:32`](../../tools/ddd/lib/rules/typescript/evaluators.ts)でこれを使う |
 | `.ddd.toml` の `typescript.code_representation`・`typescript.module_layout` | 見本ごとに異なる。振る舞いテストはこの値を読まず、見本のソースそのものを実行する | 見本の設定は `samples.ts:411` の `settings`、組み合わせは `REPRESENTATIONS`・`LAYOUTS`（`:25-26`） |
 
@@ -68,7 +76,7 @@
 
 ## 限界
 
-- リポジトリは `InMemoryInvoiceRepository` であり、保存した集約の参照を保持する。永続化の「往復」は、記録（`InvoiceRecord`）から `Invoice.restore` で復元する経路と、保存した集約を次の `findById` が返す経路で確かめている。直列化してデータベースやファイルへ書き、読み戻す経路は検証していない。
+- リポジトリは `InMemoryInvoiceRepository` であり、各請求書を状態の全体を持つ記録（`InvoiceRecord`）として保持する。`store` が記録を書き、`findById` は毎回その記録から `Invoice.restore` で新しい集約を復元する。永続化の「往復」は、リポジトリが最初に受け取った記録から復元する経路と、`store` が書いた記録から復元する経路で確かめている。直列化してデータベースやファイルへ書き、読み戻す経路は検証していない。
 - 見本は1つの集約（`invoice`）と1つの子モジュール（`invoice/line`）だけを持つ。複数の集約や集約間の協調は扱わない。
 - 振る舞いテストは bun で実行する。Node.js での実行は[Next.js統合の検証](nextjs-integration-verification.ja.md)が扱う範囲に限る。
 - すべての実測は `darwin-arm64` で、実行記録に書いた版で行った。

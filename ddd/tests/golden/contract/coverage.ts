@@ -176,6 +176,14 @@ cover(
 );
 cover(
   mapping,
+  ["mapping-declarations.execution-model-undetermined"],
+  "clean-unmapped-process-manager",
+  "clean-unmapped-single-aggregate",
+  "Without a mapping only a multi-aggregate re-execution is blocked; a Process Manager or a single target is not.",
+  "写像がないとき遮断するのは複数集約の再実行だけで、Process Managerと単一集約は対象外。",
+);
+cover(
+  mapping,
   ["mapping-declarations.j"],
   "clean-additive-idempotency",
   "clean-mapping",
@@ -242,11 +250,19 @@ cover(
 );
 cover(
   advisory,
-  ["design-advisories.repository-scope", "design-advisories.store-upsert"],
+  ["design-advisories.repository-scope"],
   "clean",
   "clean-collection-repository",
   "Collection scope is valid; partial aggregate scope is advisory.",
   "集約の集合は有効、集約の一部を扱う宣言は助言対象。",
+);
+cover(
+  advisory,
+  ["design-advisories.store-upsert"],
+  "clean",
+  "clean-event-sourcing-insert-only",
+  "State sourcing is stored by upsert and event sourcing by insert-only; each is advisory under the other.",
+  "状態の保存はupsert、イベントの保存はinsert-onlyを正とし、逆の組み合わせは助言対象。",
 );
 for (const sensor of [mapping, "ddd-rust-domain"]) {
   const code = sensor === "ddd-rust-domain";

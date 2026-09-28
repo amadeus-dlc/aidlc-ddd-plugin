@@ -2,9 +2,9 @@
 
 English | [Japanese](completion-tasks.ja.md)
 
-Updated: 2026-09-13. Track remaining work by T identifier, based on the [implementation assessment](current-state-assessment.md) and supported-environment policy.
+Updated: 2026-09-28. Track remaining work by T identifier, based on the [implementation assessment](current-state-assessment.md) and supported-environment policy.
 
-Documentation cleanup and T-01 normal approval integration are implemented. T-02 Rust evaluation, T-07 domain packaging, and T-08 Rust module layout enforcement are also implemented. The framework standalone completion gap, T-03, model execution in T-05, and final T-06 reconciliation remain.
+Documentation cleanup and the plugin side of T-01 are implemented. T-02 Rust evaluation, T-03 implementation contracts, T-07 domain packaging, and T-08 Rust module layout enforcement are also implemented. The upstream fix for the framework standalone completion gap, model execution in T-05, and final T-06 reconciliation remain.
 
 The [agreed shared-language design](language-independent-design.md) adds T-09–T-11. These are planned work, not completed features.
 
@@ -21,7 +21,7 @@ In addition to static checks and existing tests, completion requires:
 
 ## T-01: Connect artifacts to normal approval and standalone completion
 
-Status: plugin-side normal approval integration is implemented. T-01 remains incomplete because the standard AI-DLC standalone completion guard is insufficient. Priority: highest. Evidence: F-01/F-02.
+Status: the plugin side is complete. T-01 remains incomplete because the standalone completion guard of standard AI-DLC 2.9.0 is insufficient. Priority: highest. Evidence: F-01/F-02.
 
 Canonical model filenames now match standard Markdown artifact names. Use-case and layer declarations are required sections of existing review artifacts and inherit their Unit kinds. See the [artifact contract](../users/artifact-contract.md) for format, migration, and verification scope.
 
@@ -29,7 +29,9 @@ Targets: stages, contributions, sensors, model-path resolution, and integration 
 
 Completion: composed graph, actual files, and matches agree. Verify missing, invalid, and valid cases through approval processing and apply equivalent checks to standalone execution. Verify Unit-kind exclusions. Direct sensor execution alone is insufficient.
 
-Remaining: the standard `report --single` shared path must verify general artifacts and sensors, then be retested. The plugin alone cannot guarantee checks are never skipped.
+Plugin side: in AI-DLC 2.9.0, `report --single --result completed` records completion without verifying registered artifacts or running gate sensors. The seven DDD instruction files therefore carry one uniform standalone completion check: run `aidlc engine sensor fire` for each sensor of the stage, and treat a blocking sensor as passed only when the command exits 0 and reports `result: passed` with no `note`. `install-sandbox.test.ts` always reproduces the gap on an installed project for Claude and Codex, and shows that the manual check does not pass a missing artifact. The [upstream issue draft](upstream-standalone-completion-report.md) is written.
+
+Remaining: the upstream fix, and posting the drafted issue after the user reviews it. The plugin alone cannot guarantee checks are never skipped. When upstream is fixed, change the reproduction test to assert the refusal and retire the manual check.
 
 Dependency: a standard AI-DLC fix for standalone completion.
 
@@ -48,17 +50,17 @@ Investigate getter-name collisions, aliases and qualified types, trait mutations
 
 Completion: reproductions and valid cases pass against source and distributions, and deterministic syntax coverage is documented. Universal semantic proof is not required.
 
-Explicit replay is implemented through aggregate mapping replay_methods. Body semantics, return types, and recovery contracts remain T-03 work.
+Explicit replay is implemented through aggregate mapping replay_methods. Return values and recovery contracts were decided and implemented in T-03.
 
 ## T-03: Resolve remaining implementation contracts and align generation
 
-Status: the shared method-error and generation-error policy is agreed; remaining decisions and implementation are pending. Priority: high.
+Status: implemented. The decisions of T-03-01 (#111) and T-03-02 (#112) are implemented. Priority: high.
 
 Use the revised [domain](domain-layer-design.md), [use-case](use-case-layer-design.md), and [Interface Adapter](interface-adapter-layer-design.md) conventions as design inputs.
 
-Replay declaration format was decided in T-02. Remaining decisions cover return values for first success, duplicate success, and rejection; multiple events; mixed actor/class recovery declarations; and missing-mapping behavior. Decide whether retry windows and RMU ordering belong in structured data or prose review.
+Replay declaration format was decided in T-02. T-03-01 decided: a use case with any `actor` target requires `process-manager`; a multi-aggregate `re-execution` use case with a missing mapping or unmapped target fails the new blocking rule `mapping-declarations.execution-model-undetermined`; the model's existing `idempotency.retention` is authoritative for the resend period; and an `rmu` package may state the optional items `ordering_scope` and `dedup`. Delay, gaps, and reordering stay in prose review. T-03-02 decided the command return value: `CommandOutcome` with "applied" (one or more events) and "already applied" (no events), rejection as the method-specific error; several events of one command are saved in one append after one expected-version check.
 
-Revisit contribution instructions equating class with re-execution only and all storage with upsert. Coordinate any loader, JSON Schema, generation, and sensor changes. Canonical factory error sets and method-specific return-error checks are now required by the shared design and T-09/T-10. Broader FactoryRule semantic proof and exhaustive interior-mutability detection are separate work; retain review and generated-code behavior tests.
+The contribution instructions no longer equate class with re-execution only or all storage with upsert; the store semantics follow the aggregate mapping's `persistence_method`. No JSON Schema changed. No sensor judges the return shape, declared-events-only, or one-append; review and the shared behavior scenarios cover them. Canonical factory error sets and method-specific return-error checks are now required by the shared design and T-09/T-10. Broader FactoryRule semantic proof and exhaustive interior-mutability detection are separate work; retain review and generated-code behavior tests.
 
 Completion: every unresolved item has a decision and scope, implementation/declaration/instruction differences are resolved, and concrete examples/tests explain failure, retry, and duplicate outcomes.
 
@@ -196,4 +198,4 @@ Completion: source, distribution, gate, CI, and common behavior tests cover both
 
 ## Further extensions
 
-Plan sensor-generation templates, advanced language analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Treat T-01's remaining issue as an upstream reproduction, not a direct edit to third-party code; remaining T-03 design decisions can also proceed independently.
+Plan sensor-generation templates, advanced language analysis, storage-specific sensors, and other harnesses separately. T-07 is complete. Treat T-01's remaining issue as an upstream report, not a direct edit to third-party code; the drafted issue is posted only after the user reviews it.

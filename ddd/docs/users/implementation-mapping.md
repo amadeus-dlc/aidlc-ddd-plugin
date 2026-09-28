@@ -130,11 +130,20 @@ Every path that reads the mapping during a gate reads `schema_version: 2`, and a
 |---|---|---|
 | Mapping check at domain-design | `ddd-mapping-declarations` | `mapping-declarations.document` |
 | Reference resolution at domain-design | `ddd-reference-ids` | `reference-ids.document` |
-| Process Manager requirement at functional-design | `ddd-mapping-declarations` | `mapping-declarations.document`, reported against the mapping |
+| Process Manager requirement and execution model at functional-design | `ddd-mapping-declarations` | `mapping-declarations.document`, reported against the mapping |
+| Store semantics at infrastructure-design | `ddd-design-advisories` | Advisory `design-advisories.store-upsert`: the store semantics cannot be judged |
 | Domain package check | `ddd-rust-domain`, `ddd-typescript-domain` | `domain-packaging.declaration` |
 | Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter`, `ddd-typescript-domain`, `ddd-typescript-use-case`, `ddd-typescript-interface-adapter` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
 
-A mapping that is absent is a different fact from one that cannot be read. At functional-design an absent mapping leaves the Process Manager requirement unevaluated and says so in the verdict's note; a mapping that is there and unreadable blocks. `ddd-layer-structure` no longer reads the mapping at all: where an aggregate's code lives does not decide whether its context has to rebuild it.
+A mapping that is absent is a different fact from one that cannot be read. At functional-design the mapping gives each target aggregate's `programming_model`:
+
+- When any target aggregate of a use case with two or more targets is `actor`, `multi_aggregate_strategy.kind: process-manager` is required, and anything else is the blocking `mapping-declarations.process-manager-required`. When every target is `class`, either `process-manager` or `re-execution` may be chosen.
+- When a use case with two or more targets uses `re-execution` and the mapping is absent, unreadable, or has no entry for one of its targets, the programming model of that target is unknown, and the blocking `mapping-declarations.execution-model-undetermined` is reported. Single-aggregate use cases and `process-manager` use cases are not affected and pass without the mapping. No note is emitted for an absent mapping any more.
+- A mapping that is there and unreadable blocks, reported against the mapping.
+
+At infrastructure-design `ddd-design-advisories` reads each aggregate's `persistence_method`: a repository of a `state-sourcing` aggregate is expected to declare the `store` verb with `upsert`, and one of an `event-sourcing` aggregate the `store` verb with `insert-only`; a mismatch is the advisory `design-advisories.store-upsert`. When the mapping is absent, unreadable, or does not map the repository's aggregate, the same advisory reports that the store semantics cannot be judged; there is no fallback to an upsert-only judgement.
+
+`ddd-layer-structure` no longer reads the mapping at all: where an aggregate's code lives does not decide whether its context has to rebuild it.
 
 This format needs the canonical model in version 2, and every gate reads that version too. Convert the whole record in one step with [`ddd-artifact-set migrate`](artifact-migration.md), which converts the settings, the model, the mapping and the layer declarations together and checks them against each other before writing anything.
 

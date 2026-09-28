@@ -121,7 +121,7 @@ readonlyを含め、ドメインの状態は非公開にします。Domain Primi
 
 予期しない実行時障害は、想定される業務拒否と区別します。破損履歴や未知スキーマからの復元、リポジトリの競合、通信障害、コミット結果不明については、既存の区別と処理方針を維持します。今回の合意で、すべての例外やpanicを一律禁止するわけではありません。
 
-TypeScriptのResult実装は言語拡張用のinfrastructureに置きます。特定ライブラリは選定せず、neverthrow・Effect・fp-tsとの個別統合は今回のスコープ外です。成功値の具体型、重複成功の表現、複数イベントの戻り値は、既存のT-03で引き続き決めます。
+TypeScriptのResult実装は言語拡張用のinfrastructureに置きます。特定ライブラリは選定せず、neverthrow・Effect・fp-tsとの個別統合は今回のスコープ外です。成功値はT-03で2026-09-28に確定しました。1件以上のイベントを宣言するコマンドでは、TypeScriptの `Result` の成功側を判別共用体 `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }` とし、言語拡張パッケージの `Result` の隣に宣言します。Rustでは `Result<CommandOutcome<E>, <メソッドのエラー>>` を返し、`enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` をinfrastructureの言語拡張クレートに置きます。appliedは状態を変更し、モデルの `events` がそのコマンドに宣言したイベントを1件以上持ちます。already-appliedは状態を変更せずイベント0件で、`command-id-memory` のコマンドが、モデルのretentionの範囲で記憶しているコマンドIDに対してだけ返します。イベントを宣言しないコマンドは `Result<void, E>` / `Result<(), E>` のままです。1コマンドの複数イベントは、期待バージョンを1回確認して1回の追記で保存します。戻り値の形を判定するセンサーはなく、レビューと振る舞いテストで確認します。[ドメイン層設計](domain-layer-design.ja.md)を参照してください。
 
 ## 7. モジュール配置を選択し、統一する
 

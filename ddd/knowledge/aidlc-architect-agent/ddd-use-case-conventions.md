@@ -1,6 +1,6 @@
 # Use-case conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-28. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -16,14 +16,14 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.use-case-conventions.4 | Declare consistency, idempotency, ordering, failure and compensation, and observability. | Design procedure and review. |
 | K.use-case-conventions.5 | Do not extract values through getters to make business decisions. Forwarding getter results as repository arguments without business branching or calculation is allowed. | d permits proven unchanged forwarding to repository ports. Review assesses the placement of business decisions. |
 | K.use-case-conventions.6 | Do not implicitly promise automatic rollback of an entire flow. | Design convention. |
-| K.use-case-conventions.7 | Define retry identification, retention periods, and recovery from unknown persistence outcomes. | j checks only the strategy of additive commands. Safety requires review. |
-| K.use-case-conventions.8 | Represent multi-aggregate recovery with a Process Manager or an explicit re-execution strategy. | process-manager-required applies when every target is actor-based and its mapping is readable. |
+| K.use-case-conventions.7 | Define retry identification, retention periods, and recovery from unknown persistence outcomes. The resend period is the model's `idempotency.retention` (`last-one`, `multiple` with `retention_count`, or `time-window` with `retention_window`); the use-case declaration adds no item for it and `re_execution_basis` refers to it. For a `strategy: none` command, `re_execution_basis` states whether a repeat is refused with the command's own error or is a no-op of the state transition. | j checks only the strategy of additive commands; the model loader requires the retention of every `command-id-memory` command. Safety requires review. |
+| K.use-case-conventions.8 | Represent multi-aggregate recovery with a Process Manager or an explicit re-execution strategy. A use case over any actor-modelled aggregate uses a Process Manager; one over class-modelled aggregates alone may use either. | process-manager-required applies when any target is actor-modelled in the mapping. execution-model-undetermined blocks a multi-aggregate re-execution when the mapping is absent or does not map a target; a single-aggregate use case and a Process Manager are not affected. |
 | K.use-case-conventions.9 | Declare the six use-case items, identifier, and name. | mapping-declarations.use-case-item and related checks. Connected to normal approval; standalone completion has limits. |
-| K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. | Design convention. |
+| K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. A command that declares events returns an outcome: applied, with one or more declared events and the new state held by the aggregate, or already applied, with no event and no change, which only a `command-id-memory` command returns; a refusal is the command's own error. The use case stores an applied outcome's events with the aggregate in one store that checks the expected version once, and stores nothing when already applied. | Review and behavior tests. No sensor decides the outcome shape. |
 
 ## Rationale
 
-A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Retaining only the most recent ID is insufficient if C1 → C2 → retry C1 is allowed. Sagas can also use classes; declarations for mixed flows remain T-03 work.
+A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Retaining only the most recent ID is insufficient if C1 → C2 → retry C1 is allowed. Sagas can also use classes. A flow that mixes actor- and class-modelled aggregates needs a Process Manager, because one actor target is enough to require it.
 
 ## Examples
 

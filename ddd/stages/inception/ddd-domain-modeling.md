@@ -123,7 +123,11 @@ Fill the completion table and keep it in the md under `## Self-check`:
 
 ### Step 7: Completion
 
-For standalone execution, before reporting completion, run `aidlc engine sensor fire ddd-model-completeness --stage ddd-domain-modeling --output-path <actual-path-to-this-attempts-ddd-domain-model-yaml.md>`. Require `result: passed` in the final JSON, not merely a successful exit code; otherwise fix and rerun. Do not skip this step: the standard AI-DLC 2.8.2 standalone completion command does not check general artifacts.
+**Standalone completion check.** Before reporting a standalone completion of `ddd-domain-modeling`, run each command below against this attempt's artifact, replacing the path placeholder with the actual path:
+
+- `aidlc engine sensor fire ddd-model-completeness --stage ddd-domain-modeling --output-path <path-to-this-attempt's-ddd-domain-model-yaml.md>` (blocking)
+
+A blocking sensor passes only when the command exits 0 and its final JSON line is `result: passed` with no `note`; a non-zero exit (a missing artifact exits non-zero), `result: failed`, or a `note` is a failure: fix the artifact and rerun. AI-DLC 2.9.0 `report --single` does not check this stage's artifacts or run its gate sensors, so do not skip this check.
 
 Run the core completion flow: the advisory architecture review, the learnings
 ritual, then the gate. Before the gate, `ddd-model-completeness` fires. On a

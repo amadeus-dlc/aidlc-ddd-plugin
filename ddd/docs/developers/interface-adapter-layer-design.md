@@ -2,7 +2,7 @@
 
 English | [Japanese](interface-adapter-layer-design.ja.md)
 
-Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
+Updated: 2026-09-28. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
 
 ## 1. Delivery form
 
@@ -38,6 +38,8 @@ Name repository ports `<Aggregate>Repository`, without storage-medium names. Imp
 
 Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 
+Declare `store` semantics from the aggregate's `persistence_method` in the implementation mapping (infrastructure-design consumes `ddd-aggregate-mapping`, not required): a `state-sourcing` aggregate's `store` is `upsert` with the expected version; an `event-sourcing` aggregate's `store` is `insert-only` (append only). When one command yields several events, check the expected version once and save them in one append.
+
 Start with in-memory implementations and test port contracts including conflicts and failures. Restore DTOs through full constructors. Follow domain-layer design §6 for replay; arbitrary restoration bypasses are not allowed.
 
 ## 6. Choosing persistence infrastructure
@@ -57,15 +59,17 @@ Declare and review the following for each RMU:
 - How updates and processed records commit together, including any conditional-write predicates.
 - Rebuilds, retry limits, and isolation of unrecoverable events.
 
+An `rmu` package in the layer declaration may state two optional items: `ordering_scope` (`aggregate` | `item` | `none`, the unit it keeps events in order for) and `dedup` (`version-check` | `event-id` | `idempotent-write`, how it drops an event already applied). Only an `rmu` package may state them. Declarations that state neither item (including v1 migration output) are accepted unchanged, and their ordering and duplicate handling are left to review of the prose. Delays, gaps, and reordering are not structured; they stay in prose review.
+
 Applying only higher-numbered events has different meanings for full-state replacement and incremental updates. Skipping deltas corrupts results; number comparison alone must not justify ignoring gaps. A view combining several aggregates may not have one sequence number that represents progress through every history.
 
 ## 8. Declarations and sensors
 
-Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](../users/artifact-contract.md). Explain RMU details outside the schema in prose first.
+Use `## DDD Layer Structure` in `cicd-pipeline.md` to declare model/context references, CQRS, side-specific crate lists, dependencies, ports, repositories, restoration paths, and storage. Existing Japanese section markers remain readable; see the [artifact contract](../users/artifact-contract.md). Explain RMU details outside `ordering_scope` and `dedup` in prose.
 
 k checks cross-side references, l query-side domain references, m naming, and n restoration. Design sensors inspect declarations; Rust sensors inspect syntax. Neither proves semantic safety. Review and test aggregate ownership scope and re-execution safety.
 
-Declarations are connected to normal approval. T-01 tracks the framework standalone completion gap, T-02 Rust naming/placement limits, and T-03 strategy-specific detail.
+Declarations are connected to normal approval. The design sensors check the RMU items (the ddd-layer-structure sensor reports a misplaced item or a value outside the lists as blocking `layer-structure.item`) and, as advisory `design-advisories.store-upsert`, whether each repository's `store` semantics match the aggregate's `persistence_method`; when the mapping does not say how the aggregate is persisted, that advisory reports that the store semantics cannot be judged. T-01 tracks the framework standalone completion gap (the plugin side is handled by a manual `aidlc engine sensor fire` check; the upstream fix remains), and T-02 tracks Rust naming/placement limits.
 
 ## 9. Knowledge
 
@@ -73,4 +77,4 @@ Cover CQRS separation, port responsibilities, restoration, RMU, and external-mod
 
 ## 10. Later detailed design
 
-The detailed RMU schema, strategy-specific required fields, and semantic replay verification remain unresolved. Matching declarations to explicit Rust types is implemented in [T-02](../users/rust-sensor-contract.md). Determine needed fields in [T-03](completion-tasks.md); do not present unverified strategies as implemented.
+The strategy-specific items are decided in [T-03](completion-tasks.md): the optional RMU items `ordering_scope` and `dedup` (§7) and store semantics per persistence method (§5). Delays, gaps, reordering, and semantic replay verification remain prose review; no sensor proves them. Matching declarations to explicit Rust types is implemented in [T-02](../users/rust-sensor-contract.md). Do not present unverified strategies as implemented.

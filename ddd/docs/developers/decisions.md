@@ -2,7 +2,7 @@
 
 English | [Japanese](decisions.ja.md)
 
-Updated: 2026-09-13. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
+Updated: 2026-09-28. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
 
 ## Current policy
 
@@ -58,7 +58,7 @@ Several alternatives were rejected. Keeping an attribute macro under `#[cfg(test
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.
 
-Idempotency requires request identification and retention suited to retry conditions. Distinguish initial state-changing success from duplicate success with no new events. Concrete return types remain T-03 work.
+Idempotency requires request identification and retention suited to retry conditions. Distinguish initial state-changing success from duplicate success with no new events. T-03 decided the return contract on 2026-09-28: a command declaring events returns `CommandOutcome<E>` on success, either "applied" (state changed, one or more declared events) or "already applied" (state unchanged, zero events, only for a `command-id-memory` command whose ID is still remembered), and its method-specific error on rejection. Several events of one command are saved in one append after one expected-version check. No sensor judges the return shape; review and behavior tests cover it. See the [domain-layer design](domain-layer-design.md).
 
 Choose saga implementation, storage, and delivery-order guarantees from the actual requirements and conditions. The three layer designs describe those conditions and sources.
 

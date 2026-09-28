@@ -2,7 +2,7 @@
 
 English | [Japanese](artifact-contract.ja.md)
 
-Updated: 2026-09-13. T-01 uses standard AI-DLC 2.8.2 artifact naming and existing Unit kinds. No framework patch was added.
+Updated: 2026-09-28. T-01 uses standard AI-DLC 2.8.2 artifact naming and existing Unit kinds. No framework patch was added.
 
 ## Align canonical data and explanations with registered files
 
@@ -55,17 +55,17 @@ The entry points are registered artifacts enumerated by the standard process. An
 
 ## Standalone completion still has a framework gap
 
-AI-DLC 2.8.2 `report --single --result completed` does not check general artifacts or gate sensors other than CodeKB. A disposable-project regression confirmed that it returns `kind: done` with no DDD artifacts.
+AI-DLC 2.9.0 `report --single --result completed` does not verify registered artifacts or run gate sensors; it checks only summary confirmation, CodeKB artifacts, and pipeline and ensemble evidence. It returns `kind: done` even when every registered artifact of the stage is missing, and no DDD sensor runs, because every DDD sensor fires at the gate.
 
-Standalone runs must explicitly execute the pre-completion sensor checks in stage instructions. The DDD plugin alone cannot claim to reject a `report --single` that skips them. This automated guarantee remains a separate framework issue, so T-01 as a whole is incomplete.
+Before standalone completion, run the "Standalone completion check" in the instructions of the stage. The seven DDD instruction files carry the same check: one `aidlc engine sensor fire <sensor> --stage <slug> --output-path <path>` command per sensor, with each sensor marked blocking or advisory. The path is the artifact of this attempt. The rule is the same for every stage:
 
-Reproduce it with the following command (expected to fail on current 2.8.2):
+- A blocking sensor passes only when the command exits 0 and its final JSON line is `result: passed` with no `note`.
+- A non-zero exit (a missing artifact exits non-zero), `result: failed`, or a `note` is a failure. Fix the artifact and rerun the check.
+- The advisory `ddd-design-advisories` never blocks.
 
-```sh
-DDD_VERIFY_FRAMEWORK_SINGLE=1 bun test ddd/tests/t1-gate-integration.test.ts -t 'standard isolated completion'
-```
+The DDD plugin alone cannot claim to reject a `report --single` that skips this check. The automated guarantee remains a framework issue, so T-01 as a whole is incomplete. The [upstream issue draft](../developers/upstream-standalone-completion-report.md) describes it; it is not posted yet.
 
-Normal test runs skip this one upstream reproduction, separating it from plugin regressions. Once the framework is fixed, verify the same command passes and make it required.
+[install-sandbox.test.ts](../../tests/install-sandbox.test.ts) reproduces the gap on every run, for Claude and Codex. It installs the plugin into a fresh AI-DLC 2.9.0 project, completes `ddd-domain-modeling` with `report --single` while its model artifact is missing, and expects `kind: done`. It also shows that the manual check does not pass the missing artifact. Run it with `bun run test:sandbox`, or with `bun test tests/install-sandbox.test.ts` from `ddd/`. Once the framework refuses such a completion, this assertion fails; then assert the refusal and retire the manual check.
 
 ## Verification scope
 

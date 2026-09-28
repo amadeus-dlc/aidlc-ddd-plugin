@@ -101,4 +101,10 @@ human-readable table below it. Never redefine an element owned by the model.
 
 In addition to automated declaration and model-ID checks, review whether each name and its contents follow ubiquitous language. Ensure every aggregate mapping location is declared in domain_packages, together with its root and every intermediate level. Packages planned for future implementation may be declared in advance.
 
-For standalone execution, explicitly run the model-presence, reference-ID, and mapping sensors with `aidlc engine sensor fire` against components and ddd-aggregate-mapping before reporting completion. Every final JSON result must be `result: passed`. Standard 2.9.0 standalone completion does not perform these checks for you.
+**Standalone completion check.** Before reporting a standalone completion of `domain-design`, run each command below against this attempt's artifact, replacing the path placeholder with the actual path:
+
+- `aidlc engine sensor fire ddd-model-presence --stage domain-design --output-path <path-to-this-attempt's-components.md>` (blocking)
+- `aidlc engine sensor fire ddd-reference-ids --stage domain-design --output-path <path-to-this-attempt's-ddd-aggregate-mapping.md>` (blocking)
+- `aidlc engine sensor fire ddd-mapping-declarations --stage domain-design --output-path <path-to-this-attempt's-ddd-aggregate-mapping.md>` (blocking)
+
+A blocking sensor passes only when the command exits 0 and its final JSON line is `result: passed` with no `note`; a non-zero exit (a missing artifact exits non-zero), `result: failed`, or a `note` is a failure: fix the artifact and rerun. AI-DLC 2.9.0 `report --single` does not check this stage's artifacts or run its gate sensors, so do not skip this check.

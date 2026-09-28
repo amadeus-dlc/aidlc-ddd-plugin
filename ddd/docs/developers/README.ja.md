@@ -17,6 +17,7 @@
 | 再実行、一貫性、回復 | [ユースケース層設計](use-case-layer-design.ja.md) |
 | CQRS、永続化、RMU | [インターフェイスアダプタ層設計](interface-adapter-layer-design.ja.md) |
 | フレームワークとの接続と制約 | [AI-DLC互換性](framework-compatibility.ja.md) |
+| 単独実行の完了についての上流イシューの下書き（未投稿） | [上流イシューの下書き](upstream-standalone-completion-report.ja.md) |
 
 各層の設計は、生成するアプリケーションとプラグインの規約を定義します。成果物の形式やセンサーの挙動を変える際は、[利用者向けの契約](../users/README.ja.md)も確認してください。規約の記載だけで、自動検査の実装を保証するものではありません。
 

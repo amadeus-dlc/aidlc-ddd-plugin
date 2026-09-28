@@ -23,6 +23,7 @@ import {
   readText,
 } from "../shared/yaml-read.ts";
 import {
+  DEDUP_METHODS,
   IO_UNITS,
   LAYER_LANGUAGES,
   LAYER_SCHEMA_VERSION,
@@ -32,6 +33,7 @@ import {
   LayerReport,
   type LayerStructure,
   type LayerStructureDraft,
+  ORDERING_SCOPES,
   PACKAGE_ROLES,
   type PackageDependency,
   type PackageIdentity,
@@ -59,7 +61,7 @@ const KEYS = {
     "restoration_paths",
     "persistence_backend",
   ],
-  package: ["role", "code"],
+  package: ["role", "code", "ordering_scope", "dedup"],
   identity: ["language", "package"],
   dependency: ["code", "depends_on"],
   port: ["name", "kind", "verbs"],
@@ -97,8 +99,18 @@ function readPackage(
   report.unknownKeys(node, KEYS.package, where);
   const role = readChoice(report, node, "role", PACKAGE_ROLES, where);
   const code = readIdentity(report, own(node, "code"), `${where}.code`);
-  if (role === undefined || code === undefined) return undefined;
-  return { role, code };
+  const orderingScope = readOptionalChoice(report, node, "ordering_scope", ORDERING_SCOPES, where);
+  const dedup = readOptionalChoice(report, node, "dedup", DEDUP_METHODS, where);
+  if (role === undefined || code === undefined || orderingScope === undefined || dedup === undefined) return undefined;
+  // Only the read-model updater applies events to a read model, so only it keeps them in order.
+  if (role !== "rmu" && (orderingScope.present || dedup.present))
+    return structure(report, `${where}: "ordering_scope" and "dedup" belong to a read-model updater (role rmu) only`);
+  return {
+    role,
+    code,
+    ...(orderingScope.present ? { ordering_scope: orderingScope.value } : {}),
+    ...(dedup.present ? { dedup: dedup.value } : {}),
+  };
 }
 
 function readDependency(

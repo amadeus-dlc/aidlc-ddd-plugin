@@ -455,7 +455,7 @@ describe("mapping-declarations", () => {
     expect(verdict.findings.some((entry) => entry.message.includes("aggregate-mapping.unknown-key"))).toBe(true);
   });
 
-  test("blocks a functional design beside a mapping it cannot read, and only notes an absent one", () => {
+  test("blocks a functional design beside a mapping it cannot read, and passes a single-aggregate one beside an absent one", () => {
     const useCases = {
       "inception/ddd-domain-modeling/ddd-domain-model-yaml.md": MODEL,
       "construction/u1/functional-design/functional-spec.md": USE_CASES,
@@ -467,7 +467,7 @@ describe("mapping-declarations", () => {
       "construction/u1/functional-design/functional-spec.md",
     ).verdict;
     expect(absent.pass).toBe(true);
-    expect(absent.note ?? "").toContain("absent");
+    expect(absent.note).toBeUndefined();
 
     const unreadable = runSensor(
       "mapping-declarations",
@@ -566,6 +566,7 @@ describe("design-advisories", () => {
   test("passes a clean infrastructure declaration", () => {
     const record = makeRecord({
       "inception/ddd-domain-modeling/ddd-domain-model-yaml.md": MODEL,
+      "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
       "construction/u1/infrastructure-design/cicd-pipeline.md": LAYER_STRUCTURE,
     });
     const { verdict } = runSensor(
@@ -577,9 +578,10 @@ describe("design-advisories", () => {
     expect(verdict.pass).toBe(true);
   });
 
-  test("reports a non-upsert store as advisory", () => {
+  test("reports a state-sourced aggregate stored insert-only as advisory", () => {
     const record = makeRecord({
       "inception/ddd-domain-modeling/ddd-domain-model-yaml.md": MODEL,
+      "inception/domain-design/ddd-aggregate-mapping.md": AGGREGATE_MAPPING,
       "construction/u1/infrastructure-design/cicd-pipeline.md": LAYER_STRUCTURE.replace(
         "store_semantics: upsert",
         "store_semantics: insert-only",

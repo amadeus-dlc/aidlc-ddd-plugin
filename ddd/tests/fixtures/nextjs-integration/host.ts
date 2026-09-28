@@ -134,8 +134,8 @@ import { IssueInvoice } from "@acme/billing-use-case";
 
 const invoices = new InMemoryInvoiceRepository(
   new Map([
-    ["${OPEN_INVOICE}", { customer: "acme", amounts: [100], issued: false }],
-    ["${EMPTY_INVOICE}", { customer: "acme", amounts: [], issued: false }],
+    ["${OPEN_INVOICE}", { customer: "acme", amounts: [100], issued: false, paid: 0, paymentIds: [] }],
+    ["${EMPTY_INVOICE}", { customer: "acme", amounts: [], issued: false, paid: 0, paymentIds: [] }],
   ]),
 );
 

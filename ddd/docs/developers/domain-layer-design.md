@@ -2,7 +2,7 @@
 
 English | [Japanese](domain-layer-design.ja.md)
 
-Updated: 2026-09-13. Current design conventions consolidated from the discussions of September 8–10. See the [assessment](current-state-assessment.md) for implementation status and [remaining work](completion-tasks.md) for completion criteria. These conventions do not imply complete automated enforcement.
+Updated: 2026-09-28. Current design conventions consolidated from the discussions of September 8–10. See the [assessment](current-state-assessment.md) for implementation status and [remaining work](completion-tasks.md) for completion criteria. These conventions do not imply complete automated enforcement.
 
 ## 1. Purpose and scope
 
@@ -59,7 +59,7 @@ A hand-written loader performs runtime validation. JSON Schema documents the con
 - Commands returning business errors preserve their pre-call state and leave no partial mutation.
 - Do not hide undeclared business mutations with `RefCell` or similar mechanisms. Review the distinction from caches.
 
-In event sourcing, separate business decisions from event application. The earlier “one command, one event” convention is the baseline for an initial state-changing success. Rejection and safely absorbed duplicates produce zero new events. Concrete Rust return types and operations needing multiple events remain T-03 decisions.
+In event sourcing, separate business decisions from event application. The earlier “one command, one event” convention is the baseline for an initial state-changing success. Rejection and safely absorbed duplicates produce zero new events. T-03 decided the return contract on 2026-09-28. A command that declares one or more events returns two kinds of success: "applied" changes the state and carries one or more events; "already applied" leaves the state unchanged and carries zero events. Rejection is the method-specific error type. Rust returns `Result<CommandOutcome<E>, <method error>>` with `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` in the infrastructure language-extensions crate; TypeScript uses the equivalent discriminated union described in the [language-independent design](language-independent-design.md). The new state of "applied" is the aggregate the command was called on, which it mutates in place; the outcome carries only the events. Only an `idempotency.strategy: command-id-memory` command returns "already applied", for a command ID still remembered under the model's retention; a refused command's ID is not remembered. For a `strategy: none` command, `re_execution_basis` states whether a repeat is refused with the command's own error or is a no-op of the state transition. A command that declares no event keeps `Result<(), E>`. When one command produces several events, they are only events the model's `events` declares for that command; the expected version is checked once and all of them are saved in one append.
 
 For state sourcing, the baseline update result is `Result<(), E>`. Domain events are optional, not prohibited by the persistence strategy. When using CQS, explicitly define contracts for operations returning update results, new state, or generated events.
 
@@ -129,6 +129,8 @@ Normal approval requires agreement between registered artifacts, actual filename
 
 TypeScript is the agreed next language after shared contracts, Rust improvements, and artifact migration. The [shared design and release sequence](language-independent-design.md) govern that work. Sensor-generation infrastructure, detailed schemas per persistence strategy, and further interior-mutability analysis remain separate extensions. Use-case and Interface Adapter conventions already have their own design documents; they are not unstarted designs.
 
-## 12. Unresolved implementation contracts
+## 12. Implementation contracts decided in T-03
 
-Replay declarations are implemented as [replay_methods](../users/rust-sensor-contract.md). Return types distinguishing success, duplicates, and rejection, and recovery declarations for mixed actor/class flows remain unresolved. Decide and verify them through [T-01–T-03](completion-tasks.md).
+Replay declarations are implemented as [replay_methods](../users/rust-sensor-contract.md). The return contract distinguishing "applied", "already applied", and rejection, and the handling of multiple events, were decided on 2026-09-28 as described in section 6. No sensor judges the return shape: the TypeScript domain facts carry no return type, and the Rust facts resolve no type alias and record no returned variant. The return shape, the use of declared events only, and the single append are therefore covered by review and behavior tests. The shared behavior scenarios for TypeScript and Rust include a duplicate command returning "already applied", a rejected command keeping its state, and several events saved in one append.
+
+For mixed actor/class flows, a use case whose target aggregates include any `actor` aggregate in the aggregate mapping must declare `multi_aggregate_strategy.kind: process-manager`. Class-only targets may choose `process-manager` or `re-execution`. See the [use-case design](use-case-layer-design.md) and [remaining work](completion-tasks.md).

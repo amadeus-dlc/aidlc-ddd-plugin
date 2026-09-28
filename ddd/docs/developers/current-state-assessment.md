@@ -67,6 +67,8 @@ Documentation cleanup preserved rule IDs while separating conventions, automated
 
 The three layer designs also corrected failure scope, upsert/idempotency, last-ID retention, first versus duplicate success, sagas and actors, relational database selection, and Streams ordering. At that point concrete return values and replay declarations remained T-03 work.
 
+Note (2026-09-28): replay declarations were later implemented as [replay_methods](../users/rust-sensor-contract.md). The return contract (`CommandOutcome` with "applied" and "already applied" success, method-specific errors on rejection, and several events saved in one append) was decided and implemented on 2026-09-28; see the [domain-layer design](domain-layer-design.md). The measurements above are unchanged.
+
 ## 5. Errors in the old task list were corrected
 
 Fable5.1's old completion-tasks.md had the following issues; the [current list](completion-tasks.md) corrects them.

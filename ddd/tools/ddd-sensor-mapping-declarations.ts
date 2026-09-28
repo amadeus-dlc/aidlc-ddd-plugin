@@ -105,25 +105,39 @@ process.exit(
             ),
           );
         }
+        // An absent mapping, an unreadable one and one without an entry for a target all leave the
+        // execution model of that target unknown, which only a multi-aggregate re-execution depends on.
+        const unmapped = useCase.target_aggregates.filter((ref) => !programmingModel.has(ref));
         if (
-          mapping?.ok &&
           useCase.target_aggregates.length >= 2 &&
-          useCase.target_aggregates.every((ref) => programmingModel.get(ref) === "actor") &&
+          useCase.multi_aggregate_strategy?.kind === "re-execution" &&
+          unmapped.length > 0
+        ) {
+          findings.push(
+            finding(
+              "mapping-declarations.execution-model-undetermined",
+              file,
+              `use case ${useCase.use_case_id} re-executes across multiple aggregates, but the implementation mapping does not give the programming model of ${unmapped.join(", ")}, so whether a Process Manager is required cannot be decided`,
+              useCase.line,
+            ),
+          );
+        }
+        if (
+          useCase.target_aggregates.length >= 2 &&
+          useCase.target_aggregates.some((ref) => programmingModel.get(ref) === "actor") &&
           useCase.multi_aggregate_strategy?.kind !== "process-manager"
         ) {
           findings.push(
             finding(
               "mapping-declarations.process-manager-required",
               file,
-              `actor-model use case ${useCase.use_case_id} must reference a Process Manager`,
+              `use case ${useCase.use_case_id} targets an actor-model aggregate and must reference a Process Manager`,
               useCase.line,
             ),
           );
         }
       }
       findings.push(...idempotency(loaded.model, file), ...unreadableMapping);
-      if (mapping === undefined)
-        return { findings, note: "ddd-aggregate-mapping is absent; Process Manager requirement not evaluated" };
       return findings;
     },
   }),

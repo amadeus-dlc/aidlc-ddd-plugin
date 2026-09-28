@@ -276,27 +276,6 @@ for (const harness of ["claude", "codex"] as const) {
   });
 }
 
-// Opt-in red probe for the upstream 2.8.2 gap, not a plugin regression.
-// Run with DDD_VERIFY_FRAMEWORK_SINGLE=1 to require the missing guarantee.
-test.skipIf(process.env.DDD_VERIFY_FRAMEWORK_SINGLE !== "1")(
-  "standard isolated completion must reject missing DDD artifacts",
-  () => {
-    const f = fixture();
-    f.state("ddd-domain-modeling");
-    const started = f.command("orchestrate", ["next", "--stage", "ddd-domain-modeling", "--single"]);
-    expect(started.output).not.toContain('"kind":"error"');
-    const result = f.command("orchestrate", [
-      "report",
-      "--stage",
-      "ddd-domain-modeling",
-      "--single",
-      "--result",
-      "completed",
-    ]);
-    expect(result.output).not.toContain('"kind":"done"');
-  },
-);
-
 for (const harness of ["claude", "codex"] as const) {
   describe(`${harness}: packaging gates`, () => {
     for (const [name, stage, allowed, sensor] of [

@@ -2,7 +2,7 @@
 
 [English](artifact-contract.md) | 日本語
 
-更新: 2026-09-13、T-01のプラグイン側修正。標準AI-DLC 2.8.2の成果物名解決と既存のUnit種別を使う。フレームワーク本体へのパッチは追加していない。
+更新: 2026-09-28、T-01のプラグイン側修正。標準AI-DLC 2.8.2の成果物名解決と既存のUnit種別を使う。フレームワーク本体へのパッチは追加していない。
 
 ## 正規データと説明を登録済みファイルへ揃える
 
@@ -55,17 +55,17 @@ T-07で `ddd-aggregate-mapping.md` のYAMLに `domain_packages` を必須項目�
 
 ## 単独完了には標準側の不足が残る
 
-AI-DLC 2.8.2の `report --single --result completed` は、CodeKB以外の一般成果物の存在やゲートセンサーを確認しない。DDD成果物がゼロでも `kind: done` を返すことを、一時プロジェクトの再現テストで確認した。
+AI-DLC 2.9.0の `report --single --result completed` は、登録成果物を検証せず、ゲートセンサーも実行しない。確認するのは要約の確認、CodeKBの成果物、パイプラインとアンサンブルの証跡だけである。ステージの登録成果物がすべて欠落していても `kind: done` を返し、DDDのセンサーはどれも実行されない。DDDのセンサーはすべてゲートで発火するためである。
 
-そのため単独実行では、ステージ本文の完了前検査を明示的に実行する必要がある。検査を省略した `report --single` 自体をDDDプラグインだけで拒否できるとは主張しない。この機械的保証は標準側の別課題であり、T-01全体は未完了とする。
+単独完了の前に、ステージの手順にある「単独完了時の確認」を実行する。DDDの手順ファイル7件は同じ確認を載せている。センサーごとに `aidlc engine sensor fire <sensor> --stage <slug> --output-path <path>` を1つずつ示し、各センサーがblockingかadvisoryかを記す。パスはその試行の成果物である。規則はどのステージでも同じである。
 
-再現コマンド（現行2.8.2では失敗が期待される）:
+- blockingのセンサーは、コマンドが0で終了し、最後のJSON行が `note` のない `result: passed` のときだけ合格とする。
+- 0以外の終了（成果物が無いと0以外で終了する）、`result: failed`、`note` のいずれかは失敗とする。成果物を直して確認をやり直す。
+- advisoryの `ddd-design-advisories` は完了を止めない。
 
-```sh
-DDD_VERIFY_FRAMEWORK_SINGLE=1 bun test ddd/tests/t1-gate-integration.test.ts -t 'standard isolated completion'
-```
+この確認を省略した `report --single` 自体をDDDプラグインだけで拒否できるとは主張しない。機械的な保証は標準側の課題であり、T-01全体は未完了とする。[上流イシューの下書き](../developers/upstream-standalone-completion-report.ja.md)にまとめたが、まだ投稿していない。
 
-通常のテスト実行ではこの上流再現ケース1件をskipし、プラグインの回帰と区別する。標準側が修正されたら同じコマンドの成功を確認して必須検証へ移す。
+[install-sandbox.test.ts](../../tests/install-sandbox.test.ts) は、この不足をClaude・Codexの両方で毎回再現する。新しいAI-DLC 2.9.0のプロジェクトへプラグインを導入し、モデルの成果物が無い状態で `ddd-domain-modeling` を `report --single` で完了させ、`kind: done` を期待する。手動の確認が欠落した成果物を合格にしないことも示す。`bun run test:sandbox`、または `ddd/` で `bun test tests/install-sandbox.test.ts` で実行する。標準側がこの完了を拒否するようになるとこの確認は失敗する。その時点で拒否を確認するテストに書き換え、手動の確認を廃止する。
 
 ## 検証範囲
 

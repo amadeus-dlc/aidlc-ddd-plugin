@@ -74,8 +74,8 @@ export function coverageDocument(japanese: boolean): string {
       : "Dependency cases cover domain, use-case, Interface Adapter, and rmu sources against six destination layers through both use paths and Cargo declarations, plus external I/O permissions. All 14 reserved package names have design and code violations. test:sandbox also includes English/Japanese heading compatibility tests.",
     "",
     japanese
-      ? "標準AI-DLCの単独完了ガードの再現1件は任意実行のまま残る。新規導入・更新・モデルによる生成・生成アプリケーションの動作は、この検証の対象外。[残作業](completion-tasks.ja.md)を参照。"
-      : "The standard AI-DLC standalone completion-guard reproduction remains opt-in. Fresh installation, updates, model-driven generation, and generated-application behavior are outside this verification. See [remaining work](completion-tasks.md).",
+      ? "標準AI-DLC 2.9.0の単独完了（`report --single`）がDDDのゲートを実行しない不足は、導入先のテスト（`tests/install-sandbox.test.ts`）が常時再現し、手順書どおりの手動検査（`aidlc engine sensor fire`）で欠落と違反を検出することも確かめる。新規導入・更新・モデルによる生成・生成アプリケーションの動作は、この検証の対象外。[残作業](completion-tasks.ja.md)を参照。"
+      : "The standalone completion (`report --single`) of standard AI-DLC 2.9.0 does not run the DDD gates; the installed-project tests (`tests/install-sandbox.test.ts`) reproduce that on every run and show that the manual check the instructions prescribe (`aidlc engine sensor fire`) catches a missing artifact and a violation. Fresh installation, updates, model-driven generation, and generated-application behavior are outside this verification. See [remaining work](completion-tasks.md).",
     "",
   );
   return lines.join("\n");

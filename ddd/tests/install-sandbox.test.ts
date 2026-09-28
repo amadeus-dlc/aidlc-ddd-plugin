@@ -17,6 +17,9 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { legacySetFiles, RECORD_DIR, SUPPLEMENT_FILE } from "./fixtures/artifact-set/workspace.ts";
+import { type CommandRun, installedGates, lastJson, manualCheckPasses } from "./fixtures/installed-gate.ts";
+import { inspectedRustPassProblems } from "./fixtures/rust-behavior/gate-runs.ts";
+import { rustBehaviorSamples } from "./fixtures/rust-behavior/sample.ts";
 import { PROBE, PROBE_CONSTRUCTED_TYPE, writeTypeScriptProject } from "./fixtures/typescript-facts/project.ts";
 import {
   inspectedPassProblems,
@@ -24,8 +27,9 @@ import {
   sampleGateCases,
 } from "./fixtures/typescript-generation/gate-runs.ts";
 import { generationSamples } from "./fixtures/typescript-generation/samples.ts";
+import { ALL_CASES } from "./golden/catalog.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
-import { runGoldenCase } from "./golden/runner.ts";
+import { type GoldenCase, runGoldenCase } from "./golden/runner.ts";
 
 const repository = resolve(import.meta.dir, "../..");
 const temporary: string[] = [];
@@ -530,3 +534,262 @@ for (const harness of ["claude", "codex"] as const) {
     expect(snapshot(external)).toEqual(externalBefore);
   }, 30_000);
 }
+
+// ---------------------------------------------------------------------------
+// The gates of an installed project, reached the way a model reaches them
+// ---------------------------------------------------------------------------
+
+/** Installing, then driving several gate runs through the installed engine, takes more than one default timeout. */
+const GATE_FLOW_TIMEOUT_MS = 120_000;
+const USER_DATA = "User-owned application data\n";
+
+function output(run: CommandRun): string {
+  return `exit ${run.exitCode}\n${run.stdout}${run.stderr}`;
+}
+
+function caseNamed(sensor: string, name: string): GoldenCase {
+  const found = ALL_CASES.find((candidate) => candidate.sensor === sensor && candidate.name === name);
+  if (found === undefined) throw new Error(`golden case missing: ${sensor}/${name}`);
+  return structuredClone(found);
+}
+
+/** Every audit row the record holds, as one text. */
+function auditOf(record: string): string {
+  const root = join(record, "audit");
+  if (!existsSync(root)) return "";
+  return readdirSync(root, { recursive: true })
+    .filter((path) => String(path).endsWith(".md"))
+    .map((path) => readFileSync(join(root, String(path)), "utf8"))
+    .join("\n");
+}
+
+const MODEL_STAGE = { slug: "ddd-domain-modeling", phase: "inception", artifact: "ddd-domain-model-yaml.md" } as const;
+const MODEL_SENSOR = "ddd-model-completeness";
+
+/**
+ * What `report --single` answers once AI-DLC checks a standalone completion the way it checks an
+ * approval. AI-DLC 2.9.0 does not: its single-stage report (handleSingleReport in
+ * aidlc-orchestrate.ts) calls none of verifyStageArtifacts, fireGateSensors and
+ * enforceBlockingGateSensors, so the standalone completion instructions prescribe the manual check.
+ */
+const STANDALONE_COMPLETION_ONCE_FIXED =
+  "report --single refuses a stage whose registered artifacts are missing and records no completion";
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: AI-DLC 2.9.0 completes a standalone DDD stage whose artifacts are missing, and the manual check does not pass it`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const gates = installedGates(f.project, f.leaf, f.root, (id) => id.startsWith("ddd-"));
+      gates.startStage(MODEL_STAGE.slug, MODEL_STAGE.phase, "refactor");
+      const model = join(gates.record, gates.artifactPath(MODEL_STAGE.slug, MODEL_STAGE.phase, MODEL_STAGE.artifact));
+
+      const { started, reported } = gates.completeStandalone(MODEL_STAGE.slug);
+      expect(lastJson(started)?.kind, output(started)).toBe("run-stage");
+      expect(existsSync(model)).toBe(false);
+      // The upstream gap. Once AI-DLC refuses here instead, assert that refusal and retire the manual
+      // check from the standalone completion instructions.
+      expect(
+        lastJson(reported)?.kind,
+        `expected once fixed: ${STANDALONE_COMPLETION_ONCE_FIXED}\n${output(reported)}`,
+      ).toBe("done");
+
+      const check = gates.manualCheck(MODEL_SENSOR, MODEL_STAGE.slug, model);
+      expect(check.exitCode, output(check)).not.toBe(0);
+      expect(manualCheckPasses(check)).toBe(false);
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    GATE_FLOW_TIMEOUT_MS,
+  );
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the manual check the standalone instructions prescribe passes a sound model, fails a broken one and refuses a missing one`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const gates = installedGates(f.project, f.leaf, f.root, (id) => id === MODEL_SENSOR);
+      const model = () =>
+        join(gates.record, gates.artifactPath(MODEL_STAGE.slug, MODEL_STAGE.phase, MODEL_STAGE.artifact));
+      const check = (files: Readonly<Record<string, string>>) => {
+        gates.startStage(MODEL_STAGE.slug, MODEL_STAGE.phase, "refactor");
+        gates.writeRecord(files);
+        return gates.manualCheck(MODEL_SENSOR, MODEL_STAGE.slug, model());
+      };
+
+      const sound = check(caseNamed(MODEL_SENSOR, "clean-complete").files);
+      expect(manualCheckPasses(sound), output(sound)).toBe(true);
+
+      const broken = check(caseNamed(MODEL_SENSOR, "violation-schema").files);
+      expect(broken.exitCode, output(broken)).toBe(0);
+      expect(lastJson(broken)?.result, output(broken)).toBe("failed");
+      expect(manualCheckPasses(broken)).toBe(false);
+
+      const files = caseNamed(MODEL_SENSOR, "clean-complete").files;
+      delete files[`${MODEL_STAGE.phase}/${MODEL_STAGE.slug}/${MODEL_STAGE.artifact}`];
+      const missing = check(files);
+      expect(existsSync(model())).toBe(false);
+      expect(missing.exitCode, output(missing)).not.toBe(0);
+      expect(manualCheckPasses(missing)).toBe(false);
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    GATE_FLOW_TIMEOUT_MS,
+  );
+
+/**
+ * A gate whose contract the use-case, read-model updater and storage decisions changed, with the
+ * golden cases that show it: declarations it admits, declarations it reports, and — for every gate —
+ * the stage run with its declaration artifact missing.
+ */
+interface ChangedGate {
+  readonly sensor: string;
+  readonly stage: string;
+  readonly artifact: string;
+  /** A blocking gate closes the approval on a violation; an advisory one only reports it. */
+  readonly blocking: boolean;
+  readonly sound: readonly string[];
+  readonly violations: readonly string[];
+}
+
+const CHANGED_GATES: readonly ChangedGate[] = [
+  {
+    sensor: "ddd-mapping-declarations",
+    stage: "functional-design",
+    artifact: "functional-spec.md",
+    blocking: true,
+    sound: ["clean-mixed-process-manager", "clean-class-process-manager", "clean-unmapped-single-aggregate"],
+    violations: ["violation-mixed-re-execution", "violation-execution-model-undetermined"],
+  },
+  {
+    sensor: "ddd-layer-structure",
+    stage: "infrastructure-design",
+    artifact: "cicd-pipeline.md",
+    blocking: true,
+    sound: ["clean-rmu-ordering", "clean-rmu-cross-side"],
+    violations: ["violation-rmu-ordering-scope-value", "violation-ordering-outside-rmu"],
+  },
+  {
+    sensor: "ddd-design-advisories",
+    stage: "infrastructure-design",
+    artifact: "cicd-pipeline.md",
+    blocking: false,
+    sound: ["clean", "clean-event-sourcing-insert-only"],
+    violations: ["violation-store-upsert", "violation-event-sourcing-upsert", "violation-store-method-unmapped"],
+  },
+];
+
+const CONSTRUCTION = "construction";
+
+/** Starts the gate's stage afresh over `entry`'s record, with or without the declaration artifact. */
+function prepareStage(
+  gates: ReturnType<typeof installedGates>,
+  gate: ChangedGate,
+  entry: GoldenCase,
+  withArtifact: boolean,
+): string {
+  gates.startStage(gate.stage, CONSTRUCTION, "refactor");
+  const files = { ...entry.files };
+  if (!withArtifact) delete files[`${CONSTRUCTION}/u1/${gate.stage}/${gate.artifact}`];
+  gates.writeRecord(files);
+  gates.fillOtherOutputs(gate.stage, CONSTRUCTION, [gate.artifact]);
+  const artifact = join(gates.record, gates.artifactPath(gate.stage, CONSTRUCTION, gate.artifact));
+  expect(existsSync(artifact)).toBe(withArtifact);
+  return artifact;
+}
+
+for (const harness of ["claude", "codex"] as const)
+  for (const gate of CHANGED_GATES) {
+    test(
+      `${harness}: the ${gate.sensor} gate at the ${gate.stage} approval admits sound declarations and ${gate.blocking ? "refuses" : "only reports"} violations and a missing declaration`,
+      () => {
+        const f = fixture(harness);
+        const installed = f.invoke();
+        expect(installed.code, installed.output).toBe(0);
+        const gates = installedGates(f.project, f.leaf, f.root, (id) => id === gate.sensor);
+        // The gate fired and failed; a blocking gate keeps the approval closed, an advisory one does not.
+        const expectReported = (label: string) => {
+          const opened = gates.openGate(gate.stage);
+          if (gate.blocking) {
+            expect(output(opened), label).not.toContain("Recorded awaiting-approval");
+            expect(output(opened), label).toContain(gate.sensor);
+          } else {
+            expect(output(opened), label).toContain("Recorded awaiting-approval");
+          }
+          const audit = auditOf(gates.record);
+          expect(audit, label).toContain(gate.sensor);
+          expect(audit, label).toContain("SENSOR_FAILED");
+        };
+
+        for (const name of gate.sound) {
+          prepareStage(gates, gate, caseNamed(gate.sensor, name), true);
+          const opened = gates.openGate(gate.stage);
+          expect(output(opened), name).toContain("Recorded awaiting-approval");
+          expect(auditOf(gates.record), name).toContain("SENSOR_PASSED");
+          const approved = gates.approve(gate.stage);
+          expect(lastJson(approved)?.kind, `${name}: ${output(approved)}`).toBe("done");
+        }
+
+        for (const name of gate.violations) {
+          prepareStage(gates, gate, caseNamed(gate.sensor, name), true);
+          expectReported(name);
+        }
+
+        prepareStage(gates, gate, caseNamed(gate.sensor, gate.sound[0]), false);
+        expectReported(`${gate.sound[0]} without ${gate.artifact}`);
+        expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+      },
+      GATE_FLOW_TIMEOUT_MS,
+    );
+
+    test(
+      `${harness}: the manual check of ${gate.sensor} at ${gate.stage} passes sound declarations, fails violations and refuses a missing one`,
+      () => {
+        const f = fixture(harness);
+        const installed = f.invoke();
+        expect(installed.code, installed.output).toBe(0);
+        const gates = installedGates(f.project, f.leaf, f.root, (id) => id === gate.sensor);
+
+        for (const name of gate.sound) {
+          const artifact = prepareStage(gates, gate, caseNamed(gate.sensor, name), true);
+          const check = gates.manualCheck(gate.sensor, gate.stage, artifact);
+          expect(manualCheckPasses(check), `${name}: ${output(check)}`).toBe(true);
+        }
+
+        for (const name of gate.violations) {
+          const artifact = prepareStage(gates, gate, caseNamed(gate.sensor, name), true);
+          const check = gates.manualCheck(gate.sensor, gate.stage, artifact);
+          expect(check.exitCode, `${name}: ${output(check)}`).toBe(0);
+          expect(lastJson(check)?.result, `${name}: ${output(check)}`).toBe("failed");
+        }
+
+        const artifact = prepareStage(gates, gate, caseNamed(gate.sensor, gate.sound[0]), false);
+        const missing = gates.manualCheck(gate.sensor, gate.stage, artifact);
+        expect(missing.exitCode, output(missing)).not.toBe(0);
+        expect(manualCheckPasses(missing)).toBe(false);
+        expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+      },
+      GATE_FLOW_TIMEOUT_MS,
+    );
+  }
+
+/** Each Rust gate run starts the installed native extractor in a process of its own. */
+const INSTALLED_RUST_GATES_TIMEOUT_MS = 120_000;
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the installed Rust gates pass every Rust behavior sample with no finding`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const tools = join(f.project, f.leaf, "tools");
+      for (const sample of rustBehaviorSamples())
+        for (const gateCase of [sample.domainCase, sample.useCaseCase, sample.interfaceAdapterCase, sample.layoutCase])
+          expect(inspectedRustPassProblems(tools, gateCase), `${sample.layout} ${gateCase.sensor}`).toEqual([]);
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    INSTALLED_RUST_GATES_TIMEOUT_MS,
+  );

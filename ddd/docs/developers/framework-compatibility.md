@@ -2,7 +2,7 @@
 
 English | [Japanese](framework-compatibility.ja.md)
 
-Updated: 2026-09-13. Verification baseline: AI-DLC 2.8.2 and Bun 1.3.13. Completion targets are Claude Code and Codex; Kimi and opencode are out of scope.
+Updated: 2026-09-28. Verification baseline: AI-DLC 2.9.0 and Bun 1.3.13. The development scope traceability section below records the path verified on 2.8.2. Completion targets are Claude Code and Codex; Kimi and opencode are out of scope.
 
 ## Use standard installed tools
 
@@ -26,13 +26,13 @@ For an existing intent that has reached Units Generation without stories, use th
 
 ## Separate verified and unverified behavior
 
-The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. Standard standalone completion still skips general artifacts and sensors and can finish without artifacts. See the [artifact contract](../users/artifact-contract.md) for reproduction and limits.
+The assessment verified Claude/Codex builds, compose, and existing golden cases. T-01 connected artifacts to normal approval checks. In AI-DLC 2.9.0, standalone completion (`report --single --result completed`) still skips registered artifacts and gate sensors and can finish without artifacts. The DDD instruction files therefore require a manual check with `aidlc engine sensor fire` before standalone completion. `install-sandbox.test.ts` always reproduces the gap on an installed project for Claude and Codex, and checks that the manual check does not pass a missing artifact. See the [artifact contract](../users/artifact-contract.md) for the rule and limits, and the [upstream issue draft](upstream-standalone-completion-report.md), which is not posted yet.
 
 Codex rule delivery depends on integration between standard AI-DLC and the execution host. T-05 verifies the current route from the DDD side. Old bridge success records are not a substitute.
 
 ## Compatibility work order
 
-1. Maintain T-01 normal approval checks and the explicit direct checks before standalone completion. Do not infer verification success from completion or exit status alone.
+1. Maintain T-01 normal approval checks and the manual `aidlc engine sensor fire` check before standalone completion. Do not infer verification success from completion or exit status alone: a blocking sensor passes only when the command exits 0 and reports `result: passed` with no `note`. When upstream fixes standalone completion, update the reproduction test and retire the manual check.
 2. T-04 build/verification paths target the current Claude/Codex toolchain.
 3. T-05 installation/update CLI checks are complete; actual model-driven stage execution remains.
 
