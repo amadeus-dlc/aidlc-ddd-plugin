@@ -161,6 +161,6 @@
     "InMemoryInvoiceRepository holds references; restoration is checked from InvoiceRecord through Invoice.restore and from the stored aggregate, not through serialization to external storage.",
     "One aggregate (invoice) with one child module (invoice/line).",
     "Run on bun; Node.js execution is limited to the Next.js integration verification.",
-    "The shared behavior scenarios are not yet implemented for Rust."
+    "The Rust run of the shared behavior scenarios is recorded in docs/developers/rust-execution-persistence-verification.md and its evidence."
   ]
 }
