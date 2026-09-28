@@ -29,6 +29,7 @@ import {
 import { generationSamples } from "./fixtures/typescript-generation/samples.ts";
 import { ALL_CASES } from "./golden/catalog.ts";
 import { DESIGN_CASES } from "./golden/design/cases.ts";
+import { typescriptLayoutConfig } from "./golden/module-layout/typescript-cases.ts";
 import { type GoldenCase, runGoldenCase } from "./golden/runner.ts";
 
 const repository = resolve(import.meta.dir, "../..");
@@ -634,6 +635,53 @@ for (const harness of ["claude", "codex"] as const)
       expect(existsSync(model())).toBe(false);
       expect(missing.exitCode, output(missing)).not.toBe(0);
       expect(manualCheckPasses(missing)).toBe(false);
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    GATE_FLOW_TIMEOUT_MS,
+  );
+
+/**
+ * The code-generation sensors the standalone completion instructions run, over a TypeScript-only
+ * project. Each one answers its passing run with a note of its own (the layout's mode and counts,
+ * "no Rust project", "no rust sources claimed"), which AI-DLC drops from a passing verdict: a note on
+ * the verdict only ever reports a sensor that could not run. So the manual check's "no note"
+ * condition refuses no sound run, whichever language the project is written in.
+ */
+const CODE_GENERATION_SENSORS = [
+  "ddd-typescript-domain",
+  "ddd-typescript-module-layout",
+  "ddd-rust-domain",
+  "ddd-rust-module-layout",
+] as const;
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the manual check passes a sound code-generation run although its sensors answer with a note of their own`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const gates = installedGates(f.project, f.leaf, f.root, (id) => id.startsWith("ddd-"));
+      const sound = caseNamed("ddd-typescript-domain", "clean-class");
+      gates.startStage("code-generation", "construction", "refactor");
+      // The case's record keeps its Unit directory, which its source manifest names.
+      const place = (root: string, files: Readonly<Record<string, string>>) => {
+        for (const [path, content] of Object.entries(files)) {
+          mkdirSync(dirname(join(root, path)), { recursive: true });
+          writeFileSync(join(root, path), content);
+        }
+      };
+      place(gates.record, sound.files);
+      place(f.project, { ...sound.workspace, ".ddd.toml": typescriptLayoutConfig("named-file") });
+      const summary = join(gates.record, sound.output);
+      for (const sensor of CODE_GENERATION_SENSORS) {
+        const check = gates.manualCheck(sensor, "code-generation", summary);
+        const detail = lastJson(check)?.detail_path;
+        const why = typeof detail === "string" ? readFileSync(join(f.project, detail), "utf8") : "";
+        expect(lastJson(check)?.result, `${sensor}\n${output(check)}${why}`).toBe("passed");
+        expect(lastJson(check)?.note, `${sensor}\n${output(check)}`).toBeUndefined();
+        expect(manualCheckPasses(check), sensor).toBe(true);
+      }
       expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
     },
     GATE_FLOW_TIMEOUT_MS,

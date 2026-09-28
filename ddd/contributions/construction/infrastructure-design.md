@@ -74,7 +74,7 @@ layer_structures:
     ports:
       - { name: InvoiceRepository, kind: repository, verbs: [find_by_id, store, delete_by_id] }
     repositories:
-      - { name: InvoiceRepository, aggregate_ref: aggregate.invoice, io_unit: single, verbs: [find_by_id, store, delete_by_id], store_semantics: upsert }
+      - { name: InvoiceRepository, aggregate_ref: aggregate.invoice, io_unit: single, verbs: [find_by_id, store, delete_by_id], store_semantics: insert-only }
     restoration_paths:
       - { aggregate_ref: aggregate.invoice, via: full-constructor }
     persistence_backend: <the store behind the repositories>
