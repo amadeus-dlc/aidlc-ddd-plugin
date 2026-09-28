@@ -64,7 +64,7 @@
 | `actor` | `state-sourcing` | 集約に `actor` を宣言し、TypeScriptのソースを伴う見本がない |
 | `actor` | `event-sourcing` | この組を宣言する見本がない |
 
-いずれも、試験が無いという事実であり、その組み合わせが非対応または不正であるという主張ではない。Rustの共通の振る舞いテストは、まだ実装していない（[残作業](completion-tasks.ja.md)）。
+いずれも、試験が無いという事実であり、その組み合わせが非対応または不正であるという主張ではない。同じ共通の振る舞いテストをRustで実行した結果と、それが検証する組み合わせは、[Rustの実行モデルと永続化方式の検証](rust-execution-persistence-verification.ja.md)に記録している。
 
 ## 限界
 

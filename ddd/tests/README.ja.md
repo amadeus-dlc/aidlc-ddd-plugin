@@ -14,6 +14,7 @@
 | t11-typescript-module-layout | TypeScriptの配置設定、パッケージの `src` に対する両配置規約、解決できない構成（曖昧・欠落・リンク・配置できない名前・入れ子のパッケージ・読めないディレクトリ）、センサー直接実行とCI用入口が同じ判定を返すこと、CI終了コード、TypeScriptを持たないプロジェクトに何も報告しないこと |
 | t11-typescript-generation-samples | 両コード表現・両配置のTypeScript生成見本。ドメイン・ユースケース・インターフェースアダプタ・モジュール配置の各ゲートが所見0件で通ること（前の3つは申告したソースを検査したうえで）、モジュール配置のCI用入口が終了コード0で終わること、コンパイラの診断が0件であること、親モジュールを配置どおりのファイルに置くこと |
 | t11-typescript-behavior | 共通の振る舞いテスト4件（正常な状態変更、業務エラー時の状態保持、不正値の生成拒否、永続化後の復元）を、各コード表現・各モジュール配置のTypeScript生成見本で、見本のパッケージを `node_modules` にリンクして実行すること。各見本の写像が宣言する実行モデル `class` と永続化方式 `state-sourcing`。[TypeScriptの実行モデルと永続化方式の検証](../docs/developers/typescript-execution-persistence-verification.ja.md)を参照 |
+| t11-rust-behavior | 同じ共通の振る舞いテスト4件をRustで書き、請求書の集約を持つRustの見本で、各モジュール配置（`file`・`mod-rs`）について、見本のクレートへ path で依存するハーネスのクレートを通して `cargo test` でコンパイル・実行すること。見本がRustのドメイン・ユースケース・インターフェースアダプタ・モジュール配置の各ゲートを所見なしで通ること。見本の写像が宣言する実行モデル `class` と永続化方式 `state-sourcing`。`cargo` と `rustc` が必要。[Rustの実行モデルと永続化方式の検証](../docs/developers/rust-execution-persistence-verification.ja.md)を参照 |
 | t9-sensor-contract | センサー×規則の網羅性、正常・異常・境界例、依存方向表、予約名全件、対応表の更新漏れ |
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |

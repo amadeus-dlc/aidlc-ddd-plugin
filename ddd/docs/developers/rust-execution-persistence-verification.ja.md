@@ -2,9 +2,9 @@
 
 [English](rust-execution-persistence-verification.md) | 日本語 | [開発者向け文書](README.ja.md)
 
-検証日: 2026-09-25。基準コミット: `1621a6d657bccb2b9c0e1809f32c434c43f25bdd`。確認の再実行は 2026-09-26T00:06:29Z に完了しました。各実行の時刻は[実行記録](evidence/rust-execution-persistence-verification.json)にあります。
+検証日: 2026-09-25。基準コミット: `1621a6d657bccb2b9c0e1809f32c434c43f25bdd`。確認の再実行は 2026-09-26T00:06:29Z に完了しました。各実行の時刻は[実行記録](evidence/rust-execution-persistence-verification.json)にあります。T-11-07で加えた共通の振る舞いテストの経路 (e) は、2026-09-28 に基準コミット `88a80cab25c7ac76dde33bf0317f26f6dce44f6e` に対して検証しました。実測はこの変更をコミットする前の作業ツリーで行い、rustc 1.95.0 と cargo 1.95.0 を使いました。
 
-既存の試験・ゴールデンケース・検証シナリオが、Rustで `programming_model` × `persistence_method` のどの組み合わせを、どのモジュール配置で実際に判定しているかを記録します。既にあるものを洗い出した記録であり、規則を新設せず、判定も変えていません。どのケースも扱っていない組み合わせは未検証として記載し、対応済みとしては記載しません。
+既存の試験・ゴールデンケース・検証シナリオが、Rustで `programming_model` × `persistence_method` のどの組み合わせを、どのモジュール配置で実際に判定しているかを記録します。T-10-07の時点にあったものを洗い出した記録に、T-11-07の振る舞いの経路を加えたものであり、規則を新設せず、判定も変えていません。どのケースも扱っていない組み合わせは未検証として記載し、対応済みとしては記載しません。
 
 ## 各軸を読むのはどこか
 
@@ -19,9 +19,9 @@
 
 下の表で `actor` の行が宣言ゲートと写像の読込・移行の境界に置かれているのは、そこにしかケースが無いからです。集約に `actor` を宣言し、かつ同じ記録にRustソースを書くケースは1件も無いため、どの `actor` のケースもRustソース規則には届きません。そうしたケースを追加したときにRustソースの判定が変わるかどうかは別の問いで、答えも別です。変わりません。Rustビューがこのフィールドを落とすためです。本記録ではこの2つの事実のどちらも他方として扱っていません。
 
-## 「両モジュール配置」は4つの別経路に分かれている
+## 「両モジュール配置」は5つの別経路に分かれている
 
-`.ddd.toml` と集約写像を同時に持つゴールデンケースの**定義**はありません。`.ddd.toml` を書くのはモジュール配置の群だけで（[`golden/module-layout/cases.ts:22`](../../tests/golden/module-layout/cases.ts)）、この群は意図的にソース申告もドメインモデルも持ちません（`:19`）。ただし、写像を持つケースの周囲にテスト側が `.ddd.toml` を置くことはでき、ゲート統合試験が実際にそうしています。そのため両配置の検証は4つの経路に分かれており、一方で検証された組み合わせが他方でも検証されたことにはなりません。
+`tests/golden/` のゴールデンの群には、`.ddd.toml` と集約写像を同時に持つケースの**定義**はありません。群のうち `.ddd.toml` を書くのはモジュール配置の群だけで（[`golden/module-layout/cases.ts:22`](../../tests/golden/module-layout/cases.ts)）、この群は意図的にソース申告もドメインモデルも持ちません（`:19`）。ただし、写像を持つケースの周囲にテスト側が `.ddd.toml` を置くことはでき、ゲート統合試験が実際にそうしています。これらの群の外では、経路 (e) のRustの振る舞いの見本[`fixtures/rust-behavior/sample.ts`](../../tests/fixtures/rust-behavior/sample.ts)が、写像と並べて `:343` で `.ddd.toml` を書きます。そのため両配置の検証は5つの経路に分かれており、一方で検証された組み合わせが他方でも検証されたことにはなりません。
 
 | 経路 | 何を持つか | 何を判定するか |
 |---|---|---|
@@ -29,12 +29,15 @@
 | (b) Rustソース規則 | 写像と実Rustソース。`.ddd.toml` は持たない | 物理的なモジュール配置（`src/<name>.rs`、`src/<name>/mod.rs`、`#[path]`）に対する規則の判定 |
 | (c) 解決 | 写像・実ソース・配置設定を同時に持つ | 写像のモジュールが、そのパッケージの配置が置く場所で観測されるか |
 | (d) ゲート統合 | 写像・実Rustソース・`.ddd.toml` を、本物のゲートへ通す | そのステージで適用されるセンサー集合全体が記録を受理するか拒否するか |
+| (e) 共通の振る舞い | 写像・ドメインモデル・3クレートの実Rustソース・両方の宣言モードの `.ddd.toml`。Rustの4ゲートをそれぞれ単独で実行し、その後 `cargo test` でソースをコンパイルして実行する | 各Rustゲートが見本を所見なしで通すか、見本で共通の振る舞いテスト4件が成功するか |
 
 経路 (d) は[`t1-gate-integration.test.ts:288-313`](../../tests/t1-gate-integration.test.ts)です。`:300` で `layoutConfig("file")` の `.ddd.toml` を、`:306` でケースの写像を、`:307` でケースのRustソースを書き出し、本物のゲートを開きます。このフィクスチャは `ddd-*` のセンサーをすべて適用対象のまま残し（`:67-68`）、[`contributions/construction/code-generation.md`](../../contributions/construction/code-generation.md)が `code-generation` に対して `ddd-rust-module-layout` と `ddd-rust-domain` の両方を挙げているため、ここでは配置検査とRustソース規則が同一実行で判定します。扱うのは宣言された `file` 配置のみ、ケースも2件のみです。この試験は `PACKAGING_CASES` の4件（`:291-294`）を回しますが、うち2件 `clean-packaging-declarations` と `violation-packaging-technical-name` はこの層に到達しません。ステージが `domain-design` であり、そのセンサー集合（[`contributions/inception/domain-design.md`](../../contributions/inception/domain-design.md)）はRustセンサーを1件も含みません。またこの2件は `design()`（[`golden/packaging/cases.ts:83-94`](../../tests/golden/packaging/cases.ts)）が `DESIGN_CASES` のケースを複製したもので、`workspace` を持たないため `:307` は何も書き出しません。(d) の定義を満たすのは `clean-packaging-inline` と `violation-packaging-empty-inline` の2件で、これは下の該当行が根拠にしている2件と一致します。
 
+経路 (e) は[`t11-rust-behavior.test.ts`](../../tests/t11-rust-behavior.test.ts)です。対象は[`fixtures/rust-behavior/sample.ts`](../../tests/fixtures/rust-behavior/sample.ts)の見本で、宣言した配置ごとに1つあります（`:24`）。各見本は `packages/command/` の下に `billing-domain`・`billing-use-case`・`billing-interface-adapter` の3クレートを持つCargoワークスペースで、違うのは `invoice` の親モジュールのファイル（`src/invoice.rs` か `src/invoice/mod.rs`）だけです（`:45`）。試験は配置ごとに（`:176`）、`ddd-rust-domain`・`ddd-rust-use-case`・`ddd-rust-interface-adapter`・`ddd-rust-module-layout` を本物のセンサー入口からそれぞれ別のプロセスで実行し（`:178-203`）、所見が無いことを求めます。ソースを判定する3ゲートについては、note が `no rust sources claimed` を含むか `.unresolved:` を含む場合も拒否するため、何も検査しなかった合格は合格として数えません。続いて見本の隣にハーネスのクレートを書き出します。このクレートは自前のワークスペースを持ち、3クレートへ path で依存します（`:97-130`）。`cargo test --offline --lib` を実行し（`:132-161`）、[`fixtures/typescript-behavior/scenarios.ts`](../../tests/fixtures/typescript-behavior/scenarios.ts)のシナリオがそれぞれちょうど1回 `ok` と報告され、cargo が 0 で終了することを求めます（`:248-280`）。シナリオは[`fixtures/rust-behavior/scenarios.rs`](../../tests/fixtures/rust-behavior/scenarios.rs)にあり、1シナリオが1テストです。ここでのモジュール配置ゲートは、宣言された `file` 配置に加えて `mod-rs` 配置のもとでも、写像を持つ記録に対して実行されます。ただし、この検査は写像を読まず、Rustソース規則とは別の実行です。配置検査とRustソース規則を同一実行で走らせるのは、引き続き経路 (d) だけです。
+
 ## 検証済みの組み合わせ
 
-(b) の配置は、ケースが書くモジュールの物理配置です。この層は配置設定を読まないためです。`violation-i-imported-use-case` だけは子ファイルをドメインクレートではなくユースケースクレートに置きます。他はドメインクレートに置きます。層 (b)・(c)・(d) の行の `programming_model` 列は、そのケースの写像が宣言した値であり、Rustソース規則が読む値ではありません。上の表の2行目が記すとおり、Rustビューがこのフィールドを落とすためです。
+(b) の配置は、ケースが書くモジュールの物理配置です。この層は配置設定を読まないためです。`violation-i-imported-use-case` だけは子ファイルをドメインクレートではなくユースケースクレートに置きます。他はドメインクレートに置きます。層 (b)・(c)・(d)・(e) の行の `programming_model` 列は、そのケースの写像が宣言した値であり、Rustソース規則が読む値ではありません。上の表の2行目が記すとおり、Rustビューがこのフィールドを落とすためです。
 
 | `programming_model` | `persistence_method` | モジュール配置 | 層 | 根拠 |
 |---|---|---|---|---|
@@ -46,6 +49,8 @@
 | `class` | `state-sourcing` | `file` と `mod-rs` を同一実行で | (c) | [`operation-error-set-languages.test.ts:428-460`](../../tests/operation-error-set-languages.test.ts)が両パッケージを扱い、`:462-469` と `:484-498` が `mod-rs` パッケージの合格側と違反側を扱います。パッケージと配置の対応表は[`operation-error-set-verification/scenario.ts:44-47`](../../tools/ddd/lib/operation-error-set-verification/scenario.ts)、写像は[`fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md:10-11`](../../tests/fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md)です |
 | `class` | `event-sourcing` | クレートルート（子モジュールなし） | (b) | `clean-b-declared-replay`（`golden/rust/t2-cases.ts:48`、`persistence_method` は `:59`）と、読める `event-sourcing` 写像を保つ派生5件: `violation-b-replay-wrong-crate`（`:164`）、`-wrong-module`（`:165`）、`-unlisted-method`（`:166`）、`-duplicate-method`（`:167`）、`violation-b-replay-scalar`（`:189-194`）。この行の根拠にしない派生3件は下の注を参照 |
 | `class` | `state-sourcing` | 宣言された `file` 配置とインラインモジュール | (d) | `clean-packaging-inline`（`golden/packaging/cases.ts:176-181`）と `violation-packaging-empty-inline`（`:129-134`）。`t1-gate-integration.test.ts:288-313` が本物のゲートへ通します。`mapping()` ヘルパーが `:63` で `class` を与え、replay が無いため `:64` で `state-sourcing` になります |
+| `class` | `state-sourcing` | 宣言された `file` 配置。親モジュールは `src/invoice.rs` | (e) | [`fixtures/rust-behavior/sample.ts`](../../tests/fixtures/rust-behavior/sample.ts)の `file` の見本。写像は `:279` で `class`、`:280` で `state-sourcing` を宣言します。インターフェースアダプタが永続化するのはイベントではなく集約の状態です。状態の記録から `Invoice::restore` で請求書を組み立て直し（`:235-242`、コンストラクタは `:120`）、集約そのものを保存します（`:244-246`）。`t11-rust-behavior.test.ts` で、4ゲートが所見なしで通り、4シナリオ `state-change`・`business-error-keeps-state`・`invalid-value-rejected`・`restore-after-persistence` が `cargo test` で成功します |
+| `class` | `state-sourcing` | 宣言された `mod-rs` 配置。親モジュールは `src/invoice/mod.rs` | (e) | 同じファイルの `mod-rs` の見本。写像とソースは同じで、違うのは親モジュールのファイルだけです（`:45`）。同じ試験で、同じゲートとシナリオが成功します |
 | `class` | `event-sourcing` | `file` | (b) | `clean-b-split-replay`（`golden/rust/t2-cases.ts:196-201`）。replayメソッドは子ファイル `src/operations.rs`（`:27`）にあります |
 | `class` | `event-sourcing` | `#[path]` | (b) | `clean-packaging-path-replay`（`golden/packaging/cases.ts:438-453`）。`:445` の `replay` があることで `mapping()` が `:64` で `event-sourcing` を選びます |
 | `class` | `event-sourcing` | なし（写像を読むだけでソースは検査しない） | 写像の読込 | [`rust-mapping-view.test.ts:83-93`](../../tests/rust-mapping-view.test.ts)、`persistence_method` は `:87` |
@@ -90,16 +95,16 @@
 
 | `programming_model` | `persistence_method` | モジュール配置 | 未検証である理由 |
 |---|---|---|---|
-| `class` | `event-sourcing` | `mod-rs` | 両者を組み合わせたケースは、この結論が拠る2つの走査のどちらから見てもありません。2つの走査は探すものが異なります。1つめは、`tests/` で `event-sourcing` を宣言する写像です。このうちRustソースツリーを伴うのは2件で、`golden/rust/t2-cases.ts:59` はモジュールがクレートルート（`:66`）、派生の `clean-b-split-replay` だけが `:27` の `file` の子です。`golden/packaging/cases.ts:64` で `replay` を持つケースは `clean-packaging-path-replay`（`:438-453`、`replay` は `:445`）の1件だけで、`#[path]` の先に置かれています。残る5件は、Rustソースを1件も書かない写像文書で値を宣言するため、物理配置を主張しません（`rust-mapping-view.test.ts:87`。その `viewOf`（`:58-67`）は記録ファイルだけを書きます。`fixtures/aggregate-mapping/workspace.ts:210` と `:368`、`aggregate-mapping-migration.test.ts:109`、`artifact-set-migration.test.ts:197`）。さらに残る1箇所 `golden/rust/t2-cases.ts:163` は、値を宣言する写像ではなく、値を取り除く派生の置換タプルです。2つめは、`tests/` で集約写像を持つケースが `mod.rs` へ書くモジュールです。ここでの「モジュール配置」は上の表と同じ意味、すなわちケースが書くモジュールの物理配置を指します。集約写像を持たずに `mod.rs` を書くケースは `persistence_method` を宣言しないため、`event-sourcing` と組み合わさることがなく、この走査の対象外です。`golden/module-layout/cases.ts` のモジュール配置の見本（`:19` にドメインモデルを持たないと明記）、`t10-rust-module-layout.test.ts`、`error-contract-rust.test.ts` がこれにあたります。対象は4件あります（`golden/rust/domain-facts-cases.ts:109-112`、`MOD_RS` は `:15`。`golden/packaging/cases.ts:255-258`。`golden/packaging/cases.ts:378-380`（`mod.rs` の隣に `invoice.rs` を残す衝突ケース）。`operation-error-set-languages.test.ts:419`）。4件とも `state-sourcing` であり、2つの集合は交わりません。なお4件のうち3件では、写像が宣言する集約自体はクレートルートにあり（`golden/package-fixture.ts:53`、および `golden/packaging/cases.ts:22-27` の `ROOT_PACKAGE` を `:68` で消費。いずれも `module: []`）、`mod.rs` に載るのは申告済みのソースファイルか、写像されたドメインパッケージです。写像された集約自身のモジュールが `mod.rs` に置かれるのは `operation-error-set-languages.test.ts:419` の1件だけで、その写像も `state-sourcing` です（`fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md:10-11`）。したがって、集約自身の配置という狭い読み方をしても欠落は変わりません。 |
+| `class` | `event-sourcing` | `mod-rs` | 両者を組み合わせたケースは、この結論が拠る2つの走査のどちらから見てもありません。2つの走査は探すものが異なります。1つめは、`tests/` で `event-sourcing` を宣言する写像です。このうちRustソースツリーを伴うのは2件で、`golden/rust/t2-cases.ts:59` はモジュールがクレートルート（`:66`）、派生の `clean-b-split-replay` だけが `:27` の `file` の子です。`golden/packaging/cases.ts:64` で `replay` を持つケースは `clean-packaging-path-replay`（`:438-453`、`replay` は `:445`）の1件だけで、`#[path]` の先に置かれています。残る5件は、Rustソースを1件も書かない写像文書で値を宣言するため、物理配置を主張しません（`rust-mapping-view.test.ts:87`。その `viewOf`（`:58-67`）は記録ファイルだけを書きます。`fixtures/aggregate-mapping/workspace.ts:210` と `:368`、`aggregate-mapping-migration.test.ts:109`、`artifact-set-migration.test.ts:197`）。さらに残る1箇所 `golden/rust/t2-cases.ts:163` は、値を宣言する写像ではなく、値を取り除く派生の置換タプルです。2つめは、`tests/` で集約写像を持つケースが `mod.rs` へ書くモジュールです。ここでの「モジュール配置」は上の表と同じ意味、すなわちケースが書くモジュールの物理配置を指します。集約写像を持たずに `mod.rs` を書くケースは `persistence_method` を宣言しないため、`event-sourcing` と組み合わさることがなく、この走査の対象外です。`golden/module-layout/cases.ts` のモジュール配置の見本（`:19` にドメインモデルを持たないと明記）、`t10-rust-module-layout.test.ts`、`error-contract-rust.test.ts` がこれにあたります。対象は5件あります（`golden/rust/domain-facts-cases.ts:109-112`、`MOD_RS` は `:15`。`golden/packaging/cases.ts:255-258`。`golden/packaging/cases.ts:378-380`（`mod.rs` の隣に `invoice.rs` を残す衝突ケース）。`operation-error-set-languages.test.ts:419`。`fixtures/rust-behavior/sample.ts` の `mod-rs` の見本（`:45`））。5件とも `state-sourcing` であり、2つの集合は交わりません。なお5件のうち3件では、写像が宣言する集約自体はクレートルートにあり（`golden/package-fixture.ts:53`、および `golden/packaging/cases.ts:22-27` の `ROOT_PACKAGE` を `:68` で消費。いずれも `module: []`）、`mod.rs` に載るのは申告済みのソースファイルか、写像されたドメインパッケージです。写像された集約自身のモジュールが `mod.rs` に置かれるのは `operation-error-set-languages.test.ts:419` と `mod-rs` の振る舞いの見本の2件だけで、どちらの写像も `state-sourcing` です（`fixtures/operation-error-set/records/rust/inception/domain-design/ddd-aggregate-mapping.md:10-11`、`fixtures/rust-behavior/sample.ts:280`）。したがって、集約自身の配置という狭い読み方をしても欠落は変わりません。 |
 | `actor` | `state-sourcing` | `file` または `mod-rs` | 集約に `actor` を宣言し、かつ同じ記録にRustソースを書くケースが1件もありません。`tests/` にある `actor` の宣言は下の行に挙げたものがすべてで、そのいずれの記録も `.rs` ファイルを1件も持たないため、宣言ゲートか写像の読込・移行の境界までで止まります。別の理由による別の事実として、そうしたケースを追加しても、どのRustソース規則も上の `class` の行と異なる答えは出しません。Rustビューが `programming_model` を落とすためです（`rules/rust/mapping.ts:18-25`、`:56-72`）。組み合わせを通すこと自体は試験ですが、この軸でRustソースの判定を変えることは判定の変更です。 |
 | `actor` | `event-sourcing` | 任意（どの層でも） | この組を宣言するケースが1件もありません。`tests/` にある `actor` の宣言はすべて `state-sourcing` です（`golden/design/cases.ts:682`。元は `:128` の `state-sourcing`。`fixtures/aggregate-mapping/workspace.ts:219-220` と `:404-405`、`aggregate-mapping-migration.test.ts:121-123`、`artifact-set-migration.test.ts:209-211`）。残る1箇所 `aggregate-mapping-migration.test.ts:395` は `programming_model` を設定する補足行であり、`aggregate-mapping.unknown-key` で拒否されるため、受理された写像を生みません。 |
 
 ## 限界
 
-- これは1コミット時点での既存試験の洗い出しであり、網羅の保証ではありません。スクリプトで再生成されるものではなく、ケースと突き合わせる検査もないため、後から追加されるケースで自動更新されることはありません。
+- これは上に記した基準コミット時点での既存試験の洗い出しであり、網羅の保証ではありません。スクリプトで再生成されるものではなく、ケースと突き合わせる検査もないため、後から追加されるケースで自動更新されることはありません。
 - ここでの「検証済み」は、その組み合わせをケースが通していることを意味し、組み合わせが完全に規定されていることを意味しません。[ドメイン層設計](domain-layer-design.ja.md)が述べるとおり、方式別の詳細検査は未完成であり、宣言だけでコード形状が保証されたとは扱いません。
 - `programming_model` と `persistence_method` は独立した選択です（[ユースケース層設計](use-case-layer-design.ja.md)）。上記の欠落は試験の欠落であり、その組み合わせが非対応または不正であるという主張ではありません。
-- 宣言された配置と写像された集約を同時に持つゴールデンケースの**定義**はありません。写像・実ソース・配置設定を同時に持つのは (c) と (d) で、どちらも扱うのは `class` × `state-sourcing` のみです。(c) は上の行が記すとおり宣言された `mod-rs` 配置を写像と並べて持ちますが、その設定を使うのは写像のモジュール所在の解決だけで、配置検査は実行しません。`checkModuleLayout`（[`module-layout/check.ts:85-88`](../../tools/ddd/lib/module-layout/check.ts)）が受け取るのは抽出器・プロジェクトルート・予算コールバックだけで、写像は受け取りません。出荷側の呼び出し元は[`ddd-check-rust-module-layout.ts:11`](../../tools/ddd-check-rust-module-layout.ts)と[`ddd-sensor-rust-module-layout.ts:15`](../../tools/ddd-sensor-rust-module-layout.ts)で、それ以外の呼び出しは `t10-rust-module-layout.test.ts` の直接呼び出し（`:68`・`:75`・`:80`・`:87`・`:226`・`:266`・`:414`）のみです。これらは経路 (a) にあたり写像を持ちません。`operation-error-set-verification` はそのいずれにも含まれません。配置検査とRustソース規則を写像に対して同一実行で走らせるのは (d) だけであり、そこで扱うのは宣言された `file` 配置と、上で挙げたパッケージングの2ケースにとどまります。したがって、宣言された `mod-rs` 配置のもとで配置検査を写像と同時に走らせる経路はありません。
+- `tests/golden/` のゴールデンの群には、宣言された配置と写像された集約を同時に持つケースの**定義**はありません。写像・実ソース・配置設定を同時に持つのは (c)・(d)・(e) で、3つとも扱うのは `class` × `state-sourcing` のみです。(c) は上の行が記すとおり宣言された `mod-rs` 配置を写像と並べて持ちますが、その設定を使うのは写像のモジュール所在の解決だけで、配置検査は実行しません。`checkModuleLayout`（[`module-layout/check.ts:85-88`](../../tools/ddd/lib/module-layout/check.ts)）が受け取るのは抽出器・プロジェクトルート・予算コールバックだけで、写像は受け取りません。出荷側の呼び出し元は[`ddd-check-rust-module-layout.ts:11`](../../tools/ddd-check-rust-module-layout.ts)と[`ddd-sensor-rust-module-layout.ts:15`](../../tools/ddd-sensor-rust-module-layout.ts)で、それ以外の呼び出しは `t10-rust-module-layout.test.ts` の直接呼び出し（`:68`・`:75`・`:80`・`:87`・`:226`・`:266`・`:414`）のみです。これらは経路 (a) にあたり写像を持ちません。`operation-error-set-verification` はそのいずれにも含まれません。配置検査とRustソース規則を写像に対して同一実行で走らせるのは (d) だけであり、そこで扱うのは宣言された `file` 配置と、上で挙げたパッケージングの2ケースにとどまります。(e) は宣言された `mod-rs` 配置のもとで、写像を持つ記録に対して配置検査を実行しますが、それはRustソース規則とは別の単独の実行であり、配置検査はその写像を読みません。したがって、宣言された `mod-rs` 配置のもとで、配置検査とRustソース規則を写像に対して同時に走らせる経路はありません。
 - `scripts/verify-error-contract.ts` の `mod-rs` 分岐は上記のとおり未到達です。その解消は業務エラー契約の経路に属し、本記録の対象ではありません。
 - すべての実測は `darwin-arm64` で、証跡に記録したバージョンで行いました。
 
@@ -127,9 +132,10 @@ bun test tests/operation-error-set-languages.test.ts tests/error-contract-rust.t
 bun test tests/rust-mapping-view.test.ts
 bun test tests/aggregate-mapping-contract.test.ts tests/aggregate-mapping-migration.test.ts tests/artifact-set-migration.test.ts
 bun test tests/t1-gate-integration.test.ts
+bun test tests/t11-rust-behavior.test.ts
 bun run verify:operation-error-set
 ```
 
-`tests/t1-gate-integration.test.ts` が経路 (d) であり、この中で最も時間がかかります。`bun test tests/` は47のテストファイルすべてを対象にするため、`bun run check` にはこれも含まれています。
+`tests/t1-gate-integration.test.ts` が経路 (d) であり、この中で最も時間がかかります。`tests/t11-rust-behavior.test.ts` が経路 (e) であり、`bun run prepare:native` が用意する抽出器に加えて `cargo` と `rustc` を必要とします。`bun test tests/` は55のテストファイルすべてを対象にするため、`bun run check` にはこの2つも含まれています。
 
 [実行記録](evidence/rust-execution-persistence-verification.json)と[残作業](completion-tasks.ja.md)を参照してください。

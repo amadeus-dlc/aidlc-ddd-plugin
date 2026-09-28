@@ -64,7 +64,7 @@ The shared behavior scenarios run none of these combinations. Golden cases of th
 | `actor` | `state-sourcing` | No sample declares `actor` for an aggregate together with TypeScript sources |
 | `actor` | `event-sourcing` | No sample declares this pair |
 
-Each is a missing test, not a claim that the combination is unsupported or invalid. The shared behavior scenarios are not yet implemented for Rust ([remaining work](completion-tasks.md)).
+Each is a missing test, not a claim that the combination is unsupported or invalid. The Rust run of the same shared behavior scenarios, and the combinations it exercises, are recorded in [Rust execution model and persistence verification](rust-execution-persistence-verification.md).
 
 ## Limits
 
