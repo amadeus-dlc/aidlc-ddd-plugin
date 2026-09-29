@@ -255,19 +255,19 @@ import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts
 export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
 
 export class IssueInvoice {
-  readonly #invoices: InvoiceRepository;
+  readonly #invoiceRepository: InvoiceRepository;
 
-  constructor(invoices: InvoiceRepository) {
-    this.#invoices = invoices;
+  constructor(invoiceRepository: InvoiceRepository) {
+    this.#invoiceRepository = invoiceRepository;
   }
 
   execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
-    const found: Result<Invoice, InvoiceNotFound> = this.#invoices.findById(invoiceId);
+    const found: Result<Invoice, InvoiceNotFound> = this.#invoiceRepository.findById(invoiceId);
     if (!found.ok) return found;
     const invoice: Invoice = found.value;
     const issued: Result<void, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    this.#invoices.store(invoiceId, invoice);
+    this.#invoiceRepository.store(invoiceId, invoice);
     return { ok: true, value: undefined };
   }
 }

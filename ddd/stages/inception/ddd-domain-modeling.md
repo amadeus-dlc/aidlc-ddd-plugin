@@ -99,7 +99,10 @@ Also establish the correspondence between business terms and code identifiers th
 
 Create `domain-modeling-questions.md`. Cover bounded contexts, aggregate
 candidates (merge / demote confirmation), invariants, commands and errors
-(effect, state_effect, Domain Error, idempotency), states and transitions, ID
+(effect, state_effect, Domain Error, idempotency; for an accumulating command,
+which command IDs the aggregate keeps: `last-one` only when the rationale can
+state why an older command is never resent after a newer one, otherwise
+`multiple` or `time-window`), states and transitions, ID
 slugs when non-ASCII terms appear, and Process Managers when there are
 candidates. Follow the core question flow and take the Consolidated Summary
 Confirmation before writing the model.

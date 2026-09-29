@@ -2,7 +2,7 @@
 
 [English](interface-adapter-layer-design.md) | 日本語
 
-更新: 2026-09-13。[ドメイン層の境界契約](domain-layer-design.ja.md)と[ユースケースの回復契約](use-case-layer-design.ja.md)を外部I/Oへ実装する規約。
+更新: 2026-09-30。[ドメイン層の境界契約](domain-layer-design.ja.md)と[ユースケースの回復契約](use-case-layer-design.ja.md)を外部I/Oへ実装する規約。
 
 ## 1. 提供形態
 
@@ -34,7 +34,7 @@ RMUはコマンド側のインターフェイスアダプタ層やクエリ側�
 
 ポートを `repository`、`external-client`、`es-infrastructure` に分類する。コマンド側I/Oにはリポジトリ以外の外部クライアントも含まれ、それぞれのポート実装が担う。
 
-リポジトリポート名は `<Aggregate>Repository` とし、媒体名を入れない。実装名には `InMemoryInvoiceRepository` のような媒体名を使える。ポートは内側の利用者に合わせて配置し、具象実装はインターフェイスアダプタ層に置く。
+リポジトリポート名は `<Aggregate>Repository` とし、媒体名を入れない。実装名には `InMemoryInvoiceRepository` のような媒体名を使える。ポートはユースケース層で宣言し、ドメイン層には置かない。具象実装はインターフェイスアダプタ層に置く。
 
 担当集約単体またはその集合を扱い、集約の一部や担当外の集約を保存しない。基本動詞は `find_by_id`、`store`、`delete_by_id`。担当集約の追加検索は許すが、画面検索はDAOへ分ける。`store` の再保存・競合・追記はユースケース層設計 §5-1に従う。
 

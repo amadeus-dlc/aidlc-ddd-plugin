@@ -123,6 +123,36 @@ derive("ddd-mapping-declarations", "violation-j", "clean-additive-idempotency", 
   });
   clean(entry);
 });
+// Keeping only the last command ID states why an older command is never resent after a newer one.
+derive("ddd-mapping-declarations", "violation-j", "clean-last-one-rationale", (entry) => {
+  editYaml(entry, MODEL, (doc) => {
+    doc.bounded_contexts[0].aggregates[0].commands.find(
+      (c: { effect: string }) => c.effect === "accumulation",
+    ).idempotency = {
+      strategy: "command-id-memory",
+      retention: "last-one",
+      rationale:
+        "a client sends the next command only after the previous one is acknowledged, so an older command is never resent after a newer one",
+    };
+  });
+  clean(entry);
+});
+derive("ddd-mapping-declarations", "violation-j", "violation-last-one-without-rationale", (entry) => {
+  editYaml(entry, MODEL, (doc) => {
+    doc.bounded_contexts[0].aggregates[0].commands.find(
+      (c: { effect: string }) => c.effect === "accumulation",
+    ).idempotency = { strategy: "command-id-memory", retention: "last-one" };
+  });
+  entry.expect = { pass: false, rules: ["mapping-declarations.last-one"] };
+});
+derive("ddd-mapping-declarations", "violation-j", "violation-last-one-blank-rationale", (entry) => {
+  editYaml(entry, MODEL, (doc) => {
+    doc.bounded_contexts[0].aggregates[0].commands.find(
+      (c: { effect: string }) => c.effect === "accumulation",
+    ).idempotency = { strategy: "command-id-memory", retention: "last-one", rationale: "   " };
+  });
+  entry.expect = { pass: false, rules: ["mapping-declarations.last-one"] };
+});
 for (const sensor of ["ddd-layer-structure", "ddd-design-advisories"]) {
   derive(sensor, "clean", "clean-empty-layers", (entry) => {
     editYaml(entry, entry.output, (doc) => {

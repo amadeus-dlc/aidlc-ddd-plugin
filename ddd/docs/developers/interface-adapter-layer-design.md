@@ -2,7 +2,7 @@
 
 English | [Japanese](interface-adapter-layer-design.ja.md)
 
-Updated: 2026-09-13. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
+Updated: 2026-09-30. Conventions for implementing the [domain boundary contract](domain-layer-design.md) and [use-case recovery contract](use-case-layer-design.md) through external I/O.
 
 ## 1. Delivery form
 
@@ -34,7 +34,7 @@ Keep the RMU independent of the command-side Interface Adapter layer and the que
 
 Classify ports as `repository`, `external-client`, or `es-infrastructure`. Command-side I/O includes external clients as well as repositories, each handled by its port implementation.
 
-Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Place ports according to their inner-layer consumers; concrete implementations belong in the Interface Adapter layer.
+Name repository ports `<Aggregate>Repository`, without storage-medium names. Implementation names may include the medium, as in `InMemoryInvoiceRepository`. Declare ports in the use-case layer, never in the domain layer; concrete implementations belong in the Interface Adapter layer.
 
 Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 

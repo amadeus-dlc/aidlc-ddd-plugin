@@ -4,12 +4,13 @@
  * of the other layers, and the builder that turns one claimed source of one layer into a case.
  *
  * The domain package holds the aggregate `Invoice` (a `class` or a companion, each with the getters
- * `id` and `total` and the factory `open`), the repository port `InvoiceRepository` (an `interface`)
- * and the value object `Amount`, so every rule of both gates has a domain type to be decided on.
+ * `id` and `total` and the factory `open`) and the value object `Amount`, so every rule of both gates
+ * has a domain type to be decided on. It declares no port: the repository port `InvoiceRepository`
+ * belongs to the use-case layer, and a use-case case that needs it declares it there.
  */
 
 import type { GoldenCase } from "../runner.ts";
-import { CLASS_WITH_ID_GETTER, COMPANION_WITH_ID_GETTER, INVOICE_REPOSITORY_PORT, tsCase } from "./cases.ts";
+import { CLASS_WITH_ID_GETTER, COMPANION_WITH_ID_GETTER, tsCase } from "./cases.ts";
 
 export type Representation = "class" | "companion";
 export const REPRESENTATIONS: readonly Representation[] = ["class", "companion"];
@@ -31,9 +32,7 @@ const DOMAIN_SOURCE: Readonly<Record<Representation, string>> = {
 };
 
 const DOMAIN_FILES = {
-  "src/index.ts":
-    'export { Invoice } from "./invoice.ts";\nexport type { InvoiceRepository } from "./invoice-repository.ts";\nexport { Amount } from "./amount.ts";\n',
-  "src/invoice-repository.ts": INVOICE_REPOSITORY_PORT,
+  "src/index.ts": 'export { Invoice } from "./invoice.ts";\nexport { Amount } from "./amount.ts";\n',
   "src/amount.ts":
     "export class Amount {\n  #value: number;\n\n  constructor(value: number) {\n    this.#value = value;\n  }\n}\n",
 };
@@ -102,7 +101,7 @@ export function layerCase(
     `${name}-${representation}`,
     {
       files: { ...DOMAIN_FILES, "src/invoice.ts": DOMAIN_SOURCE[representation] },
-      modules: [["invoice-repository"], ["amount"]],
+      modules: [["amount"]],
       others: [options.pkg, ...(options.others ?? [])],
       claims: [claim],
       ...(options.state ? { state: options.state } : {}),

@@ -6,7 +6,7 @@
  */
 
 import type { GoldenCase } from "../runner.ts";
-import { SKIPPED_STATE } from "./cases.ts";
+import { INVOICE_REPOSITORY_PORT, SKIPPED_STATE } from "./cases.ts";
 import {
   INFRASTRUCTURE,
   INTERFACE_ADAPTER,
@@ -19,7 +19,8 @@ import {
 
 export const TYPESCRIPT_USE_CASE_SENSOR = "ddd-typescript-use-case";
 
-const DOMAIN_IMPORT = 'import { Invoice, InvoiceRepository } from "@acme/billing-domain";\n';
+const DOMAIN_IMPORT =
+  'import { Invoice } from "@acme/billing-domain";\nimport type { InvoiceRepository } from "./invoice-repository.ts";\n';
 
 /** A use-case function handed the aggregate and the repository port, with `body` as its statements. */
 function repositoryRun(body: string): string {
@@ -84,7 +85,9 @@ type Scene = readonly [string, LayerPackage, readonly LayerPackage[], GoldenCase
 
 const pass: GoldenCase["expect"] = { pass: true, rules: [] };
 const fails = (rule: string): GoldenCase["expect"] => ({ pass: false, rules: [rule] });
-const source = (text: string) => useCasePackage({ "src/index.ts": text });
+// The use-case package declares the repository port beside the claimed source: ports belong to it.
+const source = (text: string) =>
+  useCasePackage({ "src/index.ts": text, "src/invoice-repository.ts": INVOICE_REPOSITORY_PORT });
 
 /** Aggregate arguments to `execute` (h). */
 const EXECUTE_SCENES: readonly Scene[] = [
@@ -232,7 +235,7 @@ const GETTER_SCENES: readonly Scene[] = [
   [
     "clean-d-repository-import-alias",
     source(
-      `import { Invoice, InvoiceRepository as Port } from "@acme/billing-domain";\n\nexport function run(invoice: Invoice, repo: Port): void {\n  repo.remove(invoice.id());\n}\n`,
+      `import { Invoice } from "@acme/billing-domain";\nimport type { InvoiceRepository as Port } from "./invoice-repository.ts";\n\nexport function run(invoice: Invoice, repo: Port): void {\n  repo.remove(invoice.id());\n}\n`,
     ),
     [],
     pass,

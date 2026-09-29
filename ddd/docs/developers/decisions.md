@@ -2,7 +2,7 @@
 
 English | [Japanese](decisions.ja.md)
 
-Updated: 2026-09-13. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
+Updated: 2026-09-30. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
 
 ## Current policy
 
@@ -54,11 +54,19 @@ Status: in force ([#92](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/9
 
 Several alternatives were rejected. Keeping an attribute macro under `#[cfg(test)]` as a note that does not stop a gate, rather than not recording it, would add a new kind of note for code that cannot affect the rules. Extending the `#[cfg(test)]` distinction to a method or associated item of an impl or trait block would draw a configuration distinction the extractor does not draw today, and evaluating `cfg` is outside #92. For `async_trait`, stopping as before was rejected for the practical cost above, and answering with a note for every attribute macro was rejected because it would let one that does add a member or a getter pass. Deciding either exception in the rule layer was rejected for the same reason as in #80: what to record is the extractor's part. Raising `protocol_version` was rejected because no record kind or field changed.
 
+## 2026-09-30: Declare ports in the use-case layer; the aggregate keeps the applied command IDs
+
+Status: in force. A repository interface is a port of the use-case layer: the use case loads through it, calls the domain, and stores through it. The domain layer declares, holds, and calls no port. The knowledge used to allow a repository port in a domain package and to place ports by their inner-layer consumers, and rule `d` accepted forwarding to a repository port of the domain layer, so a domain that declared or called a repository passed every gate. The domain gates now report a repository port declared in a domain package or crate (`port-placement`, requirement `DEC-2026-09-30`), and rule `d` accepts forwarding only to a repository port of the use-case layer. A port is known by its name, as rules `l` and `m` know it; other ports, and a domain type that holds or calls one, are left to review. A field or parameter that holds a port is named after the port (`invoice_repository`, `#invoiceRepository`).
+
+Idempotency is guaranteed by the aggregate. It is the consistency boundary, so remembering the applied command IDs as part of its state keeps duplicate detection and persistence in one write; a record kept apart by the use case could fail apart from the state it guards. The identifier is called a command ID throughout, not a request ID. Keeping only the last command ID (`retention: last-one`) is valid only when an older command is never resent after a newer one ([use-case-layer design §5-4](use-case-layer-design.md)); `mapping-declarations.last-one` reports a `last-one` declaration without a rationale, which is the part a gate can decide.
+
+Two alternatives were rejected. Recording the applied command IDs in the repository or in a dedicated port of the use case would need a transaction across two writes to keep detection and persistence together, and would move a business guarantee out of the aggregate. Rejecting `last-one` outright would forbid the choice the schema offers to a command whose client never resends an older command after a newer one.
+
 ## Consistency and recovery policy
 
 Define failure guarantees separately for domain operations, single-aggregate persistence, unknown outcomes, and multi-aggregate partial failures. Multi-aggregate flows may retain partial commits, so design retries, compensation, and intermediate states.
 
-Idempotency requires request identification and retention suited to retry conditions. Distinguish initial state-changing success from duplicate success with no new events. Concrete return types remain T-03 work.
+Idempotency requires identifying commands by command ID, with the aggregate remembering the applied IDs, and retention suited to retry conditions. Distinguish initial state-changing success from duplicate success with no new events. Concrete return types remain T-03 work.
 
 Choose saga implementation, storage, and delivery-order guarantees from the actual requirements and conditions. The three layer designs describe those conditions and sources.
 

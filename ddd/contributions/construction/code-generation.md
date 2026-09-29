@@ -37,9 +37,13 @@ the section of each language the change generates.
   `modules/<layer>/` placement, the command / query / rmu segments, and the
   composition-root markers. Derive layers from the package, not from a config file.
 - **Domain layer.** No public fields; no mutating method that is not a declared
-  Command; construct aggregates only through a full constructor.
-- **Use-case layer.** `execute` takes IDs and value objects, never an aggregate;
-  a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations.
+  Command; construct aggregates only through a full constructor. Declare, hold, and
+  call no port: a repository interface is a use-case port. For a command with
+  `command-id-memory`, the aggregate remembers the applied command IDs as its
+  `retention` declares and checks a resent command ID before any other decision.
+- **Use-case layer.** Declare the ports here, and name a field or parameter that
+  holds one after the port (`invoice_repository`, `#invoiceRepository`). `execute`
+  takes IDs and value objects, never an aggregate; a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations.
 - **Interface Adapter layer.** The command side and query side do not depend on
   each other; the query side never references a domain type or repository port;
   repositories are named `<Aggregate>Repository`; adapters restore aggregates
@@ -76,7 +80,7 @@ Read `ddd-typescript-domain-conventions.md` developer knowledge; its examples ar
 - **Domain package names.** The declarations placed in TypeScript are matched against the module paths of each affected domain package's `src/`: `src/index.ts` is the package root `[]`, `src/a.ts` and `src/a/index.ts` are `[a]`, and `src/a/b.ts` is `[a, b]`. Name every module file `<module>.ts`; a name such as `invoice.model.ts` is not a module.
 - **Sources under `src`.** Keep test files, declaration files, and `.tsx`, `.mts` or `.cts` sources outside a package's `src`.
 - **Constructs that stop the gate.** Destructuring, object spreads, decorators, computed names not spelled by one identifier, `import =`, `export =`, dynamic imports, namespaces and dynamic callees in a domain source stop the TypeScript domain gate as uninspectable; do not generate them. The only computed name to write is a companion's brand key, `[brand]`, spelled by the brand's identifier; any other computed member of a companion, and any computed member of a class, stops the gate too. An object literal whose type is stated by an annotation, `as`, `<T>` or `satisfies` also stops the gate when that type, once `Readonly<…>` and a union with `null` or `undefined` are removed, names a domain type but is not one named type, such as `{ lines: readonly InvoiceLine[] }` or `Record<string, Invoice>`. For a companion's closure state, state the readonly type on the collection's own variable and leave the state object unannotated: `const kept: readonly InvoiceLine[] = [...lines];` and `const state = { customer, lines: kept, issued };`.
-- **Use-case layer.** Give `execute` IDs and value objects only, and state the type of every parameter. Hold a port in a `#` field or take it as a parameter, typed as the port. State the type of every receiver of `execute` or of a domain method with an annotation naming one type. Declare a repository port as `interface <Aggregate>Repository` in a domain or use-case package. Use a getter result only to hand it unchanged to a method of a repository port, directly or through a `const`. Depend on domain and infrastructure packages only.
+- **Use-case layer.** Give `execute` IDs and value objects only, and state the type of every parameter. Hold a port in a `#` field or take it as a parameter, typed as the port. State the type of every receiver of `execute` or of a domain method with an annotation naming one type. Declare a repository port as `interface <Aggregate>Repository` in a use-case package, never in a domain package. Use a getter result only to hand it unchanged to a method of a repository port, directly or through a `const`. Depend on domain and infrastructure packages only.
 - **Interface Adapter layer.** Implement ports in this layer; an implementation class may prefix `<Aggregate>Repository` with its storage medium, such as `InMemoryInvoiceRepository`. Restore an aggregate by calling its `restore` factory; do not build it with `new`, a literal annotated with its type, or `as`. The command side and the query side do not depend on each other. A query-side source imports no domain type and no `…Repository`, and neither imports a domain package as a namespace nor re-exports it with `export *`.
 
 Type check the generated TypeScript and run its tests; the TypeScript gates decide from stated types and syntax and do not compile the code.
@@ -84,13 +88,13 @@ Type check the generated TypeScript and run its tests; the TypeScript gates deci
 ## fragment: in:Sensors
 
 The three layer-specific Rust sensors fire on `code-summary.md`: `ddd-rust-domain`
-(rules a, b, c, d, g plus the layer diagnostics), `ddd-rust-use-case`
+(rules a, b, c, d, port-placement, g plus the layer diagnostics), `ddd-rust-use-case`
 (rules g, h, i, d) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
 every query-side file). Fix the code as the finding names the rule; a repeated
 failure means the plan did not carry the conventions above.
 
 `ddd-typescript-domain` fires on the same `code-summary.md` for claimed `.ts` / `.tsx` domain
-sources and reports the rule ids of `ddd-rust-domain` (a, b, c, d, g, domain packaging and the
+sources and reports the rule ids of `ddd-rust-domain` (a, b, c, d, port-placement, g, domain packaging and the
 layer diagnostics). Only a `#` field or a companion's closure hides state; `private` does not. A
 dependency through a path into another package, a `paths` alias into another package, a subpath its
 `exports` withholds, or `export *` in a published entry is a finding (g), type-only or not. A

@@ -145,6 +145,11 @@ const BASE_RUST_CASES: GoldenCase[] = [
     pass: false,
     rules: ["d"],
   }),
+  domainCase(
+    "violation-port-placement",
+    `${DOMAIN_CLEAN}pub trait InvoiceRepository {\n    fn find_by_id(&self, id: &str) -> Option<Invoice>;\n}\n`,
+    { pass: false, rules: ["port-placement"] },
+  ),
   domainCase("violation-g", `use billing_interface_adapter::Adapter;\n${DOMAIN_CLEAN}`, { pass: false, rules: ["g"] }, [
     {
       path: "packages/interface-adapter/billing-interface-adapter",

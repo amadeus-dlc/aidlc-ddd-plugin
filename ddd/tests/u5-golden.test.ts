@@ -95,6 +95,7 @@ describe("typescript golden cases", () => {
         "b",
         "c",
         "d",
+        "port-placement",
         "g",
         "domain-packaging.declaration",
         "domain-packaging.technical-name",

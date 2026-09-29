@@ -1,6 +1,6 @@
 # Aggregates, invariants, and commands
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -21,10 +21,13 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.aggregate-and-invariants.9 | Limit Domain Services to decisions that aggregates cannot own. | Design convention. |
 | K.aggregate-and-invariants.10 | Discover business events from stories and derive aggregate candidates and invariants. | Design procedure. Sensors do not enforce the derivation order. |
 | K.aggregate-and-invariants.11 | Keep IDs when renaming; record splits, merges, and deletions in lineage. | Loader lineage and reference checks. |
+| K.aggregate-and-invariants.12 | For a command with `command-id-memory`, the aggregate remembers the command IDs it applied, as the command's `retention` declares (`last-one`: the last one), and checks a resent command ID before any other decision; a resent command changes nothing and produces no event. | j and last-one check the declaration; review and tests check the aggregate. |
 
 ## Rationale
 
 Explicitly declaring no state transition is valid. Completeness checks do not prove that business transitions are correct or that code implements every transition.
+
+The aggregate is the consistency boundary, so remembering an applied command ID together with the state it changed keeps duplicate detection and persistence from failing apart; the use case does not keep a separate record of applied commands.
 
 ## Examples
 

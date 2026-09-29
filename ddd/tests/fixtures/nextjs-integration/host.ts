@@ -132,14 +132,14 @@ export default nextConfig;
 const INVOICES = `import { InMemoryInvoiceRepository } from "@acme/billing-interface-adapter";
 import { IssueInvoice } from "@acme/billing-use-case";
 
-const invoices = new InMemoryInvoiceRepository(
+const invoiceRepository = new InMemoryInvoiceRepository(
   new Map([
     ["${OPEN_INVOICE}", { customer: "acme", amounts: [100], issued: false }],
     ["${EMPTY_INVOICE}", { customer: "acme", amounts: [], issued: false }],
   ]),
 );
 
-export const issueInvoice = new IssueInvoice(invoices);
+export const issueInvoice = new IssueInvoice(invoiceRepository);
 `;
 
 const ISSUE_ROUTE = `import { issueInvoice } from "@/lib/invoices";

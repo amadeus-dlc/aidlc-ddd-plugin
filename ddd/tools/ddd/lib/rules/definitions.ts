@@ -68,6 +68,16 @@ export const RULES: readonly RuleDefinition[] = [
     per_file: true,
   },
   {
+    rule_id: "port-placement",
+    name: "use-case-port",
+    statement: "a repository port is declared in the domain layer instead of the use-case layer",
+    target_layers: ["domain"],
+    requires_model: false,
+    facts: ["traits"],
+    source: "DEC-2026-09-30",
+    per_file: true,
+  },
+  {
     rule_id: "g",
     name: "dip-violation",
     statement: "forbidden dependency direction or external I/O dependency",

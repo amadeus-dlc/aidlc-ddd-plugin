@@ -32,11 +32,18 @@ function transcribe(read: Extract<MappingLoadResult, { ok: false }>, file: strin
   );
 }
 
-/** Rule (j) of the canonical model, reported by this gate wherever the model is read. */
+/**
+ * The idempotency rules of the canonical model, reported by this gate wherever the model is read:
+ * rule (j), and the rationale a command keeping only the last command ID owes.
+ */
 function idempotency(model: DomainModel, file: string): FindingInput[] {
-  return checkCompleteness(model, file)
-    .filter((entry) => entry.rule_id === "idempotency.j")
-    .map((entry) => finding("mapping-declarations.j", file, entry.message, entry.line));
+  return checkCompleteness(model, file).flatMap((entry) =>
+    entry.rule_id === "idempotency.j"
+      ? [finding("mapping-declarations.j", file, entry.message, entry.line)]
+      : entry.rule_id === "idempotency.last-one"
+        ? [finding("mapping-declarations.last-one", file, entry.message, entry.line)]
+        : [],
+  );
 }
 
 process.exit(

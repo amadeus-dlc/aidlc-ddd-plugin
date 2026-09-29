@@ -4,7 +4,7 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-rust-domain.ts
 default_severity: blocking
 fire_on: gate
-description: The code-generation gate for the domain layer — public fields (a), undeclared mutation (b), incomplete construction (c), getter calls (d), the dependency safety net (g) and the layer diagnostics.
+description: The code-generation gate for the domain layer — public fields (a), undeclared mutation (b), incomplete construction (c), getter calls (d), a repository port declared in a domain crate (port-placement), the dependency safety net (g) and the layer diagnostics.
 category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
@@ -18,6 +18,7 @@ checks:
   - { rule_id: b, requirement: FR7.2, inputs: [impls, domain-symbols, command-index], outcome: finding }
   - { rule_id: c, requirement: FR7.3, inputs: [impls, constructions, domain-symbols], outcome: finding }
   - { rule_id: d, requirement: FR7.4, inputs: [calls, domain-symbols], outcome: finding }
+  - { rule_id: port-placement, requirement: DEC-2026-09-30, inputs: [traits, layer-assignment], outcome: finding }
   - { rule_id: g, requirement: FR9.5, inputs: [uses, cargo-dependencies, layer-assignment], outcome: finding }
   - { rule_id: layer.unknown, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
   - { rule_id: layer.conflict, requirement: FR9.4, inputs: [layer-assignment], outcome: finding }
@@ -36,5 +37,6 @@ output_schema:
 
 Blocking gate for `code-generation` on the domain layer. Uses claimed `.rs` files as entry points and also reads Cargo.toml, the model,
 the state file, and reachable modules of affected domain crates. Reports rules (a)–(d),
-the dependency safety net (g), and the U2 layer diagnostics (this manifest is
+a repository port declared in a domain crate (port-placement; ports belong to the
+use-case layer), the dependency safety net (g), and the U2 layer diagnostics (this manifest is
 the single reporter for them).

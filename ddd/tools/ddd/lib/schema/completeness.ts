@@ -45,6 +45,16 @@ export function checkCompleteness(model: DomainModel, file = "ddd-domain-model-y
             message: `accumulation command ${command.element_id} must use idempotency.strategy command-id-memory`,
           });
         }
+        // Keeping only the last command ID holds only when an older command is never resent after a
+        // newer one (C1 -> C2 -> retry C1); the rationale states why.
+        // A rationale of blanks states nothing, so it counts as missing.
+        if (command.idempotency.retention === "last-one" && !command.idempotency.rationale?.trim()) {
+          findings.push({
+            rule_id: "idempotency.last-one",
+            file,
+            message: `command ${command.element_id} keeps only the last command ID (retention last-one) but its rationale does not state why an older command is never resent after a newer one`,
+          });
+        }
       }
     }
   }

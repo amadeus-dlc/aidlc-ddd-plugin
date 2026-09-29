@@ -1,6 +1,6 @@
 # Rust persistence conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -12,18 +12,18 @@ Conventions for DDD design and code generation. A check name does not imply that
 |---|---|---|
 | K.rust-persistence-conventions.1 | Prefer static dispatch; choose dynamic dispatch where needed. | Design convention. |
 | K.rust-persistence-conventions.2 | Separate business decisions from event application in event sourcing. | Review. |
-| K.rust-persistence-conventions.3 | Design repeated store or append operations so the same request is not applied twice. | Review and tests. Storage declaration advisories cover only part of this. |
+| K.rust-persistence-conventions.3 | Design repeated store or append operations so the same command is not applied twice. | Review and tests. Storage declaration advisories cover only part of this. |
 | K.rust-persistence-conventions.4 | Use port traits and inject concrete implementations through wiring. | Design convention. |
 | K.rust-persistence-conventions.5 | Separate decide and apply; make no new business decisions during replay. | Review and behavior tests. c does not verify this separation. |
 | K.rust-persistence-conventions.6 | Consider apply, apply_event, replay, and on_event as event-application method names. | Declare the event ID under `event_ref` and the method under `code.method` in replay_methods; check persistence mode and type correspondence. |
-| K.rust-persistence-conventions.7 | Place ports according to their inner-layer consumers; Interface Adapter implementation names may identify the medium. | m covers part of naming. Review overall placement. |
+| K.rust-persistence-conventions.7 | Declare ports in the use-case layer and never in the domain layer; Interface Adapter implementation names may identify the medium. | port-placement reports a repository port declared in a domain crate; m covers part of naming. Review the other ports. |
 | K.rust-persistence-conventions.8 | Safely re-persist state; append to immutable history for event persistence. | Review. Current upsert advisories do not adequately distinguish persistence modes. |
 | K.rust-persistence-conventions.9 | Distinguish first success, duplicate success, and rejection. | Design convention. Concrete return types remain T-03 work. |
 | K.rust-persistence-conventions.10 | Validate invariants when restoring from DTOs and distinguish restoration from replay. | n checks construction-call shapes. Review and test all invariants. |
 
 ## Rationale
 
-State-storage upsert does not mean unconditional overwrite. Never rewrite existing event history. Duplicate success creates no new events; the baseline for an initial state-changing success is one event. If the persistence outcome is unknown, reconcile it using request IDs or equivalent evidence. Do not publish working state as committed before persistence succeeds.
+State-storage upsert does not mean unconditional overwrite. Never rewrite existing event history. Duplicate success creates no new events; the baseline for an initial state-changing success is one event. If the persistence outcome is unknown, reconcile it using command IDs or equivalent evidence. Do not publish working state as committed before persistence succeeds.
 
 ## Examples
 

@@ -26,15 +26,15 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-model-completeness | YAML loading, aggregate invariants, state effects, references, Markdown IDs/invariant statements. The loader enforces required Domain Errors. |
 | ddd-model-presence | Existence/loading of a model scheduled to execute. SKIP/absent passes with a note. |
 | ddd-reference-ids | Undefined, retired, wrong-kind, malformed IDs, and replacement relationships. |
-| ddd-mapping-declarations | Aggregate axes, use-case declarations, multi-aggregate strategy, additive-command idempotency, and vocabulary-based packages. |
+| ddd-mapping-declarations | Aggregate axes, use-case declarations, multi-aggregate strategy, additive-command idempotency (a rationale when only the last command ID is kept), and vocabulary-based packages. |
 | ddd-layer-structure | Required layer fields, dependency direction, naming, and restoration declarations. |
 | ddd-design-advisories | Multi-aggregate, repository-scope, and storage-declaration guidance. |
 | ddd-rust-module-layout | Enforce the selected file layout across all owned Cargo packages, including tests. |
 | ddd-typescript-module-layout | Enforce the selected TypeScript file layout across the `src` of every package. |
-| ddd-rust-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching. |
+| ddd-rust-domain | a/b/c/d/g, a repository port declared in a domain crate (port-placement), layer diagnostics, and package declaration/layout matching. |
 | ddd-rust-use-case | g/h/i/d. |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
-| ddd-typescript-domain | a/b/c/d/g, layer diagnostics, and package declaration/layout matching on TypeScript, for both the class and the companion representation. |
+| ddd-typescript-domain | a/b/c/d/g, a repository port declared in a domain package (port-placement), layer diagnostics, and package declaration/layout matching on TypeScript, for both the class and the companion representation. |
 | ddd-typescript-use-case | g/h/i/d on TypeScript, with the rule ids of ddd-rust-use-case. |
 | ddd-typescript-interface-adapter | k/l/m/n/g and query-side checks on TypeScript, with the rule ids of ddd-rust-interface-adapter. |
 

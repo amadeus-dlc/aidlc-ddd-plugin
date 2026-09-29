@@ -2,7 +2,7 @@
 
 English | [Japanese](use-case-layer-design.ja.md)
 
-Updated: 2026-09-13. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
+Updated: 2026-09-30. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
 
 ## 1. Delivery form
 
@@ -19,6 +19,7 @@ A use case coordinates retrieval, business operations, persistence, and recovery
 3. Do not call another use case directly. Put shared business decisions in the domain and coordination in an explicit flow. Calling an external port's `execute` is not prohibited.
 4. Do not extract values through getters to make business decisions. Call domain methods that return decisions. Passing a getter result as a repository argument is allowed when the value is not used for business branching or calculation.
 5. Do not use database or external-system clients directly.
+6. Declare ports (repositories and other external dependencies) in the use-case layer. The domain layer declares, holds, and calls no port. Name a field or parameter that holds a port after the port (`invoice_repository`, `#invoiceRepository`), not after a plural of the aggregate.
 
 The query side retrieves DTOs through DAOs; do not impose command-side aggregate retrieval and persistence conventions on it unchanged.
 
@@ -48,17 +49,17 @@ Define the association between an identifiable creation request, its aggregate I
 
 ### 5-3. State-setting operations
 
-If the same request has already reached the desired state, it may succeed without changes. If another request changes the state before an old request is retried, request IDs, expected versions, or equivalent checks are also needed.
+If the same command has already reached the desired state, it may succeed without changes. If another command changes the state before an old command is retried, command IDs, expected versions, or equivalent checks are also needed.
 
 ### 5-4. Additive operations
 
-Additions cannot be absorbed by setting the same value again. Associate applied command IDs with their effects and prevent repeated application. Account for failures between duplicate detection and persistence.
+Additions cannot be absorbed by setting the same value again. Associate applied command IDs with their effects and prevent repeated application. Account for failures between duplicate detection and persistence: the aggregate remembers the applied command IDs as part of its state, so detection and persistence are one write of the consistency boundary, and the use case keeps no separate record.
 
-Retaining only the most recent ID is valid only when an old retry cannot arrive after another command. `C1 → C2 → retry C1` can occur even with serialization. Choose retention counts and windows from retry conditions and define treatment of requests outside the window.
+Keeping only the last command ID (`retention: last-one`) is valid only when an older command cannot be resent after a newer one, and the declaration's rationale states why. `C1 → C2 → retry C1` can occur even with serialization. Otherwise choose retention counts and windows from retry conditions and define treatment of commands outside the window.
 
 ### 5-5. Current model representation
 
-Commands have `effect: transition | accumulation` and `idempotency`. Current checks reject `strategy: none` for `accumulation` and require `command-id-memory`. They do not prove whole-flow idempotency.
+Commands have `effect: transition | accumulation` and `idempotency`. Current checks reject `strategy: none` for `accumulation` and require `command-id-memory`, and require a rationale for `retention: last-one`. They do not prove whole-flow idempotency.
 
 For state-setting operations, `none` means safety is justified by a method other than ID memory, not that no precautions are needed. Record re-execution rationale in the use-case declaration too.
 
@@ -66,7 +67,7 @@ For state-setting operations, `none` means safety is justified by a method other
 
 A command known to be already applied can succeed with zero new events. One event is the baseline for initial state-changing success; rejection is a Domain Error. Concrete return types remain T-03 work.
 
-Distinguish cases where a state machine can recognize duplicates from those requiring request-ID memory. Using an FSM does not remove the need for event-store conflict control or duplicate-write protection.
+Distinguish cases where a state machine can recognize duplicates from those requiring command-ID memory. Using an FSM does not remove the need for event-store conflict control or duplicate-write protection.
 
 ## 6. Two declaration axes and Process Managers
 

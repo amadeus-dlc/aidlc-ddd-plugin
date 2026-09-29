@@ -182,6 +182,14 @@ cover(
   "Additive commands require ID memory; transition commands may declare none.",
   "加算型はID記憶必須、状態遷移型はnoneを宣言可能。",
 );
+cover(
+  mapping,
+  ["mapping-declarations.last-one"],
+  "clean-last-one-rationale",
+  "violation-last-one-without-rationale",
+  "Keeping only the last command ID passes with a rationale and is reported without one.",
+  "最後のコマンドIDだけを持つ宣言は、理由があれば合格、なければ報告する。",
+);
 const layer = "ddd-layer-structure";
 cover(
   layer,
@@ -260,6 +268,14 @@ for (const sensor of [mapping, "ddd-rust-domain"]) {
   );
 }
 const domain = "ddd-rust-domain";
+cover(
+  domain,
+  ["port-placement"],
+  "clean-domain",
+  "violation-port-placement",
+  "A repository port belongs to the use-case crate; a domain crate that declares one is reported.",
+  "リポジトリポートはユースケースのクレートに置き、ドメインのクレートでの宣言を報告する。",
+);
 cover(
   domain,
   ["domain-packaging.declaration"],
@@ -459,6 +475,14 @@ cover(
   "パッケージの src だけを検査し、欠落・曖昧・リンク・配置できないソースを検査済みとしない。",
 );
 const ts = "ddd-typescript-domain";
+cover(
+  ts,
+  ["port-placement"],
+  "clean-class",
+  "violation-port-placement-class",
+  "A repository port belongs to the use-case package; a domain source that declares one is reported.",
+  "リポジトリポートはユースケースのパッケージに置き、ドメインのソースでの宣言を報告する。",
+);
 cover(
   ts,
   ["a"],

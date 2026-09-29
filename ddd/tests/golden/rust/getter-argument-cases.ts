@@ -4,8 +4,9 @@ const DOMAIN = "packages/domain/billing-domain/src/lib.rs";
 const USE_CASE = "packages/use-case/billing-use-case/src/lib.rs";
 const domain = `pub struct Invoice { id: i64 }
 impl Invoice { pub fn id(&self) -> i64 { self.id } }
-pub trait InvoiceRepository { fn remove(&self, id: i64); fn by_ref(&self, id: &i64); }
 `;
+/** The repository port, declared in the use-case crate: ports belong to the use-case layer. */
+const port = "pub trait InvoiceRepository { fn remove(&self, id: i64); fn by_ref(&self, id: &i64); }";
 
 export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
   const source = base.find((entry) => entry.name === "violation-h");
@@ -17,7 +18,8 @@ export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
     expect: { pass, rules: pass ? [] : ["d"], files: { d: USE_CASE } },
   });
   const fn = (body: string) =>
-    `use billing_domain::{Invoice, InvoiceRepository};
+    `use billing_domain::Invoice;
+     ${port}
      pub fn run(invoice: &Invoice, repo: &impl InvoiceRepository) { ${body} }`;
   const cases = [
     make("argument", fn("repo.remove(invoice.id());"), true),
@@ -62,19 +64,24 @@ export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
     ),
     make(
       "import-alias",
-      `use billing_domain::{Invoice, InvoiceRepository as Port};
+      `use billing_domain::Invoice;
+      use crate::InvoiceRepository as Port;
+      ${port}
       pub fn run(invoice: &Invoice, repo: &dyn Port) { repo.remove(invoice.id()); }`,
       true,
     ),
     make(
       "type-alias",
-      `use billing_domain::Invoice; type Port = dyn billing_domain::InvoiceRepository;
+      `use billing_domain::Invoice;
+      ${port}
+      type Port = dyn InvoiceRepository;
       pub fn run(invoice: &Invoice, repo: &Port) { repo.remove(invoice.id()); }`,
       true,
     ),
     make(
       "field-port",
-      `use billing_domain::{Invoice, InvoiceRepository};
+      `use billing_domain::Invoice;
+      ${port}
       pub struct RemoveInvoice { repo: Box<dyn InvoiceRepository> }
       impl RemoveInvoice { pub fn run(&self, invoice: &Invoice) { self.repo.remove(invoice.id()); } }`,
       true,
@@ -92,6 +99,7 @@ export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
     "",
     false,
     `${domain}
+    ${port}
     pub fn run(invoice: &Invoice, repo: &impl InvoiceRepository) { repo.remove(invoice.id()); }`,
   );
   domainCase.sensor = "ddd-rust-domain";
@@ -101,7 +109,8 @@ export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
     version: 1,
     writes: [{ path: DOMAIN }],
   });
-  domainCase.expect.files = { d: DOMAIN };
+  // A domain crate that declares the port and hands it a getter result breaks both rules.
+  domainCase.expect = { pass: false, rules: ["d", "port-placement"], files: { d: DOMAIN, "port-placement": DOMAIN } };
   cases.push(domainCase);
   return cases;
 }
