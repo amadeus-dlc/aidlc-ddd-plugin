@@ -62,7 +62,11 @@ export interface Command {
   state_effect: StateEffect;
   transitions: string[];
   domain_errors: DomainError[];
-  events: string[];
+  /**
+   * The one event this command produces, whose `produced_by` names this command back. Absent for a
+   * command that records no event: one command never produces more than one event.
+   */
+  event?: string;
   idempotency: IdempotencyPolicy;
 }
 

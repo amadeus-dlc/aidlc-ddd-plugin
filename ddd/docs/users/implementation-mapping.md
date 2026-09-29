@@ -133,7 +133,7 @@ Every path that reads the mapping during a gate reads `schema_version: 2`, and a
 | Process Manager requirement and execution model at functional-design | `ddd-mapping-declarations` | `mapping-declarations.document`, reported against the mapping |
 | Store semantics at infrastructure-design | `ddd-design-advisories` | Advisory `design-advisories.store-upsert`: the store semantics cannot be judged |
 | Domain package check | `ddd-rust-domain`, `ddd-typescript-domain` | `domain-packaging.declaration` |
-| Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter`, `ddd-typescript-domain`, `ddd-typescript-use-case`, `ddd-typescript-interface-adapter` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
+| Replay method matching in the rule-evaluation context | `ddd-rust-domain`, `ddd-rust-use-case`, `ddd-rust-interface-adapter` | Disabled, with the note `replay.disabled: aggregate mapping is invalid` |
 
 A mapping that is absent is a different fact from one that cannot be read. At functional-design the mapping gives each target aggregate's `programming_model`:
 

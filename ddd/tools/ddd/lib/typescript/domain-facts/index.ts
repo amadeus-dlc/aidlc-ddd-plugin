@@ -18,7 +18,7 @@ import type { CompilerApi } from "../compiler/settings.ts";
 import type { TypeScriptFactSet, TypeScriptFileFacts, TypeScriptSourceFile } from "./contract.ts";
 import { extractFileFacts } from "./extract.ts";
 
-export { COLLECTION_MUTATORS } from "./bodies.ts";
+export { COLLECTION_MUTATORS, isCollectionType } from "./bodies.ts";
 export type {
   CallFact,
   ConstructionFact,

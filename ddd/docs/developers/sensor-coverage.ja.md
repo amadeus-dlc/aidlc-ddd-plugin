@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は14センサー・90規則項目。88項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では636ケースを各環境で実行する。承認経路には、この表から選んだ211入力を各環境で通す。
+対象は14センサー・90規則項目。88項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では656ケースを各環境で実行する。承認経路には、この表から選んだ211入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -40,7 +40,7 @@
 | ddd-model-completeness<br>`model-completeness.i` | `clean-complete` | `violation-i` | `violation-i`<br>不変条件1件と0件の境界。 |
 | ddd-model-completeness<br>`model-completeness.ii` | `clean-complete` | `violation-ii` | `clean-no-transition`<br>遷移ありと、遷移なしを明示したコマンドを区別する。 |
 | ddd-model-completeness<br>`model-completeness.iv` | `clean-complete` | `violation-unresolved-model-reference`<br>先行拒否: `model-completeness.schema` | `violation-unresolved-model-reference`<br>ローダーが未解決参照を先に拒否するため、防御的チェックへは到達しない。 |
-| ddd-model-completeness<br>`model-completeness.schema` | `clean-complete` | `violation-schema`<br>`violation-legacy-model`<br>`violation-unresolved-model-reference` | `violation-unresolved-model-reference`<br>正常モデルと、形式は正しいが参照先が存在しないモデルを区別する。 |
+| ddd-model-completeness<br>`model-completeness.schema` | `clean-complete` | `violation-schema`<br>`violation-legacy-model`<br>`violation-command-events-list`<br>`violation-command-two-events`<br>`violation-unresolved-model-reference` | `violation-unresolved-model-reference`<br>正常モデルと、形式は正しいが参照先が存在しないモデルを区別する。 |
 | ddd-model-presence<br>`model-presence.invalid` | `clean-execute` | `violation-invalid`<br>`violation-legacy-model`<br>`violation-unresolved-model-reference` | `clean-skip`<br>SKIP時の対象外と、EXECUTE時の検証を区別する。 |
 | ddd-model-presence<br>`model-presence.missing` | `clean-execute` | `violation-missing` | `clean-absent-stage`<br>ステージ未登録は対象外、EXECUTEはモデル必須。 |
 | ddd-model-presence<br>`model-presence.unresolved` | `clean-execute` | `violation-unresolved-model-reference`<br>先行拒否: `model-presence.invalid` | `violation-unresolved-model-reference`<br>ローダーが未解決参照を先に拒否するため、防御的チェックへは到達しない。 |
@@ -52,7 +52,7 @@
 | ddd-reference-ids<br>`reference-ids.model` | `clean-mapping` | `violation-model`<br>`violation-legacy-model`<br>`violation-legacy-model-use-cases` | `violation-document`<br>宣言形式の不正はモデル読込みより先に拒否する。 |
 | ddd-reference-ids<br>`reference-ids.undefined` | `clean-mapping` | `violation-undefined`<br>`violation-error-reference`<br>`violation-replay-reference`<br>`violation-packaging-reference-id` | `clean-replay-reference`<br>replayはイベント種別を要求し、一般のreference_idsとの違いを確認する。 |
 | ddd-rust-domain<br>`a` | `clean-domain` | `violation-a`<br>`violation-a-tuple`<br>`violation-a-tuple-restricted`<br>`violation-a-d-module-file`<br>`violation-a-d-mod-rs` | `violation-a`<br>同じ集約の非公開フィールドと公開フィールドを比較する。 |
-| ddd-rust-domain<br>`b` | `clean-b-split-command` | `violation-b`<br>`violation-b-split-impl`<br>`violation-b-arbitrary-apply`<br>`violation-b-trait-impl`<br>`violation-b-value-object`<br>`violation-b-replay-state-sourcing`<br>`violation-b-replay-wrong-crate`<br>`violation-b-replay-wrong-module`<br>`violation-b-replay-unlisted-method`<br>`violation-b-replay-duplicate-method`<br>`violation-b-replay-unknown-event`<br>`violation-b-replay-scalar` | `clean-b-declared-replay`<br>宣言済みコマンドと、契約に一致するreplayを許可する。 |
+| ddd-rust-domain<br>`b` | `clean-b-split-command` | `violation-b`<br>`violation-b-command-ref-self`<br>`violation-b-command-by-value`<br>`violation-b-command-mut-self-value`<br>`violation-b-split-impl`<br>`violation-b-arbitrary-apply`<br>`violation-b-trait-impl`<br>`violation-b-value-object`<br>`violation-b-replay-state-sourcing`<br>`violation-b-replay-wrong-crate`<br>`violation-b-replay-wrong-module`<br>`violation-b-replay-unlisted-method`<br>`violation-b-replay-duplicate-method`<br>`violation-b-replay-unknown-event`<br>`violation-b-replay-scalar` | `clean-b-declared-replay`<br>宣言済みコマンドと、契約に一致するreplayを許可する。 |
 | ddd-rust-domain<br>`c` | `clean-full-constructor` | `violation-c-literal`<br>`violation-c-default` | `violation-c-default`<br>inherent impl内の生成とDefaultによる迂回を区別する。 |
 | ddd-rust-domain<br>`d` | `clean-self-getter` | `violation-d`<br>`violation-d-split-getter`<br>`violation-d-repository-domain-layer`<br>`violation-d-explicit-return`<br>`violation-a-d-module-file`<br>`violation-a-d-mod-rs` | `violation-d-split-getter`<br>self呼出しは許可し、別ファイルの受信型も照合する。 |
 | ddd-rust-domain<br>`domain-packaging.coverage` | `clean-packaging-inline` | `violation-packaging-undeclared`<br>`violation-packaging-code-root-coverage` | `clean-packaging-planned-module`<br>rootと親階層を必須にし、将来のモジュールの即時実装は要求しない。 |
@@ -79,8 +79,8 @@
 | ddd-rust-use-case<br>`h` | `clean-h-value-object` | `violation-h`<br>`violation-h-import-alias`<br>`violation-h-type-alias`<br>`violation-h-qualified`<br>`violation-h-grouped-alias`<br>`violation-h-imported-box` | `clean-h-domain-primitive`<br>VOとDomain Primitiveの引数は許可し、集約引数は拒否する。 |
 | ddd-rust-use-case<br>`i` | `clean-i-port-execute` | `violation-i`<br>`violation-i-field-use-case`<br>`violation-i-associated-call`<br>`violation-i-imported-use-case` | `clean-i-own-associated-call`<br>ポート呼出しと同型自身への呼出しを別ユースケースと混同しない。 |
 | ddd-typescript-domain<br>`a` | `clean-class` | `violation-a-class`<br>`violation-a-companion`<br>`violation-a-class-private`<br>`violation-a-class-readonly`<br>`violation-a-class-parameter-property` | `violation-a-class-private`<br>実行時に状態を隠すのは # フィールドだけで、消去される private キーワードは隠蔽にならない。 |
-| ddd-typescript-domain<br>`b` | `clean-class` | `violation-b-class`<br>`violation-b-companion`<br>`violation-b-undeclared-replay` | `clean-b-declared-replay`<br>宣言済みコマンドと、写像が宣言したreplayメソッドを許可する。 |
-| ddd-typescript-domain<br>`c` | `clean-class` | `violation-c-class`<br>`violation-c-companion`<br>`violation-c-type-assertion`<br>`violation-c-post-init`<br>`violation-c-template-substitution` | `clean-c-spelling-in-comments`<br>型の外のコードでの生成と、コメント・文字列・正規表現内の同じ綴りを区別する。 |
+| ddd-typescript-domain<br>`b` | `clean-class` | `violation-b-class`<br>`violation-b-declared-command-class`<br>`violation-b-collection-class`<br>`violation-b-model-skipped-class`<br>`violation-b-companion`<br>`violation-b-declared-command-companion`<br>`violation-b-collection-companion`<br>`violation-b-model-skipped-companion`<br>`violation-b-declared-replay`<br>`violation-b-undeclared-replay`<br>`violation-b-state-member-collection-companion` | `clean-b-query-method`<br>状態を読むだけのメソッドは許可し、状態を書くメソッドは宣言の有無にかかわらず拒否する。 |
+| ddd-typescript-domain<br>`c` | `clean-class` | `violation-c-class`<br>`violation-c-companion`<br>`violation-c-post-init-declared-replay`<br>`violation-c-type-assertion`<br>`violation-c-post-init`<br>`violation-c-template-substitution` | `clean-c-spelling-in-comments`<br>型の外のコードでの生成と、コメント・文字列・正規表現内の同じ綴りを区別する。 |
 | ddd-typescript-domain<br>`d` | `clean-d-self-getter` | `violation-d-class`<br>`violation-d-repository-domain-layer-class`<br>`violation-d-companion`<br>`violation-d-repository-domain-layer-companion` | `violation-d-companion`<br>thisへの呼出しは許可し、companion表現のgetterも照合する。 |
 | ddd-typescript-domain<br>`domain-packaging.coverage` | `clean-class` | `violation-packaging-coverage` | `clean-packaging-index-file`<br>名前付きファイルとディレクトリのindexファイルを同じモジュールパスとして扱う。 |
 | ddd-typescript-domain<br>`domain-packaging.declaration` | `clean-class` | `violation-packaging-no-mapping` | `violation-packaging-no-mapping`<br>写像の欠落と、パッケージを宣言した写像を区別する。 |

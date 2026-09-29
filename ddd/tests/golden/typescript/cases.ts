@@ -133,22 +133,27 @@ function tsMapping(options: MappingOptions): string {
   ].join("\n");
 }
 
+/**
+ * The aggregate in each representation, written as TypeScript domain code is: a command returns a
+ * new instance and leaves the one it was called on as it was.
+ */
 export const CLASS_CLEAN = `export class Invoice {
   #id: string;
   #amount: number;
-  #issued = false;
+  #issued: boolean;
 
-  private constructor(id: string, amount: number) {
+  private constructor(id: string, amount: number, issued: boolean) {
     this.#id = id;
     this.#amount = amount;
+    this.#issued = issued;
   }
 
   static open(id: string, amount: number): Invoice {
-    return new Invoice(id, amount);
+    return new Invoice(id, amount, false);
   }
 
-  issue(): void {
-    this.#issued = true;
+  issue(): Invoice {
+    return new Invoice(this.#id, this.#amount, true);
   }
 
   total(): number {
@@ -159,15 +164,18 @@ export const CLASS_CLEAN = `export class Invoice {
 
 export const COMPANION_CLEAN = `const brand: unique symbol = Symbol("Invoice");
 
-export type Invoice = { readonly [brand]: true; issue(): void; total(): number };
+export type Invoice = { readonly [brand]: true; issue(): Invoice; total(): number };
 
 export const Invoice = {
   open(id: string, amount: number): Invoice {
-    const state = { id, amount, issued: false };
+    return Invoice.restore(id, amount, false);
+  },
+  restore(id: string, amount: number, issued: boolean): Invoice {
+    const state = { id, amount, issued };
     const instance: Invoice = {
       [brand]: true,
       issue() {
-        state.issued = true;
+        return Invoice.restore(state.id, state.amount, true);
       },
       total() {
         return state.amount;
@@ -258,7 +266,15 @@ export function tsCase(name: string, options: DomainOptions, expect: GoldenCase[
 const PEEK = "\nexport function peek(invoice: Invoice): number {\n  return invoice.total();\n}\n";
 const ADAPTER_IMPORT = 'import { Adapter } from "@acme/billing-interface-adapter";\n';
 
-const CLASS_PUBLIC_ID = edit(edit(CLASS_CLEAN, "#id: string;", "id: string;"), "this.#id = id;", "this.id = id;");
+/** The class with its `#id` field made an own property, read back by `issue` under the new name. */
+function classWithIdField(declaration: string): string {
+  return edit(
+    edit(edit(CLASS_CLEAN, "#id: string;", declaration), "this.#id = id;", "this.id = id;"),
+    "new Invoice(this.#id,",
+    "new Invoice(this.id,",
+  );
+}
+const CLASS_PUBLIC_ID = classWithIdField("id: string;");
 const COMPANION_PUBLIC_ID = edit(
   edit(COMPANION_CLEAN, "readonly [brand]: true;", "readonly [brand]: true; readonly id: string;"),
   "[brand]: true,\n",
@@ -289,13 +305,50 @@ const CLASS_FORWARDING = `${CLASS_WITH_ID_GETTER}${FORWARDING_PORT}`;
 const COMPANION_FORWARDING = `${COMPANION_WITH_ID_GETTER}${FORWARDING_PORT}`;
 
 /**
+ * The ways a method of the aggregate can write its state, one of each representation: every one is a
+ * finding of (b), since a TypeScript domain method returns a new instance instead, whether or not the
+ * model declares the method as a command.
+ */
+const CLASS_ISSUE = "  issue(): Invoice {\n    return new Invoice(this.#id, this.#amount, true);\n  }";
+const COMPANION_ISSUE = "        return Invoice.restore(state.id, state.amount, true);";
+const CLASS_UNDECLARED_WRITE = edit(
+  CLASS_CLEAN,
+  "  total(): number {",
+  "  rename(): void {\n    this.#issued = true;\n  }\n\n  total(): number {",
+);
+export const COMPANION_UNDECLARED_WRITE = edit(
+  edit(COMPANION_CLEAN, "issue(): Invoice;", "issue(): Invoice; rename(): void;"),
+  "      total() {",
+  "      rename() {\n        state.issued = true;\n      },\n      total() {",
+);
+const CLASS_DECLARED_WRITE = edit(CLASS_CLEAN, CLASS_ISSUE, "  issue(): void {\n    this.#issued = true;\n  }");
+const COMPANION_DECLARED_WRITE = edit(
+  edit(COMPANION_CLEAN, "issue(): Invoice;", "issue(): void;"),
+  COMPANION_ISSUE,
+  "        state.issued = true;",
+);
+const CLASS_COLLECTION_WRITE = edit(
+  edit(CLASS_CLEAN, "#issued: boolean;", "#issued: boolean;\n  #history: string[] = [];"),
+  "    return new Invoice(this.#id, this.#amount, true);",
+  '    this.#history.push("issued");\n    return new Invoice(this.#id, this.#amount, true);',
+);
+const COMPANION_COLLECTION_WRITE = edit(
+  edit(
+    COMPANION_CLEAN,
+    "const state = { id, amount, issued };",
+    "const state = { id, amount, issued };\n    const history: string[] = [];",
+  ),
+  COMPANION_ISSUE,
+  `        history.push("issued");\n${COMPANION_ISSUE}`,
+);
+
+/**
  * The cases whose Rust counterpart is the same scene of `golden/rust/cases.ts`, one per
  * representation. The keys are the Rust case names; the values the two TypeScript ones.
  */
 export const RUST_COUNTERPARTS: Readonly<Record<string, readonly [string, string]>> = {
   "clean-domain": ["clean-class", "clean-companion"],
   "violation-a": ["violation-a-class", "violation-a-companion"],
-  "violation-b": ["violation-b-class", "violation-b-companion"],
   "violation-c-literal": ["violation-c-class", "violation-c-companion"],
   "violation-d": ["violation-d-class", "violation-d-companion"],
   "violation-g": ["violation-g-class", "violation-g-companion"],
@@ -308,28 +361,45 @@ export const RUST_COUNTERPARTS: Readonly<Record<string, readonly [string, string
 
 function representationCases(): GoldenCase[] {
   const out: GoldenCase[] = [];
-  for (const [representation, clean, publicId, renamed, forged, forwarding] of [
+  for (const [representation, clean, publicId, undeclaredWrite, declaredWrite, collectionWrite, forged, forwarding] of [
     [
       "class",
       CLASS_CLEAN,
       CLASS_PUBLIC_ID,
-      edit(CLASS_CLEAN, "issue(): void {", "rename(): void {"),
-      `${CLASS_CLEAN}\nexport function build(): Invoice {\n  return new Invoice("x", 0);\n}\n`,
+      CLASS_UNDECLARED_WRITE,
+      CLASS_DECLARED_WRITE,
+      CLASS_COLLECTION_WRITE,
+      `${CLASS_CLEAN}\nexport function build(): Invoice {\n  return new Invoice("x", 0, false);\n}\n`,
       CLASS_FORWARDING,
     ],
     [
       "companion",
       COMPANION_CLEAN,
       COMPANION_PUBLIC_ID,
-      edit(edit(COMPANION_CLEAN, "issue(): void;", "rename(): void;"), "issue() {", "rename() {"),
-      `${COMPANION_CLEAN}\nexport function build(): Invoice {\n  const forged: Invoice = { [brand]: true, issue() {}, total() { return 0; } };\n  return forged;\n}\n`,
+      COMPANION_UNDECLARED_WRITE,
+      COMPANION_DECLARED_WRITE,
+      COMPANION_COLLECTION_WRITE,
+      `${COMPANION_CLEAN}\nexport function build(): Invoice {\n  const forged: Invoice = { [brand]: true, issue() { return forged; }, total() { return 0; } };\n  return forged;\n}\n`,
       COMPANION_FORWARDING,
     ],
   ] as const) {
     out.push(
       tsCase(`clean-${representation}`, { source: clean }, { pass: true, rules: [] }),
       tsCase(`violation-a-${representation}`, { source: publicId }, { pass: false, rules: ["a"] }),
-      tsCase(`violation-b-${representation}`, { source: renamed }, { pass: false, rules: ["b"] }),
+      tsCase(`violation-b-${representation}`, { source: undeclaredWrite }, { pass: false, rules: ["b"] }),
+      // Declaring the method as a command does not make a write to the instance's state right.
+      tsCase(
+        `violation-b-declared-command-${representation}`,
+        { source: declaredWrite },
+        { pass: false, rules: ["b"] },
+      ),
+      tsCase(`violation-b-collection-${representation}`, { source: collectionWrite }, { pass: false, rules: ["b"] }),
+      // Without the model, a write is still a write: rule (b) of TypeScript does not read the model.
+      tsCase(
+        `violation-b-model-skipped-${representation}`,
+        { source: declaredWrite, state: SKIPPED_STATE },
+        { pass: false, rules: ["b"] },
+      ),
       tsCase(`violation-c-${representation}`, { source: forged }, { pass: false, rules: ["c"] }),
       tsCase(`violation-d-${representation}`, { source: `${clean}${PEEK}` }, { pass: false, rules: ["d"] }),
       // Handing a getter result unchanged to a repository port is still a getter call in the domain layer.
@@ -359,7 +429,7 @@ function stateHidingCases(): GoldenCase[] {
     // Only a `#` field is hidden at run time; the rest of the class is operations.
     tsCase(
       "clean-a-private-name-only",
-      { source: "export class Invoice { #amount = 0; issue() { this.#amount = 1; } }\n" },
+      { source: "export class Invoice { #amount = 0; total() { return this.#amount; } }\n" },
       { pass: true, rules: [] },
     ),
     // `private` is erased by the compiler, so the field is an own property anyone can read.
@@ -370,16 +440,20 @@ function stateHidingCases(): GoldenCase[] {
     ),
     tsCase(
       "violation-a-class-readonly",
-      { source: edit(edit(CLASS_CLEAN, "#id: string;", "readonly id: string;"), "this.#id = id;", "this.id = id;") },
+      { source: classWithIdField("readonly id: string;") },
       { pass: false, rules: ["a"] },
     ),
     tsCase(
       "violation-a-class-parameter-property",
       {
         source: edit(
-          edit(CLASS_CLEAN, "#id: string;\n", ""),
-          "private constructor(id: string, amount: number) {\n    this.#id = id;\n",
-          "private constructor(protected id: string, amount: number) {\n",
+          edit(
+            edit(CLASS_CLEAN, "#id: string;\n", ""),
+            "private constructor(id: string, amount: number, issued: boolean) {\n    this.#id = id;\n",
+            "private constructor(protected id: string, amount: number, issued: boolean) {\n",
+          ),
+          "new Invoice(this.#id,",
+          "new Invoice(this.id,",
         ),
       },
       { pass: false, rules: ["a"] },
@@ -387,13 +461,116 @@ function stateHidingCases(): GoldenCase[] {
     // Static members belong to the class object, not to an instance's state.
     tsCase(
       "clean-a-static-member",
-      { source: edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  static readonly currency = 'JPY';") },
+      { source: edit(CLASS_CLEAN, "#issued: boolean;", "#issued: boolean;\n  static readonly currency = 'JPY';") },
       { pass: true, rules: [] },
     ),
   ];
 }
 
-/** Undeclared mutation (b): a replay method is exempt only when the mapping declares it. */
+/**
+ * A value object the aggregate keeps: `add` returns a new `Money`, so calling it changes nothing,
+ * though an array, a `Map` or a `Set` has a changing method of the same name.
+ */
+const MONEY = "type Money = { add(other: Money): Money };\n\n";
+const CLASS_VALUE_OBJECT = edit(
+  edit(
+    edit(
+      edit(
+        edit(
+          edit(CLASS_CLEAN, "export class Invoice {", `${MONEY}export class Invoice {`),
+          "#issued: boolean;",
+          "#issued: boolean;\n  #paid: Money;",
+        ),
+        "private constructor(id: string, amount: number, issued: boolean) {",
+        "private constructor(id: string, amount: number, issued: boolean, paid: Money) {",
+      ),
+      "this.#issued = issued;",
+      "this.#issued = issued;\n    this.#paid = paid;",
+    ),
+    "static open(id: string, amount: number): Invoice {\n    return new Invoice(id, amount, false);",
+    "static open(id: string, amount: number, paid: Money): Invoice {\n    return new Invoice(id, amount, false, paid);",
+  ),
+  CLASS_ISSUE,
+  "  issue(): Invoice {\n    return new Invoice(this.#id, this.#amount, true, this.#paid.add(this.#paid));\n  }",
+);
+/** The companion with the value object in a stated closure binding, or in a member of untyped state. */
+function companionValueObject(state: string, issue: string): string {
+  return edit(
+    edit(
+      edit(
+        edit(
+          edit(COMPANION_CLEAN, "export type Invoice", `${MONEY}export type Invoice`),
+          "open(id: string, amount: number): Invoice {\n    return Invoice.restore(id, amount, false);",
+          "open(id: string, amount: number, paid: Money): Invoice {\n    return Invoice.restore(id, amount, false, paid);",
+        ),
+        "restore(id: string, amount: number, issued: boolean): Invoice {",
+        "restore(id: string, amount: number, issued: boolean, paid: Money): Invoice {",
+      ),
+      "const state = { id, amount, issued };",
+      state,
+    ),
+    COMPANION_ISSUE,
+    issue,
+  );
+}
+export const COMPANION_VALUE_OBJECT = companionValueObject(
+  "const state = { id, amount, issued };",
+  "        return Invoice.restore(state.id, state.amount, true, paid.add(paid));",
+);
+const COMPANION_STATE_MEMBER_VALUE_OBJECT = companionValueObject(
+  "const state = { id, amount, issued, paid };",
+  "        return Invoice.restore(state.id, state.amount, true, state.paid.add(state.paid));",
+);
+const COMPANION_STATE_MEMBER_COLLECTION = edit(
+  edit(
+    edit(
+      COMPANION_CLEAN,
+      "export type Invoice",
+      "type InvoiceState = { id: string; amount: number; issued: boolean; history: string[] };\n\nexport type Invoice",
+    ),
+    "const state = { id, amount, issued };",
+    "const state: InvoiceState = { id, amount, issued, history: [] };",
+  ),
+  COMPANION_ISSUE,
+  `        state.history.push("issued");\n${COMPANION_ISSUE}`,
+);
+
+/**
+ * A changing method's name called on state is a write only where the type the state states is an
+ * array, a `Map` or a `Set`: a value object's method of the same name returns a new value, and what
+ * the stated types do not decide is not taken for a write, in either representation.
+ */
+function valueObjectCases(): GoldenCase[] {
+  return [
+    tsCase("clean-b-value-object-class", { source: CLASS_VALUE_OBJECT }, { pass: true, rules: [] }),
+    tsCase("clean-b-value-object-companion", { source: COMPANION_VALUE_OBJECT }, { pass: true, rules: [] }),
+    tsCase(
+      "clean-b-value-object-model-skipped-class",
+      { source: CLASS_VALUE_OBJECT, state: SKIPPED_STATE },
+      { pass: true, rules: [], note_contains: "domain-modeling is SKIP" },
+    ),
+    tsCase(
+      "clean-b-value-object-model-skipped-companion",
+      { source: COMPANION_VALUE_OBJECT, state: SKIPPED_STATE },
+      { pass: true, rules: [], note_contains: "domain-modeling is SKIP" },
+    ),
+    tsCase(
+      "clean-b-state-member-value-object-companion",
+      { source: COMPANION_STATE_MEMBER_VALUE_OBJECT },
+      { pass: true, rules: [] },
+    ),
+    tsCase(
+      "violation-b-state-member-collection-companion",
+      { source: COMPANION_STATE_MEMBER_COLLECTION },
+      { pass: false, rules: ["b"] },
+    ),
+  ];
+}
+
+/**
+ * Mutation (b): a TypeScript domain method never writes state, so a replay method the mapping
+ * declares is reported as an undeclared one is.
+ */
 function mutationCases(): GoldenCase[] {
   const replaySource = `export class Issued {
   #amount = 0;
@@ -409,7 +586,7 @@ export class Invoice {
 `;
   return [
     tsCase(
-      "clean-b-declared-replay",
+      "violation-b-declared-replay",
       {
         source: replaySource,
         mapping: tsMapping({
@@ -419,9 +596,23 @@ export class Invoice {
           replay: { event_ref: "event.invoice.issued", method: "applyEvent" },
         }),
       },
-      { pass: true, rules: [] },
+      { pass: false, rules: ["b"] },
     ),
     tsCase("violation-b-undeclared-replay", { source: replaySource }, { pass: false, rules: ["b"] }),
+    // A post-init method is (c) whatever the mapping declares it: a replay declaration takes it out of neither rule.
+    tsCase(
+      "violation-c-post-init-declared-replay",
+      {
+        source: edit(replaySource, "applyEvent(event: Issued): void {", "reset(event: Issued): void {"),
+        mapping: tsMapping({
+          pkg: DOMAIN_NAME,
+          modules: [["invoice"]],
+          persistence: "event-sourcing",
+          replay: { event_ref: "event.invoice.issued", method: "reset" },
+        }),
+      },
+      { pass: false, rules: ["c"] },
+    ),
     // A method that only reads state is a query, not a mutation.
     tsCase(
       "clean-b-query-method",
@@ -459,7 +650,7 @@ function constructionCases(): GoldenCase[] {
     // A substitution is code, so a construction inside one is a construction.
     tsCase(
       "violation-c-template-substitution",
-      { source: `${CLASS_CLEAN}\nexport const label = \`\${new Invoice("x", 0)}\`;\n` },
+      { source: `${CLASS_CLEAN}\nexport const label = \`\${new Invoice("x", 0, false)}\`;\n` },
       { pass: false, rules: ["c"] },
     ),
     // Comments, strings and regular expressions only spell a construction.
@@ -478,7 +669,13 @@ function getterCases(): GoldenCase[] {
   return [
     tsCase(
       "clean-d-self-getter",
-      { source: edit(CLASS_CLEAN, "this.#issued = true;", "if (this.total() >= 0) this.#issued = true;") },
+      {
+        source: edit(
+          CLASS_CLEAN,
+          "return new Invoice(this.#id, this.#amount, true);",
+          "return new Invoice(this.#id, this.total(), true);",
+        ),
+      },
       { pass: true, rules: [] },
     ),
   ];
@@ -692,6 +889,7 @@ export const TYPESCRIPT_CASES: GoldenCase[] = [
   ...representationCases(),
   ...stateHidingCases(),
   ...mutationCases(),
+  ...valueObjectCases(),
   ...constructionCases(),
   ...getterCases(),
   ...dependencyCases(),

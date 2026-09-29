@@ -6,7 +6,7 @@
  * the distribution carries, so a fact that holds here is the fact a rule is handed.
  */
 
-import { afterEach, beforeAll, expect, test } from "bun:test";
+import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -421,6 +421,86 @@ function open(amount: number): Invoice {
   expect(member("add")?.writes).toEqual([{ target: "captured", name: "lines" }]);
   expect(member("total")?.returns_state_only).toBe(true);
   expect(member("limit")?.returns_state_only).toBe(false);
+});
+
+describe("a changing method's name called on closure state is a write where the written types say it is a collection", () => {
+  /** What `change()` of a literal inside `open` records, with `declarations` at the top of the file. */
+  function writesOf(declarations: string, binding: string, call: string) {
+    const facts = factsOf(`${declarations}
+function open(): Invoice {
+  ${binding}
+  const instance: Invoice = {
+    change() { ${call}; },
+  };
+  return instance;
+}
+`);
+    const typed = facts.constructions.find((entry) => entry.kind === "typed-object-literal") as unknown as {
+      members: { name: string; writes?: { target: string; name: string }[] }[];
+    };
+    return typed.members.find((entry) => entry.name === "change")?.writes;
+  }
+  const MONEY = "type Money = { add(other: Money): Money };";
+  const WRITES_STATE = [{ target: "captured", name: "state" }];
+
+  test.each([
+    ["a binding stated as a value object", "const paid: Money = seed;", "paid.add(paid)", []],
+    [
+      "a binding stated as a Set",
+      "const paid: Set<Money> = new Set();",
+      "paid.add(seed)",
+      [{ target: "captured", name: "paid" }],
+    ],
+    [
+      "a binding stated as an array",
+      "const history: string[] = [];",
+      'history.push("x")',
+      [{ target: "captured", name: "history" }],
+    ],
+    [
+      "a binding stating no type",
+      "const history = [] as string[];",
+      'history.push("x")',
+      [{ target: "captured", name: "history" }],
+    ],
+    [
+      "a binding through destructuring",
+      "const { lines } = { lines: [] as string[] };",
+      'lines.push("x")',
+      [{ target: "captured", name: "lines" }],
+    ],
+  ])("%s", (_label, binding, call, expected) => {
+    expect(writesOf(MONEY, binding, call)).toEqual(expected);
+  });
+
+  test.each([
+    ["a type literal alias giving it a value object", "type S = { paid: Money };", "const state: S = seed;", []],
+    ["a type literal alias giving it a Set", "type S = { paid: Set<Money> };", "const state: S = seed;", WRITES_STATE],
+    [
+      "an interface giving it a Map",
+      "interface S { paid: Map<string, Money> }",
+      "const state: S = seed;",
+      WRITES_STATE,
+    ],
+    ["an inline type literal giving it an array", "", "const state: { paid: Money[] } = seed;", WRITES_STATE],
+    ["an inline type literal giving it a value object", "", "const state: { paid: Money } = seed;", []],
+    ["state stating no type", "", "const state = { paid: seed };", []],
+    ["a type the file does not declare", "", "const state: Other = seed;", []],
+    ["a type named with type arguments", "type S<T> = { paid: T[] };", "const state: S<Money> = seed;", []],
+    ["a type declared inside the function", "", "type S = { paid: Money[] };\n  const state: S = seed;", []],
+  ])("a member of %s", (_label, declarations, binding, expected) => {
+    expect(writesOf(`${MONEY}\n${declarations}`, binding, "state.paid.add(seed)")).toEqual(expected);
+  });
+
+  test("a longer access chain is not decided from the written types", () => {
+    expect(
+      writesOf(`${MONEY}\ntype S = { a: { b: Money[] } };`, "const state: S = seed;", "state.a.b.push(seed)"),
+    ).toEqual([]);
+  });
+
+  test("an assignment to closure state stays a write whatever its type", () => {
+    expect(writesOf(MONEY, "const state: { paid: Money } = seed;", "state.paid = seed")).toEqual(WRITES_STATE);
+  });
 });
 
 test("an assertion to a type is a construction; an assertion to const or unknown is not", () => {

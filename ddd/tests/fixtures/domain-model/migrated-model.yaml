@@ -33,8 +33,7 @@ bounded_contexts:
                 name: "AlreadyIssued"
                 operation: "command.invoice.issue"
                 condition: "下書き: \"確定\" ではない # 注記\n2行目\\末尾"
-            events:
-              - "event.invoice.issued"
+            event: "event.invoice.issued"
             idempotency:
               strategy: "none"
         events:

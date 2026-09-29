@@ -493,11 +493,13 @@ describe("sensor helpers", () => {
     const aggregate = model.bounded_contexts[0].aggregates[0];
     aggregate.root_element = "entity.absent";
     aggregate.commands[0].transitions = ["transition.absent"];
+    aggregate.commands[0].event = "event.absent";
     aggregate.events[0].produced_by = "command.absent";
     const unresolved = collectUnresolved(model, loaded.index);
     expect(unresolved.map((u) => `${u.id}/${u.expected}`).sort()).toEqual([
       "command.absent/command",
       "entity.absent/entity",
+      "event.absent/event",
       "transition.absent/transition",
     ]);
     expect(unresolved.every((u) => u.reason.length > 0)).toBe(true);

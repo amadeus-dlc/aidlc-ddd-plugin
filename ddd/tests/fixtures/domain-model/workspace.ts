@@ -149,7 +149,7 @@ export function legacyModelYaml(options: LegacyModelOptions = {}): string {
     "                name: AlreadyIssued",
     "                command: command.invoice.issue",
     `                condition: ${issue}`,
-    "            events: [event.invoice.issued]",
+    "            event: event.invoice.issued",
     "            idempotency: { strategy: none }",
     "        events:",
     "          - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }",

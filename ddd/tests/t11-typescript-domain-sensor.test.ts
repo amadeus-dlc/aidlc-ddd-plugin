@@ -36,6 +36,8 @@ import { RUST_CASES } from "./golden/rust/cases.ts";
 import {
   CLASS_CLEAN,
   COMPANION_CLEAN,
+  COMPANION_UNDECLARED_WRITE,
+  COMPANION_VALUE_OBJECT,
   DOMAIN_DIR,
   DOMAIN_FILE,
   DOMAIN_INDEX,
@@ -169,13 +171,39 @@ describe("the findings name the member, the method and the line", () => {
   });
 
   test.each(["violation-b-class", "violation-b-companion"])(
-    "%s reports the undeclared mutating method and the command it would need",
+    "%s reports the undeclared method that writes state, by type and method",
     (name) => {
       const reported = findingsOf(name, "b");
       expect(reported).toHaveLength(1);
-      expect(reported[0].message).toBe("mutating method Invoice.rename is not declared as command.invoice.rename");
+      expect(reported[0].message).toContain("Invoice.rename");
     },
   );
+
+  test.each([
+    ["violation-b-declared-command-class", "this.#issued = true;"],
+    ["violation-b-declared-command-companion", "state.issued = true;"],
+    ["violation-b-collection-class", 'this.#history.push("issued");'],
+    ["violation-b-collection-companion", 'history.push("issued");'],
+    ["violation-b-model-skipped-class", "this.#issued = true;"],
+    ["violation-b-model-skipped-companion", "state.issued = true;"],
+  ])("%s reports the declared command issue once, in the method that writes", (name, write) => {
+    const testCase = caseNamed(name);
+    const source = sourceOf(testCase, DOMAIN_FILE);
+    const reported = verdictOf(testCase).findings;
+    expect(reported.map((entry) => entry.rule_id)).toEqual(["b"]);
+    expect(reported[0].message).toContain("Invoice.issue");
+    const declaredAt = lineOf(source, "issue()");
+    expect(reported[0].line).toBeGreaterThanOrEqual(declaredAt);
+    expect(reported[0].line).toBeLessThanOrEqual(lineOf(source, write));
+  });
+
+  test("the gate's note under a skipped model does not list (b) among the checks it skips", () => {
+    const note = verdictOf(caseNamed("clean-model-skipped-class")).note ?? "";
+    expect(note).toContain("domain-modeling is SKIP");
+    const skipped = /\(([^)]*)\) skipped/.exec(note)?.[1];
+    expect(skipped).toBeDefined();
+    expect((skipped ?? "").split(",").map((entry) => entry.trim())).not.toContain("b");
+  });
 
   test("an undeclared class method is reported on its declaration", () => {
     const testCase = caseNamed("violation-b-class");
@@ -195,7 +223,7 @@ describe("the findings name the member, the method and the line", () => {
     [
       "a class method that only pushes onto a field stated as an array",
       edit(
-        edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  #lines: string[] = [];"),
+        edit(CLASS_CLEAN, "#issued: boolean;", "#issued: boolean;\n  #lines: string[] = [];"),
         "total(): number {",
         "addLine(line: string): void {\n    this.#lines.push(line);\n  }\n\n  total(): number {",
       ),
@@ -204,18 +232,25 @@ describe("the findings name the member, the method and the line", () => {
       "a companion method that only pushes onto closure state",
       edit(
         edit(
-          edit(COMPANION_CLEAN, "issue(): void;", "issue(): void; addLine(line: string): void;"),
-          "const state = { id, amount, issued: false };",
-          "const state = { id, amount, issued: false };\n    const lines: string[] = [];",
+          edit(COMPANION_CLEAN, "issue(): Invoice;", "issue(): Invoice; addLine(line: string): void;"),
+          "const state = { id, amount, issued };",
+          "const state = { id, amount, issued };\n    const lines: string[] = [];",
         ),
         "      total() {",
         "      addLine(line: string) {\n        lines.push(line);\n      },\n      total() {",
       ),
     ],
-  ])("%s is an undeclared mutation", (_label, source) => {
+  ])("%s is a mutation (b)", (_label, source) => {
     const verdict = verdictOf(withDomainSource("collection-mutation", source));
+    expect(verdict.findings.map((entry) => entry.rule_id)).toEqual(["b"]);
+    expect(verdict.findings[0].message).toContain("Invoice.addLine");
+  });
+
+  test("the same call on a closure binding stated as a Set is a mutation (b)", () => {
+    const source = edit(COMPANION_VALUE_OBJECT, "issued: boolean, paid: Money)", "issued: boolean, paid: Set<Money>)");
+    const verdict = verdictOf(withDomainSource("collection-binding", source));
     expect(verdict.findings.map((entry) => [entry.rule_id, entry.message])).toEqual([
-      ["b", "mutating method Invoice.addLine is not declared as command.invoice.add-line"],
+      ["b", expect.stringContaining("Invoice.issue")],
     ]);
   });
 
@@ -304,8 +339,9 @@ describe("each scene means what the Rust domain gate's same scene means", () => 
         expect(typescript.pass).toBe(rust.pass);
         const rules = (verdict: SensorVerdict) => [...new Set(verdict.findings.map((entry) => entry.rule_id))].sort();
         expect(rules(typescript)).toEqual(rules(rust));
-        // Rules a, b and d name a type and a member; both gates name the same ones in the same words.
-        for (const rule of ["a", "b", "d"]) {
+        // Rules a and d name a type and a member in the same words in both gates; b is worded apart,
+        // since its meaning differs.
+        for (const rule of ["a", "d"]) {
           const messages = (verdict: SensorVerdict) =>
             verdict.findings.filter((entry) => entry.rule_id === rule).map((entry) => normalized(entry.message));
           expect(messages(typescript)).toEqual(messages(rust));
@@ -329,7 +365,11 @@ const STATE_EVIDENCE_CASES = (
   JSON.parse(readFileSync(join(STATE_EVIDENCE, "cases.json"), "utf8")) as StateEvidenceCase[]
 ).filter((entry) => entry.language === "typescript");
 
-/** The fixture as the only model file of the domain package; the model is skipped so only a decides. */
+/**
+ * The fixture as the only model file of the domain package, with the model skipped. The shared
+ * companion fixtures change their closure state in `increment`, which rule (b) reports whatever the
+ * model says; every other rule is left without anything to report.
+ */
 function stateEvidenceCase(entry: StateEvidenceCase): GoldenCase {
   return tsCase(
     `state-evidence-${entry.caseId}`,
@@ -373,9 +413,15 @@ describe("state hiding is decided as the state-evidence inspection decides it", 
       expect(run.exitCode, run.stderr).toBe(0);
       const verdict = JSON.parse(run.stdout) as SensorVerdict;
       const hidden = verdict.findings.filter((finding) => finding.rule_id === "a");
+      const writesState = readFileSync(join(STATE_EVIDENCE, entry.sourceFile), "utf8").includes("state.value++");
+      expect(
+        verdict.findings
+          .filter((finding) => finding.rule_id !== "a")
+          .map((finding) => [finding.rule_id, finding.message]),
+      ).toEqual(writesState ? [["b", expect.stringContaining("Model.increment")]] : []);
       if (expected.ruleResult === "pass") {
-        expect(verdict.pass).toBe(true);
         expect(hidden).toEqual([]);
+        expect(verdict.pass).toBe(!writesState);
         return;
       }
       expect(verdict.pass).toBe(false);
@@ -458,7 +504,7 @@ describe("what the facts leave unresolved stops the gate", () => {
 const COMPANION_INSTANCE = `    const instance: Invoice = {
       [brand]: true,
       issue() {
-        state.issued = true;
+        return Invoice.restore(state.id, state.amount, true);
       },
       total() {
         return state.amount;
@@ -485,21 +531,21 @@ const RULE_UNRESOLVED: [string, string, string | undefined][] = [
   ],
   [
     "a declared class field",
-    edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  declare note: string;"),
+    edit(CLASS_CLEAN, "#issued: boolean;", "#issued: boolean;\n  declare note: string;"),
     "declare note",
   ],
   [
     "an abstract class field",
     edit(
       edit(CLASS_CLEAN, "export class Invoice {", "export abstract class Invoice {"),
-      "#issued = false;",
-      "#issued = false;\n  abstract note: string;",
+      "#issued: boolean;",
+      "#issued: boolean;\n  abstract note: string;",
     ),
     "abstract note",
   ],
   [
     "a computed class member keyed by an identifier",
-    `const key = "k";\n${edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  [key]() {}")}`,
+    `const key = "k";\n${edit(CLASS_CLEAN, "#issued: boolean;", "#issued: boolean;\n  [key]() {}")}`,
     "[key]() {}",
   ],
   ["an exported brand", edit(COMPANION_CLEAN, "const brand:", "export const brand:"), undefined],
@@ -893,13 +939,10 @@ describe("only the wrappings that build a type are removed from a constructed ty
   });
 });
 
-/** The companion with its `issue` renamed, so a write in it is an undeclared mutation (b). */
-const COMPANION_RENAMED = edit(edit(COMPANION_CLEAN, "issue(): void;", "rename(): void;"), "issue() {", "rename() {");
-
 describe("closure state is found where the name is written, through destructuring too", () => {
   test("a callback parameter of the same name elsewhere in the method does not hide the write (b)", () => {
     const source = edit(
-      COMPANION_RENAMED,
+      COMPANION_UNDECLARED_WRITE,
       "state.issued = true;",
       "state.issued = true;\n        [0].forEach((state) => state);",
     );
@@ -911,9 +954,9 @@ describe("closure state is found where the name is written, through destructurin
   test("a write through destructured closure state is a write (b)", () => {
     const source = edit(
       edit(
-        edit(COMPANION_CLEAN, "issue(): void;", "issue(): void; rename(): void;"),
-        "const state = { id, amount, issued: false };",
-        "const state = { id, amount, issued: false };\n    const { lines } = { lines: [] as string[] };",
+        edit(COMPANION_CLEAN, "issue(): Invoice;", "issue(): Invoice; rename(): void;"),
+        "const state = { id, amount, issued };",
+        "const state = { id, amount, issued };\n    const { lines } = { lines: [] as string[] };",
       ),
       "[brand]: true,\n",
       '[brand]: true,\n      rename() {\n        lines.push("x");\n      },\n',
@@ -927,8 +970,8 @@ describe("closure state is found where the name is written, through destructurin
     const source = `${edit(
       edit(
         COMPANION_CLEAN,
-        "const state = { id, amount, issued: false };",
-        "const state = { id, amount, issued: false };\n    const { amount: owed } = state;",
+        "const state = { id, amount, issued };",
+        "const state = { id, amount, issued };\n    const { amount: owed } = state;",
       ),
       "return state.amount;",
       "return owed;",

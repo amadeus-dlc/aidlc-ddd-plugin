@@ -4,7 +4,7 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-rust-domain.ts
 default_severity: blocking
 fire_on: gate
-description: The code-generation gate for the domain layer — public fields (a), undeclared mutation (b), incomplete construction (c), getter calls (d), the dependency safety net (g) and the layer diagnostics.
+description: The code-generation gate for the domain layer — public fields (a), undeclared mutation or a declared command without &mut self (b), incomplete construction (c), getter calls (d), the dependency safety net (g) and the layer diagnostics.
 category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10

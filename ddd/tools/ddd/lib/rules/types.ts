@@ -36,6 +36,18 @@ export interface MutatorSymbol {
   line: number;
 }
 
+/**
+ * A method implementing a command the model declares that does not borrow the aggregate mutably: a
+ * command changes the aggregate's state, so it takes `&mut self`.
+ */
+export interface CommandReceiverSymbol {
+  file: string;
+  method_name: string;
+  /** How the method takes its receiver, as the declaration spells it: `&self`, `self`, or another form. */
+  receiver: "ref-self" | "self" | "other";
+  line: number;
+}
+
 export interface DomainTypeSymbol {
   key: string;
   type_name: string;
@@ -46,6 +58,8 @@ export interface DomainTypeSymbol {
   aggregate_ref?: string;
   constructors: string[];
   mutators: MutatorSymbol[];
+  /** The declared commands of the bound aggregate implemented without `&mut self`. */
+  immutable_commands: CommandReceiverSymbol[];
   has_default: boolean;
   defaults: { file: string; line: number }[];
   non_private_field_lines: number[];

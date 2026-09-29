@@ -67,7 +67,7 @@ F-03/F-04は[evaluators.ts](../../tools/ddd/lib/rules/rust/evaluators.ts)のrule
 
 旧設計の失敗範囲、upsertと冪等性、直前ID保持、初回成功と重複成功、サーガとアクターモデル、RDB選定、Streamsの順序保証も設計3文書で訂正した。具体的な戻り値やreplay宣言はT-03に残す。
 
-注記（2026-09-28）: replay宣言は後に[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。戻り値の契約（applied・already appliedの2種類の成功を表す `CommandOutcome`、拒否時のメソッド固有のエラー、複数イベントの1回の追記での保存）は2026-09-28に確定・実装した。[ドメイン層設計](domain-layer-design.ja.md)を参照する。上記の計測結果は変更していない。
+注記（2026-09-28）: replay宣言は後に[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。現在の契約は、一つのコマンドが一つのイベントを生むことである。Rustの状態を変えるメソッドは `&mut self` を取り、一つのメソッドが判断・状態遷移・イベントの返却を行う（イベントソーシングでは `Result<XxxEvent, XxxError>`、ステートソーシングでは `Result<(), XxxError>`）。TypeScriptのドメインメソッドは状態へ書き込まず、新しいインスタンスを返す（イベントソーシングでは `{ next, event }`）。`CommandOutcome` を返すのは `command-id-memory` のコマンドだけであり、成功は「適用」（その1件のイベントを持つ）と「適用済み」の2種類とする。拒否はメソッド固有のエラーで表して何も変えず、`store` は期待バージョンを照合してその1件のイベントを追記する。[ドメイン層設計](domain-layer-design.ja.md)と[ユースケース層設計 §5-6](use-case-layer-design.ja.md)を参照する。上記の計測結果は変更していない。
 
 ## 5. 旧タスク表の誤認を訂正した
 

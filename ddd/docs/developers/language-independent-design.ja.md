@@ -66,9 +66,9 @@ TypeScriptの表現設定は、集約・Entity・Domain Primitive・Value Object
 
 ## 4. 合意したTypeScriptの表現を保つ
 
-class方式は、JavaScriptの `#` プライベートフィールドで内部状態を隠します。構造体方式は、型と同名のコンパニオンオブジェクトを組み合わせます。インスタンスメソッドは返すオブジェクトの中、生成などのstatic相当の処理はコンパニオンに置きます。内部状態はクロージャで保持し、型ごとの非公開 `unique symbol` ブランドを付けます。
+class方式は、JavaScriptの `#` プライベートフィールドで内部状態を隠します。構造体方式は、型と同名のコンパニオンオブジェクトを組み合わせます。インスタンスメソッドは返すオブジェクトの中、生成などのstatic相当の処理はコンパニオンに置きます。内部状態はクロージャで保持し、型ごとの非公開 `unique symbol` ブランドを付けます。どちらの方式でもドメインメソッドは不変で、状態を書き換えず新しいインスタンスを返します。
 
-以下は、メソッド固有のエラーも含めて構造体方式の形を記録した例です。数値の範囲は例示用の業務規則で、すべてのカウンターに課す要件ではありません。ここに記したResult型は、実際には言語拡張用のinfrastructureに置く契約を表します。最終的な設定キーやモデルとコードの写像は、この例では定義しません。
+以下は、メソッド固有のエラーと、新しいインスタンスを返すコマンドも含めて構造体方式の形を記録した例です。数値の範囲は例示用の業務規則で、すべてのカウンターに課す要件ではありません。ここに記したResult型は、実際には言語拡張用のinfrastructureに置く契約を表します。最終的な設定キーやモデルとコードの写像は、この例では定義しません。
 
 ```ts
 type Result<T, E> =
@@ -81,35 +81,38 @@ const counterBrand: unique symbol = Symbol("Counter");
 
 export type Counter = {
   readonly [counterBrand]: true;
-  increment(): Result<void, IncrementCounterError>;
+  increment(): Result<Counter, IncrementCounterError>;
 };
+
+function counterOf(value: number): Counter {
+  return {
+    [counterBrand]: true,
+    increment() {
+      if (value === Number.MAX_SAFE_INTEGER) {
+        return { ok: false, error: "limit-reached" };
+      }
+      return { ok: true, value: counterOf(value + 1) };
+    },
+  };
+}
 
 export const Counter = {
   create(initialValue: number): Result<Counter, CreateCounterError> {
     if (!Number.isSafeInteger(initialValue) || initialValue < 0) {
       return { ok: false, error: "invalid-initial-value" };
     }
-    const state = { value: initialValue };
-    const instance: Counter = {
-      [counterBrand]: true,
-      increment() {
-        if (state.value === Number.MAX_SAFE_INTEGER) {
-          return { ok: false, error: "limit-reached" };
-        }
-        state.value += 1;
-        return { ok: true, value: undefined };
-      },
-    };
-    return { ok: true, value: instance };
+    return { ok: true, value: counterOf(initialValue) };
   },
 };
 ```
+
+`increment` は捕捉した値を読むだけで書き換えません。元のインスタンスは値を保ち、呼び出し側は返された新しいインスタンスを保持します。
 
 ブランドは、形を合わせただけのオブジェクトの通常の代入を防ぎます。コンパニオンによる生成を通過したという実行時の証明ではないため、型アサーションやコピーなどの迂回も検査します。状態隠蔽とは区別してください。TypeScriptの `private` 修飾子は型検査時の制限ですが、`#` フィールドは実行時にも非公開です。[クラスの可視性](https://www.typescriptlang.org/docs/handbook/2/classes.html#caveats)、[構造的な型の互換性](https://www.typescriptlang.org/docs/handbook/type-compatibility)、[unique symbol](https://www.typescriptlang.org/docs/handbook/symbols#unique-symbol)を参照してください。
 
 ## 5. 両言語で不変条件と状態の所有を守る
 
-readonlyを含め、ドメインの状態は非公開にします。Domain PrimitiveとValue Objectは不変とし、生成時に検証します。完全な生成経路を使い、空の状態を作ってからフィールドを埋める初期化や、検証を迂回する復元を禁止します。状態変更を宣言済みの業務操作または明示的なイベント適用に限定する規約と、domain/use-caseからのgetter呼び出し制限も維持します。ただし、ユースケース層で取得した値を業務判断に使わずリポジトリの引数へ受け渡す場合は、getterを利用できます。
+readonlyを含め、ドメインの状態は非公開にします。Domain PrimitiveとValue Objectは不変とし、生成時に検証します。完全な生成経路を使い、空の状態を作ってからフィールドを埋める初期化や、検証を迂回する復元を禁止します。状態の変更は宣言済みの業務コマンドと宣言済みのreplayメソッドに限定します。Rustでは状態を変更するメソッドが `&mut self` を取り、TypeScriptではドメインメソッドが状態を書き換えず新しいインスタンスを返し、ユースケースがそれを保存します。domain/use-caseからのgetter呼び出し制限も維持します。ただし、ユースケース層で取得した値を業務判断に使わずリポジトリの引数へ受け渡す場合は、getterを利用できます。
 
 ドメインの外部と可変な配列・オブジェクトの参照を共有しません。入力と出力で必要なコピーや不変化を行い、状態の所有を切り分けます。privateなフィールドやクロージャでも、外部に同じ可変参照が残れば状態を変更できます。Rustの所有権・明示的な共有と、TypeScriptの参照に対して、同じ契約を言語固有の方法で検査します。業務エラー時は操作前の状態を維持します。
 
@@ -121,7 +124,15 @@ readonlyを含め、ドメインの状態は非公開にします。Domain Primi
 
 予期しない実行時障害は、想定される業務拒否と区別します。破損履歴や未知スキーマからの復元、リポジトリの競合、通信障害、コミット結果不明については、既存の区別と処理方針を維持します。今回の合意で、すべての例外やpanicを一律禁止するわけではありません。
 
-TypeScriptのResult実装は言語拡張用のinfrastructureに置きます。特定ライブラリは選定せず、neverthrow・Effect・fp-tsとの個別統合は今回のスコープ外です。成功値はT-03で2026-09-28に確定しました。1件以上のイベントを宣言するコマンドでは、TypeScriptの `Result` の成功側を判別共用体 `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }` とし、言語拡張パッケージの `Result` の隣に宣言します。Rustでは `Result<CommandOutcome<E>, <メソッドのエラー>>` を返し、`enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` をinfrastructureの言語拡張クレートに置きます。appliedは状態を変更し、モデルの `events` がそのコマンドに宣言したイベントを1件以上持ちます。already-appliedは状態を変更せずイベント0件で、`command-id-memory` のコマンドが、モデルのretentionの範囲で記憶しているコマンドIDに対してだけ返します。イベントを宣言しないコマンドは `Result<void, E>` / `Result<(), E>` のままです。1コマンドの複数イベントは、期待バージョンを1回確認して1回の追記で保存します。戻り値の形を判定するセンサーはなく、レビューと振る舞いテストで確認します。[ドメイン層設計](domain-layer-design.ja.md)を参照してください。
+TypeScriptのResult実装は言語拡張用のinfrastructureに置きます。特定ライブラリは選定せず、neverthrow・Effect・fp-tsとの個別統合は今回のスコープ外です。成功値は2026-09-28にユーザーが確定しました（T-03-03）。1つのコマンドが生むイベントは多くとも1件で、モデルではコマンドの `event` がそれを指定します。イベントを返すのは状態が遷移したときだけです。
+
+| 永続化方式 | Rust（`&mut self`） | TypeScript（不変。新しいインスタンスを返す） |
+|---|---|---|
+| ステートソーシング | `Result<(), XxxError>`。重複は状態を変えずに `Ok(())` を返す | `Result<Invoice, XxxError>` |
+| イベントソーシング | `Result<XxxEvent, XxxError>` | `Result<{ next: Invoice; event: XxxEvent }, XxxError>` |
+| イベントソーシングで `command-id-memory` のコマンド | `Result<CommandOutcome<XxxEvent>, XxxError>` | `Result<CommandOutcome<Invoice, XxxEvent>, XxxError>` |
+
+Rustは `enum CommandOutcome<E> { Applied(E), AlreadyApplied }` をinfrastructureの言語拡張クレートに宣言します。TypeScriptは `CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } | { readonly kind: "already-applied" }` を言語拡張パッケージの `Result` の隣に宣言します。appliedは1件のイベント（TypeScriptでは新しいインスタンスも）を持ちます。already-appliedは状態を変更せずイベントを持たず、`command-id-memory` のコマンドが、モデルのretentionの範囲で記憶しているコマンドIDに対してだけ返します。Rustでは1つの `&mut self` メソッドが業務判断と状態遷移を行い、イベントを返します。イベントを返す判断専用の `&self` メソッドは生成しません。replayメソッドは保存済みイベントを適用するだけで、コマンドとは区別します。戻り値の形を判定するセンサーはなく、レビューと振る舞いテストで確認します。[ドメイン層設計](domain-layer-design.ja.md)を参照してください。
 
 ## 7. モジュール配置を選択し、統一する
 
@@ -185,7 +196,7 @@ T-09-09では、これら4つの形式を、該当成果物をすでに読んで
 
 ## 11. センサーの判定と実際の動作を両方検証する
 
-共通シナリオを先に定義し、各言語・対応する表現方式で実装します。既存のセンサー、配布物、導入、承認経路の検証も維持します。実アプリの振る舞いテストには、正常な状態変更、業務エラー時の状態保持、不正値の生成拒否、永続化後の復元を含めます。
+共通シナリオを先に定義し、各言語・対応する表現方式で実装します。既存のセンサー、配布物、導入、承認経路の検証も維持します。実アプリの振る舞いテストは、共通の7シナリオ（正常な状態変更、業務エラー時の状態保持、不正値の生成拒否、永続化後の復元、重複コマンドがalready appliedを返すこと、拒否されたコマンドが状態を保つこと、1コマンドにつき1件のイベントを追記すること）です。TypeScriptでは、コマンドが元のインスタンスを変えないことを加えます。これらのシナリオが現在検証するのは `class` × `event-sourcing`（replayなし）で、`state-sourcing` は振る舞いテストの対象から外れました。
 
 受入表はRustの2配置と、TypeScriptの2配置×2コード表現を対象にします。逆方向依存、command/query境界、型だけの依存、非公開パスやエイリアスによるアクセス、一括再公開、エラー型の不一致、検査不能、可変参照の漏出も検証します。各シナリオがどの集約実行モデルと永続化方式を検証するか記録します。選択軸の独立性を維持し、未検証の組み合わせを成功扱いにしません。
 

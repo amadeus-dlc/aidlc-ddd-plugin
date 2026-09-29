@@ -83,6 +83,41 @@ element_id の文法は変わりません。エラーIDは引き続き `error.<�
 
 コマンドの `schema.command-no-error` はそのままで、他の規則の意味も変わりません。
 
+## コマンドが生むただ1つのイベント
+
+1つのコマンドが生むイベントは多くても1つです。コマンドは、そのイベントを単一のキー `event: <イベントID>` で名指しします。状態を変えないコマンドはこのキーを書きません。イベントそのものは従来どおり集約の `events:` の一覧で定義し、その `produced_by` はそのコマンドを名指ししなければなりません。このキーは `schema_version: 2` に含まれ、そのために版の番号は上げていません。
+
+```yaml
+        commands:
+          - element_id: "command.invoice.issue"
+            name: "Issue"
+            aggregate: "aggregate.invoice"
+            effect: "transition"
+            state_effect: "none"
+            domain_errors:
+              - element_id: "error.invoice.issue.already-issued"
+                name: "AlreadyIssued"
+                operation: "command.invoice.issue"
+                condition: "請求書が下書き状態ではない。"
+            event: "event.invoice.issued"
+            idempotency:
+              strategy: "none"
+        events:
+          - element_id: "event.invoice.issued"
+            name: "Issued"
+            aggregate: "aggregate.invoice"
+            produced_by: "command.invoice.issue"
+```
+
+| 検査 | 拒否 |
+|---|---|
+| コマンドが、廃止した `events` の一覧を持たないこと | `schema.command-events`。文言は、単一の `event` キーでイベントを名指しするよう求める。一覧を自動で変換することはなく、移行も書き換えない |
+| コマンドの `event` が名指すイベントが、コマンド自身の集約にあること | `schema.event-link` |
+| コマンドの `event` が名指すイベントの `produced_by` が、そのコマンドであること | `schema.event-producer` |
+| モデル全体で、1つのコマンドが2つ以上のイベントの `produced_by` になっていないこと | `schema.event-producer` |
+
+JSON Schema の `domain-model.schema.json` と `domain-model-v2.schema.json` は、コマンドに任意の `event`（element_id）を与え、`events` は与えません。`ddd-domain-modeling` の通常の承認では、これらの拒否は `ddd-model-completeness` を通して `model-completeness.schema` としてゲートに届きます。
+
 ## 各形式をゲートがどう扱うか
 
 承認時に正規モデルを読み込む経路はいずれも `schema_version: 2` を読み込みます。version 1 のままの文書に対しては、経路ごとの規則で読込失敗を報告します。

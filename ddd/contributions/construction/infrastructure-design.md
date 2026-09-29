@@ -34,9 +34,8 @@ Add these question topics, and follow the conventions while designing:
   repository's `store` behaves, which follows the `persistence_method` of the
   aggregate in `ddd-aggregate-mapping`: a `state-sourcing` aggregate is saved
   with `store` as an `upsert` that checks the expected version it was read at;
-  an `event-sourcing` aggregate appends its events with `store` as
-  `insert-only`. When a command raises several events, check the expected
-  version once and save them in one append.
+  an `event-sourcing` aggregate appends the one event of each command with
+  `store` as `insert-only`, after checking the expected version.
 - **RMU.** Each read-model updater bridges the command side to the query side;
   it may depend on both. State the unit it keeps events in order for as
   `ordering_scope` (`aggregate`, `item` or `none`) and how it drops an event it

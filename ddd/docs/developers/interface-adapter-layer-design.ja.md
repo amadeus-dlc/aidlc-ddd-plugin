@@ -38,7 +38,7 @@ RMUはコマンド側のインターフェイスアダプタ層やクエリ側�
 
 担当集約単体またはその集合を扱い、集約の一部や担当外の集約を保存しない。基本動詞は `find_by_id`、`store`、`delete_by_id`。担当集約の追加検索は許すが、画面検索はDAOへ分ける。`store` の再保存・競合・追記はユースケース層設計 §5-1に従う。
 
-`store` の意味は、実装写像にある集約の `persistence_method` から宣言する（infrastructure-designは `ddd-aggregate-mapping` を必須ではない入力として使う）。`state-sourcing` の集約の `store` は期待バージョン付きの `upsert`、`event-sourcing` の集約の `store` は `insert-only`（追記のみ）とする。一つのコマンドが複数イベントを生む場合は、期待バージョンを一度だけ照合し、一回の追記でまとめて保存する。
+`store` の意味は、実装写像にある集約の `persistence_method` から宣言する（infrastructure-designは `ddd-aggregate-mapping` を必須ではない入力として使う）。`state-sourcing` の集約の `store` は期待バージョン付きの `upsert`、`event-sourcing` の集約の `store` は `insert-only`（追記のみ）とする。一つのコマンドが生むイベントは高々1件であり、`store` は期待バージョンを照合してその1件を追記し、バージョンを1つ進める。バージョンの競合で拒否した `store` は何も保存しない。
 
 初期実装はin-memoryとし、競合や障害を含むポート契約をテストする。DTOからの復元は完全コンストラクタを通す。replayはドメイン層設計 §6に従い、任意の復元バイパスを許さない。
 
@@ -77,4 +77,4 @@ CQRS分離、ポートの責務、復元、RMU、外部モデルとの境界変�
 
 ## 10. 後続の詳細設計
 
-方式別の項目は[T-03](completion-tasks.ja.md)で確定した。省略可能なRMU項目 `ordering_scope` と `dedup`（§7）、保存方式ごとの `store` の意味（§5）である。遅延・欠番・順序逆転とreplayの意味的な正しさは本文のレビューで扱い、センサーでは証明しない。宣言と明示されたRust型の照合は[T-02](../users/rust-sensor-contract.ja.md)で実装した。未検証の方式を実装済みと表示しない。
+方式別の項目は、省略可能なRMU項目 `ordering_scope` と `dedup`（§7）、保存方式ごとの `store` の意味（§5）である。遅延・欠番・順序逆転とreplayの意味的な正しさは本文のレビューで扱い、センサーでは証明しない。宣言と明示されたRust型の照合は[T-02](../users/rust-sensor-contract.ja.md)で実装した。未検証の方式を実装済みと表示しない。

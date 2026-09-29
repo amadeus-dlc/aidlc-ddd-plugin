@@ -25,7 +25,11 @@ export interface ParamFact {
 /**
  * State a body writes: a member of `this` it assigns, updates or deletes, or a binding the body
  * captures from outside itself rather than declares — assigned, updated or deleted through, or, when
- * it is closure state, changed by an array, `Map` or `Set` changing method.
+ * it is closure state, changed by a call of an array, `Map` or `Set` changing method. Such a call on
+ * the binding itself is a write when the type the binding states is such a collection or it states
+ * none, as a binding through destructuring does; on a binding stating any other type it is not. On
+ * one member `state.m` of the binding it is a write only when the type the binding states gives `m`
+ * such a type; the same call on anything else is not a write.
  */
 export interface WriteFact {
   readonly target: "this" | "captured";

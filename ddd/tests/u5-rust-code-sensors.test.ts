@@ -30,7 +30,7 @@ bounded_contexts:
             transitions: [transition.invoice.issue]
             domain_errors:
               - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, operation: command.invoice.issue, condition: not draft }
-            events: [event.invoice.issued]
+            event: event.invoice.issued
             idempotency: { strategy: none }
         events:
           - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }
@@ -194,6 +194,21 @@ describe("ddd-rust-domain", () => {
     expect(runSensor("domain", proj).rules).toContain("b");
   });
 
+  test.each(["&self", "self", "mut self"])(
+    "reports the declared command taking %s on its declaration (b)",
+    (receiver) => {
+      const lib = `${DOMAIN_CLEAN.replace(
+        "pub fn issue(&mut self) {}",
+        `pub fn issue(${receiver}) -> Result<InvoiceEvent, IssueInvoiceError> {\n        Ok(InvoiceEvent::Issued)\n    }`,
+      )}pub enum InvoiceEvent {\n    Issued,\n}\npub enum IssueInvoiceError {\n    AlreadyIssued,\n}\n`;
+      const declaredAt = lib.split("\n").findIndex((line) => line.includes("pub fn issue(")) + 1;
+      const proj = buildProject([{ path: "packages/domain/billing-domain", name: "billing-domain", lib }]);
+      const result = runSensor("domain", proj);
+      expect(result.located).toEqual([`b@${declaredAt}`]);
+      expect(result.pass).toBe(false);
+    },
+  );
+
   test("reports a getter call (d)", () => {
     const lib = `${DOMAIN_CLEAN}\npub fn peek(inv: &Invoice) -> i64 { inv.total() }\n`;
     const proj = buildProject([{ path: "packages/domain/billing-domain", name: "billing-domain", lib }]);
@@ -220,6 +235,15 @@ describe("ddd-rust-domain", () => {
     const result = runSensor("domain", proj);
     expect(result.pass).toBe(true);
     expect(result.note ?? "").toContain("domain-modeling is SKIP");
+  });
+
+  test("the note under a skipped model lists (b) among the checks it skips", () => {
+    const proj = buildProject([{ path: "packages/domain/billing-domain", name: "billing-domain", lib: DOMAIN_CLEAN }], {
+      stageStatus: "- [S] ddd-domain-modeling — SKIP",
+    });
+    const skipped = /\(([^)]*)\) skipped/.exec(runSensor("domain", proj).note ?? "")?.[1];
+    expect(skipped).toBeDefined();
+    expect((skipped ?? "").split(",").map((entry) => entry.trim())).toContain("b");
   });
 });
 

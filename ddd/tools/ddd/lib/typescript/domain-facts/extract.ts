@@ -110,7 +110,7 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
     const typed = api.isPropertyDeclaration(node) || api.isPropertySignature(node) || api.isParameter(node);
     const signature =
       api.isMethodDeclaration(node) || api.isMethodSignature(node) || api.isConstructorDeclaration(node);
-    const body = api.isMethodDeclaration(node) && node.body ? bodyEffects(api, node) : null;
+    const body = api.isMethodDeclaration(node) && node.body ? bodyEffects(api, file, node) : null;
     return [
       {
         ...spelled,

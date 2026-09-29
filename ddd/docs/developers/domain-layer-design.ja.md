@@ -52,18 +52,26 @@ ID必須化には、手順の指示、登録済み成果物、参照センサー
 
 - フィールドは非公開とし、読み取り専用の公開フィールドも許さない。
 - 不変条件を満たす完全コンストラクタで生成する。空生成からの段階的初期化や復元時の検査迂回を禁止する。
-- 単なるsetterを禁止する。変更は宣言済みの業務コマンド、または明示されたイベント適用経路に限定する。
-- VOとDomain Primitiveは不変とする。RustのEntity・Aggregateでは排他的な `&mut self` による業務操作を許す。
+- 単なるsetterを禁止する。状態の変更は宣言済みの業務コマンド、または宣言済みのreplayメソッドに限定する。
+- VOとDomain Primitiveは両言語で不変とする。RustのEntity・Aggregateで状態を変更するメソッドは `&mut self` を取る。TypeScriptのドメインメソッドはすべて不変で、状態を書き換えず新しいインスタンスを返す。
 - Domain Serviceは状態と永続化責務を持たず、ドメインの判断を担う。
 - getterの定義は許すが、ドメイン層・ユースケース層からの呼出しは制限する。I/O変換を担うインターフェイスアダプタ層では使える。業務判断を返すメソッドはgetterと区別する。
 - 業務エラーを返すコマンドは、呼出し前の状態を保持し、途中変更を残さない。
 - `RefCell` 等で未宣言の業務変更を隠さない。キャッシュ等との区別はレビューで行う。
 
-イベントソーシングでは業務判断とイベント適用を分離する。従来の「1コマンド1イベント」は、状態を変更する初回成功時の基本形とする。拒否時と、安全に重複を吸収した場合は新規イベント0件である。戻り値の契約はT-03で2026-09-28に確定した。1件以上のイベントを宣言するコマンドの成功は2種類ある。「適用済み（applied）」は状態を変更し、1件以上のイベントを持つ。「適用済みの再受信（already applied）」は状態を変更せず、イベントは0件である。拒否はメソッド固有のエラー型で表す。Rustは `Result<CommandOutcome<E>, <メソッドのエラー>>` を返し、`enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` をinfrastructureの言語拡張クレートに置く。TypeScriptは同等の判別共用体を使う（[言語非依存設計](language-independent-design.ja.md)を参照）。appliedの新しい状態は、コマンドを呼び出した集約そのものであり、その場で変更される。結果が持つのはイベントだけである。already appliedを返すのは `idempotency.strategy: command-id-memory` のコマンドに限り、モデルのretentionの範囲で記憶しているコマンドIDに対して返す。拒否したコマンドのIDは記憶しない。`strategy: none` のコマンドでは、再実行を自身のエラーで拒否するか、状態遷移なしで終えるかを `re_execution_basis` に記す。イベントを宣言しないコマンドは `Result<(), E>` のままとする。1コマンドが複数イベントを生む場合も、モデルの `events` がそのコマンドに宣言したイベントだけを返す。期待バージョンの確認は1回とし、すべてを1回の追記で保存する。
+1コマンド1イベントとする。1つのコマンドが2件以上のイベントを生むことはない。モデルでは、コマンドが自身の1件のイベントを `event` で指定する。状態を変更しないコマンドは `event` を書かない。イベントを返すのは状態が遷移したときだけである。拒否時はメソッド固有のエラー型を返して状態を変更せず、安全に吸収した重複はイベントを生まない。これらの原則は2026-09-28にユーザーが確定した（T-03-03）。1コマンドに複数イベントを許し、TypeScriptでその場の変更を許したT-03-02の契約を置き換える。
 
-ステートソーシングの更新結果は `Result<(), E>` を基本とする。ドメインイベントは任意であり、保存方式を理由に禁止しない。CQSを使う際も、更新結果・新状態・生成イベントを返す操作の契約を明示する。
+Rust: 状態を変更するメソッドは `&mut self` を取る。1つの `&mut self` メソッドが業務判断と状態遷移を行い、イベントを返す。状態を変えずにイベントだけを返す `&self` のメソッド（判断専用）は生成しない。
 
-保存済みイベントのreplayは新たな業務判断を行わない。ただし破損・未知のスキーマを無条件に受け入れるという意味ではない。検出時は復元を中断して報告・隔離する。`apply` 等の名前だけを正当な復元経路の証拠にしない。
+| 永続化方式 | Rust | TypeScript |
+|---|---|---|
+| ステートソーシング | `Result<(), XxxError>`。重複は状態を変えずに `Ok(())` を返す | 新しいインスタンスを返す `Result<Invoice, XxxError>` |
+| イベントソーシング | `Result<XxxEvent, XxxError>` | `Result<{ next: Invoice; event: XxxEvent }, XxxError>` |
+| イベントソーシングで `idempotency.strategy: command-id-memory` のコマンド | `Result<CommandOutcome<XxxEvent>, XxxError>`。`enum CommandOutcome<E> { Applied(E), AlreadyApplied }` | `Result<CommandOutcome<Invoice, XxxEvent>, XxxError>`。`CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } \| { readonly kind: "already-applied" }` |
+
+TypeScriptのドメインメソッドは不変で、状態を書き換えず新しいインスタンスを返す。ユースケースはコマンドが返した新しいインスタンスを保存する。`CommandOutcome` はinfrastructureの言語拡張クレート・パッケージに置く（[言語非依存設計](language-independent-design.ja.md)を参照）。already appliedを返すのは `command-id-memory` のコマンドに限り、モデルのretentionの範囲で記憶しているコマンドIDに対して返す。拒否したコマンドのIDは記憶しない。`strategy: none` のコマンドでは、再実行を自身のエラーで拒否するか、状態遷移なしで終えるかを `re_execution_basis` に記す。コマンドの保存では期待バージョンを確認し、その1件のイベントを追記する。
+
+保存済みイベントから集約を再構築するreplayメソッド（`replay_methods`）は、イベントを状態へ適用するだけで業務判断を行わず、コマンドとは区別する。ただし破損・未知のスキーマを無条件に受け入れるという意味ではない。検出時は復元を中断して報告・隔離する。`apply` 等の名前だけを正当な復元経路の証拠にしない。
 
 ## 7. 外側の層との境界契約
 
@@ -105,7 +113,7 @@ composition rootは結線のため、この表の外に置く。層は名前・�
 | 規則 | 現在の検査 | 限界・残作業 |
 |---|---|---|
 | a | structの公開フィールド | Rust構文として検出できる範囲 |
-| b | モデルに宣言されない変更メソッド | 別ファイル・traitも照合。replayは明示宣言との一致で許可 |
+| b | モデルに宣言されない `&mut self` メソッドと、`&self`・`self`・`mut self` で実装された宣言済みコマンド（型が集約に一意に結び付き、モデルがある場合） | 別ファイル・traitも照合。replayは明示宣言との一致で許可。戻り値の形は判定しない。TypeScriptの規則bは異なり、ドメイン型の非staticなインスタンスメソッドによる状態の書き込みをすべて所見にする |
 | c / n | 生成箇所、Default、後付け初期化、復元呼出し | FactoryRuleの前提条件の意味は検証しない |
 | d | 明示型で特定した受信側のgetter | 推論が必要な受信側は未検査の注記 |
 | e | ID解決と廃止・置換関係 | 通常承認へ接続済み。単独完了の制約あり |
@@ -131,6 +139,12 @@ composition rootは結線のため、この表の外に置く。層は名前・�
 
 ## 12. T-03で確定した実装契約
 
-replay経路は[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。applied・already applied・拒否を区別する戻り値と、複数イベントの扱いは、6章のとおり2026-09-28に確定した。戻り値の形を判定するセンサーはない。TypeScriptのドメイン事実は戻り値型を持たず、Rustの事実は型別名を解決せず、返すバリアントも記録しないためである。したがって戻り値の形、宣言済みイベントだけを返すこと、1回の追記で保存することは、レビューと振る舞いテストで確認する。TypeScriptとRustで共通の振る舞いシナリオには、重複コマンドがalready appliedを返すこと、拒否されたコマンドが状態を保つこと、複数イベントを1回の追記で保存することを含む。
+replay経路は[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。6章の戻り値の契約と1コマンド1イベントの原則は、2026-09-28に確定した（T-03-03）。
+
+モデルのローダーは、`schema_version: 2` のまま（版は上げない）1コマンド1イベントを強制する。旧来の `events` の一覧を持つコマンド（`schema.command-events`。単一の `event` キーへの書き換えを案内する）、`produced_by` が別のコマンドを指す `event`（`schema.event-producer`）、コマンドの集約に無い `event`（`schema.event-link`）、モデル内で2件以上のイベントの `produced_by` になっているコマンド（`schema.event-producer`）を拒否する。両方のJSON Schemaも合わせた。
+
+メソッドの形はセンサーが強制する。TypeScriptの規則bは、ドメイン型の非staticなインスタンスメソッドが状態を書き込めば、すべて所見にする。対象は `#` フィールド・`this` のメンバー・クロージャが捕捉した状態への代入と、状態に持つコレクションへのpush・set・add・delete等の変更呼出しである。モデルがコマンドと宣言しているか、写像がreplayと宣言しているか、モデルがあるかどうかを問わない。Rustの規則bは、`&self`・`self`・`mut self` で実装された宣言済みコマンドも報告する。戻り値の形を判定するセンサーはない。TypeScriptのドメイン事実は戻り値型を持たず、Rustの事実は型別名を解決せず、返すバリアントも記録しないため、判定すると誤検知が出るからである。戻り値の形とイベントが1件であることは、レビューと振る舞いテストで確認する。
+
+TypeScriptとRustで共通の振る舞いシナリオは7件である。状態変更、業務エラー時の状態保持、不正値の拒否、永続化後の復元、重複コマンドがalready appliedを返すこと、拒否されたコマンドが状態を保つこと、1コマンドにつき1件のイベントを追記することである。TypeScriptでは、コマンドが元のインスタンスを変えないことを加える。
 
 actor/class混在のフローでは、集約写像で対象集約のいずれかが `actor` であれば、ユースケースに `multi_aggregate_strategy.kind: process-manager` を宣言する。class集約だけが対象なら `process-manager` と `re-execution` のどちらも選べる。[ユースケース層設計](use-case-layer-design.ja.md)と[残作業](completion-tasks.ja.md)を参照する。

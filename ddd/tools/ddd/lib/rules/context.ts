@@ -21,6 +21,9 @@ import { buildProgram, collectRustSources, PROGRAM_LAYERS } from "./rust/program
 import { buildSymbolTable } from "./rust/symbols.ts";
 import type { InspectionContext, InspectionTarget, ModelAvailability } from "./types.ts";
 
+/** The checks of the Rust gates that read the model: a skipped or absent model leaves them unchecked. */
+const RUST_MODEL_DEPENDENT_CHECKS = ["b", "h", "c-model", "n-model"] as const;
+
 export interface SensorConfig {
   sensor_id: string;
   target_layers: readonly Layer[];
@@ -163,7 +166,7 @@ export function assembleContext(
   const workspace = scanWorkspace(workspaceRoot);
   const assignments = assignLayers(workspace);
 
-  const availability = readModelAvailability(run);
+  const availability = readModelAvailability(run, RUST_MODEL_DEPENDENT_CHECKS);
   const model: ModelAvailability = availability.model;
   findings.push(...availability.findings);
 

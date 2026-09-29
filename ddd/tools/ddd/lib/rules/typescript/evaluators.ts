@@ -1,7 +1,8 @@
 /**
- * TypeScript rule evaluators of the domain gate: undeclared mutation (b), incomplete construction
- * (c), getter calls (d) and domain packaging, each in the words the Rust domain gate reports them
- * in. State hiding (a) is in `state-hiding.ts` and the dependency direction (g) in `edges.ts`.
+ * TypeScript rule evaluators of the domain gate: mutation (b), incomplete construction (c), getter
+ * calls (d) and domain packaging. Rules (c) and (d) and packaging are reported in the words the Rust
+ * domain gate reports them in; (b) is not, since a TypeScript domain method changes no state at all.
+ * State hiding (a) is in `state-hiding.ts` and the dependency direction (g) in `edges.ts`.
  * Getter calls (d) are decided the same way over a use-case source, where a getter result handed
  * unchanged to a repository port is the one call the rule permits. What the rules of every gate read
  * off a file's facts is in `file-facts.ts`, and the binding of a type to a model aggregate in
@@ -25,21 +26,17 @@ import type { FindingInput } from "../../shared/findings.ts";
 import {
   type CallFact,
   COLLECTION_MUTATORS,
+  isCollectionType,
   type Span,
   type TypeScriptFileFacts,
 } from "../../typescript/domain-facts/index.ts";
-import { toKebab } from "../lists.ts";
-import { classifyMutation, declaredReplayEventNames } from "../mutations.ts";
-import type { MutatorSymbol } from "../types.ts";
-import { aggregateBinding, aggregateMappings, locatedAt } from "./aggregate-binding.ts";
+import { POST_INIT } from "../lists.ts";
 import { factsOf, receiverType } from "./file-facts.ts";
 import { modulePathOf, PACKAGE_MANIFEST, packageSources, posixRelative, type TsPackage } from "./packages.ts";
 import { isPortDeclaration, resolveConstructedType, resolveDeclaredType, resolveTypeName, within } from "./symbols.ts";
 import type { TsDomainType, TsInspection, TsMethod, TsTarget } from "./types.ts";
 
-// --- (b) undeclared mutation and (c) post-init --------------------------------------------------
-
-const COLLECTION_TYPE = /^(?:Array|Map|Set)\s*<|\[\]$/;
+// --- (b) mutation and (c) post-init --------------------------------------------------------------
 
 /**
  * Whether a class method changes state: it writes state, or it calls a changing method of a field
@@ -53,78 +50,30 @@ function mutates(type: TsDomainType, method: TsMethod, calls: readonly CallFact[
       return false;
     const field = /^this\.(#?[A-Za-z_$][\w$]*)$/.exec((call.receiver_text ?? "").replace(/\s+/g, ""))?.[1];
     const member = field === undefined ? undefined : type.members.find((entry) => entry.name === field);
-    return member?.kind === "property" && COLLECTION_TYPE.test((member.type_text ?? "").trim());
+    return member?.kind === "property" && member.type_text !== undefined && isCollectionType(member.type_text);
   });
 }
 
-/** Whether the one parameter of a declared replay method is the declared event's domain type. */
-function isReplay(inspection: TsInspection, type: TsDomainType, method: TsMethod, aggregate?: string): boolean {
-  const names = declaredReplayEventNames(
-    method.name,
-    method.params.length,
-    aggregate,
-    inspection.model,
-    aggregateMappings(inspection),
-    locatedAt(type),
-  );
-  const stated = method.params[0]?.type_text;
-  if (!names || stated === undefined) return false;
-  const resolved = resolveTypeName(
-    inspection.packages,
-    inspection.symbols,
-    method.file,
-    factsOf(inspection, method.file),
-    stated,
-  );
-  if (resolved.kind !== "domain") return false;
-  const event = resolved.type;
-  return (
-    event.pkg.root === type.pkg.root &&
-    inspection.symbols.types.filter((entry) => entry.pkg.root === event.pkg.root && entry.name === event.name)
-      .length === 1 &&
-    names.includes(event.name)
-  );
-}
-
-interface TypeMutators {
-  readonly type: TsDomainType;
-  readonly slug: string;
-  readonly mutators: readonly MutatorSymbol[];
-}
-
-/** The mutating methods of the domain types declared in `file`, each classified against the model. */
-function mutatorsIn(inspection: TsInspection, file: string): TypeMutators[] {
-  const calls = factsOf(inspection, file).calls;
-  return inspection.symbols.types
-    .filter((type) => type.file === file)
-    .map((type) => {
-      const binding = aggregateBinding(inspection, type);
-      const mutators = type.methods
-        .filter((method) => mutates(type, method, calls))
-        .map((method) =>
-          classifyMutation(
-            { name: method.name, file, line: method.span.start_line },
-            binding.aggregate,
-            inspection.model,
-            isReplay(inspection, type, method, binding.aggregate),
-            binding.ambiguous,
-          ),
-        );
-      return { type, slug: binding.aggregate?.slice("aggregate.".length) ?? toKebab(type.name), mutators };
-    });
-}
-
+/**
+ * A TypeScript domain method returns a new instance instead of changing the one it is called on,
+ * so every instance method that changes state is a finding, whether or not the model declares it
+ * as a command or the mapping as a replay, and whether or not the model is available. A post-init
+ * method is left to rule (c), which reports it as an incomplete construction.
+ */
 export function ruleB(inspection: TsInspection, target: TsTarget): FindingInput[] {
-  return mutatorsIn(inspection, target.file).flatMap(({ type, slug, mutators }) =>
-    mutators
-      .filter((mutator) => mutator.classification === "undeclared")
-      .map((mutator) => ({
-        rule_id: "b",
-        file: target.file,
-        message: `mutating method ${type.name}.${mutator.method_name} is not declared as command.${slug}.${mutator.command_slug}`,
-        line: mutator.line,
-      })),
-  );
+  const calls = factsOf(inspection, target.file).calls;
+  return inspection.symbols.types
+    .filter((type) => type.file === target.file)
+    .flatMap((type) =>
+      type.methods
+        .filter((method) => !POST_INIT.has(method.name) && mutates(type, method, calls))
+        .map((method) => ({
+          rule_id: "b",
+          file: target.file,
+          message: `domain method ${type.name}.${method.name} changes the state of its instance; a TypeScript domain method returns a new instance instead`,
+          line: method.span.start_line,
+        })),
+    );
 }
 
 // --- (c) incomplete construction -----------------------------------------------------------------
@@ -157,13 +106,16 @@ export function ruleC(inspection: TsInspection, target: TsTarget): FindingInput[
       line: site.span.start_line,
     });
   }
-  for (const { type, mutators } of mutatorsIn(inspection, target.file))
-    for (const mutator of mutators.filter((entry) => entry.classification === "post-init"))
+  // A post-init method is decided from its name and its write alone, whatever the model or the
+  // mapping says of its type, so no binding or replay declaration takes it out of (c).
+  const calls = facts.calls;
+  for (const type of inspection.symbols.types.filter((entry) => entry.file === target.file))
+    for (const method of type.methods.filter((entry) => POST_INIT.has(entry.name) && mutates(type, entry, calls)))
       findings.push({
         rule_id: "c",
         file: target.file,
-        message: `domain type ${type.name} has a post-init method ${mutator.method_name} (c-post-init)`,
-        line: mutator.line,
+        message: `domain type ${type.name} has a post-init method ${method.name} (c-post-init)`,
+        line: method.span.start_line,
       });
   return findings;
 }

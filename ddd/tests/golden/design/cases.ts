@@ -39,7 +39,7 @@ bounded_contexts:
             transitions: [transition.invoice.issue]
             domain_errors:
               - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, operation: command.invoice.issue, condition: not draft }
-            events: [event.invoice.issued]
+            event: event.invoice.issued
             idempotency: { strategy: none }
         events:
           - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }
@@ -66,6 +66,17 @@ const M_LEGACY = M.replace("schema_version: 2", "schema_version: 1")
   .replace(FACTORY_ERRORS, "")
   .replaceAll("operation: command.", "command: command.");
 
+/** The retired list form of a command's event, which the loader refuses with a pointer to `event`. */
+const M_COMMAND_EVENTS = M.replace(
+  "            event: event.invoice.issued\n",
+  "            events: [event.invoice.issued]\n",
+);
+/** A second event naming the same command as its producer: one command may produce at most one event. */
+const SECOND_ISSUE_EVENT = "event.invoice.sent";
+const M_TWO_EVENTS = M.replace(
+  "        transitions:\n",
+  `          - { element_id: ${SECOND_ISSUE_EVENT}, name: Sent, aggregate: aggregate.invoice, produced_by: command.invoice.issue }\n        transitions:\n`,
+);
 const M_NO_INV = M.replace(/ {8}invariants:\n {10}- \{[^\n]*\}\n/, "");
 const M_NO_TRANS = M.replace("transitions: [transition.invoice.issue]", "transitions: []").replace(
   / {8}transitions:\n {10}- \{[^\n]*\}\n/,
@@ -117,6 +128,7 @@ const IDS = [
 ];
 const MD = md(IDS, "The money amount must be non-negative.");
 const MD_NO_INV = md(IDS.slice(0, 4).concat(IDS.slice(4)));
+const MD_TWO_EVENTS = md([...IDS, SECOND_ISSUE_EVENT], "The money amount must be non-negative.");
 const MD_NO_TRANS = md(
   IDS.filter((id) => id !== "transition.invoice.issue"),
   "The money amount must be non-negative.",
@@ -300,6 +312,22 @@ const RAW_DESIGN_CASES: GoldenCase[] = [
     stage: "ddd-domain-modeling",
     output: MODEL_PATH,
     files: { [MODEL_PATH]: M_LEGACY, [MD_PATH]: MD },
+    expect: { pass: false, rules: ["model-completeness.schema"] },
+  },
+  {
+    sensor: "ddd-model-completeness",
+    name: "violation-command-events-list",
+    stage: "ddd-domain-modeling",
+    output: MODEL_PATH,
+    files: { [MODEL_PATH]: M_COMMAND_EVENTS, [MD_PATH]: MD },
+    expect: { pass: false, rules: ["model-completeness.schema"] },
+  },
+  {
+    sensor: "ddd-model-completeness",
+    name: "violation-command-two-events",
+    stage: "ddd-domain-modeling",
+    output: MODEL_PATH,
+    files: { [MODEL_PATH]: M_TWO_EVENTS, [MD_PATH]: MD_TWO_EVENTS },
     expect: { pass: false, rules: ["model-completeness.schema"] },
   },
   {

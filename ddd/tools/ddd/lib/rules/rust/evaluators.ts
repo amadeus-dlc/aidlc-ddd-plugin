@@ -8,7 +8,7 @@ import type { CallFact, ParamFact, RustFileFacts, Span } from "../../rust/domain
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
-import type { DomainTypeSymbol, InspectionContext, InspectionTarget } from "../types.ts";
+import type { CommandReceiverSymbol, DomainTypeSymbol, InspectionContext, InspectionTarget } from "../types.ts";
 import { evaluateDomainPackaging } from "./packaging.ts";
 import { within as withinSpan } from "./program.ts";
 
@@ -58,11 +58,29 @@ function ruleA(target: InspectionTarget, context: InspectionContext): FindingInp
   );
 }
 
-// --- (b) undeclared mutation ------------------------------------------------
+/** How a finding spells a receiver that is not `&mut self`. */
+const RECEIVER_TEXT: Readonly<Record<CommandReceiverSymbol["receiver"], string>> = {
+  "ref-self": "&self",
+  self: "self by value",
+  other: "a receiver other than &mut self",
+};
+
+// --- (b) undeclared mutation, and a command that does not borrow mutably ----
 function ruleB(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.file) return [];
   const out: FindingInput[] = [];
   for (const symbol of context.symbols.types) {
+    for (const command of symbol.immutable_commands) {
+      if (command.file !== target.file) continue;
+      out.push(
+        finding(
+          "b",
+          target.file,
+          `declared command ${symbol.type_name}::${command.method_name} takes ${RECEIVER_TEXT[command.receiver]}; a command changes the aggregate's state and takes &mut self`,
+          command.line,
+        ),
+      );
+    }
     for (const mutator of symbol.mutators) {
       if (mutator.file !== target.file) continue;
       if (mutator.classification === "undeclared") {

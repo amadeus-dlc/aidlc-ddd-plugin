@@ -52,18 +52,26 @@ A hand-written loader performs runtime validation. JSON Schema documents the con
 
 - Keep fields private, including read-only fields.
 - Construct through full constructors that satisfy invariants. Prohibit empty construction followed by incremental initialization and validation bypass during restoration.
-- Prohibit plain setters. Limit mutation to declared business commands or explicit event-application paths.
-- Keep value objects and Domain Primitives immutable. Rust Entities and aggregates may perform exclusive business operations through `&mut self`.
+- Prohibit plain setters. Limit state changes to declared business commands or declared replay methods.
+- Keep value objects and Domain Primitives immutable in both languages. In Rust, a method of an Entity or aggregate that changes state takes `&mut self`. In TypeScript, every domain method is immutable: it never writes state and returns a new instance.
 - Domain Services make domain decisions without owning state or persistence responsibilities.
 - Getter definitions are allowed, but calls from domain and use-case layers are restricted. The Interface Adapter layer may use them for I/O conversion. Distinguish decision methods from getters.
 - Commands returning business errors preserve their pre-call state and leave no partial mutation.
 - Do not hide undeclared business mutations with `RefCell` or similar mechanisms. Review the distinction from caches.
 
-In event sourcing, separate business decisions from event application. The earlier “one command, one event” convention is the baseline for an initial state-changing success. Rejection and safely absorbed duplicates produce zero new events. T-03 decided the return contract on 2026-09-28. A command that declares one or more events returns two kinds of success: "applied" changes the state and carries one or more events; "already applied" leaves the state unchanged and carries zero events. Rejection is the method-specific error type. Rust returns `Result<CommandOutcome<E>, <method error>>` with `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` in the infrastructure language-extensions crate; TypeScript uses the equivalent discriminated union described in the [language-independent design](language-independent-design.md). The new state of "applied" is the aggregate the command was called on, which it mutates in place; the outcome carries only the events. Only an `idempotency.strategy: command-id-memory` command returns "already applied", for a command ID still remembered under the model's retention; a refused command's ID is not remembered. For a `strategy: none` command, `re_execution_basis` states whether a repeat is refused with the command's own error or is a no-op of the state transition. A command that declares no event keeps `Result<(), E>`. When one command produces several events, they are only events the model's `events` declares for that command; the expected version is checked once and all of them are saved in one append.
+One command, one event: a command never produces more than one event. In the model, a command names its one event with `event`; a command that changes no state writes no `event`. An event is returned only when the state transitions. Rejection returns the method-specific error type and leaves the state unchanged, and a safely absorbed duplicate produces no event. These principles were confirmed by the user on 2026-09-28 (T-03-03) and replace the T-03-02 contract that allowed several events per command and in-place mutation in TypeScript.
 
-For state sourcing, the baseline update result is `Result<(), E>`. Domain events are optional, not prohibited by the persistence strategy. When using CQS, explicitly define contracts for operations returning update results, new state, or generated events.
+Rust: a method that changes state takes `&mut self`. One `&mut self` method makes the business decision, performs the state transition, and returns the event; no `&self` method that returns an event without changing state (decide-only) is generated.
 
-Replay of persisted events performs no new business decisions. This does not require accepting corrupt or unknown schemas: abort restoration, report the problem, and isolate it. Names such as `apply` alone are not evidence of a valid restoration path.
+| Persistence | Rust | TypeScript |
+|---|---|---|
+| State sourcing | `Result<(), XxxError>`; a duplicate returns `Ok(())` without changing state | `Result<Invoice, XxxError>` returning the new instance |
+| Event sourcing | `Result<XxxEvent, XxxError>` | `Result<{ next: Invoice; event: XxxEvent }, XxxError>` |
+| Event sourcing, `idempotency.strategy: command-id-memory` | `Result<CommandOutcome<XxxEvent>, XxxError>` with `enum CommandOutcome<E> { Applied(E), AlreadyApplied }` | `Result<CommandOutcome<Invoice, XxxEvent>, XxxError>` with `CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } \| { readonly kind: "already-applied" }` |
+
+TypeScript domain methods are immutable: they never write state and return a new instance, which the use case stores. `CommandOutcome` belongs to the infrastructure language-extensions crate or package; see the [language-independent design](language-independent-design.md). Only a `command-id-memory` command returns "already applied", for a command ID still remembered under the model's retention; a refused command's ID is not remembered. For a `strategy: none` command, `re_execution_basis` states whether a repeat is refused with the command's own error or is a no-op of the state transition. Persisting a command checks the expected version and appends its one event.
+
+Replay methods (`replay_methods`) that rebuild the aggregate from persisted events only apply an event to state; they make no business decision and are distinct from commands. This does not require accepting corrupt or unknown schemas: abort restoration, report the problem, and isolate it. Names such as `apply` alone are not evidence of a valid restoration path.
 
 ## 7. Contracts with outer layers
 
@@ -105,7 +113,7 @@ The composition root is outside this table because it performs wiring. Determine
 | Rule | Current check | Limits and remaining work |
 |---|---|---|
 | a | Public struct fields | Detectable Rust syntax. |
-| b | Mutation methods not declared in the model | Matches across files and traits; permits replay only through explicit declaration matching. |
+| b | `&mut self` methods not declared in the model, and a declared command (type bound unambiguously to an aggregate, model available) implemented with `&self`, `self` or `mut self` | Matches across files and traits; permits replay only through explicit declaration matching. Does not judge return shapes. The TypeScript rule b differs: any state write by a non-static instance method of a domain type is a finding. |
 | c / n | Construction sites, Default, incremental initialization, restoration calls | Does not verify the meaning of FactoryRule preconditions. |
 | d | Getter calls on explicitly identified receiver types | Notes unexamined receivers requiring inference. |
 | e | ID resolution, retirement, replacement | Connected to normal approval; standalone completion has limits. |
@@ -131,6 +139,12 @@ TypeScript is the agreed next language after shared contracts, Rust improvements
 
 ## 12. Implementation contracts decided in T-03
 
-Replay declarations are implemented as [replay_methods](../users/rust-sensor-contract.md). The return contract distinguishing "applied", "already applied", and rejection, and the handling of multiple events, were decided on 2026-09-28 as described in section 6. No sensor judges the return shape: the TypeScript domain facts carry no return type, and the Rust facts resolve no type alias and record no returned variant. The return shape, the use of declared events only, and the single append are therefore covered by review and behavior tests. The shared behavior scenarios for TypeScript and Rust include a duplicate command returning "already applied", a rejected command keeping its state, and several events saved in one append.
+Replay declarations are implemented as [replay_methods](../users/rust-sensor-contract.md). The return contract and the one-command-one-event principle in section 6 were confirmed on 2026-09-28 (T-03-03).
+
+The model loader enforces one event per command in `schema_version: 2` (the version is not raised). It refuses a command that still has the old `events` list (`schema.command-events`, guiding the author to the single `event` key); an `event` whose `produced_by` names another command (`schema.event-producer`); an `event` not on the command's aggregate (`schema.event-link`); and a command that is the `produced_by` of two or more events anywhere in the model (`schema.event-producer`). Both JSON Schemas match.
+
+Sensors enforce the method shape. The TypeScript rule b reports every non-static instance method of a domain type that writes state — assignment to a `#` field, a `this` member or captured closure state, or a changing call such as push, set, add or delete on a collection held in state — whether or not the model declares it a command or the mapping a replay, and whether or not the model is available. The Rust rule b additionally reports a declared command implemented with `&self`, `self` or `mut self`. No sensor judges the return shape: the TypeScript domain facts carry no return type, and the Rust facts resolve no type alias and record no returned variant, so a check would produce false positives. The return shape and the single event are covered by review and behavior tests.
+
+The shared behavior scenarios for TypeScript and Rust are seven: state change, business error keeping state, invalid value rejected, restoration after persistence, a duplicate command returning "already applied", a rejected command keeping its state, and one event appended per command. TypeScript adds a command keeping the original instance.
 
 For mixed actor/class flows, a use case whose target aggregates include any `actor` aggregate in the aggregate mapping must declare `multi_aggregate_strategy.kind: process-manager`. Class-only targets may choose `process-manager` or `re-execution`. See the [use-case design](use-case-layer-design.md) and [remaining work](completion-tasks.md).

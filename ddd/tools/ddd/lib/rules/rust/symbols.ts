@@ -1,8 +1,8 @@
 /** Domain summaries joined across explicitly resolved Rust declarations and impls. */
 import type { MethodFact } from "../../rust/domain-facts/index.ts";
 import { toKebab } from "../lists.ts";
-import { bindAggregate, classifyMutation, declaredReplayEventNames } from "../mutations.ts";
-import type { DomainSymbolTable, DomainTypeSymbol, ModelAvailability } from "../types.ts";
+import { bindAggregate, classifyMutation, declaredReplayEventNames, isDeclaredCommand } from "../mutations.ts";
+import type { CommandReceiverSymbol, DomainSymbolTable, DomainTypeSymbol, ModelAvailability } from "../types.ts";
 import type { RustAggregateMapping } from "./mapping.ts";
 import type { LocatedMethod, RustProgram, RustType } from "./program.ts";
 
@@ -69,6 +69,15 @@ export function buildSymbolTable(
           binding.ambiguous,
         ),
       );
+    // An ambiguous binding is noted, and decides no command; nor does a type bound to no aggregate.
+    const immutable_commands = binding.ambiguous
+      ? []
+      : type.methods.flatMap((entry): CommandReceiverSymbol[] => {
+          const receiver = entry.method.receiver;
+          if (receiver !== "ref-self" && receiver !== "self" && receiver !== "other") return [];
+          if (!isDeclaredCommand(entry.method.name, aggregate, model)) return [];
+          return [{ file: entry.file, method_name: entry.method.name, receiver, line: entry.method.line }];
+        });
     const defaults = type.methods
       .filter((entry) => entry.trait === "Default" || entry.trait?.endsWith("::Default"))
       .map((entry) => ({ file: entry.file, line: entry.method.line }));
@@ -83,6 +92,7 @@ export function buildSymbolTable(
       aggregate_ref: aggregate,
       constructors,
       mutators,
+      immutable_commands,
       has_default: defaults.length > 0,
       defaults,
       non_private_field_lines: type.fields.filter((field) => field.visibility !== "private").map((field) => field.line),

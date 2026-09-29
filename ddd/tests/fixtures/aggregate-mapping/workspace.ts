@@ -80,7 +80,7 @@ export function canonicalModelYaml(version: ModelVersion): string {
     "            domain_errors:",
     error("error.invoice.issue.already-issued", "AlreadyIssued", "command.invoice.issue", "請求書が下書き状態ではない。"),
     error("error.invoice.issue.empty-lines", "EmptyLines", "command.invoice.issue", "請求明細が一件もない。"),
-    "            events: [event.invoice.issued]",
+    "            event: event.invoice.issued",
     "            idempotency: { strategy: none }",
     "          - element_id: command.invoice.cancel",
     "            name: Cancel",
