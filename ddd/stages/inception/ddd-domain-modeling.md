@@ -82,8 +82,11 @@ and `ddd-layer-boundaries.md` before writing the model.
 ### Step 2: Discover Domain Events
 
 For each story, list the domain events in the past tense and record the Command
-and actor that produces each. Keep the story → event → command → aggregate trace
-in the questions file.
+and actor that produces each. One Command produces at most one event, and a
+Command that changes no state produces none: when a story seems to need two
+events from one Command, split the Command, or read the second fact from the
+state (being settled follows from the paid amount; it is not an event). Keep the
+story → event → command → aggregate trace in the questions file.
 
 ### Step 3: Derive Aggregate Candidates
 
@@ -106,7 +109,7 @@ Confirmation before writing the model.
 
 ### Step 5: Write the Canonical Model
 
-Write canonical data in exactly one labelled YAML code block in `ddd-domain-model-yaml.md`. Explanatory text may surround it, but do not add a second YAML block. Use the U1 format with `schema_version: 2`, Bounded Contexts, aggregates, elements, invariants, commands, errors, events, transitions, construction rules, and lineage. In that format every operation owns its own Domain Errors: a Domain Error names the Command or the Factory Rule it belongs to under `operation`, and a Factory Rule declares its own `domain_errors` rather than borrowing a Command's.
+Write canonical data in exactly one labelled YAML code block in `ddd-domain-model-yaml.md`. Explanatory text may surround it, but do not add a second YAML block. Use the U1 format with `schema_version: 2`, Bounded Contexts, aggregates, elements, invariants, commands, errors, events, transitions, construction rules, and lineage. In that format every operation owns its own Domain Errors: a Domain Error names the Command or the Factory Rule it belongs to under `operation`, and a Factory Rule declares its own `domain_errors` rather than borrowing a Command's. A Command names the one event it produces under `event` (a single event ID), and that event names the Command back under `produced_by`; a Command that changes no state writes no `event`. The loader refuses a Command that still lists `events`, an `event` whose `produced_by` names another Command or that is not on the Command's aggregate, and a Command that is the `produced_by` of two or more events.
 Derive the human-facing `ddd-domain-model.md` from these data, with Sources, Overview, Bounded Context, Aggregate, Process Manager, Lineage, Derivation, Self-check, and Open questions sections. Update split, merge, and deletion lineage on reruns.
 
 ### Step 6: Self-check

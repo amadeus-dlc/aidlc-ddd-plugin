@@ -133,7 +133,7 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/domainError" }
         },
-        "events": { "type": "array", "items": { "$ref": "#/$defs/elementId" } },
+        "event": { "$ref": "#/$defs/elementId" },
         "idempotency": { "$ref": "#/$defs/idempotency" }
       }
     },

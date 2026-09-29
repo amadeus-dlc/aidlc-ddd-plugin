@@ -31,7 +31,7 @@ bounded_contexts:
             transitions: [transition.invoice.issue]
             domain_errors:
               - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, operation: command.invoice.issue, condition: not draft }
-            events: [event.invoice.issued]
+            event: event.invoice.issued
             idempotency: { strategy: none }
         events:
           - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }

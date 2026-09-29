@@ -83,6 +83,41 @@ Two of these checks are new and also apply to version 1 documents, so a legacy m
 
 Commands keep `schema.command-no-error`, and every other rule keeps its existing meaning.
 
+## The one event a command produces
+
+One command produces at most one event. A command names that event with the single key `event: <event id>`; a command that changes no state omits the key. The event itself is still defined in the aggregate's `events:` list, which is unchanged, and its `produced_by` must name the command. This key is part of `schema_version: 2`, whose number is not bumped for it.
+
+```yaml
+        commands:
+          - element_id: "command.invoice.issue"
+            name: "Issue"
+            aggregate: "aggregate.invoice"
+            effect: "transition"
+            state_effect: "none"
+            domain_errors:
+              - element_id: "error.invoice.issue.already-issued"
+                name: "AlreadyIssued"
+                operation: "command.invoice.issue"
+                condition: "The invoice is not in the draft state."
+            event: "event.invoice.issued"
+            idempotency:
+              strategy: "none"
+        events:
+          - element_id: "event.invoice.issued"
+            name: "Issued"
+            aggregate: "aggregate.invoice"
+            produced_by: "command.invoice.issue"
+```
+
+| Check | Refusal |
+|---|---|
+| A command does not carry the retired `events` list | `schema.command-events` — the message tells you to name the event with the single `event` key. The list is not converted for you, and no migration rewrites it |
+| The event a command's `event` names is on the command's own aggregate | `schema.event-link` |
+| The `produced_by` of the event a command's `event` names is that command | `schema.event-producer` |
+| No command is the `produced_by` of two or more events anywhere in the model | `schema.event-producer` |
+
+The JSON Schemas `domain-model.schema.json` and `domain-model-v2.schema.json` give a command an optional `event` (an element id) and no `events`. At the normal approval of `ddd-domain-modeling`, these refusals reach the gate through `ddd-model-completeness` as `model-completeness.schema`.
+
 ## What the gates do with each format
 
 Every path that loads the canonical model during a gate loads `schema_version: 2`, and reports a document still in version 1 as a load failure under its own rule:

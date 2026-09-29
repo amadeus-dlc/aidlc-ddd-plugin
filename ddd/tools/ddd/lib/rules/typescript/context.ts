@@ -46,6 +46,12 @@ import { type TsGate, type TsInspection, type TsTarget, Undecided } from "./type
 
 const NO_TYPESCRIPT_CLAIM = "no typescript sources claimed";
 
+/**
+ * The checks of the TypeScript gates that read the model. Rule (b) is not one: a TypeScript domain
+ * method writes no state whether or not the model declares it as a command.
+ */
+const TYPESCRIPT_MODEL_DEPENDENT_CHECKS = ["h", "c-model", "n-model"] as const;
+
 type InspectionResult =
   | { readonly kind: "empty"; readonly note: string }
   /** Claims that name no domain source, with what they still report: unowned files, layer diagnostics. */
@@ -128,7 +134,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext, gate: TsGate
   }
   const claimedPackages = [...packages.values()];
   const skippedNote = skipped > 0 ? `${skipped} non-target files skipped` : undefined;
-  const availability = readModelAvailability(run);
+  const availability = readModelAvailability(run, TYPESCRIPT_MODEL_DEPENDENT_CHECKS);
   findings.push(...availability.findings);
   if (targets.length === 0) {
     const reported = [...findings, ...(gate.reports_layer_diagnostics ? layerDiagnostics(claimedPackages) : [])];
@@ -182,7 +188,6 @@ export function assembleTypeScriptInspection(run: SensorRunContext, gate: TsGate
 
   const mapping = loadMappingView(run.record_dir, "typescript");
   const notes = new Set<string>();
-  if (mapping.kind === "invalid") notes.add("replay.disabled: aggregate mapping is invalid");
   const noteParts = [skippedNote, availability.model.note].filter((part): part is string => part !== undefined);
   return {
     kind: "ready",

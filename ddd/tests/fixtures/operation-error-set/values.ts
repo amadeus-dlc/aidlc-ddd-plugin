@@ -104,7 +104,6 @@ export function model(): DomainModel {
                   domainError(ALREADY_ISSUED, "AlreadyIssued", ISSUE),
                   domainError(EMPTY_LINES, "EmptyLines", ISSUE),
                 ],
-                events: [],
                 idempotency: { strategy: "none" },
               },
             ],

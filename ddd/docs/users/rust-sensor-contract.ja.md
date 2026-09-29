@@ -2,7 +2,7 @@
 
 [English](rust-sensor-contract.md) | 日本語
 
-更新: 2026-09-13、T-02。変更先は `ddd/` の解析器、規則、テスト、生成手順、文書に限定した。第三者のフレームワーク配布物は変更していない。
+更新: 2026-09-13、T-02。変更先は `ddd/` の解析器、規則、テスト、生成手順、文書に限定した。第三者のフレームワーク配布物は変更していない。2026-09-28、T-03-03: 規則bは、`&mut self` を取らない宣言済みのコマンドも報告するようになった（[宣言したコマンドは &mut self を取る](#宣言したコマンドは-mut-self-を取る)を参照）。
 
 ## 名前の一致と、型の対応を区別する
 
@@ -10,7 +10,7 @@
 |---|---|
 | h: executeへの集約引数 | 正規モデルのAggregate.root_elementと対応するドメイン型だけを集約として検出。VO・Domain Primitive・同名の別型は区別する |
 | i: 別ユースケース呼出し | 受信側を特定し、use-case層の具象型が持つinherent executeへの呼出しを検出。ポートtrait、他層の型、自分自身の同じ型への呼出しは区別する |
-| b: 未宣言の変更 | クレート・モジュールを含む型の識別子でstruct/enumとimplを結び付ける。別ファイル・trait実装の変更も、実際のファイルと行で報告する |
+| b: 未宣言の変更、または `&mut self` を取らない宣言済みのコマンド | クレート・モジュールを含む型の識別子でstruct/enumとimplを結び付ける。別ファイル・trait実装の変更も、実際のファイルと行で報告する。宣言したコマンドを実装するメソッドが `&mut self` を取らない場合も報告する |
 | d: getter呼出し | 特定した受信側のドメイン型が持つgetterを調べる。同じ名前の別型のメソッドは違反扱いしない。self自身への呼出しは対象外。ユースケース層では、リポジトリ引数への未加工の受け渡しを証明できる呼出しも許可する |
 
 集約のRust型は、モデルのルート要素の名前または安定IDからのPascalCaseで対応付ける。同名候補が複数ある場合は集約写像のcrate/moduleで特定し、それでも決まらなければ `model.unresolved` を残す。VOに集約と同名のコマンドメソッドを付けても、可変操作を許可する根拠にはならない。
@@ -71,6 +71,22 @@ code:
 名前をapplyやreplayへ変えるだけでは許可されない。逆に、以上の条件を満たせば別ファイルのimplでも許可する。メソッド本体が正しくイベントを適用するかは、レビューと動作テストで確認する。
 
 設計センサーもreplay_methodsの形式とevent_refの参照を検査する。書式が壊れたリストを黙って省略しない。
+
+## 宣言したコマンドは &mut self を取る
+
+コマンドは集約の状態を変えるため、それを実装するメソッドは `&mut self` を取る。規則bは、宣言したコマンドでも宣言したreplayメソッドでもない `&mut self` のメソッドを、従来と同じ文言で引き続き報告する。加えて、宣言したコマンドを実装するメソッドが別の受信側を取る場合も、メソッドの宣言行に報告する。
+
+| 受信側 | 文言 |
+|---|---|
+| `&self` | `declared command Invoice::issue takes &self; a command changes the aggregate's state and takes &mut self` |
+| `self` | `declared command Invoice::issue takes self by value; a command changes the aggregate's state and takes &mut self` |
+| `mut self` などそれ以外 | `declared command Invoice::issue takes a receiver other than &mut self; a command changes the aggregate's state and takes &mut self` |
+
+これを判定するのは、型が正規モデルの集約へ一意に結び付き、モデルが利用できるときだけである。結び付きが曖昧なとき（`model.unresolved`）、モデルがSKIP/absentのとき、型がどの集約にも結び付かないときは、受信側を判定しない。
+
+受信側が従う規約は次のとおりである。state sourcingでは、コマンドは `Result<(), XxxError>` を返し、重複は何も変えずに `Ok(())` を返す。event sourcingでは `Result<XxxEvent, XxxError>` を返し（1コマンドに1イベント）、`idempotency.strategy` が `command-id-memory` のコマンドだけが `enum CommandOutcome<E> { Applied(E), AlreadyApplied }` を使い `Result<CommandOutcome<XxxEvent>, XxxError>` を返す。1つの `&mut self` のメソッドが判断し、遷移し、イベントを返す。判断だけを行う `&self` のメソッドは置かず、拒否では何も変えない。replayメソッドはイベントを適用するだけで、コマンドとは別のメソッドである。
+
+この戻り値の形（`Result<XxxEvent, …>`、`CommandOutcome`、イベントの `Vec` のいずれを返すか）はセンサーが判定しない。Rustの事実は型エイリアスを解決せず、返すバリアントも記録しないため、事実から判定すると誤検出を避けられない。レビューと振る舞いテストに任せる。
 
 ## 未検査の箇所を残す
 

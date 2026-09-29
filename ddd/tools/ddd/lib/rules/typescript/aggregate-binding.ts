@@ -8,11 +8,11 @@ import type { AggregateMappingView } from "../../aggregate-mapping/index.ts";
 import { bindAggregate } from "../mutations.ts";
 import type { TsDomainType, TsInspection } from "./types.ts";
 
-export function aggregateMappings(inspection: TsInspection): readonly AggregateMappingView[] {
+function aggregateMappings(inspection: TsInspection): readonly AggregateMappingView[] {
   return inspection.mapping.kind === "loaded" ? inspection.mapping.view.aggregates : [];
 }
 
-export function locatedAt(type: TsDomainType) {
+function locatedAt(type: TsDomainType) {
   return (mapping: AggregateMappingView) =>
     mapping.package === type.pkg.name && mapping.module.join("/") === type.module.join("/");
 }

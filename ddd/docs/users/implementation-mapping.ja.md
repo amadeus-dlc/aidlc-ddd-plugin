@@ -133,7 +133,7 @@ domain_packages:
 | functional-design の Process Manager 要否と実行モデルの判定 | `ddd-mapping-declarations` | 写像を対象とする `mapping-declarations.document` |
 | infrastructure-design の保存意味の判定 | `ddd-design-advisories` | 助言 `design-advisories.store-upsert`（保存意味を判定できない） |
 | ドメインパッケージ検査 | `ddd-rust-domain`、`ddd-typescript-domain` | `domain-packaging.declaration` |
-| 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`、`ddd-typescript-domain`、`ddd-typescript-use-case`、`ddd-typescript-interface-adapter` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
+| 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
 
 写像が存在しないことと、存在するが読めないことは別の事実です。functional-design では、写像が各対象集約の `programming_model` を与えます。
 

@@ -67,7 +67,7 @@ Documentation cleanup preserved rule IDs while separating conventions, automated
 
 The three layer designs also corrected failure scope, upsert/idempotency, last-ID retention, first versus duplicate success, sagas and actors, relational database selection, and Streams ordering. At that point concrete return values and replay declarations remained T-03 work.
 
-Note (2026-09-28): replay declarations were later implemented as [replay_methods](../users/rust-sensor-contract.md). The return contract (`CommandOutcome` with "applied" and "already applied" success, method-specific errors on rejection, and several events saved in one append) was decided and implemented on 2026-09-28; see the [domain-layer design](domain-layer-design.md). The measurements above are unchanged.
+Note (2026-09-28): replay declarations were later implemented as [replay_methods](../users/rust-sensor-contract.md). The current contract is one event per command. Rust state-changing methods take `&mut self`, and one method decides, changes the state, and returns the event (`Result<XxxEvent, XxxError>` under event sourcing, `Result<(), XxxError>` under state sourcing); TypeScript domain methods write no state and return a new instance (`{ next, event }` under event sourcing). Only a `command-id-memory` command returns `CommandOutcome` with "applied" (carrying its one event) or "already applied" success. Rejection is the method-specific error and changes nothing, and `store` checks the expected version and appends that one event. See the [domain-layer design](domain-layer-design.md) and [use-case-layer design §5-6](use-case-layer-design.md). The measurements above are unchanged.
 
 ## 5. Errors in the old task list were corrected
 

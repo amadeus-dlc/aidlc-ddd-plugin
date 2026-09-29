@@ -17,8 +17,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { ScenarioReport } from "./fixtures/typescript-behavior/sample-runner.ts";
-import { BEHAVIOR_SCENARIOS } from "./fixtures/typescript-behavior/scenarios.ts";
+import { SAMPLE_SCENARIOS, type ScenarioReport } from "./fixtures/typescript-behavior/sample-runner.ts";
+import { BEHAVIOR_SCENARIOS, TYPESCRIPT_SCENARIOS } from "./fixtures/typescript-behavior/scenarios.ts";
 import { type GenerationSample, generationSamples } from "./fixtures/typescript-generation/samples.ts";
 
 const MAPPING_PATH = "inception/domain-design/ddd-aggregate-mapping.md";
@@ -106,11 +106,11 @@ for (const sample of generationSamples()) {
       expect(
         run.reports?.map((report) => report.id),
         childOutput(run),
-      ).toEqual(BEHAVIOR_SCENARIOS.map((scenario) => scenario.id));
+      ).toEqual(SAMPLE_SCENARIOS.map((scenario) => scenario.id));
       expect(run.exitCode, childOutput(run)).toBe(0);
     });
 
-    for (const scenario of BEHAVIOR_SCENARIOS)
+    for (const scenario of SAMPLE_SCENARIOS)
       test(`${scenario.id}: ${scenario.description}`, () => {
         const report = run.reports?.find((candidate) => candidate.id === scenario.id);
         if (report === undefined) throw new Error(`no result for ${scenario.id}\n${childOutput(run)}`);
@@ -119,9 +119,9 @@ for (const sample of generationSamples()) {
 
     // The behavior record names the execution model and persistence method each scenario exercises;
     // they are the ones the sample's own mapping declares.
-    test("declares the class programming model and state-sourcing persistence it is exercised under", () => {
+    test("declares the class programming model and event-sourcing persistence it is exercised under", () => {
       expect(mappingValue(sample, "programming_model")).toBe("class");
-      expect(mappingValue(sample, "persistence_method")).toBe("state-sourcing");
+      expect(mappingValue(sample, "persistence_method")).toBe("event-sourcing");
     });
   });
 }
@@ -134,8 +134,12 @@ test("the behavior scenarios are the seven the shared design requires", () => {
     "restore-after-persistence",
     "duplicate-command-already-applied",
     "rejected-command-keeps-state",
-    "multiple-events-one-append",
+    "one-event-appended-per-command",
   ]);
+});
+
+test("TypeScript adds the one scenario of a language whose domain methods return a new instance", () => {
+  expect(TYPESCRIPT_SCENARIOS.map((scenario) => scenario.id)).toEqual(["command-keeps-original-instance"]);
 });
 
 test("the behavior runs cover both code representations under both module layouts", () => {

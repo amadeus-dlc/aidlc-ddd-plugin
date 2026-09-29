@@ -8,11 +8,13 @@
  * only where it is visible, so a callback parameter of the same name elsewhere in the body does not
  * hide a captured binding, and a name bound through destructuring is found too. A captured binding
  * an enclosing function declares is closure state; one declared at the top of the file is module
- * state. A write to any captured binding is recorded; a call of an array, `Map` or `Set` changing
- * method on closure state is recorded as a write to it; and only a member of `this` or closure state,
- * or closure state itself, counts as state a getter returns. No name is resolved further than that,
- * so a write through an alias of `this` or through a value handed in is not state the body is
- * recorded to write.
+ * state. A write to any captured binding is recorded. A call of a method named as an array, `Map` or
+ * `Set` changing method is recorded as a write to closure state when the types written in the file
+ * say it is called on such a collection: on the binding itself when the type it states is one or it
+ * states none, or on one member of it the type it states gives such a type. Only a member of `this`
+ * or closure state, or closure state itself, counts as state a getter returns. No name is resolved
+ * further than that, so a write through an alias of `this` or through a value handed in is not state
+ * the body is recorded to write.
  */
 
 import type ts from "typescript";
@@ -78,8 +80,9 @@ function isAssignment(api: CompilerApi, kind: ts.SyntaxKind): boolean {
 }
 
 /**
- * The methods an array, a `Map` or a `Set` changes itself through. Called on closure state, they
- * change that state as an assignment to it would.
+ * The methods an array, a `Map` or a `Set` changes itself through. Called on state such a collection
+ * is, they change that state as an assignment to it would; on any other value, a method of the same
+ * name is that value's own and may return a new value instead.
  */
 export const COLLECTION_MUTATORS: ReadonlySet<string> = new Set([
   "push",
@@ -97,35 +100,139 @@ export const COLLECTION_MUTATORS: ReadonlySet<string> = new Set([
   "clear",
 ]);
 
-/** The identifier an access chain `a.b[c].d` starts from, or undefined when it starts elsewhere. */
-function rootIdentifier(api: CompilerApi, expression: ts.Expression): ts.Identifier | undefined {
-  let current = unwrap(api, expression);
-  while (api.isPropertyAccessExpression(current) || api.isElementAccessExpression(current))
-    current = unwrap(api, current.expression);
-  return api.isIdentifier(current) ? current : undefined;
+const COLLECTION_TYPE = /^(?:Array|Map|Set)\s*<|\[\]$/;
+
+/** Whether a type, as the source spells it, is an array, a `Map` or a `Set`. */
+export function isCollectionType(text: string): boolean {
+  return COLLECTION_TYPE.test(text.trim());
 }
 
 /**
- * Whether `identifier`, as written inside `fn`, is closure state: bound by an enclosing function
- * rather than by `fn` itself or at the top of the file, where it is module state shared by every
- * instance.
+ * The binding of `identifier`, as written inside `fn`, when it is closure state: bound by an
+ * enclosing function rather than by `fn` itself or at the top of the file, where it is module state
+ * shared by every instance.
  */
-function isClosureState(api: CompilerApi, fn: ts.Node, identifier: ts.Identifier): boolean {
+function closureStateBinding(api: CompilerApi, fn: ts.Node, identifier: ts.Identifier): ts.Node | undefined {
   const found = nearestBinding(api, identifier, identifier.text);
-  return found !== undefined && !api.isSourceFile(found.scope) && !within(fn, found.scope);
+  return found !== undefined && !api.isSourceFile(found.scope) && !within(fn, found.scope) ? found.binding : undefined;
+}
+
+/**
+ * The type a binding states for its own name: a parameter or a variable annotation. A name bound
+ * through destructuring takes one part of the stated type, not the type itself, so it states none.
+ */
+function statedTypeOf(api: CompilerApi, binding: ts.Node): ts.TypeNode | undefined {
+  if (!api.isParameter(binding) && !api.isVariableDeclaration(binding)) return undefined;
+  if (!api.isIdentifier(binding.name)) return undefined;
+  return binding.type;
+}
+
+function propertyNameText(api: CompilerApi, name: ts.PropertyName | undefined): string | undefined {
+  if (name && (api.isIdentifier(name) || api.isStringLiteral(name) || api.isNumericLiteral(name))) return name.text;
+  return undefined;
+}
+
+/**
+ * The members of the type `name` a type literal alias or interfaces declare at the top of the file,
+ * seen from `from`. Undefined when a type parameter or a declaration nearer to `from` holds the name,
+ * when the top of the file declares it otherwise, or declares it not at all: those types are not
+ * spelled here.
+ */
+function topLevelTypeMembers(api: CompilerApi, from: ts.Node, name: string): readonly ts.TypeElement[] | undefined {
+  for (let scope: ts.Node | undefined = from.parent; scope; scope = scope.parent) {
+    if (
+      (api.isFunctionLike(scope) ||
+        api.isClassLike(scope) ||
+        api.isInterfaceDeclaration(scope) ||
+        api.isTypeAliasDeclaration(scope)) &&
+      scope.typeParameters?.some((parameter) => parameter.name.text === name)
+    )
+      return undefined;
+    if (!api.isBlock(scope) && !api.isSourceFile(scope) && !api.isModuleBlock(scope) && !api.isCaseClause(scope))
+      continue;
+    const declarations = scope.statements.filter(
+      (statement) =>
+        (api.isTypeAliasDeclaration(statement) ||
+          api.isInterfaceDeclaration(statement) ||
+          api.isClassDeclaration(statement) ||
+          api.isEnumDeclaration(statement)) &&
+        statement.name?.text === name,
+    );
+    if (declarations.length === 0) continue;
+    if (!api.isSourceFile(scope)) return undefined;
+    const members: ts.TypeElement[] = [];
+    for (const declaration of declarations) {
+      if (api.isInterfaceDeclaration(declaration)) members.push(...declaration.members);
+      else if (api.isTypeAliasDeclaration(declaration) && api.isTypeLiteralNode(declaration.type))
+        members.push(...declaration.type.members);
+      else return undefined;
+    }
+    return members;
+  }
+  return undefined;
+}
+
+/**
+ * The type the stated type `type` of the binding `binding` gives its member `name`: `type` is a
+ * type literal, or one name without type arguments of a type the top of the file declares, and it
+ * holds exactly one member of that name, a property signature. Undefined otherwise.
+ */
+function memberTypeOf(api: CompilerApi, binding: ts.Node, type: ts.TypeNode, name: string): ts.TypeNode | undefined {
+  const members = api.isTypeLiteralNode(type)
+    ? type.members
+    : api.isTypeReferenceNode(type) && !type.typeArguments && api.isIdentifier(type.typeName)
+      ? topLevelTypeMembers(api, binding, type.typeName.text)
+      : undefined;
+  if (members === undefined) return undefined;
+  const named = members.filter((member) => propertyNameText(api, member.name) === name);
+  return named.length === 1 && api.isPropertySignature(named[0]) ? named[0].type : undefined;
+}
+
+/**
+ * The closure state a call of a changing method on `receiver` writes: the closure-state binding
+ * itself, when the type it states is an array, a `Map` or a `Set` or it states none; or the binding
+ * owning a member `binding.member`, when the type the binding states gives that member such a type.
+ * What the stated types do not decide — a member of a binding whose type is not spelled here, a
+ * longer access chain, an element access — is not recorded, as a class field whose type is not
+ * stated is not.
+ */
+function changedClosureState(
+  api: CompilerApi,
+  file: ts.SourceFile,
+  fn: ts.Node,
+  receiver: ts.Expression,
+): ts.Identifier | undefined {
+  const target = unwrap(api, receiver);
+  if (api.isIdentifier(target)) {
+    const binding = closureStateBinding(api, fn, target);
+    if (binding === undefined) return undefined;
+    const type = statedTypeOf(api, binding);
+    return type === undefined || isCollectionType(type.getText(file)) ? target : undefined;
+  }
+  if (!api.isPropertyAccessExpression(target)) return undefined;
+  const owner = unwrap(api, target.expression);
+  if (!api.isIdentifier(owner)) return undefined;
+  const binding = closureStateBinding(api, fn, owner);
+  const type = binding === undefined ? undefined : statedTypeOf(api, binding);
+  if (binding === undefined || type === undefined) return undefined;
+  const member = memberTypeOf(api, binding, type, target.name.text);
+  return member !== undefined && isCollectionType(member.getText(file)) ? owner : undefined;
 }
 
 /** Whether `expression` is state read off `this` or off closure state, or closure state itself. */
 function isStateRead(api: CompilerApi, fn: ts.Node, expression: ts.Expression): boolean {
   const read = unwrap(api, expression);
-  if (api.isIdentifier(read)) return isClosureState(api, fn, read);
+  if (api.isIdentifier(read)) return closureStateBinding(api, fn, read) !== undefined;
   if (!api.isPropertyAccessExpression(read)) return false;
   const owner = unwrap(api, read.expression);
-  return owner.kind === api.SyntaxKind.ThisKeyword || (api.isIdentifier(owner) && isClosureState(api, fn, owner));
+  return (
+    owner.kind === api.SyntaxKind.ThisKeyword ||
+    (api.isIdentifier(owner) && closureStateBinding(api, fn, owner) !== undefined)
+  );
 }
 
 /** What the body of `fn` writes, and whether it only returns state. A function without a body does neither. */
-export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): BodyEffects {
+export function bodyEffects(api: CompilerApi, file: ts.SourceFile, fn: ts.FunctionLikeDeclaration): BodyEffects {
   const body = fn.body;
   if (!body) return { writes: [], returns_state_only: false };
   const writes = new Map<string, WriteFact>();
@@ -146,9 +253,8 @@ export function bodyEffects(api: CompilerApi, fn: ts.FunctionLikeDeclaration): B
       api.isPropertyAccessExpression(node.expression) &&
       COLLECTION_MUTATORS.has(node.expression.name.text)
     ) {
-      const root = rootIdentifier(api, node.expression.expression);
-      if (root && isClosureState(api, fn, root))
-        writes.set(`captured\u0000${root.text}`, { target: "captured", name: root.text });
+      const changed = changedClosureState(api, file, fn, node.expression.expression);
+      if (changed) writes.set(`captured\u0000${changed.text}`, { target: "captured", name: changed.text });
     }
     api.forEachChild(node, visit);
   };
@@ -247,9 +353,5 @@ export function nearestBinding(
 export function bindingTypeOf(api: CompilerApi, file: ts.SourceFile, from: ts.Node, name: string): string | undefined {
   const found = nearestBinding(api, from, name);
   if (!found) return undefined;
-  const binding = found.binding;
-  if (!api.isParameter(binding) && !api.isVariableDeclaration(binding)) return undefined;
-  // A name bound through destructuring takes one part of the stated type, not the type itself.
-  if (!api.isIdentifier(binding.name)) return undefined;
-  return binding.type?.getText(file);
+  return statedTypeOf(api, found.binding)?.getText(file);
 }

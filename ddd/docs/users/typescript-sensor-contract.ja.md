@@ -2,7 +2,7 @@
 
 [English](typescript-sensor-contract.md) | 日本語
 
-更新: 2026-09-27、T-11-03。TypeScript のソースは、3つのコード生成ゲートが判定する。各ゲートは、同じ層の Rust のゲートと同じ規則 ID を同じ意味で報告する。
+更新: 2026-09-28、T-03-03。TypeScript のソースは、3つのコード生成ゲートが判定する。各ゲートは、同じ層の Rust のゲートと同じ規則 ID を同じ意味で報告する。ただし、ドメインゲートの規則 b だけは意味が異なる（[後述](#ドメインゲートの規則)）。
 
 | ゲート | 判定するもの | 対応する Rust のゲート | 規則 |
 |---|---|---|---|
@@ -35,14 +35,16 @@
 | 規則 | class | companion |
 |---|---|---|
 | a: 公開された状態 | `#` フィールドではない、static でないすべてのプロパティ（パラメータプロパティを含む）。`private`、`protected`、`readonly` は compiler が消去するため、フィールドを隠さない。メソッドは操作であり、static メンバーは class オブジェクトに属する。文言: `public field Invoice.id in domain layer` | 型リテラルのすべてのプロパティ（型リテラルの行に1回だけ報告する）と、型リテラルが宣言していないインスタンスのプロパティ。生成関数が作るクロージャに保持した状態は隠れている |
-| b: 未宣言のミューテーション | `this` のメンバーか捕捉した状態へ書き込むインスタンスメソッド（`#` のメソッドを含む）、または配列・`Map`・`Set` と型を書いたフィールドの変更メソッド（`push`、`set`、`add`、`delete` など）を呼ぶインスタンスメソッド。文言: `mutating method Invoice.rename is not declared as command.invoice.rename` | 捕捉した状態へ書き込むインスタンスメソッド、または閉包の状態に対して変更メソッド（`push`、`set`、`add`、`delete` など）を呼ぶインスタンスメソッド |
+| b: 状態へ書き込むドメインメソッド | 状態へ書き込む、static でないすべてのインスタンスメソッド（`#` のメソッドを含む）。書き込みとは、`#` フィールドや `this` のほかのメンバーへの代入、または配列・`Map`・`Set` と型を書いたフィールドに対する変更メソッド（`push`、`pop`、`shift`、`unshift`、`splice`、`sort`、`reverse`、`fill`、`copyWithin`、`set`、`add`、`delete`、`clear`）の呼び出しである。メソッドの宣言行に報告する。文言: `domain method Invoice.rename changes the state of its instance; a TypeScript domain method returns a new instance instead` | 捕捉した閉包の状態へ書き込むすべてのインスタンスメソッド、またはファイルに書かれた型から配列・`Map`・`Set` と分かる閉包の状態に対して同じ変更メソッドを呼ぶすべてのインスタンスメソッド。対象は、書いた型がそれらである閉包の束縛か、型を書いていない閉包の束縛（分割代入の束縛を含む）、または閉包の束縛のメンバー `state.m` のうち、束縛に書いた型（その場の型リテラル、または同じファイルの最上位で宣言した型リテラルの型別名・interface を指す型引数なしの1つの名前）がプロパティシグネチャ `m` をちょうど1つ持ち、その型がそれらであるものである。ほかの型を書いた束縛（`add` が新しい値を返す `paid: Money` のような値オブジェクト）、書かれた型から決められないメンバー（束縛が型を書いていない、またはそのように宣言していない型を名指す）、2段以上のアクセス連鎖、添字アクセスへの同じ呼び出しは書き込みとしない。行と文言は class と同じ |
 | c: 不完全な構築 | class 本体の外での `new T`、`T` と型を書いたリテラル、`x as T`。post-init メソッド（`init`、`setup`、`initialize`、`reset`、`configure`）は `b` ではなく `c` | companion のオブジェクトの外での、`T` と型を書いたリテラルと `x as T` |
 | d: getter の呼び出し | 書かれた型がドメイン型である受け手に対する getter の呼び出し。getter とは、本体が `this` の1つのメンバー、閉包の状態の1つのメンバー、または閉包の状態そのものを `return` するだけのメソッドである。`this.total()` は許可する。文言: `getter total called from domain layer (Tell, Don't Ask)` | インスタンスが持つ getter について同じ。閉包の状態とは生成関数が束縛するものであり、モジュールの定数を返すメソッドは getter にならない |
 | g: 依存 | 下記 | 下記 |
 
-規則 b は、Rust のゲートと同じく正規モデルのコマンドのスラッグに従う。`rename` は `command.<aggregate>.rename` でなければならず、`applyEvent` は `apply-event` になる。replay メソッドが除外されるのは、次の条件がすべて成り立つときだけである。集約写像が event-sourcing の集約について `replay_methods` で宣言している。その集約が型のパッケージとモジュールパスに置かれている。メソッドの1つの引数の型が、同じパッケージにある、宣言したイベントのドメイン型と書かれている。ドメインモデルが SKIP または無いとき、b は判定せず、そのことを note に記録する。`c-default` に対応するものは無い。TypeScript には `Default` の導出が無いためである。
+TypeScript のドメインメソッドは不変である。状態へ書き込まず、新しいインスタンスを返し、ユースケースがそれを保存する。そのため規則 b の意味は、宣言したコマンドでも replay メソッドでもない `&mut self` のメソッドを報告する Rust のゲートの b とは異なる。ここでは、状態へ書き込むメソッドは、正規モデルがコマンドとして宣言しているかどうか、集約写像が `replay_methods` で宣言しているかどうかを問わず、すべて所見になる。replay メソッドも次のインスタンスを返す。b はモデルを読まないため、ドメインモデルが SKIP または無いとき（ddd-domain-modeling を SKIP したときなど）も判定する。そのときの note は `model-dependent checks (h, c-model, n-model) skipped` であり、b を含まない。post-init メソッド（`init`、`setup`、`initialize`、`reset`、`configure`）は c だけが報告し、b は報告しない。`c-default` に対応するものは無い。TypeScript には `Default` の導出が無いためである。
 
-文言では、Rust のゲートが `::` で綴るメンバーを `.` で綴る。それ以外の言葉は同じである。
+ドメインメソッドが何を返すかは、ゲートは判定しない。state sourcing では `Result<Invoice, XxxError>`、event sourcing では `Result<{ next: Invoice; event: XxxEvent }, XxxError>`（1コマンドに1イベント）、`command-id-memory` のコマンドでは成功の値が `CommandOutcome<Invoice, XxxEvent>`、すなわち `{ kind: "applied"; next; event } | { kind: "already-applied" }` である。これはレビューと振る舞いテストで確かめる。
+
+文言では、Rust のゲートが `::` で綴るメンバーを `.` で綴る。それ以外の言葉は同じである。ただし、意味の異なる b の文言は除く。
 
 ### 依存の方向（g）
 
@@ -108,6 +110,6 @@ Rust のゲートと同じく、リポジトリへの受け渡しを証明でき
 
 ## 判定しないこと
 
-各ゲートは、Rust のゲートの明示的な型の照合と同じく、型チェッカーを使わない。受け手の型は、引数、変数、class のフィールドに書かれた型である。初期化式から推論はしない。型名は、同じファイルの宣言に、それが無ければ名指す import を通して、import 先パッケージのドメイン型（ユースケースとポートについては class と interface）に解決する。別の場所で保持する値（`this` の別名、型を書いていないコレクションのフィールド）を通した状態の変更は見えない。companion の外で書かれた、ブランドをキーに持つリテラルは構築として報告しない。変数に保持したアロー関数、オブジェクトリテラルのメソッド、interface のメソッドシグネチャとして書いた `execute` は h で判定しない。Rust のゲートが判定するのも impl のメソッドと自由関数だけである。TypeScript のすべての構文の網羅は保証しない。生成したコードには引き続き型検査と試験が必要である。
+各ゲートは、Rust のゲートの明示的な型の照合と同じく、型チェッカーを使わない。受け手の型は、引数、変数、class のフィールドに書かれた型である。初期化式から推論はしない。型名は、同じファイルの宣言に、それが無ければ名指す import を通して、import 先パッケージのドメイン型（ユースケースとポートについては class と interface）に解決する。別の場所で保持する値（`this` の別名、型を書いていないコレクションのフィールド、ファイルに書かれた型からコレクションと決められない閉包の状態のメンバー）を通した状態の変更は見えない。companion の外で書かれた、ブランドをキーに持つリテラルは構築として報告しない。変数に保持したアロー関数、オブジェクトリテラルのメソッド、interface のメソッドシグネチャとして書いた `execute` は h で判定しない。Rust のゲートが判定するのも impl のメソッドと自由関数だけである。TypeScript のすべての構文の網羅は保証しない。生成したコードには引き続き型検査と試験が必要である。
 
 Rust のゲート（`ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`）が判定するのは、申告した `.rs` ファイルだけである。申告した `.ts` ファイルは判定の対象外なので、TypeScript のソースだけを申告するプロジェクトは、注記 `no rust sources claimed` 付きでこれらのゲートに合格する。どの Cargo workspace にも属さない申告した `.rs` ファイルは、引き続き `layer.unowned` になる。

@@ -234,9 +234,9 @@ for (const sample of rustBehaviorSamples()) {
 
     // The behavior record names the execution model and persistence method each scenario exercises;
     // they are the ones the sample's own mapping declares, for the Rust code it maps.
-    test("declares the class programming model and state-sourcing persistence it is exercised under", () => {
+    test("declares the class programming model and event-sourcing persistence it is exercised under", () => {
       expect(mappingValue(sample, "programming_model")).toBe("class");
-      expect(mappingValue(sample, "persistence_method")).toBe("state-sourcing");
+      expect(mappingValue(sample, "persistence_method")).toBe("event-sourcing");
       expect(sample.domainCase.files[MAPPING_PATH]).toContain("language: rust");
     });
 
@@ -291,7 +291,7 @@ describe("reading cargo's report", () => {
     "test business_error_keeps_state ... ok",
     "test duplicate_command_already_applied ... ok",
     "test invalid_value_rejected ... ok",
-    "test multiple_events_one_append ... ok",
+    "test one_event_appended_per_command ... ok",
     "test rejected_command_keeps_state ... ok",
     "test restore_after_persistence ... ok",
     "test state_change ... ok",

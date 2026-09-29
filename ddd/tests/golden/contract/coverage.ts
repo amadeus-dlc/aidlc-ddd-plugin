@@ -487,9 +487,9 @@ cover(
   ts,
   ["b"],
   "clean-class",
-  "clean-b-declared-replay",
-  "A declared command and a replay method the mapping declares are both permitted.",
-  "宣言済みコマンドと、写像が宣言したreplayメソッドを許可する。",
+  "clean-b-query-method",
+  "A method that only reads state is permitted; any method that writes it is not, declared or not.",
+  "状態を読むだけのメソッドは許可し、状態を書くメソッドは宣言の有無にかかわらず拒否する。",
 );
 cover(
   ts,

@@ -40,7 +40,7 @@ A保存成功後にBが失敗するフローでは、Aのコミットが残る�
 
 ポートの書込み名は `store` を基本とし、同一要求の再保存を安全に扱う。ステートソーシングではupsertを基本にするが、無条件の上書きでよいという意味ではない。期待バージョンや一意制約で競合を検出する。ステートソーシングの集約の `store` は、期待バージョン付きの `upsert` として宣言する。
 
-イベントソーシングでは新規イベントの追記が基本であり、過去のイベントを更新しない。重複要求・追記競合・結果照合を含めて設計する。SQLのinsert使用自体を禁止しない。upsertという名前だけでフロー全体の冪等性が成立するとは扱わない。イベントソーシングの集約の `store` は `insert-only`（追記のみ）として宣言する。一つのコマンドが複数イベントを生む場合は、期待バージョンを一度だけ照合し、一回の追記でまとめて保存する。
+イベントソーシングでは新規イベントの追記が基本であり、過去のイベントを更新しない。重複要求・追記競合・結果照合を含めて設計する。SQLのinsert使用自体を禁止しない。upsertという名前だけでフロー全体の冪等性が成立するとは扱わない。イベントソーシングの集約の `store` は `insert-only`（追記のみ）として宣言する。一つのコマンドが生むイベントは高々1件であり、`store` は期待バージョンを照合してその1件を追記する。バージョンの競合で拒否した `store` は何も保存しない。
 
 助言 `design-advisories.store-upsert`（ルールIDは変更なし）は、各リポジトリを実装写像にあるその集約の `persistence_method` と照合する。`state-sourcing` は `store` 動詞と `upsert`、`event-sourcing` は `store` 動詞と `insert-only` を期待する。写像が無い、読めない、またはリポジトリの集約を写像していない場合は、storeの意味を判定できないことを助言として報告し、従来のupsertのみの判定には戻さない。
 
@@ -66,18 +66,22 @@ Commandは `effect: transition | accumulation` と `idempotency` を持つ。現
 
 再送を識別する期間は、モデルの既存の `idempotency.retention`（`last-one`、`retention_count` 付きの `multiple`、`retention_window` 付きの `time-window`）とする。モデルローダーは `command-id-memory` にこれを既に必須としている。ユースケース宣言に新しい項目は追加せず、`re_execution_basis` がこの保持期間を参照する。`strategy: none` のコマンドでは、繰り返しをコマンド自身のエラーで拒否するか、状態遷移のno-opとして扱うかを `re_execution_basis` に記載する。
 
-### 5-6. イベントソーシングの重複成功
+### 5-6. コマンドの結果と重複成功
 
-コマンドの成功は2種類とする。「適用」は状態を変え、1件以上のイベントを持つ。「適用済み」は状態を変えず、イベントは0件とする。拒否はメソッド固有のエラー型で表す。
+一つのコマンドは一つのイベントを生む。モデルではコマンドが省略可能な `event` にイベントを高々1件宣言する。ローダーは、コマンドに書かれた従来の `events` の一覧を案内付きで拒否し（`schema.command-events`）、`produced_by` が宣言元のコマンドと一致しないイベントや、2件以上のイベントを生むコマンドを拒否し（`schema.event-producer`）、集約が宣言していないイベントを拒否する（`schema.event-link`）。コマンドがイベントを返すのは状態遷移したときだけである。拒否はメソッド固有のエラー型で表し、何も変えない。
 
-- Rust: `Result<CommandOutcome<E>, <メソッドのエラー>>`。`enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` はインフラ層のlanguage-extensionsクレート（`packages/infrastructure/language-extensions`）に置く。
-- TypeScript: インフラ層の `Result` の成功側を `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }` とし、`@acme/language-extensions` で `Result` と並べて宣言する。
+- Rust: 状態を変えるメソッドは `&mut self` を取る。一つの `&mut self` メソッドが業務判断・状態遷移・イベントの返却を行い、判断だけを行う `&self` のメソッドを適用と分けて設けない。ステートソーシングでは `Result<(), XxxError>`、イベントソーシングでは `Result<XxxEvent, XxxError>` を返す。replayメソッド（`replay_methods`）は業務判断をせず永続化済みイベントを適用するだけであり、コマンドとは区別する。
+- TypeScript: ドメインメソッドは不変であり、インスタンスの状態へ書き込まず、新しいインスタンスを返す。ステートソーシングのコマンドは `Result<Invoice, XxxError>`、イベントソーシングのコマンドは `Result<{ next: Invoice; event: XxxEvent }, XxxError>` を返す。ユースケースは、コマンドを呼んだインスタンスではなく、返された新しいインスタンス（`next`）を保存する。
+- 値オブジェクトとDomain Primitiveは両言語とも不変とする。
 
-適用済みを返すのは `idempotency.strategy: command-id-memory` のコマンドだけであり、モデルの保持期間内で記憶しているコマンドIDに対して返す。拒否したコマンドのIDは記憶しない。`none` のコマンドは、`re_execution_basis` の記載どおり繰り返しを拒否またはno-opとして扱う。`CommandOutcome` はイベントを1件以上宣言するコマンドだけに適用し、イベントを宣言しないコマンドは `Result<(), E>` / `Result<void, E>` のままとする。適用ではコマンドを呼んだ集約自身を変更し、結果はイベントを運ぶ。
+成功が2種類になるのは `idempotency.strategy: command-id-memory` のコマンドだけである。「適用」は状態を変え、その1件のイベントを持つ。「適用済み」は何も変えず、イベントを持たない。適用済みは、モデルの保持期間内で記憶しているコマンドIDに対して返す。拒否したコマンドのIDは記憶しない。
 
-一つのコマンドが複数イベントを生む場合、それらはモデルの `events` がそのコマンドに宣言したイベントに限る。期待バージョンは一度だけ照合し、すべてを一回の追記で保存する。
+- Rust: `Result<CommandOutcome<XxxEvent>, XxxError>`。`enum CommandOutcome<E> { Applied(E), AlreadyApplied }` はインフラ層のlanguage-extensionsクレート（`packages/infrastructure/language-extensions`）に置く。ステートソーシングでは重複に対して変更なしで `Ok(())` を返す。
+- TypeScript: インフラ層の `Result` の成功側を `CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } | { readonly kind: "already-applied" }` とし、`@acme/language-extensions` で `Result` と並べて宣言する。ユースケースは適用なら `next` を保存し、適用済みなら何も保存しない。
 
-戻り値の形を判定するセンサーは無い。TypeScriptのドメイン事実は戻り値型を持たず、Rustの事実は別名を解決せず返すバリアントも記録しない。戻り値の形、宣言済みイベントだけであること、一回の追記はレビューと動作テストで確認する。
+`none` のコマンドは、`re_execution_basis` の記載どおり繰り返しを拒否またはno-opとして扱う。
+
+センサーが検査するのは状態の変更であり、戻り値の形ではない。TypeScriptの規則bは、モデル・コマンド・replayの宣言やモデルの有無にかかわらず、ドメインのインスタンスメソッドでの状態の書込みをすべて報告する。Rustの規則bは、宣言済みコマンドを `&self`・`self`・`mut self` で実装した場合も報告する。戻り値の形を判定するセンサーは無い。TypeScriptのドメイン事実は戻り値型を持たず、Rustの事実は別名を解決せず返すバリアントも記録しない。戻り値の形と1件の追記はレビューと動作テストで確認する。
 
 状態機械だけで重複判定できるケースと、要求IDの記憶が必要なケースを分ける。FSMを使うことを理由に、イベントストアの競合制御や重複保存対策を省略しない。
 

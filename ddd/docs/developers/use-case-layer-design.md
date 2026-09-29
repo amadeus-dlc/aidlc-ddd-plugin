@@ -40,7 +40,7 @@ Distinguish caller re-execution from retrying a failed step with backoff. Define
 
 Use `store` as the baseline port write verb and safely handle repeated persistence of the same request. Upsert is the state-sourcing baseline, not permission for unconditional overwrites. Detect conflicts using expected versions, uniqueness constraints, or equivalent mechanisms. A state-sourcing aggregate's `store` is declared as `upsert` with the expected version.
 
-Event sourcing appends new events and never updates past events. Design duplicate handling, append conflicts, and outcome reconciliation together. SQL insert is not itself prohibited. A method named upsert does not establish idempotency for an entire flow. An event-sourcing aggregate's `store` is declared as `insert-only` (append only). When one command yields several events, check the expected version once and save them in one append.
+Event sourcing appends new events and never updates past events. Design duplicate handling, append conflicts, and outcome reconciliation together. SQL insert is not itself prohibited. A method named upsert does not establish idempotency for an entire flow. An event-sourcing aggregate's `store` is declared as `insert-only` (append only). One command produces at most one event: `store` checks the expected version and appends that one event, and a store refused for a conflicting version saves nothing.
 
 The advisory `design-advisories.store-upsert` (the rule id is unchanged) judges each repository against the `persistence_method` of its aggregate in the implementation mapping: `state-sourcing` expects the `store` verb with `upsert`, `event-sourcing` expects the `store` verb with `insert-only`. When the mapping is absent, unreadable, or does not map the repository's aggregate, it reports (advisory) that the store semantics cannot be judged; it does not fall back to an upsert-only judgement.
 
@@ -66,18 +66,22 @@ For state-setting operations, `none` means safety is justified by a method other
 
 The period in which a resend is recognized is the model's existing `idempotency.retention` (`last-one`, `multiple` with `retention_count`, or `time-window` with `retention_window`); the model loader already requires it for `command-id-memory`. The use-case declaration gets no new item: `re_execution_basis` refers to that retention. For a `strategy: none` command, `re_execution_basis` states whether a repeat is refused with the command's own error or is a no-op of the state transition.
 
-### 5-6. Duplicate success in event sourcing
+### 5-6. Command results and duplicate success
 
-A command's success has two kinds. "Applied" changes the state and carries one or more events; "already applied" does not change the state and carries zero events. Rejection is the method-specific error type.
+One command produces one event. In the model a command declares at most one event in its optional `event`. The loader refuses the former `events` list on a command with guidance (`schema.command-events`), refuses an event whose `produced_by` does not match the command that declares it, or a command producing two or more events (`schema.event-producer`), and refuses an event the aggregate does not declare (`schema.event-link`). A command returns its event only when it makes a state transition; a refusal is the method-specific error type and changes nothing.
 
-- Rust: `Result<CommandOutcome<E>, <method error>>` with `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` in the infrastructure language-extensions crate (`packages/infrastructure/language-extensions`).
-- TypeScript: the success side of the infrastructure `Result` is `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }`, declared beside `Result` in `@acme/language-extensions`.
+- Rust: a state-changing method takes `&mut self`. One `&mut self` method makes the business decision, changes the state, and returns the event; there is no `&self` method that only decides, separated from an apply. Under state sourcing it returns `Result<(), XxxError>`; under event sourcing it returns `Result<XxxEvent, XxxError>`. Replay methods (`replay_methods`) only apply persisted events without business decisions and are distinct from commands.
+- TypeScript: domain methods are immutable. They never write the instance's state and return a new instance. Under state sourcing a command returns `Result<Invoice, XxxError>`; under event sourcing it returns `Result<{ next: Invoice; event: XxxEvent }, XxxError>`. The use case stores the returned new instance (`next`), not the instance it called the command on.
+- Value objects and Domain Primitives are immutable in both languages.
 
-Only an `idempotency.strategy: command-id-memory` command returns already applied, for a command ID still remembered under the model's retention; the ID of a refused command is not remembered. A `none` command handles a repeat as refusal or as a no-op, as written in `re_execution_basis`. `CommandOutcome` applies only to commands that declare one or more events; a command that declares no event keeps `Result<(), E>` / `Result<void, E>`. Applied mutates the aggregate the command was called on in place; the outcome carries the events.
+Only an `idempotency.strategy: command-id-memory` command has two kinds of success. "Applied" changes the state and carries its one event; "already applied" changes nothing and carries no event. It is returned for a command ID still remembered under the model's retention; the ID of a refused command is not remembered.
 
-When a command yields several events, they are only events the model's `events` declares for that command; the expected version is checked once and all of them are saved in one append.
+- Rust: `Result<CommandOutcome<XxxEvent>, XxxError>` with `enum CommandOutcome<E> { Applied(E), AlreadyApplied }` in the infrastructure language-extensions crate (`packages/infrastructure/language-extensions`). Under state sourcing a duplicate returns `Ok(())` without change.
+- TypeScript: the success side of the infrastructure `Result` is `CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } | { readonly kind: "already-applied" }`, declared beside `Result` in `@acme/language-extensions`. On applied the use case stores `next`; on already applied it stores nothing.
 
-No sensor judges the return shape: TypeScript domain facts carry no return type, and Rust facts resolve no alias and record no returned variant. The return shape, the declared-events-only rule, and the single append are left to review and behavior tests.
+A `none` command handles a repeat as refusal or as a no-op, as written in `re_execution_basis`.
+
+The sensors enforce state changes, not return shapes. TypeScript rule b reports every state write in a domain instance method, regardless of the model, command, and replay declarations and of whether the model is available. Rust rule b additionally reports a declared command implemented with `&self`, `self`, or `mut self`. No sensor judges the return shape: TypeScript domain facts carry no return type, and Rust facts resolve no alias and record no returned variant. The return shape and the one-event append are left to review and behavior tests.
 
 Distinguish cases where a state machine can recognize duplicates from those requiring request-ID memory. Using an FSM does not remove the need for event-store conflict control or duplicate-write protection.
 

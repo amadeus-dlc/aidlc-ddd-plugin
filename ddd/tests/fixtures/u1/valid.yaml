@@ -44,8 +44,7 @@ bounded_contexts:
                 name: AlreadyIssued
                 command: command.invoice.issue
                 condition: The invoice is not in the draft state.
-            events:
-              - event.invoice.issued
+            event: event.invoice.issued
             idempotency:
               strategy: none
               rationale: Re-issuing an issued invoice is absorbed by the state guard.

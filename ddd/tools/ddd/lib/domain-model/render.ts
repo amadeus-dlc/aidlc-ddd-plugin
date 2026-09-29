@@ -84,7 +84,7 @@ function commandLines(command: Command): string[] {
     field("state_effect", command.state_effect),
     ...scalarList("transitions", command.transitions),
     ...nodeList("domain_errors", command.domain_errors.map(domainErrorLines)),
-    ...scalarList("events", command.events),
+    ...optionalField("event", command.event),
     ...mapping("idempotency", idempotencyLines(command.idempotency)),
   ];
 }

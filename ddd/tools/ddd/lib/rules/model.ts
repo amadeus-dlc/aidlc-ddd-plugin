@@ -12,14 +12,21 @@ import { finding, relPath } from "../sensors/common.ts";
 import type { FindingInput } from "../shared/findings.ts";
 import type { ModelAvailability } from "./types.ts";
 
-/** The model of `run`'s record, and the finding an executed stage whose model does not load raises. */
-export function readModelAvailability(run: SensorRunContext): { model: ModelAvailability; findings: FindingInput[] } {
+/**
+ * The model of `run`'s record, and the finding an executed stage whose model does not load raises.
+ * `dependentChecks` names the checks of the calling gate that read the model, which a skipped or
+ * absent model leaves unchecked; each language's gate decides a different set of them.
+ */
+export function readModelAvailability(
+  run: SensorRunContext,
+  dependentChecks: readonly string[],
+): { model: ModelAvailability; findings: FindingInput[] } {
   const status = readStageStatus(run, "ddd-domain-modeling");
   if (status.execution === "SKIP" || status.execution === "absent") {
     return {
       model: {
         status: status.execution === "SKIP" ? "skipped" : "absent",
-        note: `domain-modeling is ${status.execution}; model-dependent checks (b, h, c-model, n-model) skipped`,
+        note: `domain-modeling is ${status.execution}; model-dependent checks (${dependentChecks.join(", ")}) skipped`,
       },
       findings: [],
     };

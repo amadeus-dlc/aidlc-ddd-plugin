@@ -254,6 +254,36 @@ for (const harness of ["claude", "codex"] as const)
     INSTALLED_TYPESCRIPT_GATES_TIMEOUT_MS,
   );
 
+/** A TypeScript domain method that writes state, in both representations, declared as a command or not. */
+const TYPESCRIPT_STATE_WRITES = [
+  "violation-b-class",
+  "violation-b-companion",
+  "violation-b-declared-command-class",
+  "violation-b-declared-command-companion",
+] as const;
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the installed TypeScript domain gate refuses a domain method that writes state under rule b`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const tools = join(f.project, f.leaf, "tools");
+      for (const name of TYPESCRIPT_STATE_WRITES) {
+        const result = runGoldenCase(tools, caseNamed("ddd-typescript-domain", name));
+        expect(result.problems, name).toEqual([]);
+        expect(result.verdict?.pass, name).toBe(false);
+        expect(
+          result.verdict?.findings.map((entry) => entry.rule_id),
+          name,
+        ).toEqual(["b"]);
+      }
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    INSTALLED_TYPESCRIPT_GATES_TIMEOUT_MS,
+  );
+
 for (const harness of ["claude", "codex"] as const)
   test(`${harness}: a user file at the native extractor path is refused without touching the destination`, () => {
     const f = fixture(harness);
@@ -635,6 +665,47 @@ for (const harness of ["claude", "codex"] as const)
       expect(existsSync(model())).toBe(false);
       expect(missing.exitCode, output(missing)).not.toBe(0);
       expect(manualCheckPasses(missing)).toBe(false);
+      expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
+    },
+    GATE_FLOW_TIMEOUT_MS,
+  );
+
+/** Models the approval of ddd-domain-modeling refuses: the retired event list, and one command producing two events. */
+const ONE_EVENT_MODEL_VIOLATIONS = ["violation-command-events-list", "violation-command-two-events"] as const;
+
+for (const harness of ["claude", "codex"] as const)
+  test(
+    `${harness}: the ddd-domain-modeling approval admits a model whose commands name at most one event and refuses the event list and a command producing two events`,
+    () => {
+      const f = fixture(harness);
+      const installed = f.invoke();
+      expect(installed.code, installed.output).toBe(0);
+      const gates = installedGates(f.project, f.leaf, f.root, (id) => id === MODEL_SENSOR);
+      const prepare = (name: string) => {
+        gates.startStage(MODEL_STAGE.slug, MODEL_STAGE.phase, "refactor");
+        const files = caseNamed(MODEL_SENSOR, name).files;
+        gates.writeRecord(files);
+        gates.fillOtherOutputs(
+          MODEL_STAGE.slug,
+          MODEL_STAGE.phase,
+          Object.keys(files).map((path) => path.slice(path.lastIndexOf("/") + 1)),
+        );
+      };
+
+      prepare("clean-complete");
+      const sound = gates.openGate(MODEL_STAGE.slug);
+      expect(output(sound)).toContain("Recorded awaiting-approval");
+      expect(auditOf(gates.record)).toContain("SENSOR_PASSED");
+      const approved = gates.approve(MODEL_STAGE.slug);
+      expect(lastJson(approved)?.kind, output(approved)).toBe("done");
+
+      for (const name of ONE_EVENT_MODEL_VIOLATIONS) {
+        prepare(name);
+        const refused = gates.openGate(MODEL_STAGE.slug);
+        expect(output(refused), name).not.toContain("Recorded awaiting-approval");
+        expect(output(refused), name).toContain(MODEL_SENSOR);
+        expect(auditOf(gates.record), name).toContain("SENSOR_FAILED");
+      }
       expect(readFileSync(f.userFile, "utf8")).toBe(USER_DATA);
     },
     GATE_FLOW_TIMEOUT_MS,

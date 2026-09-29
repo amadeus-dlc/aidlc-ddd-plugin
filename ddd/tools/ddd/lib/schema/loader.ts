@@ -84,7 +84,7 @@ const ALLOWED: Record<string, readonly string[]> = {
     "state_effect",
     "transitions",
     "domain_errors",
-    "events",
+    "event",
     "idempotency",
   ],
   idempotency: ["strategy", "retention", "retention_count", "retention_window", "rationale"],
@@ -347,10 +347,19 @@ function readCommand(
   where: string,
   version: SchemaVersion,
 ): Command | undefined {
-  report.checkKeys(node, ALLOWED.command, where);
+  // The retired list is refused with its own guidance, so the unknown-key pass must not also name it.
+  const { events: retiredEvents, ...current } = node;
+  report.checkKeys(current, ALLOWED.command, where);
   const element_id = report.idField(node, "element_id", where);
+  if (retiredEvents !== undefined) {
+    report.add(
+      "schema.command-events",
+      `${where}: ${element_id ?? "this command"} still lists "events"; one command produces at most one event, so name it with the single key \`event: <event id>\` (and drop the key when the command records no event)`,
+    );
+  }
   const name = report.requiredString(node, "name", where);
   const aggregate = report.requiredString(node, "aggregate", where);
+  const event = report.optionalString(node, "event", where);
   const effect = node.effect;
   const state_effect = node.state_effect;
   if (effect !== "transition" && effect !== "accumulation") {
@@ -384,7 +393,7 @@ function readCommand(
     state_effect: state_effect as StateEffect,
     transitions: readStringArray(report, node, "transitions", where, false),
     domain_errors: domainErrors as DomainError[],
-    events: readStringArray(report, node, "events", where, false),
+    ...(event === undefined ? {} : { event }),
     idempotency,
   };
 }
@@ -734,6 +743,7 @@ function validateModel(report: Report, model: DomainModel, index: ElementIndex):
     }
   }
 
+  validateEventProducers(report, model);
   validateLineage(report, index, model.lineage);
 
   // Derived: Aggregate.process_managers from ProcessManager.aggregates.
@@ -751,6 +761,27 @@ function validateModel(report: Report, model: DomainModel, index: ElementIndex):
     for (const aggregate of bc.aggregates) {
       aggregate.process_managers = [...(pmByAggregate.get(aggregate.element_id) ?? [])].sort();
     }
+  }
+}
+
+/** One command produces at most one event, wherever in the model that event is declared. */
+function validateEventProducers(report: Report, model: DomainModel): void {
+  const eventsByProducer = new Map<string, string[]>();
+  for (const bc of model.bounded_contexts) {
+    for (const aggregate of bc.aggregates) {
+      for (const event of aggregate.events) {
+        const events = eventsByProducer.get(event.produced_by) ?? [];
+        events.push(event.element_id);
+        eventsByProducer.set(event.produced_by, events);
+      }
+    }
+  }
+  for (const [producer, events] of eventsByProducer) {
+    if (events.length < 2) continue;
+    report.add(
+      "schema.event-producer",
+      `${producer} is the produced_by of ${events.length} events (${events.join(", ")}); one command produces at most one event`,
+    );
   }
 }
 
@@ -909,14 +940,18 @@ function validateAggregate(report: Report, index: ElementIndex, bc: BoundedConte
         );
       }
     }
-    const eventIds = new Set(aggregate.events.map((e) => e.element_id));
-    for (const eventId of command.events) {
-      if (!eventIds.has(eventId)) {
-        report.add(
-          "schema.event-link",
-          `${where}.commands.${command.element_id}: event "${eventId}" is not on this aggregate`,
-        );
-      }
+    if (command.event === undefined) continue;
+    const event = aggregate.events.find((entry) => entry.element_id === command.event);
+    if (event === undefined) {
+      report.add(
+        "schema.event-link",
+        `${where}.commands.${command.element_id}: event "${command.event}" is not on this aggregate`,
+      );
+    } else if (event.produced_by !== command.element_id) {
+      report.add(
+        "schema.event-producer",
+        `${where}.commands.${command.element_id}: event "${command.event}" is produced_by ${event.produced_by}, not by this command`,
+      );
     }
   }
 

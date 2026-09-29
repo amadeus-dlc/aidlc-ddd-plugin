@@ -38,7 +38,7 @@ Name repository ports `<Aggregate>Repository`, without storage-medium names. Imp
 
 Operate on the owned aggregate or a collection of it; do not persist parts of aggregates or unrelated aggregates. Baseline verbs are `find_by_id`, `store`, and `delete_by_id`. Allow additional queries for the owned aggregate, but put screen-oriented searches in DAOs. Follow use-case design §5-1 for repeated stores, conflicts, and appends.
 
-Declare `store` semantics from the aggregate's `persistence_method` in the implementation mapping (infrastructure-design consumes `ddd-aggregate-mapping`, not required): a `state-sourcing` aggregate's `store` is `upsert` with the expected version; an `event-sourcing` aggregate's `store` is `insert-only` (append only). When one command yields several events, check the expected version once and save them in one append.
+Declare `store` semantics from the aggregate's `persistence_method` in the implementation mapping (infrastructure-design consumes `ddd-aggregate-mapping`, not required): a `state-sourcing` aggregate's `store` is `upsert` with the expected version; an `event-sourcing` aggregate's `store` is `insert-only` (append only). One command produces at most one event: `store` checks the expected version and appends that one event, advancing the version by one; a store refused for a conflicting version saves nothing.
 
 Start with in-memory implementations and test port contracts including conflicts and failures. Restore DTOs through full constructors. Follow domain-layer design §6 for replay; arbitrary restoration bypasses are not allowed.
 
@@ -77,4 +77,4 @@ Cover CQRS separation, port responsibilities, restoration, RMU, and external-mod
 
 ## 10. Later detailed design
 
-The strategy-specific items are decided in [T-03](completion-tasks.md): the optional RMU items `ordering_scope` and `dedup` (§7) and store semantics per persistence method (§5). Delays, gaps, reordering, and semantic replay verification remain prose review; no sensor proves them. Matching declarations to explicit Rust types is implemented in [T-02](../users/rust-sensor-contract.md). Do not present unverified strategies as implemented.
+The strategy-specific items are the optional RMU items `ordering_scope` and `dedup` (§7) and store semantics per persistence method (§5). Delays, gaps, reordering, and semantic replay verification remain prose review; no sensor proves them. Matching declarations to explicit Rust types is implemented in [T-02](../users/rust-sensor-contract.md). Do not present unverified strategies as implemented.

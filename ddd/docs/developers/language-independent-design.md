@@ -66,9 +66,9 @@ Apply the selected TypeScript representation to aggregates, Entities, Domain Pri
 
 ## 4. Preserve the agreed TypeScript representations
 
-The class representation hides internal state with JavaScript `#` private fields. The structure representation uses a type and a same-named companion object: instance methods reside in the returned object, static-equivalent operations such as creation reside in the companion, and state is captured by closures. Add a type-specific, unexported `unique symbol` brand to the structure representation.
+The class representation hides internal state with JavaScript `#` private fields. The structure representation uses a type and a same-named companion object: instance methods reside in the returned object, static-equivalent operations such as creation reside in the companion, and state is captured by closures. Add a type-specific, unexported `unique symbol` brand to the structure representation. In both representations domain methods are immutable: they never write state and return a new instance.
 
-This example records the agreed structure shape, including method-specific errors. Its numeric limits illustrate a business rule; they are not a universal counter requirement. The inline Result definition stands for the language-support contract that belongs in infrastructure. The example does not define final configuration keys or model-to-code bindings.
+This example records the agreed structure shape, including method-specific errors and a command that returns a new instance. Its numeric limits illustrate a business rule; they are not a universal counter requirement. The inline Result definition stands for the language-support contract that belongs in infrastructure. The example does not define final configuration keys or model-to-code bindings.
 
 ```ts
 type Result<T, E> =
@@ -81,35 +81,38 @@ const counterBrand: unique symbol = Symbol("Counter");
 
 export type Counter = {
   readonly [counterBrand]: true;
-  increment(): Result<void, IncrementCounterError>;
+  increment(): Result<Counter, IncrementCounterError>;
 };
+
+function counterOf(value: number): Counter {
+  return {
+    [counterBrand]: true,
+    increment() {
+      if (value === Number.MAX_SAFE_INTEGER) {
+        return { ok: false, error: "limit-reached" };
+      }
+      return { ok: true, value: counterOf(value + 1) };
+    },
+  };
+}
 
 export const Counter = {
   create(initialValue: number): Result<Counter, CreateCounterError> {
     if (!Number.isSafeInteger(initialValue) || initialValue < 0) {
       return { ok: false, error: "invalid-initial-value" };
     }
-    const state = { value: initialValue };
-    const instance: Counter = {
-      [counterBrand]: true,
-      increment() {
-        if (state.value === Number.MAX_SAFE_INTEGER) {
-          return { ok: false, error: "limit-reached" };
-        }
-        state.value += 1;
-        return { ok: true, value: undefined };
-      },
-    };
-    return { ok: true, value: instance };
+    return { ok: true, value: counterOf(initialValue) };
   },
 };
 ```
+
+`increment` reads the captured value and never writes it; the original instance keeps its value, and the caller keeps the returned instance.
 
 A brand prevents ordinary assignment of a merely matching object shape; it is not runtime proof that construction passed through the companion. Inspect assertions, copies, and other construction bypasses. Keep this separate from state privacy. TypeScript's `private` modifier is enforced during type checking, while `#` private fields retain runtime privacy; see [class privacy](https://www.typescriptlang.org/docs/handbook/2/classes.html#caveats), [structural compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility), and [unique symbols](https://www.typescriptlang.org/docs/handbook/symbols#unique-symbol).
 
 ## 5. Preserve invariants and ownership in both languages
 
-Keep domain state private, including readonly fields. Domain Primitives and Value Objects are immutable and validated on creation. Use complete construction paths; reject empty construction followed by field filling and restoration that bypasses validation. Preserve the existing rules restricting mutation to declared business operations or explicit event application, and restricting getter calls from domain/use-case code. Use-case code may forward getter results as repository arguments without using them for business decisions.
+Keep domain state private, including readonly fields. Domain Primitives and Value Objects are immutable and validated on creation. Use complete construction paths; reject empty construction followed by field filling and restoration that bypasses validation. Restrict state changes to declared business commands and declared replay methods: in Rust, a state-changing method takes `&mut self`; in TypeScript, domain methods never write state and return a new instance, which the use case stores. Preserve the existing rules restricting getter calls from domain/use-case code. Use-case code may forward getter results as repository arguments without using them for business decisions.
 
 Do not share mutable array or object references across the domain boundary. Separate ownership through appropriate copying or immutable representations on input and output. A private field or closure does not protect an object whose mutable reference remains outside. Rust ownership and explicit sharing mechanisms, and TypeScript references, require language-specific checks against this same contract. Business failure leaves the pre-operation state intact.
 
@@ -121,7 +124,15 @@ Define the owning operation and business failure conditions in the canonical mod
 
 Keep unexpected runtime failures distinct from expected business rejection. Preserve the existing restoration policy for corrupt histories or unknown schemas and the existing distinctions between repository conflicts, communication failure, and unknown commit outcomes. This agreement does not impose a blanket ban on every exception or panic.
 
-Place the TypeScript Result implementation in the language-support infrastructure package. No specific Result library is selected. Individual integrations with neverthrow, Effect, or fp-ts are outside this scope. T-03 decided the success value on 2026-09-28. For a command that declares one or more events, the success side of the TypeScript `Result` is the discriminated union `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }`, declared beside `Result` in the language-extensions package. The Rust counterpart is `Result<CommandOutcome<E>, <method error>>` with `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` in the infrastructure language-extensions crate. "applied" changes the state and carries one or more events that the model's `events` declares for that command; "already-applied" leaves the state unchanged, carries zero events, and is returned only by a `command-id-memory` command for a command ID still remembered under the model's retention. A command that declares no event keeps `Result<void, E>` / `Result<(), E>`. Several events of one command are saved in one append after one expected-version check. No sensor judges the return shape; review and behavior tests cover it. See the [domain-layer design](domain-layer-design.md).
+Place the TypeScript Result implementation in the language-support infrastructure package. No specific Result library is selected. Individual integrations with neverthrow, Effect, or fp-ts are outside this scope. The success values were confirmed by the user on 2026-09-28 (T-03-03). One command produces at most one event, named by the command's `event` in the model, and an event is returned only when the state transitions.
+
+| Persistence | Rust (`&mut self`) | TypeScript (immutable, returns a new instance) |
+|---|---|---|
+| State sourcing | `Result<(), XxxError>`; a duplicate returns `Ok(())` without changing state | `Result<Invoice, XxxError>` |
+| Event sourcing | `Result<XxxEvent, XxxError>` | `Result<{ next: Invoice; event: XxxEvent }, XxxError>` |
+| Event sourcing, `command-id-memory` command | `Result<CommandOutcome<XxxEvent>, XxxError>` | `Result<CommandOutcome<Invoice, XxxEvent>, XxxError>` |
+
+Rust declares `enum CommandOutcome<E> { Applied(E), AlreadyApplied }` in the infrastructure language-extensions crate; TypeScript declares `CommandOutcome<T, E> = { readonly kind: "applied"; readonly next: T; readonly event: E } | { readonly kind: "already-applied" }` beside `Result` in the language-extensions package. "applied" carries the one event (and, in TypeScript, the new instance); "already-applied" leaves the state unchanged, carries no event, and is returned only by a `command-id-memory` command for a command ID still remembered under the model's retention. In Rust, one `&mut self` method makes the business decision, performs the state transition and returns the event; no decide-only `&self` method returning an event is generated. Replay methods only apply a persisted event and are distinct from commands. No sensor judges the return shape; review and behavior tests cover it. See the [domain-layer design](domain-layer-design.md).
 
 ## 7. Select and enforce one module layout
 
@@ -185,7 +196,7 @@ T-09-09 connects the four formats to the paths that already read those artifacts
 
 ## 11. Verify behavior as well as sensor outcomes
 
-Define shared scenarios first, then implement them in each language and supported representation. Existing sensor, distribution, installation, and gate tests remain required. Add actual application behavior tests for successful state changes, unchanged state on business failure, rejected invalid construction, and restoration after persistence.
+Define shared scenarios first, then implement them in each language and supported representation. Existing sensor, distribution, installation, and gate tests remain required. Add actual application behavior tests for seven shared scenarios: state change, business error keeping state, invalid value rejected, restoration after persistence, a duplicate command returning "already applied", a rejected command keeping its state, and one event appended per command. TypeScript adds a command keeping the original instance. These scenarios currently exercise `class` × `event-sourcing` without replay; `state-sourcing` is no longer exercised by the behavior tests.
 
 The acceptance matrix must cover Rust's two layouts and TypeScript's two layouts combined with its two domain representations. Also test forbidden reverse dependencies, command/query boundaries, type-only dependencies, access through non-public paths and aliases, wildcard re-exports, method-error mismatches, unresolved analysis, and mutable-reference leaks. Record which supported aggregate execution and persistence combinations each scenario verifies; preserve the independent axes without claiming untested combinations pass.
 

@@ -11,12 +11,25 @@
 import { afterAll, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { BEHAVIOR_SCENARIOS, type BehaviorScenario, type SampleModules } from "./scenarios.ts";
+import {
+  BEHAVIOR_SCENARIOS,
+  type BehaviorScenario,
+  type SampleModules,
+  TYPESCRIPT_SCENARIOS,
+  type TypeScriptScenario,
+} from "./scenarios.ts";
 
+/** The scenarios a TypeScript sample runs: the shared ones, then the ones of TypeScript alone. */
+export const SAMPLE_SCENARIOS: readonly (BehaviorScenario | TypeScriptScenario)[] = [
+  ...BEHAVIOR_SCENARIOS,
+  ...TYPESCRIPT_SCENARIOS,
+];
+
+type ScenarioId = (BehaviorScenario | TypeScriptScenario)["id"];
 /** What the child reports for one scenario. */
 export type ScenarioReport =
-  | { readonly id: BehaviorScenario["id"]; readonly ok: true }
-  | { readonly id: BehaviorScenario["id"]; readonly ok: false; readonly message: string };
+  | { readonly id: ScenarioId; readonly ok: true }
+  | { readonly id: ScenarioId; readonly ok: false; readonly message: string };
 
 /** Loads the packages the scenarios call through the names their consumers import them by. */
 async function loadModules(root: string): Promise<SampleModules> {
@@ -38,7 +51,7 @@ async function loadModules(root: string): Promise<SampleModules> {
 /** Registers one test per scenario against the sample installed at `root` and reports to `reportPath`. */
 export function registerSampleScenarios(root: string, reportPath: string): void {
   const reports: ScenarioReport[] = [];
-  for (const scenario of BEHAVIOR_SCENARIOS) {
+  for (const scenario of SAMPLE_SCENARIOS) {
     test(scenario.id, async () => {
       try {
         // A failure to load the sample is reported against the scenario it prevented from running.

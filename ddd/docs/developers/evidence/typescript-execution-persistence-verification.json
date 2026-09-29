@@ -1,8 +1,8 @@
 {
-  "verified_at": "2026-09-27T15:49:09Z",
-  "scope": "T-11-06 shared behavior scenarios (language-independent design section 11) run on the TypeScript generation samples, and the programming_model x persistence_method each scenario exercises per code representation and module layout.",
-  "base_commit": "a1c9f8969100ed47bc7a63e603dc3b424395dc0d",
-  "base_commit_note": "Measured on an uncommitted working tree holding the T-11-06 changes on top of the base commit.",
+  "verified_at": "2026-09-28T07:12:39Z",
+  "scope": "T-03-03 re-measurement of the shared behavior scenarios (language-independent design section 11) and the TypeScript-only scenario run on the TypeScript generation samples, after the samples became immutable one-command-one-event code mapped as event-sourcing, and the programming_model x persistence_method each scenario exercises per code representation and module layout.",
+  "base_commit": "7cda3bf634b8a4c58fc55d7a441c768a132af041",
+  "base_commit_note": "Measured on an uncommitted working tree holding the T-03-03 changes on top of the base commit.",
   "platform": "darwin-arm64",
   "toolchain": {
     "bun": "1.3.13",
@@ -10,17 +10,16 @@
   },
   "command": "cd ddd && bun test tests/t11-typescript-behavior.test.ts",
   "result": {
-    "tests": 26,
-    "pass": 26,
+    "tests": 43,
+    "pass": 43,
     "fail": 0,
-    "expect_calls": 22,
+    "expect_calls": 23,
     "child_runs": {
       "runs": 4,
-      "tests_per_run": 4,
-      "pass_per_run": 4,
+      "tests_per_run": 8,
+      "pass_per_run": 8,
       "fail_per_run": 0,
-      "expect_calls_per_run": 38,
-      "note": "Each sample's four scenarios run in a child bun test process started in the sample's directory without coverage (tests/t11-typescript-behavior.test.ts:60-77, tests/fixtures/typescript-behavior/sample-runner.ts:37-55); the parent counts above judge the child's report and do not include the child's expect() calls."
+      "note": "Each sample's seven shared scenarios and the one TypeScript-only scenario run in a child bun test process started in the sample's directory without coverage (tests/fixtures/typescript-behavior/sample-runner.ts); the parent passes a sample only when the child reports all eight ids in order, each passing, and exits 0. The child's expect() calls are not counted by the parent and were not recorded."
     }
   },
   "axes": [
@@ -45,106 +44,149 @@
         "event-sourcing"
       ],
       "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:23",
-      "read_for_a_decision_by": [
-        "tools/ddd/lib/rules/mutations.ts:81, the replay exemption the TypeScript evaluators use (tools/ddd/lib/rules/typescript/evaluators.ts:32)"
-      ],
+      "read_for_a_decision_by": [],
       "not_read_by": [
-        "The behavior scenarios."
+        "The TypeScript domain gate: ruleB (tools/ddd/lib/rules/typescript/evaluators.ts:63-77) and the post-init check of ruleC (:109-119) decide from a method's writes alone, whatever the model, the mapping or its replay_methods declare (T-03-03).",
+        "tools/ddd/lib/rules/mutations.ts:69 declaredReplayEventNames is read by the Rust domain gate only (tools/ddd/lib/rules/rust/symbols.ts:126), not by any TypeScript gate.",
+        "The behavior scenarios, which run the sample sources as written. The samples' command results follow it by convention: under event-sourcing each command returns its one event."
       ]
     }
   ],
   "scenarios": [
     {
       "id": "state-change",
-      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:82-98"
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:171-187"
     },
     {
       "id": "business-error-keeps-state",
-      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:99-124"
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:188-212"
     },
     {
       "id": "invalid-value-rejected",
-      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:125-135"
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:213-232"
     },
     {
       "id": "restore-after-persistence",
-      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:136-161"
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:233-258"
+    },
+    {
+      "id": "duplicate-command-already-applied",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:259-301"
+    },
+    {
+      "id": "rejected-command-keeps-state",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:302-327"
+    },
+    {
+      "id": "one-event-appended-per-command",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:328-374"
+    },
+    {
+      "id": "command-keeps-original-instance",
+      "defined_at": "tests/fixtures/typescript-behavior/scenarios.ts:377-406",
+      "language": "typescript only"
     }
   ],
   "combinations": [
     {
       "programming_model": "class",
-      "persistence_method": "state-sourcing",
+      "persistence_method": "event-sourcing",
+      "replay": "none",
       "code_representation": "class",
       "module_layout": "named-file",
       "scenarios": [
         "state-change",
         "business-error-keeps-state",
         "invalid-value-rejected",
-        "restore-after-persistence"
+        "restore-after-persistence",
+        "duplicate-command-already-applied",
+        "rejected-command-keeps-state",
+        "one-event-appended-per-command",
+        "command-keeps-original-instance"
       ],
       "result": "pass",
       "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: class / named-file",
-      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:607-608"
     },
     {
       "programming_model": "class",
-      "persistence_method": "state-sourcing",
+      "persistence_method": "event-sourcing",
+      "replay": "none",
       "code_representation": "class",
       "module_layout": "index-file",
       "scenarios": [
         "state-change",
         "business-error-keeps-state",
         "invalid-value-rejected",
-        "restore-after-persistence"
+        "restore-after-persistence",
+        "duplicate-command-already-applied",
+        "rejected-command-keeps-state",
+        "one-event-appended-per-command",
+        "command-keeps-original-instance"
       ],
       "result": "pass",
       "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: class / index-file",
-      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:607-608"
     },
     {
       "programming_model": "class",
-      "persistence_method": "state-sourcing",
+      "persistence_method": "event-sourcing",
+      "replay": "none",
       "code_representation": "companion",
       "module_layout": "named-file",
       "scenarios": [
         "state-change",
         "business-error-keeps-state",
         "invalid-value-rejected",
-        "restore-after-persistence"
+        "restore-after-persistence",
+        "duplicate-command-already-applied",
+        "rejected-command-keeps-state",
+        "one-event-appended-per-command",
+        "command-keeps-original-instance"
       ],
       "result": "pass",
       "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: companion / named-file",
-      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:607-608"
     },
     {
       "programming_model": "class",
-      "persistence_method": "state-sourcing",
+      "persistence_method": "event-sourcing",
+      "replay": "none",
       "code_representation": "companion",
       "module_layout": "index-file",
       "scenarios": [
         "state-change",
         "business-error-keeps-state",
         "invalid-value-rejected",
-        "restore-after-persistence"
+        "restore-after-persistence",
+        "duplicate-command-already-applied",
+        "rejected-command-keeps-state",
+        "one-event-appended-per-command",
+        "command-keeps-original-instance"
       ],
       "result": "pass",
       "evidence": "tests/t11-typescript-behavior.test.ts: generation sample behavior: companion / index-file",
-      "mapping": "tests/fixtures/typescript-generation/samples.ts:383-384"
+      "mapping": "tests/fixtures/typescript-generation/samples.ts:607-608"
     }
   ],
   "checks": [
-    "tests/t11-typescript-behavior.test.ts:103-111 checks that the child reports every scenario id, in order, and exits 0",
+    "tests/t11-typescript-behavior.test.ts:104-111 checks that the child reports every scenario id, in order, and exits 0",
     "tests/t11-typescript-behavior.test.ts:113-118 passes a scenario only when the child reports it as passing",
-    "tests/t11-typescript-behavior.test.ts:122-125 checks that each sample's mapping declares programming_model class and persistence_method state-sourcing",
-    "tests/t11-typescript-behavior.test.ts:129-136 checks the four scenario ids",
-    "tests/t11-typescript-behavior.test.ts:138-146 checks the four representation x layout combinations"
+    "tests/t11-typescript-behavior.test.ts:122-125 checks that each sample's mapping declares programming_model class and persistence_method event-sourcing",
+    "tests/t11-typescript-behavior.test.ts:129-139 checks the seven shared scenario ids",
+    "tests/t11-typescript-behavior.test.ts:141-143 checks the one TypeScript-only scenario id",
+    "tests/t11-typescript-behavior.test.ts:145-152 checks the four representation x layout combinations"
   ],
   "unverified": [
     {
       "programming_model": "class",
-      "persistence_method": "event-sourcing",
-      "reason": "No generation sample declares event-sourcing or has a replay method."
+      "persistence_method": "state-sourcing",
+      "reason": "Since T-03-03 every generation sample declares event-sourcing, so no behavior run exercises a state-sourcing command returning Result<Invoice, E>."
+    },
+    {
+      "programming_model": "class",
+      "persistence_method": "event-sourcing with replay",
+      "reason": "No generation sample declares replay_methods; the samples restore from a record of the whole state, not by replaying events."
     },
     {
       "programming_model": "actor",

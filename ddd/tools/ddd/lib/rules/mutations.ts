@@ -1,11 +1,11 @@
 /**
- * How a mutating method of a domain type is judged against the model, whatever language it is
- * written in: which model aggregate the type is bound to, whether the mapping declares the method a
- * replay of one of that aggregate's events, and which of the rules (b) and (c) the method falls under.
+ * How a domain type is bound to a model aggregate, and how the Rust domain gate judges a mutating
+ * method against the model: whether the mapping declares it a replay of one of that aggregate's
+ * events, whether it is a declared command, and which of the rules (b) and (c) it falls under.
  *
- * Each language finds its own types and methods and resolves its own parameter types; the binding
- * and the classification those facts are judged by are stated here once, so the Rust and TypeScript
- * domain gates give one mutation one answer.
+ * The binding (`bindAggregate`) is shared by the Rust and TypeScript gates. The classification is
+ * the Rust domain gate's alone: a TypeScript domain method returns a new instance, so the TypeScript
+ * gate reports every state write under (b) or (c) without reading the model or the mapping.
  */
 
 import type { Aggregate } from "../schema/model.ts";
@@ -110,14 +110,26 @@ export function classifyMutation(
   if (replay) return { ...base, classification: "replay-exempt" };
   if (POST_INIT.has(method.name)) return { ...base, classification: "post-init" };
   if (model.status !== "available" || !model.index) return { ...base, classification: "unknown" };
-  const declared =
-    aggregate !== undefined &&
-    model.index
-      .commandsOf(aggregate)
-      .some(
-        (command) =>
-          command.element_id.split(".").slice(2).join("-") === command_slug ||
-          command.element_id.endsWith(`.${command_slug}`),
-      );
-  return { ...base, classification: declared ? "declared-command" : "undeclared" };
+  return {
+    ...base,
+    classification: isDeclaredCommand(method.name, aggregate, model) ? "declared-command" : "undeclared",
+  };
+}
+
+/**
+ * Whether the method `methodName` is one of the commands the model declares on `aggregate`. False
+ * when the model is not available or the type is bound to no aggregate, where nothing is declared.
+ */
+export function isDeclaredCommand(
+  methodName: string,
+  aggregate: string | undefined,
+  model: ModelAvailability,
+): boolean {
+  if (aggregate === undefined || model.status !== "available" || !model.index) return false;
+  const slug = snakeToKebab(methodName);
+  return model.index
+    .commandsOf(aggregate)
+    .some(
+      (command) => command.element_id.split(".").slice(2).join("-") === slug || command.element_id.endsWith(`.${slug}`),
+    );
 }

@@ -2,7 +2,7 @@
 
 English | [Japanese](rust-sensor-contract.ja.md)
 
-Updated: 2026-09-13, T-02. Changes are limited to the analyzer, rules, tests, generation instructions, and documentation in `ddd/`. Third-party framework distributions were not modified.
+Updated: 2026-09-13, T-02. Changes are limited to the analyzer, rules, tests, generation instructions, and documentation in `ddd/`. Third-party framework distributions were not modified. 2026-09-28, T-03-03: rule b also reports a declared command that does not take `&mut self` (see [A declared command takes &mut self](#a-declared-command-takes-mut-self)).
 
 ## Distinguish name equality from type identity
 
@@ -10,7 +10,7 @@ Updated: 2026-09-13, T-02. Changes are limited to the analyzer, rules, tests, ge
 |---|---|
 | h: Aggregate arguments to execute | Only domain types corresponding to canonical Aggregate.root_element are aggregates. Distinguish value objects, Domain Primitives, and unrelated same-named types. |
 | i: Calls to other use cases | Resolve the receiver and detect calls to inherent execute methods on concrete use-case-layer types. Distinguish port traits, other layers, and calls to the same type as the caller. |
-| b: Undeclared mutation | Join structs/enums with impls using crate- and module-qualified type identity. Report cross-file and trait-implementation mutations at their actual file and line. |
+| b: Undeclared mutation, or a declared command without `&mut self` | Join structs/enums with impls using crate- and module-qualified type identity. Report cross-file and trait-implementation mutations at their actual file and line. A method implementing a declared command that does not take `&mut self` is also reported. |
 | d: Getter calls | Inspect getters on the identified domain receiver type. Same-named methods on unrelated types are not violations. Calls on self remain excluded. Use-case calls proven to forward results unchanged as repository arguments are also allowed. |
 
 Match aggregate Rust types by the root element's name or PascalCase derived from its stable ID. When several candidates share a name, use crate/module from the aggregate mapping; if still ambiguous, emit `model.unresolved`. Giving a value object a command method named after an aggregate command does not authorize mutation.
@@ -71,6 +71,22 @@ Require one domain-event parameter and an event_ref resolving to an event owned 
 Renaming a method to apply or replay is insufficient. A cross-file impl is allowed when all conditions match. Review and behavior tests verify whether the body applies the event correctly.
 
 Design sensors also check replay_methods shape and event_ref resolution. Malformed lists are not silently discarded.
+
+## A declared command takes &mut self
+
+A command changes the aggregate's state, so the method implementing it takes `&mut self`. Rule b keeps reporting a `&mut self` method that is neither a declared command nor a declared replay method, with the same message as before. It also reports, at the method's declaration line, a method implementing a declared command that takes another receiver:
+
+| Receiver | Message |
+|---|---|
+| `&self` | `declared command Invoice::issue takes &self; a command changes the aggregate's state and takes &mut self` |
+| `self` | `declared command Invoice::issue takes self by value; a command changes the aggregate's state and takes &mut self` |
+| any other, such as `mut self` | `declared command Invoice::issue takes a receiver other than &mut self; a command changes the aggregate's state and takes &mut self` |
+
+This is judged only when the type is bound unambiguously to an aggregate of the canonical model and the model is available. When the binding is ambiguous (`model.unresolved`), when the model is SKIP or absent, or when the type is bound to no aggregate, the receiver is not judged.
+
+The convention the receiver belongs to is: under state sourcing a command returns `Result<(), XxxError>` and a duplicate returns `Ok(())` without changing anything; under event sourcing it returns `Result<XxxEvent, XxxError>` — one command, one event — and only a command whose `idempotency.strategy` is `command-id-memory` returns `Result<CommandOutcome<XxxEvent>, XxxError>` with `enum CommandOutcome<E> { Applied(E), AlreadyApplied }`. One `&mut self` method decides, transitions and returns the event; there is no `&self` method that only decides, and a refusal changes nothing. A replay method only applies an event and is distinct from the commands.
+
+The sensor does not judge that return shape — whether a method returns `Result<XxxEvent, …>`, `CommandOutcome`, or a `Vec` of events. The Rust facts resolve no type alias and record no returned variant, so the shape cannot be judged from them without false positives. It is left to review and the behavior tests.
 
 ## Record unexamined locations
 

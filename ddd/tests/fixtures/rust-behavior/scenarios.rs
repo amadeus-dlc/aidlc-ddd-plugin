@@ -2,7 +2,9 @@
 //! §11), stated for the Rust sample: the same seven scenarios, steps and values as
 //! tests/fixtures/typescript-behavior/scenarios.ts, with each string error case replaced by the
 //! Rust variant the aggregate mapping names for the same `error_ref`, and each `applied` /
-//! `already-applied` outcome by the `CommandOutcome` variant of the same name.
+//! `already-applied` outcome by the `CommandOutcome` variant of the same name. A Rust command
+//! borrows the aggregate mutably, changes it and returns its one event, so where the TypeScript
+//! steps go on with the instance a command returned, these go on with the same aggregate.
 //!
 //! This file is the whole library of a harness crate the behavior test writes next to the sample and
 //! runs with `cargo test`; the harness depends on the sample's three crates by path, so the sample
@@ -92,18 +94,10 @@ fn expect_not_found(result: Result<(), IssueInvoiceFailure>) {
     }
 }
 
-/// The command applied and raised `events` events.
-fn expect_applied<E, F: std::fmt::Debug>(result: Result<CommandOutcome<E>, F>, events: usize) {
+/// The command that remembers its command ids applied: the one event it raised.
+fn applied<E, F: std::fmt::Debug>(result: Result<CommandOutcome<E>, F>) -> E {
     match value(result) {
-        CommandOutcome::Applied(raised) => assert_eq!(raised.len(), events),
-        CommandOutcome::AlreadyApplied => panic!("expected the command to apply, got already applied"),
-    }
-}
-
-/// The events of a command that applied.
-fn events_of<E, F: std::fmt::Debug>(result: Result<CommandOutcome<E>, F>) -> Vec<E> {
-    match value(result) {
-        CommandOutcome::Applied(raised) => raised,
+        CommandOutcome::Applied(event) => event,
         CommandOutcome::AlreadyApplied => panic!("expected the command to apply, got already applied"),
     }
 }
@@ -112,9 +106,7 @@ fn events_of<E, F: std::fmt::Debug>(result: Result<CommandOutcome<E>, F>) -> Vec
 fn expect_already_applied<E, F: std::fmt::Debug>(result: Result<CommandOutcome<E>, F>) {
     match value(result) {
         CommandOutcome::AlreadyApplied => {}
-        CommandOutcome::Applied(raised) => {
-            panic!("expected the command to be already applied, got it applied with {} events", raised.len())
-        }
+        CommandOutcome::Applied(_) => panic!("expected the command to be already applied, got it applied"),
     }
 }
 
@@ -138,7 +130,7 @@ fn state_change() {
     value(invoice.add_line(InvoiceLine::of(50)));
     assert_eq!(invoice.total(), 150);
     assert_eq!(invoice.lines().len(), 2);
-    expect_applied(invoice.issue(), 1);
+    value(invoice.issue());
     assert_eq!(error_of(invoice.add_line(InvoiceLine::of(1))), AddInvoiceLineError::AlreadyIssued);
     assert_eq!(error_of(invoice.issue()), IssueInvoiceError::AlreadyIssued);
     assert_eq!(invoice.total(), 150);
@@ -159,7 +151,7 @@ fn business_error_keeps_state() {
     assert_eq!(error_of(empty.issue()), IssueInvoiceError::EmptyLines);
     // Still a draft: a refused issue did not issue it.
     value(empty.add_line(InvoiceLine::of(10)));
-    expect_applied(empty.issue(), 1);
+    value(empty.issue());
 
     let repository = InMemoryInvoiceRepository::new(records());
     expect_rejected(IssueInvoice::new(&repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
@@ -218,15 +210,15 @@ fn restore_after_persistence() {
 #[test]
 fn duplicate_command_already_applied() {
     let mut invoice = value(Invoice::open(CUSTOMER, vec![InvoiceLine::of(100)]));
-    expect_applied(invoice.issue(), 1);
-    expect_applied(invoice.record_payment("payment-1", 30), 1);
+    value(invoice.issue());
+    applied(invoice.record_payment("payment-1", 30));
     assert_eq!(invoice.paid(), 30);
     expect_already_applied(invoice.record_payment("payment-1", 30));
     assert_eq!(invoice.paid(), 30);
     // Only the command id decides: the same id with another amount is the same command again.
     expect_already_applied(invoice.record_payment("payment-1", 50));
     assert_eq!(invoice.paid(), 30);
-    expect_applied(invoice.record_payment("payment-2", 30), 1);
+    applied(invoice.record_payment("payment-2", 30));
     assert_eq!(invoice.paid(), 60);
 
     let repository = InMemoryInvoiceRepository::new(records());
@@ -264,11 +256,11 @@ fn rejected_command_keeps_state() {
     assert_eq!(draft.paid(), 0);
 
     let mut invoice = value(Invoice::open(CUSTOMER, vec![InvoiceLine::of(100)]));
-    expect_applied(invoice.issue(), 1);
+    value(invoice.issue());
     assert_eq!(error_of(invoice.record_payment("payment-1", 150)), RecordPaymentError::Overpayment);
     assert_eq!(invoice.paid(), 0);
     // A refused command is not remembered: the same id is applied once it can be.
-    expect_applied(invoice.record_payment("payment-1", 30), 1);
+    applied(invoice.record_payment("payment-1", 30));
     assert_eq!(invoice.paid(), 30);
 
     let repository = InMemoryInvoiceRepository::new(records());
@@ -285,45 +277,49 @@ fn rejected_command_keeps_state() {
     }
 }
 
-/// scenarios.ts "multiple-events-one-append".
+/// scenarios.ts "one-event-appended-per-command".
 #[test]
-fn multiple_events_one_append() {
+fn one_event_appended_per_command() {
     let mut invoice = value(Invoice::open(CUSTOMER, vec![InvoiceLine::of(100), InvoiceLine::of(20)]));
-    expect_applied(invoice.issue(), 1);
-    // A part payment records the payment; the payment that reaches the total also settles it.
-    expect_applied(invoice.record_payment("payment-1", 20), 1);
-    expect_applied(invoice.record_payment("payment-2", 100), 2);
+    value(invoice.issue());
+    applied(invoice.record_payment("payment-1", 20));
+    assert!(!invoice.is_settled());
+    // The payment that reaches the total settles the invoice and still raises its one event.
+    applied(invoice.record_payment("payment-2", 100));
     assert_eq!(invoice.paid(), 120);
+    assert!(invoice.is_settled());
 
     let repository = InMemoryInvoiceRepository::new(records());
+    assert_eq!(saved_of(&repository, DRAFT), (0, 0));
     value(IssueInvoice::new(&repository).execute(DRAFT));
+    assert_eq!(saved_of(&repository, DRAFT), (1, 1));
     let record_payment = RecordPayment::new(&repository);
-    let issued = saved_of(&repository, DRAFT);
     value(record_payment.execute(DRAFT, "payment-1", 20));
-    let partly_paid = saved_of(&repository, DRAFT);
-    assert_eq!(partly_paid, (issued.0 + 1, issued.1 + 1));
+    assert_eq!(saved_of(&repository, DRAFT), (2, 2));
     value(record_payment.execute(DRAFT, "payment-2", 100));
-    assert_eq!(saved_of(&repository, DRAFT), (partly_paid.0 + 1, partly_paid.1 + 2));
-    assert_eq!(value(repository.find_by_id(DRAFT)).invoice.paid(), 120);
+    assert_eq!(saved_of(&repository, DRAFT), (3, 3));
+    let stored = value(repository.find_by_id(DRAFT)).invoice;
+    assert_eq!(stored.paid(), 120);
+    assert!(stored.is_settled());
 
-    // A store checks the version its own read found, whatever was read in between.
+    // A store appends the one event it is handed, checked against the version its own read found.
     let contended = InMemoryInvoiceRepository::new(records());
     value(IssueInvoice::new(&contended).execute(DRAFT));
     let mut first = value(contended.find_by_id(DRAFT));
     let mut second = value(contended.find_by_id(DRAFT));
-    let second_events = events_of(second.invoice.record_payment("payment-2", 20));
-    value(contended.store(DRAFT, second.invoice, second.version, second_events));
+    let second_event = applied(second.invoice.record_payment("payment-2", 20));
+    value(contended.store(DRAFT, second.invoice, second.version, second_event.clone()));
     assert_eq!(saved_of(&contended, DRAFT), (2, 2));
+    assert_eq!(contended.stored_events(DRAFT).last(), Some(&second_event));
     value(contended.find_by_id(DRAFT));
-    let first_events = events_of(first.invoice.record_payment("payment-1", 30));
-    assert_eq!(error_of(contended.store(DRAFT, first.invoice, first.version, first_events)), VersionConflict);
+    let first_event = applied(first.invoice.record_payment("payment-1", 30));
+    assert_eq!(error_of(contended.store(DRAFT, first.invoice, first.version, first_event)), VersionConflict);
     assert_eq!(saved_of(&contended, DRAFT), (2, 2));
     // The refused change was not saved: a new read lacks it, and the same payment applies there.
     let mut reread = value(contended.find_by_id(DRAFT));
     assert_eq!(reread.invoice.paid(), 20);
-    let reread_events = events_of(reread.invoice.record_payment("payment-1", 30));
-    assert_eq!(reread_events.len(), 1);
-    value(contended.store(DRAFT, reread.invoice, reread.version, reread_events));
+    let reread_event = applied(reread.invoice.record_payment("payment-1", 30));
+    value(contended.store(DRAFT, reread.invoice, reread.version, reread_event));
     assert_eq!(saved_of(&contended, DRAFT), (3, 3));
     assert_eq!(value(contended.find_by_id(DRAFT)).invoice.paid(), 50);
 }

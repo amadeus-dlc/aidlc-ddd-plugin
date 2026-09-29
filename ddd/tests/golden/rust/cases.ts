@@ -36,7 +36,7 @@ bounded_contexts:
             transitions: [transition.invoice.issue]
             domain_errors:
               - { element_id: error.invoice.issue.already-issued, name: AlreadyIssued, operation: command.invoice.issue, condition: not draft }
-            events: [event.invoice.issued]
+            event: event.invoice.issued
             idempotency: { strategy: none }
         events:
           - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }
@@ -128,6 +128,32 @@ function withFiles(expect: GoldenCase["expect"], path: string): GoldenCase["expe
   return { ...expect, files };
 }
 
+/**
+ * The declared command `issue` taking something other than `&mut self`: a command changes the
+ * aggregate's state, so it borrows it mutably, whatever it returns. The first one returns the event
+ * without changing state, the shape of a decision-only method.
+ */
+const ISSUE_TYPES = "pub enum InvoiceEvent {\n    Issued,\n}\npub enum IssueInvoiceError {\n    AlreadyIssued,\n}\n";
+function withIssue(signature: string): string {
+  return `${DOMAIN_CLEAN.replace(
+    "pub fn issue(&mut self) {}",
+    `pub fn issue(${signature}) -> Result<InvoiceEvent, IssueInvoiceError> { Ok(InvoiceEvent::Issued) }`,
+  )}${ISSUE_TYPES}`;
+}
+const RUST_COMMAND_RECEIVER_CASES: readonly (readonly [string, string])[] = [
+  ["violation-b-command-ref-self", withIssue("&self")],
+  ["violation-b-command-by-value", withIssue("self")],
+  ["violation-b-command-mut-self-value", withIssue("mut self")],
+];
+/** A method named like the command on a type bound to no aggregate is not the command. */
+const UNBOUND_ISSUE = `${DOMAIN_CLEAN}pub struct Stamp {
+    mark: i64,
+}
+impl Stamp {
+    pub fn issue(&self) -> bool { self.mark > 0 }
+}
+`;
+
 const BASE_RUST_CASES: GoldenCase[] = [
   domainCase("clean-domain", DOMAIN_CLEAN, { pass: true, rules: [] }),
   domainCase("violation-a", DOMAIN_CLEAN.replace("id: String,", "pub id: String,"), { pass: false, rules: ["a"] }),
@@ -135,6 +161,17 @@ const BASE_RUST_CASES: GoldenCase[] = [
     pass: false,
     rules: ["b"],
   }),
+  ...RUST_COMMAND_RECEIVER_CASES.map(([name, lib]) => domainCase(name, lib, { pass: false, rules: ["b"] })),
+  // A command that borrows the aggregate mutably and returns its one event is the shape a command has.
+  domainCase(
+    "clean-b-command-returns-event",
+    `${DOMAIN_CLEAN.replace(
+      "pub fn issue(&mut self) {}",
+      "pub fn issue(&mut self) -> Result<InvoiceEvent, IssueInvoiceError> { Ok(InvoiceEvent::Issued) }",
+    )}${ISSUE_TYPES}`,
+    { pass: true, rules: [] },
+  ),
+  domainCase("clean-b-unbound-type-method", UNBOUND_ISSUE, { pass: true, rules: [] }),
   domainCase(
     "violation-c-literal",
     `${DOMAIN_CLEAN}\npub fn build() -> Invoice { Invoice { id: String::new(), amount: 0 } }\n`,

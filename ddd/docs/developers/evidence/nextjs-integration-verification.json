@@ -1,8 +1,8 @@
 {
-  "verified_at": "2026-09-27T16:35:44.786Z",
-  "scope": "T-11-06 integration of the TypeScript generation samples (class and companion representations under the named-file and index-file layouts) into an ESM Next.js application on the server-side Node.js runtime: npm ci, next build, the four TypeScript gates and the module layout CI entry over the installed and built project, next start and HTTP requests through the sample's IssueInvoice.",
-  "base_commit": "a1c9f8969100ed47bc7a63e603dc3b424395dc0d",
-  "base_commit_note": "Measured on an uncommitted working tree holding the T-11-06 changes on top of the base commit.",
+  "verified_at": "2026-09-28T16:08:25.068Z",
+  "scope": "T-03-03 re-run of the T-11-06 integration of the TypeScript generation samples (class and companion representations under the named-file and index-file layouts) into an ESM Next.js application on the server-side Node.js runtime: npm ci, next build, the four TypeScript gates and the module layout CI entry over the installed and built project, next start and HTTP requests through the sample's IssueInvoice. Re-measured after the samples became immutable one-command-one-event code (TypeScript use cases store the instance the command returns). Re-measured again on the final TypeScript domain gate (after the rule b and rule c changes, and after rule b took a changing method's name called on closure state for a write only where the written types say it is an array, a Map or a Set), so the four gates in this run are the ones this change ships.",
+  "base_commit": "7cda3bf634b8a4c58fc55d7a441c768a132af041",
+  "base_commit_note": "Measured on an uncommitted working tree holding the T-03-03 changes on top of the base commit.",
   "command": "cd ddd && bun run verify:nextjs-integration",
   "platform": "darwin-arm64",
   "toolchain": {
@@ -29,8 +29,8 @@
     "tsconfig_rewritten_by_next_build": false
   },
   "run": {
-    "started_at": "2026-09-27T16:35:15.303Z",
-    "finished_at": "2026-09-27T16:35:44.786Z",
+    "started_at": "2026-09-28T16:07:53.944Z",
+    "finished_at": "2026-09-28T16:08:25.068Z",
     "platform": "darwin-arm64",
     "toolchain": {
       "node": "v24.19.0",
@@ -53,29 +53,29 @@
           {
             "step": "npm ci",
             "ok": true,
-            "seconds": 2.02
+            "seconds": 2.47
           },
           {
             "step": "next build",
             "ok": true,
-            "seconds": 3.73
+            "seconds": 3.87
           },
           {
             "step": "gate ddd-typescript-domain",
             "ok": true,
-            "seconds": 0.27,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-use-case",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-interface-adapter",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
@@ -87,8 +87,8 @@
           {
             "step": "layout CI entry",
             "ok": true,
-            "seconds": 0.01,
-            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"named-file\"}"
+            "seconds": 0.02,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":8,\"mode\":\"named-file\"}"
           },
           {
             "step": "next start",
@@ -185,29 +185,29 @@
           {
             "step": "npm ci",
             "ok": true,
-            "seconds": 2.15
+            "seconds": 2.34
           },
           {
             "step": "next build",
             "ok": true,
-            "seconds": 3.72
+            "seconds": 4.15
           },
           {
             "step": "gate ddd-typescript-domain",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-use-case",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-interface-adapter",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
@@ -219,8 +219,8 @@
           {
             "step": "layout CI entry",
             "ok": true,
-            "seconds": 0.01,
-            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"index-file\"}"
+            "seconds": 0.02,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":8,\"mode\":\"index-file\"}"
           },
           {
             "step": "next start",
@@ -317,29 +317,29 @@
           {
             "step": "npm ci",
             "ok": true,
-            "seconds": 2.29
+            "seconds": 2.4
           },
           {
             "step": "next build",
             "ok": true,
-            "seconds": 3.82
+            "seconds": 4.06
           },
           {
             "step": "gate ddd-typescript-domain",
             "ok": true,
-            "seconds": 0.13,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-use-case",
             "ok": true,
-            "seconds": 0.13,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-interface-adapter",
             "ok": true,
-            "seconds": 0.13,
+            "seconds": 0.14,
             "detail": []
           },
           {
@@ -352,7 +352,7 @@
             "step": "layout CI entry",
             "ok": true,
             "seconds": 0.02,
-            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"named-file\"}"
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":8,\"mode\":\"named-file\"}"
           },
           {
             "step": "next start",
@@ -449,29 +449,29 @@
           {
             "step": "npm ci",
             "ok": true,
-            "seconds": 2.36
+            "seconds": 2.32
           },
           {
             "step": "next build",
             "ok": true,
-            "seconds": 3.77
+            "seconds": 3.78
           },
           {
             "step": "gate ddd-typescript-domain",
             "ok": true,
-            "seconds": 0.13,
+            "seconds": 0.15,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-use-case",
             "ok": true,
-            "seconds": 0.13,
+            "seconds": 0.14,
             "detail": []
           },
           {
             "step": "gate ddd-typescript-interface-adapter",
             "ok": true,
-            "seconds": 0.12,
+            "seconds": 0.14,
             "detail": []
           },
           {
@@ -483,13 +483,13 @@
           {
             "step": "layout CI entry",
             "ok": true,
-            "seconds": 0.01,
-            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":6,\"mode\":\"index-file\"}"
+            "seconds": 0.02,
+            "detail": "{\"pass\":true,\"findings\":[],\"packages\":4,\"files\":8,\"mode\":\"index-file\"}"
           },
           {
             "step": "next start",
             "ok": true,
-            "seconds": 0.26
+            "seconds": 0.27
           },
           {
             "step": "POST /api/invoices/invoice-open/issue",

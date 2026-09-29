@@ -13,8 +13,8 @@
 | t10-rust-module-layout | プロジェクト設定、両配置規約、センサー直接実行、CI終了コード、共通の論理モジュール解決、抽出器を起動できない場合のゲートとCI用入口それぞれの挙動 |
 | t11-typescript-module-layout | TypeScriptの配置設定、パッケージの `src` に対する両配置規約、解決できない構成（曖昧・欠落・リンク・配置できない名前・入れ子のパッケージ・読めないディレクトリ）、センサー直接実行とCI用入口が同じ判定を返すこと、CI終了コード、TypeScriptを持たないプロジェクトに何も報告しないこと |
 | t11-typescript-generation-samples | 両コード表現・両配置のTypeScript生成見本。ドメイン・ユースケース・インターフェースアダプタ・モジュール配置の各ゲートが所見0件で通ること（前の3つは申告したソースを検査したうえで）、モジュール配置のCI用入口が終了コード0で終わること、コンパイラの診断が0件であること、親モジュールを配置どおりのファイルに置くこと |
-| t11-typescript-behavior | 共通の振る舞いテスト7件（正常な状態変更、業務エラー時の状態保持、不正値の生成拒否、永続化後の復元、重複したコマンドを適用済みとして返すこと、拒否したコマンドで状態を保つこと、1コマンドの複数イベントを1回の追記で保存すること）を、各コード表現・各モジュール配置のTypeScript生成見本で、見本のパッケージを `node_modules` にリンクして実行すること。各見本の写像が宣言する実行モデル `class` と永続化方式 `state-sourcing`。[TypeScriptの実行モデルと永続化方式の検証](../docs/developers/typescript-execution-persistence-verification.ja.md)を参照 |
-| t11-rust-behavior | 同じ共通の振る舞いテスト7件をRustで書き、請求書の集約を持つRustの見本で、各モジュール配置（`file`・`mod-rs`）について、見本のクレートへ path で依存するハーネスのクレートを通して `cargo test` でコンパイル・実行すること。見本がRustのドメイン・ユースケース・インターフェースアダプタ・モジュール配置の各ゲートを所見なしで通ること。見本の写像が宣言する実行モデル `class` と永続化方式 `state-sourcing`。`cargo` と `rustc` が必要。[Rustの実行モデルと永続化方式の検証](../docs/developers/rust-execution-persistence-verification.ja.md)を参照 |
+| t11-typescript-behavior | 共通の振る舞いテスト7件（正常な状態変更、業務エラー時の状態保持、不正値の生成拒否、永続化後の復元、重複したコマンドを適用済みとして返すこと、拒否したコマンドで状態を保つこと、1コマンドにつき1件のイベントを追記すること）と、TypeScriptだけのシナリオ1件（コマンドが呼び出し元のインスタンスを変えないこと）を、各コード表現・各モジュール配置のTypeScript生成見本で、見本のパッケージを `node_modules` にリンクして実行すること。各見本の写像が宣言する実行モデル `class` と永続化方式 `event-sourcing`（replay なし）。ステートソーシングは振る舞いテストの対象外。[TypeScriptの実行モデルと永続化方式の検証](../docs/developers/typescript-execution-persistence-verification.ja.md)を参照 |
+| t11-rust-behavior | 同じ共通の振る舞いテスト7件をRustで書き、請求書の集約を持つRustの見本で、各モジュール配置（`file`・`mod-rs`）について、見本のクレートへ path で依存するハーネスのクレートを通して `cargo test` でコンパイル・実行すること。見本がRustのドメイン・ユースケース・インターフェースアダプタ・モジュール配置の各ゲートを所見なしで通ること。見本の写像が宣言する実行モデル `class` と永続化方式 `event-sourcing`（replay なし）。Rustのテストは共通シナリオ7件とちょうど一致すること。ステートソーシングは振る舞いテストの対象外。`cargo` と `rustc` が必要。[Rustの実行モデルと永続化方式の検証](../docs/developers/rust-execution-persistence-verification.ja.md)を参照 |
 | t9-sensor-contract | センサー×規則の網羅性、正常・異常・境界例、依存方向表、予約名全件、対応表の更新漏れ |
 | t8-declaration-language | 英語見出し・従来の日本語見出しの受理と、両言語の重複セクションの拒否 |
 | u1-sensor-foundation | 正規モデルのローダー・ID・参照、完全性、所見と実行契約 |
@@ -33,7 +33,7 @@
 | install / install-sandbox | 取得元ヘルパー、実CLIでの導入・更新・dry-run・失敗時の保護。導入後と更新後のツリーからTypeScriptの事実抽出を起動できること。導入済みのTypeScriptゲートとモジュール配置のCI用入口を、すべての生成見本で実行すること。`fixtures/installed-gate.ts` を通した、Claude/Codexでの導入済みゲートのテスト。`report --single` がモデルの無い `ddd-domain-modeling` を完了させるAI-DLC 2.9.0の単独完了の不足と、それを合格にしない `aidlc engine sensor fire` による手動の確認。手動の確認が正しいモデルを合格にし、壊れたモデルを失敗にし、無いモデルを拒否すること。functional-designの `ddd-mapping-declarations`、infrastructure-designの `ddd-layer-structure` と `ddd-design-advisories` の承認経路と手動の確認の経路。すべてのRustの振る舞いの見本が、導入済みのRustゲートを所見なしで通ること。ネットワーク取得は任意実行 |
 | typescript-compiler-launch | 同梱したTypeScript Compiler APIの起動分類。起動できない各条件が固有のsubjectと理由コードを持つこと、複数成立時の固定順、センサーを検査不能として止めること、同梱したcompilerが固定した版と記録したdigestに一致すること、対応する `target` の範囲（`ES2017` 〜 `ESNext`。書かれたとおりに記録し、それより低いもの・書かれていないもの・パッケージ間で異なるものは拒否する） |
 | t11-typescript-domain-facts | TypeScriptの事実の契約。宣言、メンバーと可視性、型だけのものを区別したimportとexport、呼び出し、構築、位置、未解決の各理由、構文エラー、関数宣言の引数、getterの結果を変更せずに渡した先の呼び出しと、どこにも渡さない各使い方、TypeScriptパッケージに届かない場所へ複製したtoolsツリーからの起動 |
-| t11-typescript-domain-sensor / u5-golden | class表現とcompanion表現の両方でのTypeScriptドメインゲート。TypeScriptのゴールデンケースを同一プロセスと入口の両方で判定し、各所見が名指すメンバー・メソッド・行、Rustのドメインゲートの同じ場面と同じ意味になること、state-evidenceの検査と同じ状態隠蔽の判定、事実や規則で決まらない構文によるゲートの停止、起動できないcompilerによるT-11-01と同じ停止を確認する。 |
+| t11-typescript-domain-sensor / u5-golden | class表現とcompanion表現の両方でのTypeScriptドメインゲート。TypeScriptのゴールデンケースを同一プロセスと入口の両方で判定し、各所見が名指すメンバー・メソッド・行、規則(b)がモデル・コマンド・replayの宣言やモデルの有無にかかわらずドメインのインスタンスメソッドでの状態の書込みをすべて報告すること、それ以外の場面でRustのドメインゲートの同じ場面と同じ意味になること、state-evidenceの検査と同じ状態隠蔽の判定、事実や規則で決まらない構文によるゲートの停止、起動できないcompilerによるT-11-01と同じ停止を確認する。 |
 | t11-typescript-layer-sensors / u5-golden | ドメインのclass表現とcompanion表現の両方でのTypeScriptのユースケースゲートとインターフェースアダプタゲート。ゴールデンケースを同一プロセスと入口の両方で判定し、各所見が名指すファイル・行・文言、各場面が`ddd-rust-use-case`・`ddd-rust-interface-adapter`の同じ場面と同じ意味になること、command/queryの境界と型だけの依存、各ゲートが規則の判定に使うソースだけを読むこと、どちらのゲートも決められない構文で停止すること、起動できないcompilerで停止することを確認する。 |
 | framework-compatibility | 標準ツールによるClaude/Codexへのcompose、グラフ生成、再composeの冪等性 |
 | error-contract-contract | 業務エラー契約の語彙、Cargo条件とTypeScript条件を含む要求識別、応答検証 |
@@ -52,9 +52,9 @@ bun run build:codex
 bun scripts/verify-dist.ts claude codex
 ```
 
-配布物の検査は各636ケースを実行します。あわせて、4つの生成見本それぞれについて、TypeScriptの4ゲート、モジュール配置のCI用入口、配置の混在をその入口が拒否することを確かめ、各環境で24件のTypeScriptの実行を行います。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
+配布物の検査は各656ケースを実行します。あわせて、4つの生成見本それぞれについて、TypeScriptの4ゲート、モジュール配置のCI用入口、配置の混在をその入口が拒否することを確かめ、各環境で24件のTypeScriptの実行を行います。ランナーは一時ディレクトリを作り、実センサースクリプトを子プロセスとして呼びます。通常の承認処理や、モデルによるコード生成を実行するテストではありません。
 
-`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各636件の配布物検査、通常承認の統合検査、導入のテストを順に実行します。規則表から選んだ211入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持し、判定できないTypeScriptのドメイン・ユースケース・インターフェースアダプタの各ゲートが各環境で承認を閉じたままにすることも確認します。
+`bun run test:sandbox` は、英日見出し・契約ケース・対応表の検査、Claude/Codexのビルド、一時コピーへのcompose・グラフ生成・冪等性、各656件の配布物検査、通常承認の統合検査、導入のテストを順に実行します。規則表から選んだ211入力を各環境の承認経路へ通し、監査記録と所見の規則IDも確認します。既存の結合検査40件も維持し、判定できないTypeScriptのドメイン・ユースケース・インターフェースアダプタの各ゲートが各環境で承認を閉じたままにすることも確認します。
 
 ## 回帰で確認した範囲と残る検証
 
