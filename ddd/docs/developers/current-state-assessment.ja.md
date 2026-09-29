@@ -67,6 +67,8 @@ F-03/F-04は[evaluators.ts](../../tools/ddd/lib/rules/rust/evaluators.ts)のrule
 
 旧設計の失敗範囲、upsertと冪等性、直前ID保持、初回成功と重複成功、サーガとアクターモデル、RDB選定、Streamsの順序保証も設計3文書で訂正した。具体的な戻り値やreplay宣言はT-03に残す。
 
+注記（2026-09-28）: replay宣言は後に[replay_methods](../users/rust-sensor-contract.ja.md)として実装した。戻り値の契約（applied・already appliedの2種類の成功を表す `CommandOutcome`、拒否時のメソッド固有のエラー、複数イベントの1回の追記での保存）は2026-09-28に確定・実装した。[ドメイン層設計](domain-layer-design.ja.md)を参照する。上記の計測結果は変更していない。
+
 ## 5. 旧タスク表の誤認を訂正した
 
 Fable5.1の旧completion-tasks.mdには、次の問題があった。現在の[タスク表](completion-tasks.ja.md)はこれらを訂正済み。

@@ -2,7 +2,7 @@
 
 [English](interface-adapter-layer-design.md) | 日本語
 
-更新: 2026-09-13。[ドメイン層の境界契約](domain-layer-design.ja.md)と[ユースケースの回復契約](use-case-layer-design.ja.md)を外部I/Oへ実装する規約。
+更新: 2026-09-28。[ドメイン層の境界契約](domain-layer-design.ja.md)と[ユースケースの回復契約](use-case-layer-design.ja.md)を外部I/Oへ実装する規約。
 
 ## 1. 提供形態
 
@@ -38,6 +38,8 @@ RMUはコマンド側のインターフェイスアダプタ層やクエリ側�
 
 担当集約単体またはその集合を扱い、集約の一部や担当外の集約を保存しない。基本動詞は `find_by_id`、`store`、`delete_by_id`。担当集約の追加検索は許すが、画面検索はDAOへ分ける。`store` の再保存・競合・追記はユースケース層設計 §5-1に従う。
 
+`store` の意味は、実装写像にある集約の `persistence_method` から宣言する（infrastructure-designは `ddd-aggregate-mapping` を必須ではない入力として使う）。`state-sourcing` の集約の `store` は期待バージョン付きの `upsert`、`event-sourcing` の集約の `store` は `insert-only`（追記のみ）とする。一つのコマンドが複数イベントを生む場合は、期待バージョンを一度だけ照合し、一回の追記でまとめて保存する。
+
 初期実装はin-memoryとし、競合や障害を含むポート契約をテストする。DTOからの復元は完全コンストラクタを通す。replayはドメイン層設計 §6に従い、任意の復元バイパスを許さない。
 
 ## 6. 永続化基盤の選定
@@ -57,15 +59,17 @@ DynamoDB Streamsの順序保証は同一アイテム単位。同じ集約のイ�
 - 更新と処理済み記録を一体で確定する方法。条件付き書込みを使う場合はその条件。
 - 再構築、再試行上限、回復不能イベントの隔離方法。
 
+層構造宣言の `rmu` パッケージは、省略可能な2項目を記載できる。`ordering_scope`（`aggregate` | `item` | `none`。イベントの順序を保つ単位）と `dedup`（`version-check` | `event-id` | `idempotent-write`。適用済みイベントを捨てる方法）である。これらを記載できるのは `rmu` パッケージだけとする。どちらも記載しない宣言（v1移行の出力を含む）はそのまま受理し、順序と重複の扱いは本文のレビューで確認する。遅延・欠番・順序逆転は構造化せず、本文のレビューで扱う。
+
 番号の大きいイベントだけを反映する方式は、状態全体の置換と差分の積み上げで意味が異なる。差分を飛ばすと結果が壊れるため、番号比較だけで欠番を無視しない。複数集約をまとめるビューでは、単一の番号で全履歴の進行を表せるとも限らない。
 
 ## 8. 宣言とセンサー
 
-`cicd-pipeline.md` 内の `## DDD Layer Structure`（従来の日本語見出しも受理。[成果物契約](../users/artifact-contract.ja.md)を参照） にモデルとcontextの参照、CQRS有無、各側のクレート一覧、依存、ポート、リポジトリ、復元経路、保存先を記載する。スキーマにないRMUの詳細はまず本文で説明する。
+`cicd-pipeline.md` 内の `## DDD Layer Structure`（従来の日本語見出しも受理。[成果物契約](../users/artifact-contract.ja.md)を参照） にモデルとcontextの参照、CQRS有無、各側のクレート一覧、依存、ポート、リポジトリ、復元経路、保存先を記載する。`ordering_scope` と `dedup` 以外のRMUの詳細は本文で説明する。
 
 kは両側の参照、lはクエリ側のドメイン参照、mは命名、nは復元を検査する。設計側は宣言、Rust側は構文を対象とし、意味的な安全性の証明には使わない。担当集約の範囲や再実行安全性はレビューとテストで確認する。
 
-宣言は通常承認へ接続した。単独完了の標準側の不足はT-01、Rustの名前・配置依存の制約はT-02、方式別の詳細化はT-03で管理する。
+宣言は通常承認へ接続した。設計センサーはRMUの項目（ddd-layer-structureセンサーは、置き場所の誤りや一覧外の値をブロッキングの `layer-structure.item` として報告する）と、助言 `design-advisories.store-upsert` として各リポジトリの `store` の意味が集約の `persistence_method` と一致するかを検査する。写像が集約の保存方式を示さない場合、この助言はstoreの意味を判定できないことを報告する。単独完了の標準側の不足はT-01（プラグイン側は `aidlc engine sensor fire` による手動確認で対応済み、標準側の修正は残る）、Rustの名前・配置依存の制約はT-02で管理する。
 
 ## 9. ナレッジ
 
@@ -73,4 +77,4 @@ CQRS分離、ポートの責務、復元、RMU、外部モデルとの境界変�
 
 ## 10. 後続の詳細設計
 
-RMUの詳細スキーマ、方式別必須項目、replayの意味的な正しさの検証方法は未確定。宣言と明示されたRust型の照合は[T-02](../users/rust-sensor-contract.ja.md)で実装した。[T-03](completion-tasks.ja.md)で必要な項目を決め、未検証の方式を実装済みと表示しない。
+方式別の項目は[T-03](completion-tasks.ja.md)で確定した。省略可能なRMU項目 `ordering_scope` と `dedup`（§7）、保存方式ごとの `store` の意味（§5）である。遅延・欠番・順序逆転とreplayの意味的な正しさは本文のレビューで扱い、センサーでは証明しない。宣言と明示されたRust型の照合は[T-02](../users/rust-sensor-contract.ja.md)で実装した。未検証の方式を実装済みと表示しない。

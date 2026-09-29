@@ -130,11 +130,20 @@ domain_packages:
 |---|---|---|
 | domain-design の写像検査 | `ddd-mapping-declarations` | `mapping-declarations.document` |
 | domain-design の参照解決 | `ddd-reference-ids` | `reference-ids.document` |
-| functional-design の Process Manager 要否の判定 | `ddd-mapping-declarations` | 写像を対象とする `mapping-declarations.document` |
+| functional-design の Process Manager 要否と実行モデルの判定 | `ddd-mapping-declarations` | 写像を対象とする `mapping-declarations.document` |
+| infrastructure-design の保存意味の判定 | `ddd-design-advisories` | 助言 `design-advisories.store-upsert`（保存意味を判定できない） |
 | ドメインパッケージ検査 | `ddd-rust-domain`、`ddd-typescript-domain` | `domain-packaging.declaration` |
 | 規則評価コンテキストでの replay メソッド照合 | `ddd-rust-domain`、`ddd-rust-use-case`、`ddd-rust-interface-adapter`、`ddd-typescript-domain`、`ddd-typescript-use-case`、`ddd-typescript-interface-adapter` | 無効になり、`replay.disabled: aggregate mapping is invalid` と注記する |
 
-写像が存在しないことと、存在するが読めないことは別の事実です。functional-design では、写像が存在しなければ Process Manager の要否を評価せずその旨を判定結果に注記しますが、存在して読めない写像はブロック要因になります。`ddd-layer-structure` は写像を読みません。集約のコードの置き場所は、そのコンテキストが集約を復元すべきかどうかを決めないためです。
+写像が存在しないことと、存在するが読めないことは別の事実です。functional-design では、写像が各対象集約の `programming_model` を与えます。
+
+- 対象集約が2つ以上のユースケースで、対象のいずれか一つでも `actor` であれば `multi_aggregate_strategy.kind: process-manager` を必須とし、それ以外はブロッキングの `mapping-declarations.process-manager-required` になります。対象がすべて `class` の場合は、`process-manager` と `re-execution` のどちらも選べます。
+- 対象集約が2つ以上で `re-execution` を使うユースケースについて、写像が存在しない、読めない、または対象のいずれかの項目がない場合は、その対象の実行モデルが分からないため、ブロッキングの `mapping-declarations.execution-model-undetermined` を報告します。単一集約のユースケースと `process-manager` のユースケースは影響を受けず、写像がなくても通ります。写像が存在しないことの注記は出力しなくなりました。
+- 存在して読めない写像は、写像を対象とするブロック要因になります。
+
+infrastructure-design では、`ddd-design-advisories` が各集約の `persistence_method` を読みます。`state-sourcing` の集約のリポジトリは `store` 動詞と `upsert` を、`event-sourcing` の集約のリポジトリは `store` 動詞と `insert-only` を宣言することを期待し、一致しなければ助言 `design-advisories.store-upsert` になります。写像が存在しない、読めない、またはリポジトリの集約を写像していない場合は、同じ助言が保存意味を判定できないことを報告します。従来のupsertだけの判定には戻しません。
+
+`ddd-layer-structure` は写像を読みません。集約のコードの置き場所は、そのコンテキストが集約を復元すべきかどうかを決めないためです。
 
 この形式は version 2 の正規モデルを必要とし、ゲートもその版を読みます。設定・モデル・写像・レイヤー宣言をまとめて変換し、書き込む前に相互の整合を検査する[`ddd-artifact-set migrate`](artifact-migration.ja.md)で、記録一式を一度に移行してください。
 

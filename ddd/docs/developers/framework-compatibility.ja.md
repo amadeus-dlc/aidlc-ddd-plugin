@@ -2,7 +2,7 @@
 
 [English](framework-compatibility.md) | 日本語
 
-更新: 2026-09-13。確認基準はAI-DLC 2.8.2とBun 1.3.13。完成時の検証対象はClaude CodeとCodexであり、kimi・opencodeは対象外。
+更新: 2026-09-28。確認基準はAI-DLC 2.9.0とBun 1.3.13。下の開発スコープの追跡の節は、2.8.2で確認した経路を記録する。完成時の検証対象はClaude CodeとCodexであり、kimi・opencodeは対象外。
 
 ## 標準の導入済みツールを使う
 
@@ -26,13 +26,13 @@ User StoriesなしでUnits Generationまで進んだintentでは、標準の経�
 
 ## 検証済みと未検証を分ける
 
-Claude/Codexのビルド・compose・既存ゴールデンケースは調査で成功した。T-01で成果物と通常承認のDDD検査を接続した。ただし標準の単独完了は一般成果物・センサーを検証せず、成果物なしでも完了を返す。再現と制約は[成果物契約](../users/artifact-contract.ja.md)を参照。
+Claude/Codexのビルド・compose・既存ゴールデンケースは調査で成功した。T-01で成果物と通常承認のDDD検査を接続した。ただしAI-DLC 2.9.0の単独完了（`report --single --result completed`）は登録成果物もゲートセンサーも検証せず、成果物なしでも完了を返す。そこでDDDの手順ファイルは、単独完了の前に `aidlc engine sensor fire` による手動の確認を求める。`install-sandbox.test.ts` は、導入済みプロジェクト上でこの不足をClaude・Codexの両方で毎回再現し、手動の確認が欠落した成果物を合格にしないことも確認する。規則と制約は[成果物契約](../users/artifact-contract.ja.md)を、未投稿の[上流イシューの下書き](upstream-standalone-completion-report.ja.md)も参照。
 
 Codexのルール転送は標準AI-DLCと実行ホストの連携に依存する。DDD側で現在の経路を実機確認する作業はT-05であり、旧bridgeの成功記録を代用しない。
 
 ## 互換性を直す順序
 
-1. T-01の通常承認と、単独完了前の明示的な直接検査を維持する。完了や終了コードだけで検査成功を判断しない。
+1. T-01の通常承認と、単独完了前の `aidlc engine sensor fire` による手動の確認を維持する。完了や終了コードだけで検査成功を判断しない。blockingのセンサーは、コマンドが0で終了し、`note` のない `result: passed` を返したときだけ合格とする。上流が単独完了を修正したら、再現テストを更新し、手動の確認を廃止する。
 2. T-04のビルド・検証経路はClaude/Codexの現行ツールを対象とする。
 3. T-05の導入・更新CLIは検証済み。実モデルによるステージ実行を確認する。
 

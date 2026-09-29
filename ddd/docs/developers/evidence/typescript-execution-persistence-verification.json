@@ -32,7 +32,7 @@
       ],
       "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:20",
       "read_for_a_decision_by": [
-        "tools/ddd-sensor-mapping-declarations.ts:111 requires a Process Manager for a use case whose target aggregates are all actor"
+        "tools/ddd-sensor-mapping-declarations.ts:127 requires a Process Manager for a use case with any actor target aggregate (2026-09-28: was all actor at :111)"
       ],
       "not_read_by": [
         "The behavior scenarios, which run the sample sources as written."

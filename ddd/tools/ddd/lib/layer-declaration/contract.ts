@@ -31,6 +31,14 @@ type IoUnit = (typeof IO_UNITS)[number];
 export const STORE_SEMANTICS = ["upsert", "insert-only", "unknown"] as const;
 type StoreSemantics = (typeof STORE_SEMANTICS)[number];
 
+/** The unit a read-model updater keeps its events in order for: one aggregate, one read-model item, or none. */
+export const ORDERING_SCOPES = ["aggregate", "item", "none"] as const;
+type OrderingScope = (typeof ORDERING_SCOPES)[number];
+
+/** How a read-model updater drops an event it has already applied. */
+export const DEDUP_METHODS = ["version-check", "event-id", "idempotent-write"] as const;
+type DedupMethod = (typeof DEDUP_METHODS)[number];
+
 export const RESTORATION_ROUTES = ["full-constructor", "other"] as const;
 type RestorationRoute = (typeof RESTORATION_ROUTES)[number];
 
@@ -62,6 +70,13 @@ export interface PackageIdentity {
 export interface LayerPackage {
   readonly role: PackageRole;
   readonly code: PackageIdentity;
+  /**
+   * Only a read-model updater (`rmu`) states these, and each only when the declaration says so: a
+   * declaration that states neither leaves ordering and duplicate handling to the review of its
+   * prose, as do delay, gaps and reordering, which are never structured.
+   */
+  readonly ordering_scope?: OrderingScope;
+  readonly dedup?: DedupMethod;
 }
 
 export interface PackageDependency {

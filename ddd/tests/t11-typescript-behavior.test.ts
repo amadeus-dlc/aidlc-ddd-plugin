@@ -126,12 +126,15 @@ for (const sample of generationSamples()) {
   });
 }
 
-test("the behavior scenarios are the four the shared design requires", () => {
+test("the behavior scenarios are the seven the shared design requires", () => {
   expect(BEHAVIOR_SCENARIOS.map((scenario) => scenario.id)).toEqual([
     "state-change",
     "business-error-keeps-state",
     "invalid-value-rejected",
     "restore-after-persistence",
+    "duplicate-command-already-applied",
+    "rejected-command-keeps-state",
+    "multiple-events-one-append",
   ]);
 });
 

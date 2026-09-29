@@ -17,6 +17,7 @@ For developers maintaining this plugin. Start with the assessment and remaining 
 | Re-execution, consistency, and recovery | [Use-case-layer design](use-case-layer-design.md) |
 | CQRS, persistence, and RMU | [Interface Adapter-layer design](interface-adapter-layer-design.md) |
 | Framework integration and constraints | [AI-DLC compatibility](framework-compatibility.md) |
+| Draft upstream issue for standalone stage completion (not posted) | [Upstream issue draft](upstream-standalone-completion-report.md) |
 
 The layer designs define conventions for generated applications and the plugin. Consult the [user contracts](../users/README.md) when changing artifact formats or sensor behavior. Written conventions alone do not establish automated enforcement.
 

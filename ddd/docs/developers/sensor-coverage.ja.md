@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は14センサー・89規則項目。87項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では620ケースを各環境で実行する。承認経路には、この表から選んだ207入力を各環境で通す。
+対象は14センサー・90規則項目。88項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では636ケースを各環境で実行する。承認経路には、この表から選んだ211入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -17,20 +17,21 @@
 | ddd-design-advisories<br>`design-advisories.document` | `clean-use-case` | `violation-legacy-layer`<br>`violation-document`<br>`violation-mixed-headings`<br>`violation-missing-list` | `violation-mixed-headings`<br>宣言不正は助言として報告し、承認開始を遮断しない。 |
 | ddd-design-advisories<br>`design-advisories.multi-aggregate` | `clean-use-case` | `violation-multi-aggregate` | `clean-empty-use-cases`<br>対象0件・1件と、2集約以上の助言の境界。 |
 | ddd-design-advisories<br>`design-advisories.repository-scope` | `clean` | `violation-repository-scope` | `clean-collection-repository`<br>集約の集合は有効、集約の一部を扱う宣言は助言対象。 |
-| ddd-design-advisories<br>`design-advisories.store-upsert` | `clean` | `violation-store-upsert` | `clean-collection-repository`<br>集約の集合は有効、集約の一部を扱う宣言は助言対象。 |
+| ddd-design-advisories<br>`design-advisories.store-upsert` | `clean` | `violation-event-sourcing-upsert`<br>`violation-store-method-unmapped`<br>`violation-store-upsert` | `clean-event-sourcing-insert-only`<br>状態の保存はupsert、イベントの保存はinsert-onlyを正とし、逆の組み合わせは助言対象。 |
 | ddd-layer-structure<br>`layer-structure.cqrs-sides` | `clean` | `violation-cqrs-sides` | `clean-non-cqrs`<br>クエリ側が必須になるCQRSと非CQRSを区別する。 |
 | ddd-layer-structure<br>`layer-structure.dependencies-incomplete` | `clean` | `violation-item` | `clean-empty-layers`<br>完全な層宣言と、明示的に層構造がないUnitを区別する。 |
-| ddd-layer-structure<br>`layer-structure.item` | `clean` | `violation-legacy-layer`<br>`violation-item`<br>`violation-mixed-headings`<br>`violation-missing-list` | `clean-empty-layers`<br>完全な層宣言と、明示的に層構造がないUnitを区別する。 |
+| ddd-layer-structure<br>`layer-structure.item` | `clean` | `violation-legacy-layer`<br>`violation-item`<br>`violation-rmu-ordering-scope-value`<br>`violation-rmu-dedup-value`<br>`violation-ordering-outside-rmu`<br>`violation-ordering-on-structure`<br>`violation-mixed-headings`<br>`violation-missing-list` | `clean-empty-layers`<br>完全な層宣言と、明示的に層構造がないUnitを区別する。 |
 | ddd-layer-structure<br>`layer-structure.k` | `clean-rmu-cross-side` | `violation-k`<br>`violation-k-reverse` | `violation-k-reverse`<br>RMUの橋渡しは許可し、クエリ側からの逆方向依存も検出する。 |
 | ddd-layer-structure<br>`layer-structure.l` | `clean-rmu-cross-side` | `violation-l`<br>`violation-k-reverse` | `violation-k-reverse`<br>RMUの橋渡しは許可し、クエリ側からの逆方向依存も検出する。 |
 | ddd-layer-structure<br>`layer-structure.model` | `clean` | `violation-model`<br>`violation-legacy-model` | `violation-missing-list`<br>一覧の欠落はモデル検査の前に拒否する。 |
 | ddd-layer-structure<br>`layer-structure.n` | `clean` | `violation-n`<br>`violation-n-aggregate-mapped-elsewhere` | `clean-collection-repository`<br>集合を扱うリポジトリでも完全コンストラクタによる復元を確認する。 |
 | ddd-mapping-declarations<br>`domain-packaging.technical-name` | `clean-packaging-declarations` | `violation-packaging-technical-name`<br>`violation-packaging-name-aggregate`<br>`violation-packaging-name-aggregates`<br>`violation-packaging-name-impl`<br>`violation-packaging-name-vo`<br>`violation-packaging-name-entities`<br>`violation-packaging-name-entity`<br>`violation-packaging-name-value_objects`<br>`violation-package-reserved-impls`<br>`violation-package-reserved-implementation`<br>`violation-package-reserved-implementations`<br>`violation-package-reserved-vos`<br>`violation-package-reserved-value_object`<br>`violation-package-reserved-valueobject`<br>`violation-package-reserved-valueobjects`<br>`violation-package-reserved-VO` | `violation-package-reserved-VO`<br>大小文字・raw識別子を正規化して要素全体で照合し、部分文字列では判定しない。 |
 | ddd-mapping-declarations<br>`mapping-declarations.document` | `clean-use-case` | `violation-document`<br>`violation-legacy-mapping`<br>`violation-legacy-key`<br>`violation-axes`<br>`violation-aggregate-unmapped`<br>`violation-operation-unmapped`<br>`violation-duplicate`<br>`violation-legacy-mapping-beside-use-cases`<br>`violation-replay-shape`<br>`violation-packaging-missing-declarations`<br>`violation-packaging-empty-declarations`<br>`violation-packaging-missing-term`<br>`violation-packaging-missing-rationale`<br>`violation-packaging-missing-reference`<br>`violation-packaging-duplicate`<br>`violation-packaging-missing-parent`<br>`violation-packaging-shape`<br>`violation-mixed-headings`<br>`violation-missing-list` | `violation-mixed-headings`<br>見出しの言語をまたいでも正規セクションは1つだけ。 |
+| ddd-mapping-declarations<br>`mapping-declarations.execution-model-undetermined` | `clean-unmapped-process-manager` | `violation-execution-model-undetermined`<br>`violation-unmapped-target-re-execution` | `clean-unmapped-single-aggregate`<br>写像がないとき遮断するのは複数集約の再実行だけで、Process Managerと単一集約は対象外。 |
 | ddd-mapping-declarations<br>`mapping-declarations.j` | `clean-additive-idempotency` | `violation-j` | `clean-mapping`<br>加算型はID記憶必須、状態遷移型はnoneを宣言可能。 |
 | ddd-mapping-declarations<br>`mapping-declarations.model` | `clean-mapping` | `violation-model`<br>`violation-legacy-model`<br>`violation-legacy-model-use-cases` | `violation-document`<br>壊れた宣言はモデル読込み前に拒否する。 |
-| ddd-mapping-declarations<br>`mapping-declarations.multi-aggregate-strategy` | `clean-actor-process-manager` | `violation-multi-aggregate-strategy`<br>`violation-process-manager-required` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
-| ddd-mapping-declarations<br>`mapping-declarations.process-manager-required` | `clean-actor-process-manager` | `violation-process-manager-required` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
+| ddd-mapping-declarations<br>`mapping-declarations.multi-aggregate-strategy` | `clean-actor-process-manager` | `violation-multi-aggregate-strategy`<br>`violation-process-manager-required`<br>`violation-mixed-strategy-absent` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
+| ddd-mapping-declarations<br>`mapping-declarations.process-manager-required` | `clean-actor-process-manager` | `violation-process-manager-required`<br>`violation-mixed-re-execution`<br>`violation-mixed-strategy-absent` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
 | ddd-mapping-declarations<br>`mapping-declarations.use-case-item` | `clean-use-case` | `violation-use-case-item` | `clean-empty-use-cases`<br>必須項目のあるユースケースと、明示的な空一覧を区別する。 |
 | ddd-model-completeness<br>`model-completeness.f-absent` | `clean-complete` | `violation-f-absent` | `violation-empty-model-view`<br>ファイル欠落と、存在するが空の説明を区別する。 |
 | ddd-model-completeness<br>`model-completeness.f-invariant` | `clean-complete` | `violation-f-invariant`<br>`violation-empty-model-view` | `clean-model-whitespace`<br>空白の違いだけで不変条件本文の一致を否定しない。 |
@@ -110,4 +111,4 @@
 
 層の依存方向は、domain・use-case・インターフェイスアダプタ・rmuを起点に6層への依存をuse/Cargoの両方で検証し、外部I/Oの許可・禁止も確認する。技術分類の予約名14種類は設計・コード両方で違反ケースを持つ。英日見出しの互換性テストもtest:sandboxに含める。
 
-標準AI-DLCの単独完了ガードの再現1件は任意実行のまま残る。新規導入・更新・モデルによる生成・生成アプリケーションの動作は、この検証の対象外。[残作業](completion-tasks.ja.md)を参照。
+標準AI-DLC 2.9.0の単独完了（`report --single`）がDDDのゲートを実行しない不足は、導入先のテスト（`tests/install-sandbox.test.ts`）が常時再現し、手順書どおりの手動検査（`aidlc engine sensor fire`）で欠落と違反を検出することも確かめる。新規導入・更新・モデルによる生成・生成アプリケーションの動作は、この検証の対象外。[残作業](completion-tasks.ja.md)を参照。

@@ -4,6 +4,31 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — 単独完了時の確認と実装契約（T-01、T-03）
+
+### T-01-01（#110）: AI-DLC 2.9.0 での単独完了
+
+- **単独完了の前に行う手動の確認を1つに揃える。** AI-DLC 2.9.0 の `report --single --result completed` は、登録成果物を検証せず、ゲートセンサーも実行せずに完了を記録する。そのためステージの成果物がすべて欠落していても `kind: done` を返す。DDD の手順ファイル7件（`ddd-domain-modeling` と、domain-design・functional-design・infrastructure-design・code-generation・build-and-test・ci-pipeline の contribution）に、同じ「単独完了時の確認」を載せた。センサーごとに `aidlc engine sensor fire <sensor> --stage <slug> --output-path <path>` を1つずつ示し、blocking か advisory かを記す。blocking のセンサーは、コマンドが0で終了し、最後の JSON 行が `note` のない `result: passed` のときだけ合格とする。0以外の終了（成果物が無いと0以外で終了する）、`result: failed`、`note` のいずれかは失敗とする。advisory の `ddd-design-advisories` は完了を止めない。AI-DLC 2.8.2 についての古い記述は除いた。build-and-test と ci-pipeline は、ビルドと CI の必須の検査として `ddd-check-*-module-layout.ts` の直接実行を残す。code-generation は、直接の CLI の代わりに、8つのセンサーの sensor fire コマンドを使う。
+- **この不足をサンドボックスの実行ごとに再現する。** `install-sandbox.test.ts` は、Claude と Codex で、ビルドした配布物を新しい AI-DLC 2.9.0 のプロジェクトへ導入し、モデルが無い状態で `ddd-domain-modeling` を `report --single` で完了させ、`kind: done` を期待する。手動の確認が欠落した成果物を合格にしないこと、正しいモデルを合格にし、壊れたモデルを失敗にし、無いモデルを拒否することも示す。上流がこの完了を拒否するようになると、この確認は失敗し、修正後に期待する挙動を示す。新しい補助 `tests/fixtures/installed-gate.ts` が導入済みのゲートを動かす。
+- **任意実行の再現を削除する。** 環境変数で有効にしていた `t1-gate-integration.test.ts` の単独完了ガードの任意再現を削除した。上の毎回実行するテストがこれに代わる。
+- **上流イシューを下書きする。** [上流イシューの下書き](docs/developers/upstream-standalone-completion-report.ja.md)。まだ投稿しておらず、ユーザーの確認後に投稿する。
+
+### T-03-01（#111）: 実行モデル、写像の欠落、再送期間、RMU、保存の意味
+
+- **対象に actor が1つでもあれば Process Manager を必須にする。** `mapping-declarations.process-manager-required` は、すべてではなく、対象集約のいずれかが集約写像で `actor` のときに適用する。class だけが対象なら `process-manager` と `re-execution` のどちらも選べる。functional-design の contribution から「class は再実行だけ」という記述を除いた。
+- **実行モデルを決められない再実行のユースケースを拒否する。** 新しい blocking のルール `mapping-declarations.execution-model-undetermined` は、対象集約が2つ以上で戦略が `re-execution` のユースケースについて、写像が無い、読めない、または対象のいずれかの項目が無いときに報告する。単一集約のユースケースと `process-manager` のユースケースは写像が無くても通る。注記「ddd-aggregate-mapping is absent; Process Manager requirement not evaluated」は出さなくなった。
+- **再送期間はモデルから取る。** モデルの既存の `idempotency.retention` を正とし、ユースケース宣言には項目を追加しない。`re_execution_basis` はそれを参照し、`strategy: none` のコマンドについては、繰り返しをコマンド自身のエラーで拒否するのか、状態遷移のない no-op にするのかを書く。
+- **RMU が順序と重複の扱いを書けるようにする。** レイヤー宣言で `role: rmu` のパッケージは、任意項目 `ordering_scope`（`aggregate` | `item` | `none`）と `dedup`（`version-check` | `event-id` | `idempotent-write`）を書ける。command・query のパッケージに書くと `layer-declaration.structure`、レイヤー構造の直下に書くと `layer-declaration.unknown-key`、一覧に無い値は `layer-declaration.structure` として拒否し、`ddd-layer-structure` はこれらをすべて blocking の `layer-structure.item` として報告する。`schema_version` は2のままで、どちらの項目も書かない宣言はそのまま受け入れる。遅延・欠落・順序の入れ替わりは本文レビューに残す。
+- **保存の意味を永続化方式から判定する。** infrastructure-design の contribution は `ddd-aggregate-mapping` を（必須ではない入力として）読むようになった。`state-sourcing` の集約は期待バージョンつきの `upsert`、`event-sourcing` の集約は `insert-only` で保存し、1コマンドの複数イベントは期待バージョンを1回だけ確認して1回の追記で保存する。advisory の `design-advisories.store-upsert`（ルール ID は変えていない）は、集約の `persistence_method` に従って判定する。写像が無い、読めない、またはリポジトリの集約を写像していないときは、保存の意味を判定できないと報告する。以前の upsert だけの判定へは戻らない。
+- **ゴールデンケースを追加し、対応表を再生成する。** 上の規則について契約と設計のゴールデンケースを追加した。対応表は14センサー、90ルール、各環境636件の配布物ケースと211件の承認ケースになった。`install-sandbox.test.ts` は、Claude と Codex で、functional-design の `ddd-mapping-declarations`、infrastructure-design の `ddd-layer-structure` と `ddd-design-advisories` について、承認経路と手動の確認の経路を実行する。
+
+### T-03-02（#112）: コマンドの結果と複数イベント
+
+- **イベントを宣言するコマンドは `CommandOutcome` を返す。** 成功は「適用した」（状態を変え、1件以上のイベントを持つ）と「適用済み」（状態を変えず、イベントを持たない）の2種類で、拒否はメソッド固有のエラー型とする。Rust は、infrastructure の言語拡張クレートの `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` を使い `Result<CommandOutcome<E>, <メソッドのエラー>>` を返す。TypeScript は、言語拡張パッケージで `Result` の隣に宣言した判別共用体 `{ kind: "applied"; events } | { kind: "already-applied" }` を使う。適用済みを返すのは `command-id-memory` のコマンドだけで、モデルの retention のもとでまだ覚えている ID に対してだけ返す。イベントを宣言しないコマンドは `Result<(), E>` / `Result<void, E>` のままとする。
+- **1コマンドの複数イベントをまとめて保存する。** コマンドは、モデルがそのコマンドについて宣言したイベントだけを返す。期待バージョンは1回だけ確認し、すべてを1回の追記で保存する。
+- **見本と振る舞いテストを広げる。** TypeScript と Rust の見本に `recordPayment` / `record_payment` とユースケース `RecordPayment` を加え、リポジトリポートの `store` はバージョンを1回だけ確認してコマンドのイベントをまとめて追記する。共通の振る舞いテストに duplicate-command-already-applied、rejected-command-keeps-state、multiple-events-one-append の3件を加えて7件にし、TypeScript と Rust で同じにした。すべての見本は、DDD のすべてのコードゲートを所見なしで通る。
+- **戻り値の形はレビューとテストに任せる。** 戻り値の形、宣言したイベントだけを返すこと、1回の追記は、どのセンサーも判定しない。code-generation の contribution とナレッジ（`ddd-rust-domain-conventions`、`ddd-rust-persistence-conventions`、`ddd-typescript-domain-conventions`、`ddd-use-case-conventions`、`ddd-interface-adapter-conventions`）が、これらの規則と、ゲートがレビューとテストに任せる事柄を述べる。
+
 ## 未リリース — 配布物・承認・CI・Next.js での TypeScript の検証
 
 - **パッケージの `target` が `ES2017` 以上 `ESNext` 以下の TypeScript プロジェクトを受け入れる。** `create-next-app` が生成する `tsconfig.json` は `target: "ES2017"` を書くため、これまでは `typescript-extractor:project-condition-mismatch` として拒否していた。事実と規則は target に依存しないため、`ES2017` 〜 `ES2025` と `ESNext` を大文字小文字を問わず受け入れる。それより低い target、書かれていない target、パッケージ間で異なる target は、引き続き拒否する。`module: esnext`・`moduleResolution: bundler`・`strict: true` は変えていない。error-contract の条件は、`esnext` だけを受け入れるのをやめ、プロジェクトが書いた target（`es2017` 〜 `esnext`）をそのまま記録する。両方の入口は同じプロジェクトを拒否する。[TypeScript の事実抽出](docs/developers/typescript-fact-extraction.ja.md)を参照。

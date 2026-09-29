@@ -3,7 +3,8 @@
  *
  * Key order is fixed so reviewers see the business terms — the context, the sides, the ports and the
  * aggregates — before the package names that spell them. Lists the reader requires are written even
- * when empty; the note on a restoration path is written only when the declaration carries one.
+ * when empty; the note on a restoration path, and the ordering scope and duplicate handling of a
+ * read-model updater, are written only when the declaration carries them.
  */
 
 import { field, mapping, optionalField, requiredNodeList, requiredScalarList } from "../shared/yaml-render.ts";
@@ -23,7 +24,12 @@ function identityLines(identity: PackageIdentity): string[] {
 }
 
 function packageLines(entry: LayerPackage): string[] {
-  return [field("role", entry.role), ...mapping("code", identityLines(entry.code))];
+  return [
+    field("role", entry.role),
+    ...mapping("code", identityLines(entry.code)),
+    ...optionalField("ordering_scope", entry.ordering_scope),
+    ...optionalField("dedup", entry.dedup),
+  ];
 }
 
 function dependencyLines(row: PackageDependency): string[] {

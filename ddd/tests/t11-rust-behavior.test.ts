@@ -14,6 +14,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { inspectedRustPassProblems } from "./fixtures/rust-behavior/gate-runs.ts";
 import {
   otherParentModuleFile,
   parentModuleFile,
@@ -21,13 +22,16 @@ import {
   rustBehaviorSamples,
 } from "./fixtures/rust-behavior/sample.ts";
 import { BEHAVIOR_SCENARIOS } from "./fixtures/typescript-behavior/scenarios.ts";
-import { type GoldenCase, runGoldenCase, SENSOR_RUN_TIMEOUT_MS, TIMED_OUT_EXIT_CODE } from "./golden/runner.ts";
+import { runGoldenCase, SENSOR_RUN_TIMEOUT_MS, TIMED_OUT_EXIT_CODE } from "./golden/runner.ts";
 
 const TOOLS = join(import.meta.dir, "../tools");
 const SCENARIOS_RS = join(import.meta.dir, "fixtures/rust-behavior/scenarios.rs");
 const MAPPING_PATH = "inception/domain-design/ddd-aggregate-mapping.md";
 const DOMAIN_CRATES = ["billing-domain", "billing-use-case", "billing-interface-adapter"] as const;
 const CRATE_DIR = "packages/command";
+/** The infrastructure crate that declares `CommandOutcome`, which the scenarios match on. */
+const LANGUAGE_EXTENSIONS_CRATE = "language-extensions";
+const LANGUAGE_EXTENSIONS_DIR = `packages/infrastructure/${LANGUAGE_EXTENSIONS_CRATE}`;
 
 /** Every gate run starts the distributed extractor in a process of its own. */
 const GATE_RUN_TIMEOUT_MS = 30_000;
@@ -76,18 +80,6 @@ function reportCoverageProblems(reports: readonly CargoTestReport[], scenarioIds
   return problems;
 }
 
-/** What keeps a Rust gate run from being a pass that inspected the sample; empty when it is one. */
-function inspectedRustPassProblems(gateCase: GoldenCase): string[] {
-  const result = runGoldenCase(TOOLS, gateCase);
-  const problems = [...result.problems];
-  const findings = result.verdict?.findings ?? [];
-  if (findings.length) problems.push(`${gateCase.sensor} reported ${JSON.stringify(findings)}`);
-  const note = result.verdict?.note ?? "";
-  if (note.includes("no rust sources claimed")) problems.push(`${gateCase.sensor} inspected nothing: ${note}`);
-  if (note.includes(".unresolved:")) problems.push(`${gateCase.sensor} left part of the sample undecided: ${note}`);
-  return problems;
-}
-
 interface CargoRun {
   readonly exitCode: number | null;
   readonly stdout: string;
@@ -111,7 +103,10 @@ function installSample(sample: RustBehaviorSample): string {
 
 /** The harness is a workspace of its own, so it is never a member of the sample's workspace. */
 function harnessManifest(): string {
-  const dependencies = DOMAIN_CRATES.map((crate) => `${crate} = { path = "../${CRATE_DIR}/${crate}" }`);
+  const dependencies = [
+    ...DOMAIN_CRATES.map((crate) => `${crate} = { path = "../${CRATE_DIR}/${crate}" }`),
+    `${LANGUAGE_EXTENSIONS_CRATE} = { path = "../${LANGUAGE_EXTENSIONS_DIR}" }`,
+  ];
   return [
     "[package]",
     'name = "behavior"',
@@ -177,19 +172,19 @@ for (const sample of rustBehaviorSamples()) {
   describe(`rust behavior sample: ${sample.layout}`, () => {
     test(
       "passes the Rust domain gate with no finding",
-      () => expect(inspectedRustPassProblems(sample.domainCase)).toEqual([]),
+      () => expect(inspectedRustPassProblems(TOOLS, sample.domainCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
     test(
       "passes the Rust use-case gate with no finding",
-      () => expect(inspectedRustPassProblems(sample.useCaseCase)).toEqual([]),
+      () => expect(inspectedRustPassProblems(TOOLS, sample.useCaseCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
     test(
       "passes the Rust interface-adapter gate with no finding",
-      () => expect(inspectedRustPassProblems(sample.interfaceAdapterCase)).toEqual([]),
+      () => expect(inspectedRustPassProblems(TOOLS, sample.interfaceAdapterCase)).toEqual([]),
       GATE_RUN_TIMEOUT_MS,
     );
 
@@ -292,13 +287,16 @@ test("the behavior runs cover both Rust module layouts", () => {
 describe("reading cargo's report", () => {
   const passing = [
     "",
-    "running 4 tests",
+    "running 7 tests",
     "test business_error_keeps_state ... ok",
+    "test duplicate_command_already_applied ... ok",
     "test invalid_value_rejected ... ok",
+    "test multiple_events_one_append ... ok",
+    "test rejected_command_keeps_state ... ok",
     "test restore_after_persistence ... ok",
     "test state_change ... ok",
     "",
-    "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
     "",
   ].join("\n");
   const ids = BEHAVIOR_SCENARIOS.map((scenario) => scenario.id);

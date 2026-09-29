@@ -1,6 +1,6 @@
 # Rust domain conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-28. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -22,6 +22,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-domain-conventions.10 | Make business errors explicit and leave no partial mutation on error. | Review and behavior tests. Distinguish aborting restoration of corrupt history. |
 | K.rust-domain-conventions.11 | Use dedicated collection types when collections have invariants. | Design convention. |
 | K.rust-domain-conventions.12 | Expose only needed operations and hide module internals. | Review. a does not check module visibility. |
+| K.rust-domain-conventions.13 | A command that declares events returns `Result<CommandOutcome<E>, <its error type>>`, with `E` the aggregate's event enum and `enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` declared once in the language-extensions crate of the infrastructure layer. `Applied` carries one or more of the events the model declares for the command; `AlreadyApplied` carries none, changes nothing, and is returned only by a `command-id-memory` command for an id it still remembers under the model's retention. A command that declares no event returns `Result<(), <its error type>>`. | Review and behavior tests. No sensor decides the return shape: the Rust facts resolve no alias and record no returned variant. |
 
 ## Rationale
 

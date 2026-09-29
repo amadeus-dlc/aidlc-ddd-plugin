@@ -30,6 +30,7 @@ async function loadModules(root: string): Promise<SampleModules> {
     Invoice: domain.Invoice,
     InvoiceLine: domain.InvoiceLine,
     IssueInvoice: useCase.IssueInvoice,
+    RecordPayment: useCase.RecordPayment,
     InMemoryInvoiceRepository: interfaceAdapter.InMemoryInvoiceRepository,
   };
 }

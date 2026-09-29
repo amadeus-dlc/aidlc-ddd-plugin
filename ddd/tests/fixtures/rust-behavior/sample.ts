@@ -2,12 +2,18 @@
  * The Rust sample of the invoice aggregate the shared behavior scenarios run against (T-11-07), written
  * once per module layout (`file`, `mod-rs`), with the record the Rust gates read.
  *
- * Each sample is a Cargo workspace of three crates under `packages/command/`: a domain crate holding
- * the `invoice` aggregate with its child module `invoice::line`; a use-case crate declaring the
- * repository port and the use case that issues an invoice; and an interface-adapter crate implementing
- * that port in memory. The parent module has a child so the two layouts place it in different files;
- * only the file of that parent changes with the layout. The use-case and interface-adapter crates hold
- * leaf modules alone, so they are the same in both samples.
+ * Each sample is a Cargo workspace of four crates: the language-extensions crate of the infrastructure
+ * layer under `packages/infrastructure/`, which declares `CommandOutcome`, and three crates under
+ * `packages/command/` — a domain crate holding the `invoice` aggregate with its child module
+ * `invoice::line`; a use-case crate declaring the repository port and the use cases that issue an
+ * invoice and record a payment on it; and an interface-adapter crate implementing that port in memory.
+ * A command that declares events returns `Result<CommandOutcome<InvoiceEvent>, its own error>`: `issue`
+ * is applied with its one event, and `record_payment`, which remembers its recent command ids, is applied
+ * with one or two events or is already applied with none. The repository returns each invoice it
+ * reads with the version it was read at; a store checks that version once and appends every event of
+ * a command together. The parent module has a child so the two
+ * layouts place it in different files; only the file of that parent changes with the layout. The
+ * use-case and interface-adapter crates hold leaf modules alone, so they are the same in both samples.
  *
  * The aggregate is the one the TypeScript samples generate (tests/fixtures/typescript-generation/
  * samples.ts): the same canonical model, and a mapping of the same shape with the Rust spelling of each
@@ -34,6 +40,8 @@ const MODEL_PATH = "inception/ddd-domain-modeling/ddd-domain-model-yaml.md";
 const MAPPING_PATH = "inception/domain-design/ddd-aggregate-mapping.md";
 const STATE = "## Stage Progress\n- [x] ddd-domain-modeling — EXECUTE\n- [x] code-generation — EXECUTE\n";
 
+const LANGUAGE_EXTENSIONS_CRATE = "language-extensions";
+const LANGUAGE_EXTENSIONS_DIR = `packages/infrastructure/${LANGUAGE_EXTENSIONS_CRATE}`;
 const DOMAIN_CRATE = "billing-domain";
 const USE_CASE_CRATE = "billing-use-case";
 const INTERFACE_ADAPTER_CRATE = "billing-interface-adapter";
@@ -50,6 +58,14 @@ export function parentModuleFile(layout: RustModuleLayout): string {
 export function otherParentModuleFile(layout: RustModuleLayout): string {
   return parentModuleFile(layout === "file" ? "mod-rs" : "file");
 }
+
+/** The success side of a command that declares events: applied with its events, or already applied. */
+const LANGUAGE_EXTENSIONS_LIB = `#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommandOutcome<E> {
+    Applied(Vec<E>),
+    AlreadyApplied,
+}
+`;
 
 const DOMAIN_LIB = `pub mod invoice;
 `;
@@ -72,6 +88,8 @@ impl InvoiceLine {
 
 const INVOICE = `pub mod line;
 
+use language_extensions::CommandOutcome;
+
 use self::line::InvoiceLine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -92,6 +110,22 @@ pub enum IssueInvoiceError {
     EmptyLines,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordPaymentError {
+    NotIssued,
+    Overpayment,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvoiceEvent {
+    Issued,
+    PaymentRecorded,
+    Settled,
+}
+
+/// How many payment command ids an invoice remembers: the model's retention_count.
+const REMEMBERED_PAYMENTS: usize = 16;
+
 /// The invoice total: the invariant forbids a negative one.
 fn sum_of(lines: &[InvoiceLine]) -> i64 {
     lines.iter().fold(0, |sum, line| line.add_to(sum))
@@ -102,6 +136,8 @@ pub struct Invoice {
     customer: String,
     lines: Vec<InvoiceLine>,
     issued: bool,
+    paid: i64,
+    payment_ids: Vec<String>,
 }
 
 impl Invoice {
@@ -112,16 +148,23 @@ impl Invoice {
         if sum_of(&lines) < 0 {
             return Err(OpenInvoiceError::NegativeTotal);
         }
-        Ok(Invoice { customer: customer.to_string(), lines, issued: false })
+        Ok(Invoice { customer: customer.to_string(), lines, issued: false, paid: 0, payment_ids: Vec::new() })
     }
 
-    /// Rebuilds a persisted invoice. A state the invariants forbid is corrupt storage, not a business
-    /// error, so it panics rather than returning one.
-    pub fn restore(customer: &str, lines: Vec<InvoiceLine>, issued: bool) -> Self {
-        if customer.is_empty() || (issued && lines.is_empty()) || sum_of(&lines) < 0 {
+    /// Rebuilds a persisted invoice from its whole state. A state the invariants forbid is corrupt
+    /// storage, not a business error, so it panics rather than returning one.
+    pub fn restore(customer: &str, lines: Vec<InvoiceLine>, issued: bool, paid: i64, payment_ids: Vec<String>) -> Self {
+        let total = sum_of(&lines);
+        if customer.is_empty() || total < 0 || (issued && lines.is_empty()) {
             panic!("corrupt invoice state");
         }
-        Invoice { customer: customer.to_string(), lines, issued }
+        if paid < 0 || paid > total || payment_ids.len() > REMEMBERED_PAYMENTS {
+            panic!("corrupt invoice state");
+        }
+        if !issued && (paid != 0 || !payment_ids.is_empty()) {
+            panic!("corrupt invoice state");
+        }
+        Invoice { customer: customer.to_string(), lines, issued, paid, payment_ids }
     }
 
     pub fn add_line(&mut self, line: InvoiceLine) -> Result<(), AddInvoiceLineError> {
@@ -135,7 +178,7 @@ impl Invoice {
         Ok(())
     }
 
-    pub fn issue(&mut self) -> Result<(), IssueInvoiceError> {
+    pub fn issue(&mut self) -> Result<CommandOutcome<InvoiceEvent>, IssueInvoiceError> {
         if self.issued {
             return Err(IssueInvoiceError::AlreadyIssued);
         }
@@ -143,7 +186,29 @@ impl Invoice {
             return Err(IssueInvoiceError::EmptyLines);
         }
         self.issued = true;
-        Ok(())
+        Ok(CommandOutcome::Applied(vec![InvoiceEvent::Issued]))
+    }
+
+    pub fn record_payment(&mut self, payment_id: &str, amount: i64) -> Result<CommandOutcome<InvoiceEvent>, RecordPaymentError> {
+        if self.payment_ids.iter().any(|remembered| remembered == payment_id) {
+            return Ok(CommandOutcome::AlreadyApplied);
+        }
+        if !self.issued {
+            return Err(RecordPaymentError::NotIssued);
+        }
+        let total = sum_of(&self.lines);
+        if self.paid + amount > total {
+            return Err(RecordPaymentError::Overpayment);
+        }
+        self.paid += amount;
+        self.payment_ids.push(payment_id.to_string());
+        if self.payment_ids.len() > REMEMBERED_PAYMENTS {
+            self.payment_ids.remove(0);
+        }
+        if self.paid == total {
+            return Ok(CommandOutcome::Applied(vec![InvoiceEvent::PaymentRecorded, InvoiceEvent::Settled]));
+        }
+        Ok(CommandOutcome::Applied(vec![InvoiceEvent::PaymentRecorded]))
     }
 
     pub fn is_billed_to(&self, customer: &str) -> bool {
@@ -154,6 +219,10 @@ impl Invoice {
         sum_of(&self.lines)
     }
 
+    pub fn paid(&self) -> i64 {
+        self.paid
+    }
+
     pub fn lines(&self) -> Vec<InvoiceLine> {
         self.lines.clone()
     }
@@ -162,27 +231,47 @@ impl Invoice {
 
 const USE_CASE_LIB = `pub mod invoice_repository;
 pub mod issue_invoice;
+pub mod record_payment;
 `;
 
-const INVOICE_REPOSITORY_PORT = `use billing_domain::invoice::Invoice;
+const INVOICE_REPOSITORY_PORT = `use billing_domain::invoice::{Invoice, InvoiceEvent};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InvoiceNotFound;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VersionConflict;
+
+/// An invoice one read found, with the version the invoice was at when it was read.
+pub struct FoundInvoice {
+    pub invoice: Invoice,
+    pub version: u64,
+}
+
 pub trait InvoiceRepository {
-    fn find_by_id(&self, invoice_id: &str) -> Result<Invoice, InvoiceNotFound>;
-    fn store(&self, invoice_id: &str, invoice: Invoice);
+    fn find_by_id(&self, invoice_id: &str) -> Result<FoundInvoice, InvoiceNotFound>;
+    /// Saves the invoice and appends its events together if the invoice is still at the expected
+    /// version, the one its read found; otherwise saves nothing.
+    fn store(
+        &self,
+        invoice_id: &str,
+        invoice: Invoice,
+        expected_version: u64,
+        events: Vec<InvoiceEvent>,
+    ) -> Result<(), VersionConflict>;
 }
 `;
 
-const ISSUE_INVOICE = `use billing_domain::invoice::IssueInvoiceError;
+const ISSUE_INVOICE = `use billing_domain::invoice::{Invoice, IssueInvoiceError};
+use language_extensions::CommandOutcome;
 
-use crate::invoice_repository::{InvoiceNotFound, InvoiceRepository};
+use crate::invoice_repository::{FoundInvoice, InvoiceNotFound, InvoiceRepository, VersionConflict};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IssueInvoiceFailure {
     NotFound(InvoiceNotFound),
     Rejected(IssueInvoiceError),
+    Conflict(VersionConflict),
 }
 
 pub struct IssueInvoice<'a> {
@@ -195,10 +284,48 @@ impl<'a> IssueInvoice<'a> {
     }
 
     pub fn execute(&self, invoice_id: &str) -> Result<(), IssueInvoiceFailure> {
-        let mut invoice = self.invoices.find_by_id(invoice_id).map_err(IssueInvoiceFailure::NotFound)?;
-        invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
-        self.invoices.store(invoice_id, invoice);
-        Ok(())
+        let found: FoundInvoice = self.invoices.find_by_id(invoice_id).map_err(IssueInvoiceFailure::NotFound)?;
+        let mut invoice: Invoice = found.invoice;
+        match invoice.issue().map_err(IssueInvoiceFailure::Rejected)? {
+            CommandOutcome::Applied(events) => {
+                self.invoices.store(invoice_id, invoice, found.version, events).map_err(IssueInvoiceFailure::Conflict)
+            }
+            CommandOutcome::AlreadyApplied => Ok(()),
+        }
+    }
+}
+`;
+
+const RECORD_PAYMENT = `use billing_domain::invoice::{Invoice, RecordPaymentError};
+use language_extensions::CommandOutcome;
+
+use crate::invoice_repository::{FoundInvoice, InvoiceNotFound, InvoiceRepository, VersionConflict};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordPaymentFailure {
+    NotFound(InvoiceNotFound),
+    Rejected(RecordPaymentError),
+    Conflict(VersionConflict),
+}
+
+pub struct RecordPayment<'a> {
+    invoices: &'a dyn InvoiceRepository,
+}
+
+impl<'a> RecordPayment<'a> {
+    pub fn new(invoices: &'a dyn InvoiceRepository) -> Self {
+        RecordPayment { invoices }
+    }
+
+    pub fn execute(&self, invoice_id: &str, payment_id: &str, amount: i64) -> Result<(), RecordPaymentFailure> {
+        let found: FoundInvoice = self.invoices.find_by_id(invoice_id).map_err(RecordPaymentFailure::NotFound)?;
+        let mut invoice: Invoice = found.invoice;
+        match invoice.record_payment(payment_id, amount).map_err(RecordPaymentFailure::Rejected)? {
+            CommandOutcome::Applied(events) => {
+                self.invoices.store(invoice_id, invoice, found.version, events).map_err(RecordPaymentFailure::Conflict)
+            }
+            CommandOutcome::AlreadyApplied => Ok(()),
+        }
     }
 }
 `;
@@ -210,39 +337,75 @@ const IN_MEMORY_INVOICE_REPOSITORY = `use std::cell::RefCell;
 use std::collections::HashMap;
 
 use billing_domain::invoice::line::InvoiceLine;
-use billing_domain::invoice::Invoice;
-use billing_use_case::invoice_repository::{InvoiceNotFound, InvoiceRepository};
+use billing_domain::invoice::{Invoice, InvoiceEvent};
+use billing_use_case::invoice_repository::{FoundInvoice, InvoiceNotFound, InvoiceRepository, VersionConflict};
 
 pub struct InvoiceRecord {
     pub customer: String,
     pub amounts: Vec<i64>,
     pub issued: bool,
+    pub paid: i64,
+    pub payment_ids: Vec<String>,
 }
 
-/// The invoices stored here take precedence over the records they were first read from.
+/// The invoices stored here take precedence over the records they were first read from. Every read
+/// returns a copy with the version it was read at. A store saves only when the invoice is still at
+/// that version, then advances the version by one and appends every event of the command together.
 pub struct InMemoryInvoiceRepository {
     records: HashMap<String, InvoiceRecord>,
     stored: RefCell<HashMap<String, Invoice>>,
+    versions: RefCell<HashMap<String, u64>>,
+    events: RefCell<HashMap<String, Vec<InvoiceEvent>>>,
 }
 
 impl InMemoryInvoiceRepository {
     pub fn new(records: HashMap<String, InvoiceRecord>) -> Self {
-        InMemoryInvoiceRepository { records, stored: RefCell::new(HashMap::new()) }
+        InMemoryInvoiceRepository {
+            records,
+            stored: RefCell::new(HashMap::new()),
+            versions: RefCell::new(HashMap::new()),
+            events: RefCell::new(HashMap::new()),
+        }
+    }
+
+    /// How many times the invoice has been stored.
+    pub fn version(&self, invoice_id: &str) -> u64 {
+        self.versions.borrow().get(invoice_id).copied().unwrap_or(0)
+    }
+
+    /// Every event stored with the invoice, in the order the stores appended them.
+    pub fn stored_events(&self, invoice_id: &str) -> Vec<InvoiceEvent> {
+        self.events.borrow().get(invoice_id).cloned().unwrap_or_default()
     }
 }
 
 impl InvoiceRepository for InMemoryInvoiceRepository {
-    fn find_by_id(&self, invoice_id: &str) -> Result<Invoice, InvoiceNotFound> {
+    fn find_by_id(&self, invoice_id: &str) -> Result<FoundInvoice, InvoiceNotFound> {
+        let version = self.version(invoice_id);
         if let Some(stored) = self.stored.borrow().get(invoice_id) {
-            return Ok(stored.clone());
+            return Ok(FoundInvoice { invoice: stored.clone(), version });
         }
         let record = self.records.get(invoice_id).ok_or(InvoiceNotFound)?;
         let lines: Vec<InvoiceLine> = record.amounts.iter().map(|amount| InvoiceLine::of(*amount)).collect();
-        Ok(Invoice::restore(&record.customer, lines, record.issued))
+        let invoice = Invoice::restore(&record.customer, lines, record.issued, record.paid, record.payment_ids.clone());
+        Ok(FoundInvoice { invoice, version })
     }
 
-    fn store(&self, invoice_id: &str, invoice: Invoice) {
+    fn store(
+        &self,
+        invoice_id: &str,
+        invoice: Invoice,
+        expected_version: u64,
+        events: Vec<InvoiceEvent>,
+    ) -> Result<(), VersionConflict> {
+        let current = self.version(invoice_id);
+        if expected_version != current {
+            return Err(VersionConflict);
+        }
+        self.versions.borrow_mut().insert(invoice_id.to_string(), current + 1);
+        self.events.borrow_mut().entry(invoice_id.to_string()).or_default().extend(events);
         self.stored.borrow_mut().insert(invoice_id.to_string(), invoice);
+        Ok(())
     }
 }
 `;
@@ -250,16 +413,26 @@ impl InvoiceRepository for InMemoryInvoiceRepository {
 const WORKSPACE_MANIFEST = `[workspace]
 resolver = "2"
 members = [
+    "${LANGUAGE_EXTENSIONS_DIR}",
     "${DOMAIN_DIR}",
     "${USE_CASE_DIR}",
     "${INTERFACE_ADAPTER_DIR}",
 ]
 `;
 
+/** The path from a crate under `packages/command/` to `dependency`. */
+function dependencyPath(dependency: string): string {
+  return dependency === LANGUAGE_EXTENSIONS_CRATE ? `../../../${LANGUAGE_EXTENSIONS_DIR}` : `../${dependency}`;
+}
+
 function crateManifest(name: string, dependencies: readonly string[]): string {
   const lines = ["[package]", `name = "${name}"`, 'version = "0.1.0"', 'edition = "2021"', "publish = false", ""];
   if (dependencies.length > 0) {
-    lines.push("[dependencies]", ...dependencies.map((dependency) => `${dependency} = { path = "../${dependency}" }`), "");
+    lines.push(
+      "[dependencies]",
+      ...dependencies.map((dependency) => `${dependency} = { path = "${dependencyPath(dependency)}" }`),
+      "",
+    );
   }
   return lines.join("\n");
 }
@@ -296,9 +469,14 @@ const MAPPING = [
   "        errors:",
   "          - { error_ref: error.invoice.issue.already-issued, code: { case: AlreadyIssued } }",
   "          - { error_ref: error.invoice.issue.empty-lines, code: { case: EmptyLines } }",
+  "      - operation_ref: command.invoice.record-payment",
+  "        code: { method: record_payment, error_type: RecordPaymentError }",
+  "        errors:",
+  "          - { error_ref: error.invoice.record-payment.not-issued, code: { case: NotIssued } }",
+  "          - { error_ref: error.invoice.record-payment.overpayment, code: { case: Overpayment } }",
   "domain_packages:",
   `  - { term: Billing, model_refs: [bc.billing], rationale: owns the billing business, code: ${location([])} }`,
-  `  - { term: Invoice, model_refs: [aggregate.invoice], rationale: opens and issues invoices, code: ${location(["invoice"])} }`,
+  `  - { term: Invoice, model_refs: [aggregate.invoice], rationale: opens and issues invoices and records their payments, code: ${location(["invoice"])} }`,
   `  - { term: Invoice line, model_refs: [vo.invoice-line], rationale: the amounts an invoice adds up, code: ${location(["invoice", "line"])} }`,
   "```",
   "",
@@ -330,20 +508,23 @@ export interface RustBehaviorSample {
 /** The generated project for one module layout. */
 function rustBehaviorSample(layout: RustModuleLayout): RustBehaviorSample {
   const sources: Record<string, string> = {
+    [`${LANGUAGE_EXTENSIONS_DIR}/src/lib.rs`]: LANGUAGE_EXTENSIONS_LIB,
     [`${DOMAIN_DIR}/src/lib.rs`]: DOMAIN_LIB,
     [parentModuleFile(layout)]: INVOICE,
     [`${DOMAIN_DIR}/src/invoice/line.rs`]: INVOICE_LINE,
     [`${USE_CASE_DIR}/src/lib.rs`]: USE_CASE_LIB,
     [`${USE_CASE_DIR}/src/invoice_repository.rs`]: INVOICE_REPOSITORY_PORT,
     [`${USE_CASE_DIR}/src/issue_invoice.rs`]: ISSUE_INVOICE,
+    [`${USE_CASE_DIR}/src/record_payment.rs`]: RECORD_PAYMENT,
     [`${INTERFACE_ADAPTER_DIR}/src/lib.rs`]: INTERFACE_ADAPTER_LIB,
     [`${INTERFACE_ADAPTER_DIR}/src/in_memory_invoice_repository.rs`]: IN_MEMORY_INVOICE_REPOSITORY,
   };
   const workspace: Record<string, string> = {
     ".ddd.toml": layoutConfig(layout),
     "Cargo.toml": WORKSPACE_MANIFEST,
-    [`${DOMAIN_DIR}/Cargo.toml`]: crateManifest(DOMAIN_CRATE, []),
-    [`${USE_CASE_DIR}/Cargo.toml`]: crateManifest(USE_CASE_CRATE, [DOMAIN_CRATE]),
+    [`${LANGUAGE_EXTENSIONS_DIR}/Cargo.toml`]: crateManifest(LANGUAGE_EXTENSIONS_CRATE, []),
+    [`${DOMAIN_DIR}/Cargo.toml`]: crateManifest(DOMAIN_CRATE, [LANGUAGE_EXTENSIONS_CRATE]),
+    [`${USE_CASE_DIR}/Cargo.toml`]: crateManifest(USE_CASE_CRATE, [DOMAIN_CRATE, LANGUAGE_EXTENSIONS_CRATE]),
     [`${INTERFACE_ADAPTER_DIR}/Cargo.toml`]: crateManifest(INTERFACE_ADAPTER_CRATE, [DOMAIN_CRATE, USE_CASE_CRATE]),
     ...sources,
   };

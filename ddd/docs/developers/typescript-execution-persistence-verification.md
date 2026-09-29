@@ -21,11 +21,19 @@ The scenarios are defined once, as `BEHAVIOR_SCENARIOS` of [`fixtures/typescript
 | `invalid-value-rejected` (an invalid value refused at creation) | `open` returns `missing-customer` and `negative-total`. `restore` throws `corrupt invoice state` for an empty customer, an issued invoice with no line, and a negative total | `:125-135` |
 | `restore-after-persistence` (restoration after persistence) | An aggregate restored by `findById` from its record has the recorded state. After `execute` stores it, `findById` returns the stored, issued aggregate rather than the record it was read from. An unknown id returns `invoice-not-found` | `:136-161` |
 
+Addition of 2026-09-28 (T-03-02): three scenarios were added, so the shared scenarios are now seven, and `t11-typescript-behavior.test.ts:129-139` checks that they are these seven. The samples gained the command `recordPayment` (`command-id-memory`, retention `multiple`), a `CommandOutcome` success value (`applied` with events, or `already-applied`), and a repository `store` that checks the expected version once and appends the command's events together. The four-scenario table above and the line numbers in it are the measurement at the base commit and are not rewritten; the new scenarios are at the current lines of [`fixtures/typescript-behavior/scenarios.ts`](../../tests/fixtures/typescript-behavior/scenarios.ts) below, and the same scenarios are written in Rust in [`fixtures/rust-behavior/scenarios.rs`](../../tests/fixtures/rust-behavior/scenarios.rs).
+
+| Scenario | What it checks | Definition |
+|---|---|---|
+| `duplicate-command-already-applied` (a repeated command is already applied) | A `recordPayment` repeated with the same command id, even with another amount, returns already applied: no event, no change, nothing saved. A new id is applied. An invoice restored with a paid amount and remembered ids, directly through `restore` or from a record through `RecordPayment`, answers a remembered id as already applied with nothing saved and refuses an overpayment against the restored paid amount; a record that does not remember the id has the payment applied | `scenarios.ts:244-287`; Rust `scenarios.rs:219` |
+| `rejected-command-keeps-state` (a refused command keeps the state) | A `recordPayment` refused with `not-issued` or `overpayment` changes nothing, saves nothing, and does not remember the id, so the same id is applied once it can be | `:288-315`; Rust `scenarios.rs:261` |
+| `multiple-events-one-append` (several events in one append) | A payment that reaches the total returns two events, and `RecordPayment` saves them in one append that advances the version by one. A `store` of an invoice that was saved again after its read returns `version-conflict` even when another read came in between, and leaves the version and the saved events unchanged; a new read lacks the refused change | `:316-360`; Rust `scenarios.rs:290` |
+
 ## Where each axis is read
 
 | Axis | Where it is read for a decision | Location |
 |---|---|---|
-| `programming_model` | The language-neutral declaration gate only: a use case targeting two or more aggregates that are all `actor` requires a Process Manager | [`ddd-sensor-mapping-declarations.ts:111`](../../tools/ddd-sensor-mapping-declarations.ts) |
+| `programming_model` | The language-neutral declaration gate only: a use case targeting two or more aggregates of which any is `actor` requires a Process Manager (changed on 2026-09-28 from "all `actor`", T-03-01); a use case that re-executes across two or more aggregates the mapping does not all map is refused as `mapping-declarations.execution-model-undetermined` | [`ddd-sensor-mapping-declarations.ts:127`](../../tools/ddd-sensor-mapping-declarations.ts) (Process Manager condition), `:110-118` (undetermined execution model) |
 | `persistence_method` | The replay exemption of the TypeScript domain gate, which holds only for `event-sourcing` | [`rules/mutations.ts:81`](../../tools/ddd/lib/rules/mutations.ts), used by the TypeScript evaluators at [`rules/typescript/evaluators.ts:32`](../../tools/ddd/lib/rules/typescript/evaluators.ts) |
 | `typescript.code_representation` and `typescript.module_layout` of `.ddd.toml` | Differ per sample. The behavior tests do not read them; they run the sample's sources themselves | The sample's settings are `settings` at `samples.ts:411`; the combinations are `REPRESENTATIONS` and `LAYOUTS` (`:25-26`) |
 
@@ -68,7 +76,7 @@ Each is a missing test, not a claim that the combination is unsupported or inval
 
 ## Limits
 
-- The repository is `InMemoryInvoiceRepository`, which holds a reference to the stored aggregate. The persistence round trip is checked on two paths: restoring from a record (`InvoiceRecord`) through `Invoice.restore`, and the next `findById` returning the stored aggregate. Serializing to a database or a file and reading it back is not verified.
+- The repository is `InMemoryInvoiceRepository`, which keeps each invoice as a record (`InvoiceRecord`) of its whole state: `store` writes the record, and every `findById` restores a new aggregate from it through `Invoice.restore`. The persistence round trip is checked on two paths: restoring from a record the repository starts from, and restoring from the record a `store` wrote. Serializing to a database or a file and reading it back is not verified.
 - A sample holds one aggregate (`invoice`) and one child module (`invoice/line`). Several aggregates and collaboration between aggregates are not covered.
 - The behavior tests run on bun. Running on Node.js is limited to what the [Next.js integration verification](nextjs-integration-verification.md) covers.
 - Every measurement was taken on `darwin-arm64`, at the versions in the execution evidence.

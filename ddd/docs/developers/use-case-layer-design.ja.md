@@ -2,7 +2,7 @@
 
 [English](use-case-layer-design.md) | 日本語
 
-更新: 2026-09-13。[ドメイン層設計 §7](domain-layer-design.ja.md)と共通の失敗・保存契約を使う。以下は設計規約であり、センサーによる完全な保証を意味しない。
+更新: 2026-09-28。[ドメイン層設計 §7](domain-layer-design.ja.md)と共通の失敗・保存契約を使う。以下は設計規約であり、センサーによる完全な保証を意味しない。
 
 ## 1. 提供形態
 
@@ -38,9 +38,11 @@ A保存成功後にBが失敗するフローでは、Aのコミットが残る�
 
 ### 5-1. storeの契約
 
-ポートの書込み名は `store` を基本とし、同一要求の再保存を安全に扱う。ステートソーシングではupsertを基本にするが、無条件の上書きでよいという意味ではない。期待バージョンや一意制約で競合を検出する。
+ポートの書込み名は `store` を基本とし、同一要求の再保存を安全に扱う。ステートソーシングではupsertを基本にするが、無条件の上書きでよいという意味ではない。期待バージョンや一意制約で競合を検出する。ステートソーシングの集約の `store` は、期待バージョン付きの `upsert` として宣言する。
 
-イベントソーシングでは新規イベントの追記が基本であり、過去のイベントを更新しない。重複要求・追記競合・結果照合を含めて設計する。SQLのinsert使用自体を禁止しない。upsertという名前だけでフロー全体の冪等性が成立するとは扱わない。
+イベントソーシングでは新規イベントの追記が基本であり、過去のイベントを更新しない。重複要求・追記競合・結果照合を含めて設計する。SQLのinsert使用自体を禁止しない。upsertという名前だけでフロー全体の冪等性が成立するとは扱わない。イベントソーシングの集約の `store` は `insert-only`（追記のみ）として宣言する。一つのコマンドが複数イベントを生む場合は、期待バージョンを一度だけ照合し、一回の追記でまとめて保存する。
+
+助言 `design-advisories.store-upsert`（ルールIDは変更なし）は、各リポジトリを実装写像にあるその集約の `persistence_method` と照合する。`state-sourcing` は `store` 動詞と `upsert`、`event-sourcing` は `store` 動詞と `insert-only` を期待する。写像が無い、読めない、またはリポジトリの集約を写像していない場合は、storeの意味を判定できないことを助言として報告し、従来のupsertのみの判定には戻さない。
 
 ### 5-2. 新規作成
 
@@ -62,9 +64,20 @@ Commandは `effect: transition | accumulation` と `idempotency` を持つ。現
 
 状態設定型の `none` は、ID記憶以外の方法で安全性を説明する選択であり、無対策でよいという意味ではない。再実行の根拠はユースケース宣言にも記載する。
 
+再送を識別する期間は、モデルの既存の `idempotency.retention`（`last-one`、`retention_count` 付きの `multiple`、`retention_window` 付きの `time-window`）とする。モデルローダーは `command-id-memory` にこれを既に必須としている。ユースケース宣言に新しい項目は追加せず、`re_execution_basis` がこの保持期間を参照する。`strategy: none` のコマンドでは、繰り返しをコマンド自身のエラーで拒否するか、状態遷移のno-opとして扱うかを `re_execution_basis` に記載する。
+
 ### 5-6. イベントソーシングの重複成功
 
-適用済みと確認できるコマンドは新規イベント0件で成功できる。初回の状態変更成功は1イベントを基本とし、拒否はDomain Errorとして区別する。戻り値の具体型はT-03で決定する。
+コマンドの成功は2種類とする。「適用」は状態を変え、1件以上のイベントを持つ。「適用済み」は状態を変えず、イベントは0件とする。拒否はメソッド固有のエラー型で表す。
+
+- Rust: `Result<CommandOutcome<E>, <メソッドのエラー>>`。`enum CommandOutcome<E> { Applied(Vec<E>), AlreadyApplied }` はインフラ層のlanguage-extensionsクレート（`packages/infrastructure/language-extensions`）に置く。
+- TypeScript: インフラ層の `Result` の成功側を `CommandOutcome<E> = { readonly kind: "applied"; readonly events: readonly E[] } | { readonly kind: "already-applied" }` とし、`@acme/language-extensions` で `Result` と並べて宣言する。
+
+適用済みを返すのは `idempotency.strategy: command-id-memory` のコマンドだけであり、モデルの保持期間内で記憶しているコマンドIDに対して返す。拒否したコマンドのIDは記憶しない。`none` のコマンドは、`re_execution_basis` の記載どおり繰り返しを拒否またはno-opとして扱う。`CommandOutcome` はイベントを1件以上宣言するコマンドだけに適用し、イベントを宣言しないコマンドは `Result<(), E>` / `Result<void, E>` のままとする。適用ではコマンドを呼んだ集約自身を変更し、結果はイベントを運ぶ。
+
+一つのコマンドが複数イベントを生む場合、それらはモデルの `events` がそのコマンドに宣言したイベントに限る。期待バージョンは一度だけ照合し、すべてを一回の追記で保存する。
+
+戻り値の形を判定するセンサーは無い。TypeScriptのドメイン事実は戻り値型を持たず、Rustの事実は別名を解決せず返すバリアントも記録しない。戻り値の形、宣言済みイベントだけであること、一回の追記はレビューと動作テストで確認する。
 
 状態機械だけで重複判定できるケースと、要求IDの記憶が必要なケースを分ける。FSMを使うことを理由に、イベントストアの競合制御や重複保存対策を省略しない。
 
@@ -72,9 +85,9 @@ Commandは `effect: transition | accumulation` と `idempotency` を持つ。現
 
 `programming_model: actor | class` と `persistence_method: state-sourcing | event-sourcing` は独立した選択とする。サーガはアクターモデル固有ではない。通常のクラスでも実装でき、採用基盤の対応範囲と技術上の可否を区別する。[Temporal公式Java実装例](https://github.com/temporalio/samples-java/blob/main/core/src/main/java/io/temporal/samples/hello/HelloSaga.java)
 
-現行宣言は複数集約に `process-manager` または `re-execution` を要求する。写像が読め、全対象集約がactorの場合、センサーは `process-manager` を必須にする。classでもProcess Managerを表現できる。既存contributionがclassを再実行に限定する指示は、この設計と揃える必要がある。
+現行宣言は複数集約に `process-manager` または `re-execution` を要求する。集約の写像で対象集約のいずれか一つでも `actor` であれば、`multi_aggregate_strategy.kind: process-manager` を必須とする（ブロッキングの `mapping-declarations.process-manager-required`）。actor/class混在のフローもこれに含まれる。対象がすべて `class` の場合は、`process-manager` と `re-execution` のどちらも選べる。functional-designのcontributionはこの設計に従う。
 
-actor/class混在時の要件と写像欠落時の扱いはT-03で確定する。現在のセンサーは写像欠落時にProcess Manager必須チェックを省略するため、その動作を安全性の保証として採用しない。
+対象集約が2つ以上で `re-execution` を使うユースケースについて、写像が無い、読めない、または対象のいずれかの項目が無い場合は、Process Managerが必要か判断できないため、ブロッキングの `mapping-declarations.execution-model-undetermined` を報告する。単一集約のユースケースと `process-manager` のユースケースは影響を受けず、写像が無くても通る。写像欠落時の従来の注記は出力しなくなった。
 
 [言語共通の設計](language-independent-design.ja.md)では、TypeScriptのコード表現もプロジェクト単位の独立した選択とする。集約ごとのactor/class宣言は、ソース言語のclassキーワードを選ぶ指定ではない。
 
@@ -105,4 +118,4 @@ gは依存方向と外部I/O、hは集約引数、iはユースケース連鎖�
 
 ## 10. 残る設計判断
 
-混在モデルの回復宣言、no-opを表す戻り値、保持期間等をモデルへ追加するかはT-03で判断する。新属性を追加する場合はローダー・契約資料・生成手順・センサー・テストを同時に更新する。
+以前の未決事項は確定した。actor/class混在と写像欠落は§6、適用済みの戻り値は§5-6、再送期間は§5-5（モデルの既存の `idempotency.retention` を使い、ユースケース宣言に項目を追加しない）を参照。今後新属性を追加する場合も、ローダー・契約資料・生成手順・センサー・テストを同時に更新する。

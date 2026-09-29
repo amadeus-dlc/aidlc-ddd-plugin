@@ -818,13 +818,49 @@ const RAW_DESIGN_CASES: GoldenCase[] = [
   },
 
   // ---- design-advisories ----
+  // The store semantics a repository needs follow from how the mapping persists its aggregate: a
+  // state-sourced aggregate is stored with an expected-version upsert, an event-sourced one appended.
   {
     sensor: "ddd-design-advisories",
     name: "clean",
     stage: "infrastructure-design",
     output: LAYER_PATH,
-    files: { [MODEL_PATH]: M, [LAYER_PATH]: LAYER },
+    files: { [MODEL_PATH]: M, [MAP_PATH]: MAP, [LAYER_PATH]: LAYER },
     expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-design-advisories",
+    name: "clean-event-sourcing-insert-only",
+    stage: "infrastructure-design",
+    output: LAYER_PATH,
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP.replace("persistence_method: state-sourcing", "persistence_method: event-sourcing"),
+      [LAYER_PATH]: LAYER.replace("store_semantics: upsert", "store_semantics: insert-only"),
+    },
+    expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-design-advisories",
+    name: "violation-event-sourcing-upsert",
+    stage: "infrastructure-design",
+    output: LAYER_PATH,
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP.replace("persistence_method: state-sourcing", "persistence_method: event-sourcing"),
+      [LAYER_PATH]: LAYER,
+    },
+    expect: { pass: false, rules: ["design-advisories.store-upsert"] },
+  },
+  {
+    // Without the mapping nothing says how the aggregate is persisted, so the store semantics cannot
+    // be judged and that is what the reviewer is told, instead of judging them against upsert alone.
+    sensor: "ddd-design-advisories",
+    name: "violation-store-method-unmapped",
+    stage: "infrastructure-design",
+    output: LAYER_PATH,
+    files: { [MODEL_PATH]: M, [LAYER_PATH]: LAYER },
+    expect: { pass: false, rules: ["design-advisories.store-upsert"] },
   },
   {
     sensor: "ddd-design-advisories",
@@ -861,15 +897,24 @@ const RAW_DESIGN_CASES: GoldenCase[] = [
     name: "violation-repository-scope",
     stage: "infrastructure-design",
     output: LAYER_PATH,
-    files: { [MODEL_PATH]: M, [LAYER_PATH]: LAYER.replace("io_unit: single", "io_unit: partial") },
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP,
+      [LAYER_PATH]: LAYER.replace("io_unit: single", "io_unit: partial"),
+    },
     expect: { pass: false, rules: ["design-advisories.repository-scope"] },
   },
   {
+    // A state-sourced aggregate appended to instead of upserted with its expected version.
     sensor: "ddd-design-advisories",
     name: "violation-store-upsert",
     stage: "infrastructure-design",
     output: LAYER_PATH,
-    files: { [MODEL_PATH]: M, [LAYER_PATH]: LAYER.replace("store_semantics: upsert", "store_semantics: insert-only") },
+    files: {
+      [MODEL_PATH]: M,
+      [MAP_PATH]: MAP,
+      [LAYER_PATH]: LAYER.replace("store_semantics: upsert", "store_semantics: insert-only"),
+    },
     expect: { pass: false, rules: ["design-advisories.store-upsert"] },
   },
 ];

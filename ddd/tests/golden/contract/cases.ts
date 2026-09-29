@@ -115,6 +115,66 @@ editYaml(classFlow, classFlow.output, (doc) => {
   doc.use_cases[0].multi_aggregate_strategy = { kind: "re-execution", description: "retry with request ID" };
 });
 cases.push(classFlow);
+
+/** A variant of `source` under `name`, edited by `edit` and added to the matrix. */
+function variantOf(source: GoldenCase, name: string, edit: (entry: GoldenCase) => void): GoldenCase {
+  const entry = structuredClone(source);
+  entry.name = name;
+  edit(entry);
+  cases.push(entry);
+  return entry;
+}
+const reExecution = { kind: "re-execution", description: "retry with request ID" };
+
+// One actor aggregate among the targets is enough to require a Process Manager; a flow over class
+// aggregates alone may choose either strategy.
+const mixedFlow = variantOf(strategy, "clean-mixed-process-manager", (entry) => {
+  editYaml(entry, MAP, (doc) => {
+    doc.aggregate_mappings[1].programming_model = "class";
+  });
+});
+variantOf(mixedFlow, "violation-mixed-re-execution", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    doc.use_cases[0].multi_aggregate_strategy = reExecution;
+  });
+  entry.expect = { pass: false, rules: ["mapping-declarations.process-manager-required"] };
+});
+variantOf(mixedFlow, "violation-mixed-strategy-absent", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    delete doc.use_cases[0].multi_aggregate_strategy;
+  });
+  entry.expect = {
+    pass: false,
+    rules: ["mapping-declarations.multi-aggregate-strategy", "mapping-declarations.process-manager-required"],
+  };
+});
+variantOf(classFlow, "clean-class-process-manager", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    doc.use_cases[0].multi_aggregate_strategy = { kind: "process-manager", process_manager_ref: "pm.invoice" };
+  });
+});
+
+// Without the mapping the execution model of the targets is unknown, which blocks only a
+// multi-aggregate use case that chose re-execution.
+variantOf(classFlow, "violation-execution-model-undetermined", (entry) => {
+  delete entry.files[MAP];
+  entry.expect = { pass: false, rules: ["mapping-declarations.execution-model-undetermined"] };
+});
+variantOf(classFlow, "violation-unmapped-target-re-execution", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    doc.use_cases[0].target_aggregates = ["aggregate.invoice", "aggregate.ghost"];
+  });
+  entry.expect = { pass: false, rules: ["mapping-declarations.execution-model-undetermined"] };
+});
+variantOf(strategy, "clean-unmapped-process-manager", (entry) => {
+  delete entry.files[MAP];
+});
+variantOf(classFlow, "clean-unmapped-single-aggregate", (entry) => {
+  delete entry.files[MAP];
+  editYaml(entry, entry.output, (doc) => {
+    doc.use_cases[0].target_aggregates = ["aggregate.invoice"];
+  });
+});
 derive("ddd-mapping-declarations", "violation-j", "clean-additive-idempotency", (entry) => {
   editYaml(entry, MODEL, (doc) => {
     doc.bounded_contexts[0].aggregates[0].commands.find(
@@ -153,6 +213,39 @@ derive("ddd-layer-structure", "clean", "clean-rmu-cross-side", (entry) => {
       depends_on: [rustPackage("billing-domain"), rustPackage("billing-query")],
     });
   });
+});
+// The read-model updater may state the unit it keeps in order and how it drops a duplicate; a
+// declaration that states neither (clean-rmu-cross-side) is still accepted and left to review.
+const rmuUpdater = (fields: Record<string, string>) => (entry: GoldenCase) => {
+  editYaml(entry, entry.output, (doc) => {
+    const layer = doc.layer_structures[0];
+    layer.packages.push({ role: "rmu", code: rustPackage("billing-rmu"), ...fields });
+    layer.dependencies.push({
+      code: rustPackage("billing-rmu"),
+      depends_on: [rustPackage("billing-domain"), rustPackage("billing-query")],
+    });
+  });
+};
+derive("ddd-layer-structure", "clean", "clean-rmu-ordering", rmuUpdater({ ordering_scope: "item", dedup: "event-id" }));
+derive("ddd-layer-structure", "clean", "violation-rmu-ordering-scope-value", (entry) => {
+  rmuUpdater({ ordering_scope: "global", dedup: "event-id" })(entry);
+  entry.expect = { pass: false, rules: ["layer-structure.item"] };
+});
+derive("ddd-layer-structure", "clean", "violation-rmu-dedup-value", (entry) => {
+  rmuUpdater({ ordering_scope: "aggregate", dedup: "sequence-number" })(entry);
+  entry.expect = { pass: false, rules: ["layer-structure.item"] };
+});
+derive("ddd-layer-structure", "clean", "violation-ordering-outside-rmu", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    doc.layer_structures[0].packages[0].ordering_scope = "item";
+  });
+  entry.expect = { pass: false, rules: ["layer-structure.item"] };
+});
+derive("ddd-layer-structure", "clean", "violation-ordering-on-structure", (entry) => {
+  editYaml(entry, entry.output, (doc) => {
+    doc.layer_structures[0].ordering_scope = "none";
+  });
+  entry.expect = { pass: false, rules: ["layer-structure.item"] };
 });
 derive("ddd-layer-structure", "clean", "violation-k-reverse", (entry) => {
   editYaml(entry, entry.output, (doc) => {

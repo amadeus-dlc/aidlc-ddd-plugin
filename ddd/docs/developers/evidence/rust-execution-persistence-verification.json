@@ -26,9 +26,9 @@
       "values": ["actor", "class"],
       "declared_at": "tools/ddd/lib/aggregate-mapping/contract.ts:20",
       "read_for_a_decision_by": [
-        "tools/ddd-sensor-mapping-declarations.ts:75 builds the aggregate_ref -> programming_model map",
-        "tools/ddd-sensor-mapping-declarations.ts:109-113 is the condition; :111 compares === \"actor\"",
-        "tools/ddd-sensor-mapping-declarations.ts:116 reports mapping-declarations.process-manager-required"
+        "tools/ddd-sensor-mapping-declarations.ts:72-77 builds the aggregate_ref -> programming_model map",
+        "tools/ddd-sensor-mapping-declarations.ts:125-129 is the condition; :127 requires a Process Manager when some target compares === \"actor\" (2026-09-28: any target, was every target)",
+        "tools/ddd-sensor-mapping-declarations.ts:132 reports mapping-declarations.process-manager-required"
       ],
       "not_read_by": [
         "Any Rust source rule. The Rust view type omits the field (tools/ddd/lib/rules/rust/mapping.ts:18-25) and the projection does not copy it (:56-72)."

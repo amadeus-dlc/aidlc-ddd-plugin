@@ -36,6 +36,8 @@ layer_structures:
         code: { language: rust, package: billing-query }
       - role: rmu
         code: { language: rust, package: billing-rmu }
+        ordering_scope: aggregate
+        dedup: version-check
     dependencies:
       - code: { language: rust, package: billing-domain }
         depends_on: []
@@ -68,16 +70,20 @@ The TypeScript declaration of the same context differs only in how the packages 
         code: { language: typescript, package: "@acme/billing-query" }
 ```
 
-Every key listed here is the whole key set. Only `restoration_paths[].note` may be left out; every other key is required, and a list the context has nothing to put in is written as `[]` rather than omitted.
+Every key listed here is the whole key set. Only `restoration_paths[].note` and, on a `role: rmu` package, `ordering_scope` and `dedup` may be left out; every other key is required, and a list the context has nothing to put in is written as `[]` rather than omitted.
 
 | Key | Values |
 |---|---|
 | `packages[].role` | `command`, `query`, `rmu` |
+| `packages[].ordering_scope` | `aggregate`, `item`, `none` — the unit the read-model updater keeps events in order for. Optional; `role: rmu` only |
+| `packages[].dedup` | `version-check`, `event-id`, `idempotent-write` — how the read-model updater drops an event it has already applied. Optional; `role: rmu` only |
 | `code.language` | `rust`, `typescript` |
 | `ports[].kind` | `repository`, `external-client`, `es-infrastructure` |
 | `repositories[].io_unit` | `single`, `collection`, `partial` |
 | `repositories[].store_semantics` | `upsert`, `insert-only`, `unknown` |
 | `restoration_paths[].via` | `full-constructor`, `other` |
+
+`repositories[].store_semantics` is expected to follow the aggregate's `persistence_method` in the implementation mapping: a `state-sourcing` aggregate's repository declares the `store` verb with `upsert` (with the expected version), and an `event-sourcing` aggregate's repository declares the `store` verb with `insert-only` (append only). The advisory `design-advisories.store-upsert` of `ddd-design-advisories` reports a repository that does not match; when the mapping is absent, unreadable, or does not map the repository's aggregate, it reports that the store semantics cannot be judged. It is advisory and does not close the approval.
 
 `code.package` is checked against the grammar of its language: `^[A-Za-z][A-Za-z0-9_-]*$` for Rust, and an npm package name, optionally scoped, for TypeScript. A version such as `billing-domain@0.1.0` is not a package name and is refused.
 
@@ -89,14 +95,18 @@ The loader stops at the first stage that fails: the document, its version, its s
 |---|---|
 | `layer-declaration.document` | A path other than `<record>/construction/[<unit>/]infrastructure-design/cicd-pipeline.md`, a missing or unreadable file, no `## DDD Layer Structure` section or more than one — English and Japanese markers count together — no labelled YAML block inside that section, more than one, an unclosed block, YAML that does not parse, or a block that is not a mapping |
 | `layer-declaration.version` | A `schema_version` other than the number `2`. A version 1 document is not read as this format; the finding points to the migration |
-| `layer-declaration.unknown-key` | Any key outside the format, including `command_side_crates`, `query_side_crates`, `rmu_crates`, `crate_dependencies`, a `crate` beside a package's role, and a module path or version inside a package identity |
-| `layer-declaration.structure` | A missing or mistyped value, a `cqrs` flag that is not a boolean, a role, port kind, io unit, store semantics or restoration route outside its set, a package identity written as a bare name or without its language, a name the language does not accept, and a value the document does not state at all |
+| `layer-declaration.unknown-key` | Any key outside the format, including `command_side_crates`, `query_side_crates`, `rmu_crates`, `crate_dependencies`, a `crate` beside a package's role, a module path or version inside a package identity, and `ordering_scope` or `dedup` written directly under a layer structure |
+| `layer-declaration.structure` | A missing or mistyped value, a `cqrs` flag that is not a boolean, a role, port kind, io unit, store semantics or restoration route outside its set, a package identity written as a bare name or without its language, a name the language does not accept, a value the document does not state at all, an `ordering_scope` or `dedup` value outside its set, and either item on a `command` or `query` package |
 | `layer-declaration.model` | A `model_ref` that does not load as a `schema_version: 2` canonical model, including a model still in version 1 |
 | `layer-declaration.reference` | A `context_ref` that does not name a bounded context, or a repository's or restoration path's `aggregate_ref` that does not name an aggregate — undefined, retired by the lineage, of the wrong kind, or not a model id at all |
 | `layer-declaration.duplicate` | Two structures for one context, one package identity declared twice, two dependency rows for one package, one package named twice inside one row, two ports under one name, two repositories under one name, or two restoration paths for one aggregate |
 | `layer-declaration.coverage` | A dependency row for a package this context never declares. A row may depend on a package outside the context: that edge is kept as written, and `layer-declaration.query-domain-dependency` still judges it by the package's name |
 
 A list is empty only when the document says so: `verbs: []` states an empty list, while leaving `verbs` out states nothing and is refused.
+
+## Declarations without the read-model updater items
+
+`ordering_scope` and `dedup` are optional. A declaration that states neither, including one written before these items existed and the output of a version 1 migration, is accepted unchanged, and `schema_version` stays `2`. The migration does not add them. For such a declaration, and for anything the two items do not cover — delays, gaps and reordering are never structured — the read-model updater's ordering and duplicate handling are judged by review of the prose. `ddd-layer-structure` reports a misplaced item or a value outside its set as `layer-structure.item`, which is blocking.
 
 ## Inspect the layering
 
