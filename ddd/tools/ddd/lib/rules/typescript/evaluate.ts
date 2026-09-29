@@ -2,8 +2,9 @@
  * The evaluations of the TypeScript gates, each with the rules and rule ids of the Rust gate of the
  * same layer:
  *
- * - domain: the layer diagnostics, rules (a), (b), (c) and (d) over each claimed domain source, then
- *   the dependency direction (g), and domain packaging over each domain package a claim touches;
+ * - domain: the layer diagnostics, rules (a), (b), (c), (d) and port placement over each claimed
+ *   domain source, then the dependency direction (g), and domain packaging over each domain package a
+ *   claim touches;
  * - use-case: rules (h), (i) and (d) over each claimed use-case source, then the dependency
  *   direction and external I/O (g);
  * - interface-adapter: rules (l), (m) and (n) over each claimed interface-adapter or rmu source and
@@ -20,7 +21,7 @@ import type { FindingInput } from "../../shared/findings.ts";
 import { dedupe } from "../evaluate.ts";
 import { assembleTypeScriptInspection } from "./context.ts";
 import { buildEdges, ruleG, ruleK } from "./edges.ts";
-import { ruleB, ruleC, ruleD, ruleDomainPackaging } from "./evaluators.ts";
+import { ruleB, ruleC, ruleD, ruleDomainPackaging, rulePortPlacement } from "./evaluators.ts";
 import { factsOf } from "./file-facts.ts";
 import { ruleL, ruleM, ruleN } from "./interface-adapter.ts";
 import { ruleA } from "./state-hiding.ts";
@@ -88,6 +89,7 @@ export function evaluateTypeScriptDomain(run: SensorRunContext, api: SensorApi):
       ...ruleB(inspection, target),
       ...ruleC(inspection, target),
       ...ruleD(inspection, target),
+      ...rulePortPlacement(inspection, target),
     ],
     whole: (inspection, api) => {
       const findings = ruleG(buildEdges(inspection));

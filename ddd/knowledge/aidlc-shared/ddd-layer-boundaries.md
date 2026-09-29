@@ -1,6 +1,6 @@
 # Layer boundaries and dependencies
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -21,6 +21,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.layer-boundaries.9 | Allow the RMU to depend on both sides. | Edges originating from the RMU are exceptions to k. |
 | K.layer-boundaries.10 | Wire implementations and ports for both sides in the composition root. | Design convention. |
 | K.layer-boundaries.11 | When names or placement are ambiguous, explain their correspondence to conventions rather than adding a custom layer override. | Layer diagnostics and review. |
+| K.layer-boundaries.12 | Declare ports (repository, external-client, es-infrastructure) in the use-case layer. The domain layer declares, holds, and calls no port; a repository interface is a use-case port. | port-placement reports a repository port declared in a domain package or crate. Review covers the other ports and holding or calling one. |
 
 ## Rationale
 

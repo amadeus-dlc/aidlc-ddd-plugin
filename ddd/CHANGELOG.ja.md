@@ -4,6 +4,11 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — ポートをユースケース層に置き、適用済みのコマンドIDを集約が記憶する
+
+- **ドメイン層で宣言したリポジトリポートを報告する。** リポジトリのインターフェイスはユースケース層のポートである。`ddd-rust-domain` と `ddd-typescript-domain` は、ドメインのクレートやパッケージで宣言した `…Repository` という名前の trait・`interface`・型リテラルの型別名を `port-placement` として報告する。規則 `d` が getter の結果の受け渡し先として許すのは、ユースケース層のリポジトリポートだけにした。ナレッジ・生成手順・設計文書は、ドメインのパッケージにポートを置くことを認めなくなった。ポートを持つフィールドや引数はポートの名前に合わせる（`invoice_repository`、`#invoiceRepository`）。ドメインのパッケージのポートへ受け渡していたゴールデンケースは、ポートをユースケースのパッケージやクレートで宣言するようにした。
+- **適用済みのコマンドIDを集約が記憶し、最後の1件だけを持つならその理由を書く。** ナレッジと設計文書に、集約が適用済みのコマンドIDをコマンドの `retention` のとおりに記憶し、再送されたコマンドIDをほかの判定より先に確かめることを書いた。識別子の呼び名は要求IDではなくコマンドIDにそろえた。最後の1件だけを持つのは、古いコマンドが新しいコマンドの後に再送されない場合に限られる。そのため `ddd-mapping-declarations` は、理由のない `retention: last-one` を宣言したコマンドを `mapping-declarations.last-one` として報告する。
+
 ## 未リリース — 配布物・承認・CI・Next.js での TypeScript の検証
 
 - **パッケージの `target` が `ES2017` 以上 `ESNext` 以下の TypeScript プロジェクトを受け入れる。** `create-next-app` が生成する `tsconfig.json` は `target: "ES2017"` を書くため、これまでは `typescript-extractor:project-condition-mismatch` として拒否していた。事実と規則は target に依存しないため、`ES2017` 〜 `ES2025` と `ESNext` を大文字小文字を問わず受け入れる。それより低い target、書かれていない target、パッケージ間で異なる target は、引き続き拒否する。`module: esnext`・`moduleResolution: bundler`・`strict: true` は変えていない。error-contract の条件は、`esnext` だけを受け入れるのをやめ、プロジェクトが書いた target（`es2017` 〜 `esnext`）をそのまま記録する。両方の入口は同じプロジェクトを拒否する。[TypeScript の事実抽出](docs/developers/typescript-fact-extraction.ja.md)を参照。

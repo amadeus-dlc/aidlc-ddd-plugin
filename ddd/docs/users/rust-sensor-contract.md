@@ -38,11 +38,15 @@ if invoice.id() == 42 { /* business decision: violation */ }
 repo.remove(invoice.id() + 1); // calculation inside an argument: violation
 ```
 
-The check resolves the recipient to a trait named `<Aggregate>Repository` declared in the domain or use-case layer, and verifies that the method is declared on that trait. A variable named `repo` or a method named `save` alone does not grant an exemption. Explicit types, `impl`/`dyn` ports, import/type aliases, and field receivers are supported.
+The check resolves the recipient to a trait named `<Aggregate>Repository` declared in the use-case layer, and verifies that the method is declared on that trait. A variable named `repo` or a method named `save` alone does not grant an exemption. Explicit types, `impl`/`dyn` ports, import/type aliases, and field receivers are supported.
 
 Direct arguments, parentheses, shared borrowing, and immutable local bindings are supported. Every use of a local value must forward it to a repository argument. Comparison, calculation, transformation, mutable bindings, macros, and other function consumers do not qualify. Domain-layer getter restrictions remain unchanged.
 
 Generic-bound resolution, trait implementation selection, associated-function call syntax, and recipients requiring type inference cannot establish this exception. Getter calls with unproven forwarding remain blocking; unresolved recipient types also produce a `syntax.unresolved` note. The shared convention applies to TypeScript, but this Rust sensor does not establish TypeScript coverage.
+
+## A repository port belongs to the use-case layer
+
+Ports are declared in the use-case layer. The domain gate reports a trait named `…Repository` declared in a domain crate as `port-placement`, with the message `repository port InvoiceRepository is declared in the domain layer; declare it in the use-case layer`. A port is known by its name, as rules l and m know it; other ports, and a domain type that holds or calls a port, are left to review.
 
 ## Permit replay through explicit declarations
 

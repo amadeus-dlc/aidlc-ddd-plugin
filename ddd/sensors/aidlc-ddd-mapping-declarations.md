@@ -4,7 +4,7 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-mapping-declarations.ts
 default_severity: blocking
 fire_on: gate
-description: The domain-design / functional-design gate — the implementation mapping reads in the language-neutral format, every use case declares its six items, and non-idempotent commands are caught (rule j).
+description: The domain-design / functional-design gate — the implementation mapping reads in the language-neutral format, every use case declares its six items, and non-idempotent commands are caught (rule j, and a command keeping only the last command ID without a rationale).
 category: document-traceability
 matches: "**/{domain-design/*,functional-design/*}"
 timeout_seconds: 10
@@ -34,6 +34,10 @@ checks:
     requirement: FR6.3
     inputs: [ddd-domain-model-yaml, U1 checkCompleteness]
     outcome: finding
+  - rule_id: mapping-declarations.last-one
+    requirement: DEC-2026-09-30
+    inputs: [ddd-domain-model-yaml, U1 checkCompleteness]
+    outcome: finding
 input_schema:
   output_path: string
   stage_slug: string
@@ -52,4 +56,7 @@ mapped — and reports what that reader refuses as `mapping-declarations.documen
 case declarations it requires the six mandatory items and a strategy for
 multi-aggregate use cases, and requires a Process Manager when every target
 aggregate is actor-modelled; a mapping that is present but unreadable blocks
-there too. It also transcribes rule (j) from the model completeness check.
+there too. It also transcribes rule (j) from the model completeness check, and
+reports a command that keeps only the last command ID (`retention: last-one`)
+without a rationale stating why an older command is never resent after a newer
+one (`mapping-declarations.last-one`).

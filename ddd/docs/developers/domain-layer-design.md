@@ -2,7 +2,7 @@
 
 English | [Japanese](domain-layer-design.ja.md)
 
-Updated: 2026-09-13. Current design conventions consolidated from the discussions of September 8–10. See the [assessment](current-state-assessment.md) for implementation status and [remaining work](completion-tasks.md) for completion criteria. These conventions do not imply complete automated enforcement.
+Updated: 2026-09-30. Current design conventions consolidated from the discussions of September 8–10. See the [assessment](current-state-assessment.md) for implementation status and [remaining work](completion-tasks.md) for completion criteria. These conventions do not imply complete automated enforcement.
 
 ## 1. Purpose and scope
 
@@ -55,6 +55,7 @@ A hand-written loader performs runtime validation. JSON Schema documents the con
 - Prohibit plain setters. Limit mutation to declared business commands or explicit event-application paths.
 - Keep value objects and Domain Primitives immutable. Rust Entities and aggregates may perform exclusive business operations through `&mut self`.
 - Domain Services make domain decisions without owning state or persistence responsibilities.
+- Declare, hold, and call no port: a repository interface is a use-case port. For a command with `command-id-memory`, the aggregate remembers the applied command IDs as the command's `retention` declares and checks a resent command ID before any other decision.
 - Getter definitions are allowed, but calls from domain and use-case layers are restricted. The Interface Adapter layer may use them for I/O conversion. Distinguish decision methods from getters.
 - Commands returning business errors preserve their pre-call state and leave no partial mutation.
 - Do not hide undeclared business mutations with `RefCell` or similar mechanisms. Review the distinction from caches.
@@ -87,7 +88,7 @@ Repositories translate database-specific failures into a common contract such as
 |---|---|
 | One domain operation | Preserve pre-operation state on business error. |
 | Persistence of one aggregate | Do not expose working state as committed before persistence. Discard and reload after confirmed persistence failure. |
-| Communication failure with unknown persistence outcome | Do not assume no write occurred; reconcile request IDs and persisted outcomes. |
+| Communication failure with unknown persistence outcome | Do not assume no write occurred; reconcile command IDs and persisted outcomes. |
 | Multi-aggregate flow | Partial commits may remain. Design retry, compensation, and intermediate states without promising automatic rollback of the whole flow. |
 
 Do not publish events externally before persistence succeeds. Declare how failures between persistence and publication are handled. Multi-aggregate recovery is covered by the [use-case design](use-case-layer-design.md).

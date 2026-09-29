@@ -26,15 +26,15 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-model-completeness | YAMLローダー、集約の不変条件、状態効果、参照、MarkdownのID・不変条件本文。Domain Error必須はローダーで検査 |
 | ddd-model-presence | 実行対象のモデルの存在・読み込み。SKIP/absentでは注記して通過 |
 | ddd-reference-ids | 未定義・廃止・種別・不正IDと置換関係 |
-| ddd-mapping-declarations | 集約の2軸、ユースケース宣言、複数集約戦略、加算型コマンドの冪等性宣言、業務語彙によるパッケージ宣言 |
+| ddd-mapping-declarations | 集約の2軸、ユースケース宣言、複数集約戦略、加算型コマンドの冪等性宣言（最後のコマンドIDだけを持つときの理由を含む）、業務語彙によるパッケージ宣言 |
 | ddd-layer-structure | 層構造の必須項目、依存方向、命名、復元宣言 |
 | ddd-design-advisories | 複数集約、リポジトリ範囲、保存宣言への助言 |
 | ddd-rust-module-layout | テストを含む全Cargoパッケージで、選択したファイル配置を強制 |
 | ddd-typescript-module-layout | 全パッケージの `src` で、選択したTypeScriptのファイル配置を強制 |
-| ddd-rust-domain | a/b/c/d/g、層診断、パッケージ宣言と実配置の照合 |
+| ddd-rust-domain | a/b/c/d/g、ドメインのクレートで宣言したリポジトリポート（port-placement）、層診断、パッケージ宣言と実配置の照合 |
 | ddd-rust-use-case | g/h/i/d |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
-| ddd-typescript-domain | TypeScriptでのa/b/c/d/g、層診断、パッケージ宣言と実配置の照合。class表現とcompanion表現の両方 |
+| ddd-typescript-domain | TypeScriptでのa/b/c/d/g、ドメインのパッケージで宣言したリポジトリポート（port-placement）、層診断、パッケージ宣言と実配置の照合。class表現とcompanion表現の両方 |
 | ddd-typescript-use-case | TypeScriptでのg/h/i/d。ddd-rust-use-caseと同じ規則ID |
 | ddd-typescript-interface-adapter | TypeScriptでのk/l/m/n/gとquery側の検査。ddd-rust-interface-adapterと同じ規則ID |
 

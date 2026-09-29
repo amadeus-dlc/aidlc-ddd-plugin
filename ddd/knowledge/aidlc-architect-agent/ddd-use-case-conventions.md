@@ -1,6 +1,6 @@
 # Use-case conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -16,14 +16,15 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.use-case-conventions.4 | Declare consistency, idempotency, ordering, failure and compensation, and observability. | Design procedure and review. |
 | K.use-case-conventions.5 | Do not extract values through getters to make business decisions. Forwarding getter results as repository arguments without business branching or calculation is allowed. | d permits proven unchanged forwarding to repository ports. Review assesses the placement of business decisions. |
 | K.use-case-conventions.6 | Do not implicitly promise automatic rollback of an entire flow. | Design convention. |
-| K.use-case-conventions.7 | Define retry identification, retention periods, and recovery from unknown persistence outcomes. | j checks only the strategy of additive commands. Safety requires review. |
+| K.use-case-conventions.7 | Define retry identification by command ID, retention periods, and recovery from unknown persistence outcomes. | j checks only the strategy of additive commands; last-one checks that keeping only the last command ID states its rationale. Safety requires review. |
 | K.use-case-conventions.8 | Represent multi-aggregate recovery with a Process Manager or an explicit re-execution strategy. | process-manager-required applies when every target is actor-based and its mapping is readable. |
 | K.use-case-conventions.9 | Declare the six use-case items, identifier, and name. | mapping-declarations.use-case-item and related checks. Connected to normal approval; standalone completion has limits. |
 | K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. | Design convention. |
+| K.use-case-conventions.11 | Name a field or parameter that holds a port after the port (`invoice_repository`, `#invoiceRepository` for `InvoiceRepository`), not after a plural of the aggregate such as `invoices`. | Review. |
 
 ## Rationale
 
-A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Retaining only the most recent ID is insufficient if C1 → C2 → retry C1 is allowed. Sagas can also use classes; declarations for mixed flows remain T-03 work.
+A single aggregate is the basic strong-consistency boundary. If B fails after A is persisted, A's commit may remain. Compensation is a new operation, not a database rollback. Upsert alone does not guarantee safe re-execution. Keeping only the last command ID (`retention: last-one`) is sufficient only when an older command is never resent after a newer one, and the declaration's rationale states why; when `C1 → C2 → retry C1` can occur, keep several IDs or a time window. Sagas can also use classes; declarations for mixed flows remain T-03 work.
 
 ## Examples
 

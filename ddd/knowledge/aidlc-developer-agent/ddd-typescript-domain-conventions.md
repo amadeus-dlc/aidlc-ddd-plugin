@@ -1,6 +1,6 @@
 # TypeScript domain conventions
 
-Updated: 2026-09-27. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -213,7 +213,7 @@ When a module file moves between the layouts, update every specifier that names 
 
 The use-case package `@acme/billing-use-case` (`packages/command/billing-use-case`) and the interface-adapter package `@acme/billing-interface-adapter` (`packages/command/billing-interface-adapter`) follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md). Both list the domain and language-extensions packages in `dependencies`, and the adapter also lists the use-case package. Their sources are the same in both code representations and both module layouts: they call only `restore`, `of` and the command `issue`, which both representations spell alike, and they hold leaf modules only.
 
-The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package; it may also be declared in a domain package. Its lookup returns its own error type through `Result`:
+The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Its lookup returns its own error type through `Result`:
 
 ```ts
 import type { Invoice } from "@acme/billing-domain";
@@ -227,7 +227,7 @@ export interface InvoiceRepository {
 }
 ```
 
-`execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port, states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
+`execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port and named after it (`#invoiceRepository`), states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
 
 ```ts
 import type { Invoice, IssueInvoiceError } from "@acme/billing-domain";
@@ -237,19 +237,19 @@ import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts
 export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
 
 export class IssueInvoice {
-  readonly #invoices: InvoiceRepository;
+  readonly #invoiceRepository: InvoiceRepository;
 
-  constructor(invoices: InvoiceRepository) {
-    this.#invoices = invoices;
+  constructor(invoiceRepository: InvoiceRepository) {
+    this.#invoiceRepository = invoiceRepository;
   }
 
   execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
-    const found: Result<Invoice, InvoiceNotFound> = this.#invoices.findById(invoiceId);
+    const found: Result<Invoice, InvoiceNotFound> = this.#invoiceRepository.findById(invoiceId);
     if (!found.ok) return found;
     const invoice: Invoice = found.value;
     const issued: Result<void, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    this.#invoices.store(invoiceId, invoice);
+    this.#invoiceRepository.store(invoiceId, invoice);
     return { ok: true, value: undefined };
   }
 }

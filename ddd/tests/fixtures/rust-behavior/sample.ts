@@ -186,18 +186,18 @@ pub enum IssueInvoiceFailure {
 }
 
 pub struct IssueInvoice<'a> {
-    invoices: &'a dyn InvoiceRepository,
+    invoice_repository: &'a dyn InvoiceRepository,
 }
 
 impl<'a> IssueInvoice<'a> {
-    pub fn new(invoices: &'a dyn InvoiceRepository) -> Self {
-        IssueInvoice { invoices }
+    pub fn new(invoice_repository: &'a dyn InvoiceRepository) -> Self {
+        IssueInvoice { invoice_repository }
     }
 
     pub fn execute(&self, invoice_id: &str) -> Result<(), IssueInvoiceFailure> {
-        let mut invoice = self.invoices.find_by_id(invoice_id).map_err(IssueInvoiceFailure::NotFound)?;
+        let mut invoice = self.invoice_repository.find_by_id(invoice_id).map_err(IssueInvoiceFailure::NotFound)?;
         invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
-        self.invoices.store(invoice_id, invoice);
+        self.invoice_repository.store(invoice_id, invoice);
         Ok(())
     }
 }

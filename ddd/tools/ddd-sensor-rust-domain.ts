@@ -24,7 +24,7 @@ process.exit(
           report_layer_diagnostics: true,
           domain_facts: extractor,
         },
-        ["a", "b", "c", "d", "g", "domain-packaging"],
+        ["a", "b", "c", "d", "port-placement", "g", "domain-packaging"],
         api,
       ),
   }),

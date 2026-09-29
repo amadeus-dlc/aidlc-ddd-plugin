@@ -281,8 +281,8 @@ export const COMPANION_WITH_ID_GETTER = edit(
 export const INVOICE_REPOSITORY_PORT = "export interface InvoiceRepository {\n  remove(id: string): void;\n}\n";
 
 /**
- * A domain function handing the result of the getter `id` unchanged to the repository port: the
- * forwarding rule (d) permits in the use-case layer only.
+ * A domain function handing the result of the getter `id` unchanged to a repository port it declares:
+ * the forwarding rule (d) permits in the use-case layer only, and the port belongs there too.
  */
 const FORWARDING_PORT = `\n${INVOICE_REPOSITORY_PORT}\nexport function forget(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`;
 const CLASS_FORWARDING = `${CLASS_WITH_ID_GETTER}${FORWARDING_PORT}`;
@@ -304,6 +304,7 @@ export const RUST_COUNTERPARTS: Readonly<Record<string, readonly [string, string
     "violation-d-repository-domain-layer-class",
     "violation-d-repository-domain-layer-companion",
   ],
+  "violation-port-placement": ["violation-port-placement-class", "violation-port-placement-companion"],
 };
 
 function representationCases(): GoldenCase[] {
@@ -336,7 +337,13 @@ function representationCases(): GoldenCase[] {
       tsCase(
         `violation-d-repository-domain-layer-${representation}`,
         { source: forwarding },
-        { pass: false, rules: ["d"] },
+        { pass: false, rules: ["d", "port-placement"] },
+      ),
+      // A repository port belongs to the use-case layer; a domain source that declares one is reported.
+      tsCase(
+        `violation-port-placement-${representation}`,
+        { source: `${clean}\n${INVOICE_REPOSITORY_PORT}` },
+        { pass: false, rules: ["port-placement"] },
       ),
       tsCase(
         `violation-g-${representation}`,
