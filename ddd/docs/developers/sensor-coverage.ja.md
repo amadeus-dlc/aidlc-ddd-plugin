@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は14センサー・92規則項目。90項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では625ケースを各環境で実行する。承認経路には、この表から選んだ212入力を各環境で通す。
+対象は14センサー・92規則項目。90項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では626ケースを各環境で実行する。承認経路には、この表から選んだ212入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -28,7 +28,7 @@
 | ddd-mapping-declarations<br>`domain-packaging.technical-name` | `clean-packaging-declarations` | `violation-packaging-technical-name`<br>`violation-packaging-name-aggregate`<br>`violation-packaging-name-aggregates`<br>`violation-packaging-name-impl`<br>`violation-packaging-name-vo`<br>`violation-packaging-name-entities`<br>`violation-packaging-name-entity`<br>`violation-packaging-name-value_objects`<br>`violation-package-reserved-impls`<br>`violation-package-reserved-implementation`<br>`violation-package-reserved-implementations`<br>`violation-package-reserved-vos`<br>`violation-package-reserved-value_object`<br>`violation-package-reserved-valueobject`<br>`violation-package-reserved-valueobjects`<br>`violation-package-reserved-VO` | `violation-package-reserved-VO`<br>大小文字・raw識別子を正規化して要素全体で照合し、部分文字列では判定しない。 |
 | ddd-mapping-declarations<br>`mapping-declarations.document` | `clean-use-case` | `violation-document`<br>`violation-legacy-mapping`<br>`violation-legacy-key`<br>`violation-axes`<br>`violation-aggregate-unmapped`<br>`violation-operation-unmapped`<br>`violation-duplicate`<br>`violation-legacy-mapping-beside-use-cases`<br>`violation-replay-shape`<br>`violation-packaging-missing-declarations`<br>`violation-packaging-empty-declarations`<br>`violation-packaging-missing-term`<br>`violation-packaging-missing-rationale`<br>`violation-packaging-missing-reference`<br>`violation-packaging-duplicate`<br>`violation-packaging-missing-parent`<br>`violation-packaging-shape`<br>`violation-mixed-headings`<br>`violation-missing-list` | `violation-mixed-headings`<br>見出しの言語をまたいでも正規セクションは1つだけ。 |
 | ddd-mapping-declarations<br>`mapping-declarations.j` | `clean-additive-idempotency` | `violation-j` | `clean-mapping`<br>加算型はID記憶必須、状態遷移型はnoneを宣言可能。 |
-| ddd-mapping-declarations<br>`mapping-declarations.last-one` | `clean-last-one-rationale` | `violation-last-one-without-rationale` | `violation-last-one-without-rationale`<br>最後のコマンドIDだけを持つ宣言は、理由があれば合格、なければ報告する。 |
+| ddd-mapping-declarations<br>`mapping-declarations.last-one` | `clean-last-one-rationale` | `violation-last-one-without-rationale`<br>`violation-last-one-blank-rationale` | `violation-last-one-without-rationale`<br>最後のコマンドIDだけを持つ宣言は、理由があれば合格、なければ報告する。 |
 | ddd-mapping-declarations<br>`mapping-declarations.model` | `clean-mapping` | `violation-model`<br>`violation-legacy-model`<br>`violation-legacy-model-use-cases` | `violation-document`<br>壊れた宣言はモデル読込み前に拒否する。 |
 | ddd-mapping-declarations<br>`mapping-declarations.multi-aggregate-strategy` | `clean-actor-process-manager` | `violation-multi-aggregate-strategy`<br>`violation-process-manager-required` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
 | ddd-mapping-declarations<br>`mapping-declarations.process-manager-required` | `clean-actor-process-manager` | `violation-process-manager-required` | `clean-class-re-execution`<br>actorのProcess Managerとclassの再実行戦略を両方確認する。 |
