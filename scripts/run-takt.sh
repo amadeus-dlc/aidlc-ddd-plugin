@@ -84,7 +84,10 @@ done
 # 相対パスで渡されても REPO_ROOT へ移動した後に解決がずれないよう、先に絶対パスにする。
 CONFIG_DIR="$(cd "${CONFIG_DIR}" && pwd)"
 
-command -v takt >/dev/null 2>&1 || die "takt が PATH にありません (mise の設定を確認してください)"
+# takt は mise.toml で固定した版を mise exec で起動する。mise が有効でないシェルや IDE から
+# 呼ばれても、グローバルに入っている版では動かさない。
+command -v mise >/dev/null 2>&1 || die "mise が PATH にありません (takt は mise.toml で固定した版を使います)"
+TAKT_VERSION="$(mise exec -- takt --version 2>/dev/null)" || die "mise で takt を起動できません (mise install を実行してください)"
 # claude-sdk プロバイダ (.takt/runtime.yaml で coder に割り当てている) は、TAKT_CLAUDE_CLI_PATH が無いと
 # Claude Agent SDK に同梱された Claude Code を使う。同梱版は新しいモデルに追いつかないことがあり、
 # Claude Opus 5.5 は 2.1.280 以上を要求する。そのため PATH 上の claude を明示的に渡す。
@@ -121,5 +124,5 @@ cd "${REPO_ROOT}"
 printf '==> CLAUDE_CONFIG_DIR=%s (CLAUDE_CODE_OAUTH_TOKEN は unset 済み)\n' "${CLAUDE_CONFIG_DIR}"
 printf '==> TAKT_CONFIG_DIR=%s (~/.takt は読まない)\n' "${TAKT_CONFIG_DIR}"
 printf '==> TAKT_CLAUDE_CLI_PATH=%s (%s, %s 以上)\n' "${TAKT_CLAUDE_CLI_PATH}" "${CLAUDE_CLI_VERSION}" "${CLAUDE_CLI_MIN_VERSION}"
-printf '==> takt %s\n' "$*"
-exec takt "$@"
+printf '==> takt %s (%s)\n' "$*" "${TAKT_VERSION}"
+exec mise exec -- takt "$@"
