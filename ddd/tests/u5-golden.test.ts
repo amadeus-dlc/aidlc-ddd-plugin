@@ -86,7 +86,7 @@ describe("typescript golden cases", () => {
       const rust = declaredRules(sensorsDir, [`aidlc-ddd-rust-${layer}.md`]).get(`ddd-rust-${layer}`);
       expect([...(declared.get(`ddd-typescript-${layer}`) ?? [])].sort()).toEqual([...(rust ?? [])].sort());
     }
-    expect([...(declared.get("ddd-typescript-use-case") ?? [])].sort()).toEqual(["d", "g", "h", "i"]);
+    expect([...(declared.get("ddd-typescript-use-case") ?? [])].sort()).toEqual(["d", "g", "h", "i", "use-case-name"]);
     expect([...(declared.get("ddd-typescript-interface-adapter") ?? [])].sort()).toEqual(["g", "k", "l", "m", "n"]);
     // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
     expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(

@@ -4,6 +4,10 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — ユースケースの型名を `<動詞><対象>UseCase` にする
+
+- **`<動詞><対象>UseCase` という名前でないユースケースの型を報告する。** `ddd-rust-use-case` と `ddd-typescript-use-case` は、`execute` を持つ型（Rust の impl ブロックの型、TypeScript の class）の名前が `UseCase` で終わらなければ `use-case-name` として報告する。関数だけで書いたユースケースには名付ける型がない。ナレッジ・生成手順・生成見本・振る舞いテストのフィクスチャ・ゴールデンケースで、`IssueInvoice` を `IssueInvoiceUseCase` に、`FinishInvoice` を `FinishInvoiceUseCase` に改名した。過去の検証の記録は、実行したときの名前のまま残す。
+
 ## 未リリース — ポートをユースケース層に置き、適用済みのコマンドIDを集約が記憶する
 
 - **ドメイン層で宣言したリポジトリポートを報告する。** リポジトリのインターフェイスはユースケース層のポートである。`ddd-rust-domain` と `ddd-typescript-domain` は、ドメインのクレートやパッケージで宣言した `…Repository` という名前の trait・`interface`・型リテラルの型別名を `port-placement` として報告する。規則 `d` が getter の結果の受け渡し先として許すのは、ユースケース層のリポジトリポートだけにした。ナレッジ・生成手順・設計文書は、ドメインのパッケージにポートを置くことを認めなくなった。ポートを持つフィールドや引数はポートの名前に合わせる（`invoice_repository`、`#invoiceRepository`）。ドメインのパッケージのポートへ受け渡していたゴールデンケースは、ポートをユースケースのパッケージやクレートで宣言するようにした。

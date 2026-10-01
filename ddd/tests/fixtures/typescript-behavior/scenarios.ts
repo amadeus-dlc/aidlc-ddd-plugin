@@ -40,7 +40,7 @@ export interface SampleModules {
     restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice;
   };
   readonly InvoiceLine: { of(amount: number): InvoiceLine };
-  readonly IssueInvoice: new (invoices: InvoiceRepository) => {
+  readonly IssueInvoiceUseCase: new (invoiceRepository: InvoiceRepository) => {
     execute(invoiceId: string): Result<void, string>;
   };
   readonly InMemoryInvoiceRepository: new (records: ReadonlyMap<string, InvoiceRecord>) => InvoiceRepository;
@@ -82,7 +82,7 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
   {
     id: "state-change",
     description: "a command that succeeds changes the aggregate's state, and an issued invoice accepts no further change",
-    run: ({ Invoice, InvoiceLine, IssueInvoice, InMemoryInvoiceRepository }) => {
+    run: ({ Invoice, InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
       const invoice = value(Invoice.open(CUSTOMER, [InvoiceLine.of(100)]));
       expect(invoice.total()).toBe(100);
       expectOk(invoice.addLine(InvoiceLine.of(50)));
@@ -93,13 +93,13 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expectError(invoice.issue(), "already-issued");
       expect(invoice.total()).toBe(150);
 
-      expectOk(new IssueInvoice(new InMemoryInvoiceRepository(records())).execute(DRAFT));
+      expectOk(new IssueInvoiceUseCase(new InMemoryInvoiceRepository(records())).execute(DRAFT));
     },
   },
   {
     id: "business-error-keeps-state",
     description: "a command refused with a business error leaves the aggregate's state as it was",
-    run: ({ Invoice, InvoiceLine, IssueInvoice, InMemoryInvoiceRepository }) => {
+    run: ({ Invoice, InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
       const invoice = value(Invoice.open(CUSTOMER, [InvoiceLine.of(100)]));
       expectError(invoice.addLine(InvoiceLine.of(-150)), "negative-total");
       expect(invoice.total()).toBe(100);
@@ -112,8 +112,8 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expectOk(empty.issue());
 
       const repository = new InMemoryInvoiceRepository(records());
-      expectError(new IssueInvoice(repository).execute(ISSUED), "already-issued");
-      expectError(new IssueInvoice(repository).execute(EMPTY_DRAFT), "empty-lines");
+      expectError(new IssueInvoiceUseCase(repository).execute(ISSUED), "already-issued");
+      expectError(new IssueInvoiceUseCase(repository).execute(EMPTY_DRAFT), "empty-lines");
       const issued = value(repository.findById(ISSUED));
       expect(issued.total()).toBe(5);
       expectError(issued.addLine(InvoiceLine.of(1)), "already-issued");
@@ -136,7 +136,7 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
   {
     id: "restore-after-persistence",
     description: "an aggregate read back from its persisted state has the state that was persisted",
-    run: ({ InvoiceLine, IssueInvoice, InMemoryInvoiceRepository }) => {
+    run: ({ InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
       const repository = new InMemoryInvoiceRepository(records());
       const draft = value(repository.findById(DRAFT));
       expect(draft.total()).toBe(120);
@@ -146,7 +146,7 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expectError(value(repository.findById(ISSUED)).issue(), "already-issued");
 
       const persisted = new InMemoryInvoiceRepository(records());
-      const issueInvoice = new IssueInvoice(persisted);
+      const issueInvoice = new IssueInvoiceUseCase(persisted);
       expectOk(issueInvoice.execute(DRAFT));
       // The stored invoice, not the draft record it was read from, is what the next read returns.
       const stored = value(persisted.findById(DRAFT));

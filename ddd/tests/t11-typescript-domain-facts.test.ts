@@ -531,7 +531,7 @@ test("a request without sources answers with no files and no notes", () => {
 
 test("a function declaration records its parameters with the types they state; other declarations record none", () => {
   const facts = factsOf(`export function execute(invoice: Invoice, count, ...rest: readonly Invoice[]): void {}
-export class IssueInvoice {}
+export class IssueInvoiceUseCase {}
 export const limit = 1;
 `);
   const byName = new Map(
@@ -544,7 +544,7 @@ export const limit = 1;
     { name: "count" },
     { name: "rest", type_text: "readonly Invoice[]" },
   ]);
-  expect(byName.get("IssueInvoice")?.params).toBeUndefined();
+  expect(byName.get("IssueInvoiceUseCase")?.params).toBeUndefined();
   expect(byName.get("limit")?.params).toBeUndefined();
 });
 

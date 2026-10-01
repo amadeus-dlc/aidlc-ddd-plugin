@@ -42,7 +42,8 @@ the section of each language the change generates.
   `command-id-memory`, the aggregate remembers the applied command IDs as its
   `retention` declares and checks a resent command ID before any other decision.
 - **Use-case layer.** Declare the ports here, and name a field or parameter that
-  holds one after the port (`invoice_repository`, `#invoiceRepository`). `execute`
+  holds one after the port (`invoice_repository`, `#invoiceRepository`). Name the
+  type whose method is `execute` `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). `execute`
   takes IDs and value objects, never an aggregate; a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations.
 - **Interface Adapter layer.** The command side and query side do not depend on
   each other; the query side never references a domain type or repository port;
@@ -89,7 +90,7 @@ Type check the generated TypeScript and run its tests; the TypeScript gates deci
 
 The three layer-specific Rust sensors fire on `code-summary.md`: `ddd-rust-domain`
 (rules a, b, c, d, port-placement, g plus the layer diagnostics), `ddd-rust-use-case`
-(rules g, h, i, d) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
+(rules g, h, i, d, use-case-name) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
 every query-side file). Fix the code as the finding names the rule; a repeated
 failure means the plan did not carry the conventions above.
 
@@ -107,7 +108,7 @@ package, since a type declared in any of them can be constructed, called or repl
 one; a syntax error or a construct the extraction leaves unresolved stops the gate there too,
 claimed or not.
 
-`ddd-typescript-use-case` (rules g, h, i, d) and `ddd-typescript-interface-adapter` (rules k, l, m,
+`ddd-typescript-use-case` (rules g, h, i, d, use-case-name) and `ddd-typescript-interface-adapter` (rules k, l, m,
 n, g, over the interface-adapter and rmu layers and every query-side package) fire on the same
 `code-summary.md` for claimed `.ts` / `.tsx` sources of those layers, with the rule ids and finding
 meanings of `ddd-rust-use-case` and `ddd-rust-interface-adapter`. State the type of every `execute`

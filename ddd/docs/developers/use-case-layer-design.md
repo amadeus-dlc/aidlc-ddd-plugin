@@ -2,7 +2,7 @@
 
 English | [Japanese](use-case-layer-design.ja.md)
 
-Updated: 2026-09-30. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
+Updated: 2026-10-01. Uses the failure and persistence contracts in [domain-layer design §7](domain-layer-design.md). These are design conventions, not claims of complete sensor enforcement.
 
 ## 1. Delivery form
 
@@ -20,6 +20,7 @@ A use case coordinates retrieval, business operations, persistence, and recovery
 4. Do not extract values through getters to make business decisions. Call domain methods that return decisions. Passing a getter result as a repository argument is allowed when the value is not used for business branching or calculation.
 5. Do not use database or external-system clients directly.
 6. Declare ports (repositories and other external dependencies) in the use-case layer. The domain layer declares, holds, and calls no port. Name a field or parameter that holds a port after the port (`invoice_repository`, `#invoiceRepository`), not after a plural of the aggregate.
+7. Name the type whose method is `execute` `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). A use case written as a bare function has no type to name.
 
 The query side retrieves DTOs through DAOs; do not impose command-side aggregate retrieval and persistence conventions on it unchanged.
 

@@ -468,7 +468,7 @@ function domainGateOverProgram(name: string, useCase: string): GoldenCase {
 test("with every program source readable, the domain gate reports its verdict", () => {
   const result = spawnSensor(
     toolsDir,
-    domainGateOverProgram("decision-base-program-readable", "pub struct IssueInvoice;\n"),
+    domainGateOverProgram("decision-base-program-readable", "pub struct IssueInvoiceUseCase;\n"),
   );
   expect(result.exitCode, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout).pass).toBe(true);

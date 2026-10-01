@@ -32,10 +32,10 @@ AI-DLCに正規ドメインモデルの設計手順と、設計・Rustコード�
 | ddd-rust-module-layout | テストを含む全Cargoパッケージで、選択したファイル配置を強制 |
 | ddd-typescript-module-layout | 全パッケージの `src` で、選択したTypeScriptのファイル配置を強制 |
 | ddd-rust-domain | a/b/c/d/g、ドメインのクレートで宣言したリポジトリポート（port-placement）、層診断、パッケージ宣言と実配置の照合 |
-| ddd-rust-use-case | g/h/i/d |
+| ddd-rust-use-case | g/h/i/d、ユースケースの型名（use-case-name） |
 | ddd-rust-interface-adapter | k/l/m/n/gとクエリ側の検査 |
 | ddd-typescript-domain | TypeScriptでのa/b/c/d/g、ドメインのパッケージで宣言したリポジトリポート（port-placement）、層診断、パッケージ宣言と実配置の照合。class表現とcompanion表現の両方 |
-| ddd-typescript-use-case | TypeScriptでのg/h/i/d。ddd-rust-use-caseと同じ規則ID |
+| ddd-typescript-use-case | TypeScriptでのg/h/i/d、ユースケースの型名（use-case-name）。ddd-rust-use-caseと同じ規則ID |
 | ddd-typescript-interface-adapter | TypeScriptでのk/l/m/n/gとquery側の検査。ddd-rust-interface-adapterと同じ規則ID |
 
 助言センサー以外のマニフェストはblockingを指定しています。正規モデルは登録名へ統一し、追加宣言は既存レビュー成果物の必須セクションとして通常承認へ接続しました。単独完了の制約は[成果物契約](docs/users/artifact-contract.ja.md)を参照してください。

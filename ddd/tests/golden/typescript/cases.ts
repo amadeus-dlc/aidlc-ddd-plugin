@@ -43,7 +43,7 @@ interface TsPackage {
 export const USE_CASE: TsPackage = {
   dir: "packages/use-case/billing-use-case",
   name: "@acme/billing-use-case",
-  files: { "src/index.ts": "export class IssueInvoice {}\n" },
+  files: { "src/index.ts": "export class IssueInvoiceUseCase {}\n" },
 };
 const INTERFACE_ADAPTER: TsPackage = {
   dir: "packages/interface-adapter/billing-interface-adapter",
@@ -517,7 +517,10 @@ function dependencyCases(): GoldenCase[] {
     ),
     tsCase(
       "violation-g-type-only",
-      { source: `import type { IssueInvoice } from "@acme/billing-use-case";\n${CLASS_CLEAN}`, others: [USE_CASE] },
+      {
+        source: `import type { IssueInvoiceUseCase } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
+        others: [USE_CASE],
+      },
       { pass: false, rules: ["g"] },
     ),
     tsCase(

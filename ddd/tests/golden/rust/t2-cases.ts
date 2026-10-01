@@ -13,7 +13,7 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
   const value = clone("violation-h", "clean-h-value-object");
   value.workspace[DOMAIN] = "pub struct Invoice;\npub struct Amount { value: i64 }\n";
   value.workspace[USE_CASE] =
-    "use billing_domain::Amount;\npub struct IssueInvoice;\nimpl IssueInvoice { pub fn execute(&self, amount: Amount) {} }\n";
+    "use billing_domain::Amount;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase { pub fn execute(&self, amount: Amount) {} }\n";
   value.files[MODEL] = value.files[MODEL].replace(
     "        invariants:",
     "          - { element_id: vo.amount, kind: value-object, name: Amount, aggregate: aggregate.invoice }\n        invariants:",
@@ -21,7 +21,7 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
   value.expect = { pass: true, rules: [] };
   const port = clone("violation-i", "clean-i-port-execute");
   port.workspace[USE_CASE] =
-    "pub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoice;\nimpl IssueInvoice { pub fn execute(&self, port: &impl PaymentPort) { port.execute(); } }\n";
+    "pub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase { pub fn execute(&self, port: &impl PaymentPort) { port.execute(); } }\n";
   port.expect = { pass: true, rules: [] };
   const split = clone("clean-domain", "violation-b-split-impl");
   const operations = "packages/domain/billing-domain/src/operations.rs";
@@ -77,10 +77,10 @@ aggregate_mappings:
   replay.expect = { pass: true, rules: [] };
   const alias = clone("violation-h", "violation-h-import-alias");
   alias.workspace[USE_CASE] =
-    "use billing_domain::Invoice as Bill;\npub struct IssueInvoice;\nimpl IssueInvoice { pub fn execute(&self, invoice: Box<Bill>) {} }\n";
+    "use billing_domain::Invoice as Bill;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase { pub fn execute(&self, invoice: Box<Bill>) {} }\n";
   const local = clone("violation-h", "clean-h-local-name-collision");
   local.workspace[USE_CASE] =
-    "pub struct Invoice;\npub struct IssueInvoice;\nimpl IssueInvoice { pub fn execute(&self, value: Invoice) {} }\n";
+    "pub struct Invoice;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase { pub fn execute(&self, value: Invoice) {} }\n";
   local.expect = { pass: true, rules: [] };
   const getter = clone("violation-h", "clean-d-unrelated-getter-name");
   getter.workspace[DOMAIN] =
@@ -102,31 +102,31 @@ aggregate_mappings:
   const fieldPort = structuredClone(port);
   fieldPort.name = "clean-i-field-port";
   fieldPort.workspace[USE_CASE] =
-    "pub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoice { port: Box<dyn PaymentPort> }\nimpl IssueInvoice { pub fn execute(&self) { self.port.execute(); } }\n";
+    "pub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoiceUseCase { port: Box<dyn PaymentPort> }\nimpl IssueInvoiceUseCase { pub fn execute(&self) { self.port.execute(); } }\n";
   cases.push(fieldPort);
   const fieldUseCase = clone("violation-i", "violation-i-field-use-case");
   fieldUseCase.workspace[USE_CASE] =
-    "pub struct FinishInvoice; impl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice { finish: FinishInvoice }\nimpl IssueInvoice { pub fn execute(&self) { self.finish.execute(); } }\n";
+    "pub struct FinishInvoiceUseCase; impl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub struct IssueInvoiceUseCase { finish: FinishInvoiceUseCase }\nimpl IssueInvoiceUseCase { pub fn execute(&self) { self.finish.execute(); } }\n";
   cases.push(fieldUseCase);
   const ufcs = clone("violation-i", "violation-i-associated-call");
   ufcs.workspace[USE_CASE] =
-    "pub struct FinishInvoice; impl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice; impl IssueInvoice { pub fn execute(&self, other: &FinishInvoice) { FinishInvoice::execute(other); } }\n";
+    "pub struct FinishInvoiceUseCase; impl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub struct IssueInvoiceUseCase; impl IssueInvoiceUseCase { pub fn execute(&self, other: &FinishInvoiceUseCase) { FinishInvoiceUseCase::execute(other); } }\n";
   cases.push(ufcs);
   const crossFile = clone("violation-i", "violation-i-imported-use-case");
   crossFile.workspace[USE_CASE] =
-    "mod finish; use finish::FinishInvoice as Done;\npub struct IssueInvoice; impl IssueInvoice { pub fn execute(&self, other: &Done) { other.execute(); } }\n";
+    "mod finish; use finish::FinishInvoiceUseCase as Done;\npub struct IssueInvoiceUseCase; impl IssueInvoiceUseCase { pub fn execute(&self, other: &Done) { other.execute(); } }\n";
   crossFile.workspace["packages/use-case/billing-use-case/src/finish.rs"] =
-    "pub struct FinishInvoice; impl FinishInvoice { pub fn execute(&self) {} }\n";
+    "pub struct FinishInvoiceUseCase; impl FinishInvoiceUseCase { pub fn execute(&self) {} }\n";
   cases.push(crossFile);
   const shadow = clone("violation-i", "clean-i-untyped-shadow");
   shadow.workspace[USE_CASE] =
-    "pub struct FinishInvoice; impl FinishInvoice { pub fn execute(&self) {} }\npub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoice; impl IssueInvoice { pub fn execute(&self, other: &FinishInvoice, port: &impl PaymentPort) { let other = port; other.execute(); } }\n";
+    "pub struct FinishInvoiceUseCase; impl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoiceUseCase; impl IssueInvoiceUseCase { pub fn execute(&self, other: &FinishInvoiceUseCase, port: &impl PaymentPort) { let other = port; other.execute(); } }\n";
   shadow.expect = { pass: true, rules: [], note_contains: "rule i not evaluated" };
   cases.push(shadow);
   const patternShadow = structuredClone(shadow);
   patternShadow.name = "clean-i-pattern-shadow";
   patternShadow.workspace[USE_CASE] =
-    "pub struct FinishInvoice; impl FinishInvoice { pub fn execute(&self) {} }\npub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoice; impl IssueInvoice { pub fn execute(&self, other: &FinishInvoice, port: Option<&dyn PaymentPort>) { if let Some(other) = port { other.execute(); } } }\n";
+    "pub struct FinishInvoiceUseCase; impl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub trait PaymentPort { fn execute(&self); }\npub struct IssueInvoiceUseCase; impl IssueInvoiceUseCase { pub fn execute(&self, other: &FinishInvoiceUseCase, port: Option<&dyn PaymentPort>) { if let Some(other) = port { other.execute(); } } }\n";
   cases.push(patternShadow);
   const trait = structuredClone(split);
   trait.name = "violation-b-trait-impl";
@@ -214,7 +214,7 @@ aggregate_mappings:
   cases.push(primitive);
   const own = clone("violation-i", "clean-i-own-associated-call");
   own.workspace[USE_CASE] =
-    "pub struct IssueInvoice; impl IssueInvoice { pub fn execute(&self) {} pub fn run(&self) { IssueInvoice::execute(self); } }\n";
+    "pub struct IssueInvoiceUseCase; impl IssueInvoiceUseCase { pub fn execute(&self) {} pub fn run(&self) { IssueInvoiceUseCase::execute(self); } }\n";
   own.expect = { pass: true, rules: [] };
   cases.push(own);
   return cases;

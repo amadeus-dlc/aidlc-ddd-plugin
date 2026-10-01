@@ -130,7 +130,7 @@ export default nextConfig;
 // One repository for the server process: the route module is loaded once, so an invoice issued by
 // one request is the invoice the next request finds.
 const INVOICES = `import { InMemoryInvoiceRepository } from "@acme/billing-interface-adapter";
-import { IssueInvoice } from "@acme/billing-use-case";
+import { IssueInvoiceUseCase } from "@acme/billing-use-case";
 
 const invoiceRepository = new InMemoryInvoiceRepository(
   new Map([
@@ -139,7 +139,7 @@ const invoiceRepository = new InMemoryInvoiceRepository(
   ]),
 );
 
-export const issueInvoice = new IssueInvoice(invoiceRepository);
+export const issueInvoice = new IssueInvoiceUseCase(invoiceRepository);
 `;
 
 const ISSUE_ROUTE = `import { issueInvoice } from "@/lib/invoices";

@@ -35,7 +35,7 @@ function caseRun(laterClause: string): string {
   return `${DOMAIN_IMPORT}\nexport function run(invoice: Invoice, repo: InvoiceRepository, mode: string): void {\n  switch (mode) {\n    case "a":\n      const id = invoice.id();\n      repo.remove(id);\n    ${laterClause}\n      if (id === "42") {\n      }\n  }\n}\n`;
 }
 
-const FINISH = "export class FinishInvoice {\n  execute(): void {}\n}\n";
+const FINISH = "export class FinishInvoiceUseCase {\n  execute(): void {}\n}\n";
 
 /**
  * Each Rust use-case case whose scene a TypeScript case repeats, by name, with the TypeScript case's
@@ -43,6 +43,8 @@ const FINISH = "export class FinishInvoice {\n  execute(): void {}\n}\n";
  */
 export const USE_CASE_RUST_COUNTERPARTS: Readonly<Record<string, string>> = {
   "violation-h": "violation-h",
+  "violation-use-case-name": "violation-use-case-name",
+  "clean-use-case-name-free-function": "clean-use-case-name-function",
   "violation-h-import-alias": "violation-h-import-alias",
   "clean-h-value-object": "clean-h-value-object",
   "clean-h-local-name-collision": "clean-h-local-name-collision",
@@ -94,7 +96,7 @@ const EXECUTE_SCENES: readonly Scene[] = [
   [
     "violation-h",
     source(
-      `import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoice {\n  execute(invoice: Invoice): void {}\n}\n`,
+      `import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoiceUseCase {\n  execute(invoice: Invoice): void {}\n}\n`,
     ),
     [],
     fails("h"),
@@ -110,7 +112,7 @@ const EXECUTE_SCENES: readonly Scene[] = [
   [
     "violation-h-import-alias",
     source(
-      `import { Invoice as Bill } from "@acme/billing-domain";\n\nexport class IssueInvoice {\n  execute(invoice: Bill | undefined): void {}\n}\n`,
+      `import { Invoice as Bill } from "@acme/billing-domain";\n\nexport class IssueInvoiceUseCase {\n  execute(invoice: Bill | undefined): void {}\n}\n`,
     ),
     [],
     fails("h"),
@@ -118,16 +120,24 @@ const EXECUTE_SCENES: readonly Scene[] = [
   [
     "violation-h-readonly-array",
     source(
-      `import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoice {\n  execute(invoices: readonly Invoice[]): void {}\n}\n`,
+      `import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoiceUseCase {\n  execute(invoices: readonly Invoice[]): void {}\n}\n`,
     ),
     [],
     fails("h"),
   ],
-  ["clean-h-id", source("export class IssueInvoice {\n  execute(invoiceId: string): void {}\n}\n"), [], pass],
+  ["clean-h-id", source("export class IssueInvoiceUseCase {\n  execute(invoiceId: string): void {}\n}\n"), [], pass],
+  // A use case type is named <Verb><Object>UseCase; a use case written as a function has no type to name.
+  [
+    "violation-use-case-name",
+    source("export class IssueInvoice {\n  execute(invoiceId: string): void {}\n}\n"),
+    [],
+    fails("use-case-name"),
+  ],
+  ["clean-use-case-name-function", source("export function execute(invoiceId: string): void {}\n"), [], pass],
   [
     "clean-h-value-object",
     source(
-      `import { Amount } from "@acme/billing-domain";\n\nexport class IssueInvoice {\n  execute(amount: Amount): void {}\n}\n`,
+      `import { Amount } from "@acme/billing-domain";\n\nexport class IssueInvoiceUseCase {\n  execute(amount: Amount): void {}\n}\n`,
     ),
     [],
     pass,
@@ -135,7 +145,7 @@ const EXECUTE_SCENES: readonly Scene[] = [
   // A use-case type that happens to share the aggregate's name is not the aggregate.
   [
     "clean-h-local-name-collision",
-    source("export class Invoice {}\n\nexport class IssueInvoice {\n  execute(value: Invoice): void {}\n}\n"),
+    source("export class Invoice {}\n\nexport class IssueInvoiceUseCase {\n  execute(value: Invoice): void {}\n}\n"),
     [],
     pass,
   ],
@@ -146,7 +156,7 @@ const CHAINING_SCENES: readonly Scene[] = [
   [
     "violation-i",
     source(
-      `${FINISH}\nexport class IssueInvoice {\n  run(other: FinishInvoice): void {\n    other.execute();\n  }\n}\n`,
+      `${FINISH}\nexport class IssueInvoiceUseCase {\n  run(other: FinishInvoiceUseCase): void {\n    other.execute();\n  }\n}\n`,
     ),
     [],
     fails("i"),
@@ -154,7 +164,7 @@ const CHAINING_SCENES: readonly Scene[] = [
   [
     "violation-i-field",
     source(
-      `${FINISH}\nexport class IssueInvoice {\n  readonly #finish: FinishInvoice;\n\n  constructor(finish: FinishInvoice) {\n    this.#finish = finish;\n  }\n\n  execute(): void {\n    this.#finish.execute();\n  }\n}\n`,
+      `${FINISH}\nexport class IssueInvoiceUseCase {\n  readonly #finish: FinishInvoiceUseCase;\n\n  constructor(finish: FinishInvoiceUseCase) {\n    this.#finish = finish;\n  }\n\n  execute(): void {\n    this.#finish.execute();\n  }\n}\n`,
     ),
     [],
     fails("i"),
@@ -162,7 +172,7 @@ const CHAINING_SCENES: readonly Scene[] = [
   [
     "violation-i-imported",
     useCasePackage({
-      "src/index.ts": `import { FinishInvoice as Done } from "./finish.ts";\n\nexport class IssueInvoice {\n  execute(other: Done): void {\n    other.execute();\n  }\n}\n`,
+      "src/index.ts": `import { FinishInvoiceUseCase as Done } from "./finish.ts";\n\nexport class IssueInvoiceUseCase {\n  execute(other: Done): void {\n    other.execute();\n  }\n}\n`,
       "src/finish.ts": FINISH,
     }),
     [],
@@ -172,7 +182,7 @@ const CHAINING_SCENES: readonly Scene[] = [
   [
     "clean-i-port-execute",
     source(
-      "export interface PaymentPort {\n  execute(): void;\n}\n\nexport class IssueInvoice {\n  execute(port: PaymentPort): void {\n    port.execute();\n  }\n}\n",
+      "export interface PaymentPort {\n  execute(): void;\n}\n\nexport class IssueInvoiceUseCase {\n  execute(port: PaymentPort): void {\n    port.execute();\n  }\n}\n",
     ),
     [],
     pass,
@@ -181,7 +191,7 @@ const CHAINING_SCENES: readonly Scene[] = [
   [
     "clean-i-own-call",
     source(
-      "export class IssueInvoice {\n  execute(): void {}\n\n  run(same: IssueInvoice): void {\n    this.execute();\n    same.execute();\n  }\n}\n",
+      "export class IssueInvoiceUseCase {\n  execute(): void {}\n\n  run(same: IssueInvoiceUseCase): void {\n    this.execute();\n    same.execute();\n  }\n}\n",
     ),
     [],
     pass,
@@ -332,14 +342,14 @@ const USE_CASE_PACKAGE_JSON = "packages/use-case/billing-use-case/package.json";
 const DEPENDENCY_SCENES: readonly Scene[] = [
   [
     "clean-g-use-case-to-infrastructure-import",
-    source('import { Clock } from "@acme/billing-infrastructure";\n\nexport class IssueInvoice {}\n'),
+    source('import { Clock } from "@acme/billing-infrastructure";\n\nexport class IssueInvoiceUseCase {}\n'),
     [INFRASTRUCTURE],
     pass,
   ],
   [
     "clean-g-use-case-to-infrastructure-package-json",
     useCasePackage(
-      { "src/index.ts": "export class IssueInvoice {}\n" },
+      { "src/index.ts": "export class IssueInvoiceUseCase {}\n" },
       { dependencies: { "@acme/billing-infrastructure": "0.1.0" } },
     ),
     [INFRASTRUCTURE],
@@ -347,20 +357,20 @@ const DEPENDENCY_SCENES: readonly Scene[] = [
   ],
   [
     "violation-g-use-case-to-interface-adapter-import",
-    source('import { Adapter } from "@acme/billing-interface-adapter";\n\nexport class IssueInvoice {}\n'),
+    source('import { Adapter } from "@acme/billing-interface-adapter";\n\nexport class IssueInvoiceUseCase {}\n'),
     [INTERFACE_ADAPTER],
     fails("g"),
   ],
   [
     "violation-g-use-case-type-only",
-    source('import type { Adapter } from "@acme/billing-interface-adapter";\n\nexport class IssueInvoice {}\n'),
+    source('import type { Adapter } from "@acme/billing-interface-adapter";\n\nexport class IssueInvoiceUseCase {}\n'),
     [INTERFACE_ADAPTER],
     fails("g"),
   ],
   [
     "violation-g-use-case-to-interface-adapter-package-json",
     useCasePackage(
-      { "src/index.ts": "export class IssueInvoice {}\n" },
+      { "src/index.ts": "export class IssueInvoiceUseCase {}\n" },
       { dependencies: { "@acme/billing-interface-adapter": "0.1.0" } },
     ),
     [INTERFACE_ADAPTER],
@@ -368,7 +378,7 @@ const DEPENDENCY_SCENES: readonly Scene[] = [
   ],
   [
     "violation-g-use-case-external-io",
-    source('import { MongoClient } from "mongodb";\n\nexport class IssueInvoice {}\n'),
+    source('import { MongoClient } from "mongodb";\n\nexport class IssueInvoiceUseCase {}\n'),
     [],
     fails("g"),
   ],

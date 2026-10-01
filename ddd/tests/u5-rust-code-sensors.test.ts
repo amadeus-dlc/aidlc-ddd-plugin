@@ -225,7 +225,7 @@ describe("ddd-rust-domain", () => {
 
 describe("ddd-rust-use-case", () => {
   test("reports an aggregate argument to execute (h)", () => {
-    const lib = `use billing_domain::Invoice;\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn execute(&self, invoice: Invoice) {}\n}\n`;
+    const lib = `use billing_domain::Invoice;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase {\n    pub fn execute(&self, invoice: Invoice) {}\n}\n`;
     expect(runSensor("use-case", useCaseProject(lib)).located).toEqual(["h@4"]);
   });
 
@@ -275,7 +275,7 @@ describe("ddd-rust-use-case", () => {
   });
 
   test("reports use-case chaining (i)", () => {
-    const lib = `pub struct FinishInvoice;\nimpl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &FinishInvoice) { other.execute(); }\n}\n`;
+    const lib = `pub struct FinishInvoiceUseCase;\nimpl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase {\n    pub fn run(&self, other: &FinishInvoiceUseCase) { other.execute(); }\n}\n`;
     const proj = buildProject([{ path: "packages/use-case/billing-use-case", name: "billing-use-case", lib }]);
     expect(runSensor("use-case", proj).rules).toContain("i");
   });
