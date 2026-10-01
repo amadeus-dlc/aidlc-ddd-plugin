@@ -4,6 +4,10 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Use case types named `<Verb><Object>UseCase`
+
+- **Report a use case type not named `<Verb><Object>UseCase`.** `ddd-rust-use-case` and `ddd-typescript-use-case` report the type whose method is `execute` — the type of a Rust impl block, a TypeScript class — when its name does not end with `UseCase`, as `use-case-name`; a use case written as a bare function has no type to name. The knowledge, the generation instructions, the generation samples, the behavior fixtures and the golden cases rename `IssueInvoice` to `IssueInvoiceUseCase` and `FinishInvoice` to `FinishInvoiceUseCase`. Verification records of earlier runs keep the names they ran with.
+
 ## Unreleased — Ports in the use-case layer, command IDs kept by the aggregate
 
 - **Report a repository port declared in the domain layer.** A repository interface is a port of the use-case layer. `ddd-rust-domain` and `ddd-typescript-domain` report a trait, an `interface` or a type literal alias named `…Repository` declared in a domain crate or package as `port-placement`, and rule `d` accepts a getter result handed only to a repository port of the use-case layer. The knowledge, the generation instructions and the design documents no longer allow a port in a domain package, and a field or parameter that holds a port is named after it (`invoice_repository`, `#invoiceRepository`). The golden cases that forwarded to a port of the domain package now declare it in the use-case package or crate.

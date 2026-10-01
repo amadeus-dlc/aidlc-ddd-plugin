@@ -1,6 +1,6 @@
 # TypeScript domain conventions
 
-Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-01. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -227,7 +227,7 @@ export interface InvoiceRepository {
 }
 ```
 
-`execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port and named after it (`#invoiceRepository`), states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
+The use case is a class named `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). `execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port and named after it (`#invoiceRepository`), states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
 
 ```ts
 import type { Invoice, IssueInvoiceError } from "@acme/billing-domain";
@@ -236,7 +236,7 @@ import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts
 
 export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
 
-export class IssueInvoice {
+export class IssueInvoiceUseCase {
   readonly #invoiceRepository: InvoiceRepository;
 
   constructor(invoiceRepository: InvoiceRepository) {

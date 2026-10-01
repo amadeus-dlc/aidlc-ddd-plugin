@@ -14,7 +14,7 @@ use billing_domain::invoice::line::InvoiceLine;
 use billing_domain::invoice::{AddInvoiceLineError, Invoice, IssueInvoiceError, OpenInvoiceError};
 use billing_interface_adapter::in_memory_invoice_repository::{InMemoryInvoiceRepository, InvoiceRecord};
 use billing_use_case::invoice_repository::InvoiceRepository;
-use billing_use_case::issue_invoice::{IssueInvoice, IssueInvoiceFailure};
+use billing_use_case::issue_invoice::{IssueInvoiceUseCase, IssueInvoiceFailure};
 
 const CUSTOMER: &str = "acme";
 const DRAFT: &str = "invoice-draft";
@@ -89,7 +89,7 @@ fn state_change() {
     assert_eq!(invoice.total(), 150);
 
     let repository = InMemoryInvoiceRepository::new(records());
-    value(IssueInvoice::new(&repository).execute(DRAFT));
+    value(IssueInvoiceUseCase::new(&repository).execute(DRAFT));
 }
 
 /// scenarios.ts "business-error-keeps-state".
@@ -107,8 +107,8 @@ fn business_error_keeps_state() {
     value(empty.issue());
 
     let repository = InMemoryInvoiceRepository::new(records());
-    expect_rejected(IssueInvoice::new(&repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
-    expect_rejected(IssueInvoice::new(&repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
+    expect_rejected(IssueInvoiceUseCase::new(&repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
+    expect_rejected(IssueInvoiceUseCase::new(&repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
     let mut issued = value(repository.find_by_id(ISSUED));
     assert_eq!(issued.total(), 5);
     assert_eq!(error_of(issued.add_line(InvoiceLine::of(1))), AddInvoiceLineError::AlreadyIssued);
@@ -139,7 +139,7 @@ fn restore_after_persistence() {
     assert_eq!(error_of(value(repository.find_by_id(ISSUED)).issue()), IssueInvoiceError::AlreadyIssued);
 
     let persisted = InMemoryInvoiceRepository::new(records());
-    let issue_invoice = IssueInvoice::new(&persisted);
+    let issue_invoice = IssueInvoiceUseCase::new(&persisted);
     value(issue_invoice.execute(DRAFT));
     // The stored invoice, not the draft record it was read from, is what the next read returns.
     let mut stored = value(persisted.find_by_id(DRAFT));

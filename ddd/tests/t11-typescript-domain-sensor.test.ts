@@ -564,7 +564,7 @@ describe("what the rules cannot decide stops the gate", () => {
       tsCase(
         "unresolved-exports",
         {
-          source: `import { IssueInvoice } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
+          source: `import { IssueInvoiceUseCase } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
           others: [{ ...USE_CASE, manifest: { exports: undefined } }],
         },
         { pass: true, rules: [] },
@@ -718,7 +718,7 @@ describe("a package of the workspace the root tsconfig.json does not reference i
   test("importing an unreferenced use-case package by name is a layer-forbidden dependency", () => {
     const testCase = tsCase(
       "unreferenced-use-case-import",
-      { source: `import { IssueInvoice } from "@acme/billing-use-case";\n${CLASS_CLEAN}`, others: [USE_CASE] },
+      { source: `import { IssueInvoiceUseCase } from "@acme/billing-use-case";\n${CLASS_CLEAN}`, others: [USE_CASE] },
       { pass: false, rules: ["g"] },
     );
     const reported = verdictOf(referencing(testCase, [DOMAIN_DIR])).findings.filter((entry) => entry.rule_id === "g");
@@ -730,7 +730,7 @@ describe("a package of the workspace the root tsconfig.json does not reference i
     const testCase = tsCase(
       "installed-copy-not-workspace-package",
       {
-        source: `import { IssueInvoice } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
+        source: `import { IssueInvoiceUseCase } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
         others: [USE_CASE],
         extra: {
           "node_modules/@acme/billing-use-case/package.json": `${JSON.stringify({ name: USE_CASE.name, version: "0.1.0" })}\n`,
@@ -788,7 +788,7 @@ describe("a package of the workspace the root tsconfig.json does not reference i
       tsCase(
         "duplicate-package-name",
         {
-          source: `import { IssueInvoice } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
+          source: `import { IssueInvoiceUseCase } from "@acme/billing-use-case";\n${CLASS_CLEAN}`,
           others: [USE_CASE, USE_CASE_COPY],
         },
         { pass: true, rules: [] },

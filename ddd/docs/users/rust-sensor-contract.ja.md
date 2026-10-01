@@ -48,6 +48,10 @@ repo.remove(invoice.id() + 1); // 引数内でも計算は違反
 
 ポートはユースケース層で宣言する。ドメインゲートは、ドメインのクレートで宣言した `…Repository` という名前のtraitを `port-placement` として報告する。文言は `repository port InvoiceRepository is declared in the domain layer; declare it in the use-case layer` である。規則l・mと同じく、ポートは名前で見分ける。ほかのポートや、ドメイン型がポートを保持・呼出しすることはレビューで確認する。
 
+## ユースケースの型名は `<動詞><対象>UseCase` にする
+
+ユースケースゲートは、`execute` を宣言するimplブロックの型について、名前が `UseCase` で終わらなければ `use-case-name` として報告する。文言は `use case IssueInvoice is not named <Verb><Object>UseCase; name it IssueInvoiceUseCase` である。ジェネリック引数とパスの前置きは無視する。implに属さない `fn execute` には名付ける型がない。
+
 ## replayは明示した契約で許可する
 
 集約写像の各行に、任意の `replay_methods` を追加した。既存の行で省略した場合は空配列として扱う。正規モデルのスキーマ自体は変更していない。

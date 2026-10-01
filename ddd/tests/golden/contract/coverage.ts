@@ -379,6 +379,14 @@ cover(
 );
 cover(
   use,
+  ["use-case-name"],
+  "clean-h-value-object",
+  "clean-use-case-name-free-function",
+  "A use case type is named <Verb><Object>UseCase; a free execute function has no type to name.",
+  "ユースケースの型名は<動詞><対象>UseCaseとし、型を持たない関数executeは対象外とする。",
+);
+cover(
+  use,
   ["i"],
   "clean-i-port-execute",
   "clean-i-own-associated-call",
@@ -596,6 +604,14 @@ cover(
   "clean-h-value-object-class",
   "Ids and value objects are valid execute arguments; aggregates are not.",
   "IDと値オブジェクトの引数は許可し、集約引数は拒否する。",
+);
+cover(
+  tsUse,
+  ["use-case-name"],
+  "clean-h-id-class",
+  "clean-use-case-name-function-class",
+  "A use case class is named <Verb><Object>UseCase; a top-level execute function has no type to name.",
+  "ユースケースのclass名は<動詞><対象>UseCaseとし、型を持たない関数executeは対象外とする。",
 );
 cover(
   tsUse,

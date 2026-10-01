@@ -29,7 +29,7 @@ async function loadModules(root: string): Promise<SampleModules> {
   return {
     Invoice: domain.Invoice,
     InvoiceLine: domain.InvoiceLine,
-    IssueInvoice: useCase.IssueInvoice,
+    IssueInvoiceUseCase: useCase.IssueInvoiceUseCase,
     InMemoryInvoiceRepository: interfaceAdapter.InMemoryInvoiceRepository,
   };
 }

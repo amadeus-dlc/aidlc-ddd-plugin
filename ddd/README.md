@@ -32,10 +32,10 @@ Sources live in stages/, contributions/, sensors/, knowledge/, and tools/. Imple
 | ddd-rust-module-layout | Enforce the selected file layout across all owned Cargo packages, including tests. |
 | ddd-typescript-module-layout | Enforce the selected TypeScript file layout across the `src` of every package. |
 | ddd-rust-domain | a/b/c/d/g, a repository port declared in a domain crate (port-placement), layer diagnostics, and package declaration/layout matching. |
-| ddd-rust-use-case | g/h/i/d. |
+| ddd-rust-use-case | g/h/i/d and use case type names (use-case-name). |
 | ddd-rust-interface-adapter | k/l/m/n/g and query-side checks. |
 | ddd-typescript-domain | a/b/c/d/g, a repository port declared in a domain package (port-placement), layer diagnostics, and package declaration/layout matching on TypeScript, for both the class and the companion representation. |
-| ddd-typescript-use-case | g/h/i/d on TypeScript, with the rule ids of ddd-rust-use-case. |
+| ddd-typescript-use-case | g/h/i/d and use case type names (use-case-name) on TypeScript, with the rule ids of ddd-rust-use-case. |
 | ddd-typescript-interface-adapter | k/l/m/n/g and query-side checks on TypeScript, with the rule ids of ddd-rust-interface-adapter. |
 
 All manifests except the advisory sensor are blocking. Canonical models use registered names, and added declarations are required sections of existing review artifacts connected to normal approval. See the [artifact contract](docs/users/artifact-contract.md) for standalone limits.

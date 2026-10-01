@@ -228,7 +228,7 @@ describe("the use-case findings name the argument, the use case, the getter and 
     const testCase = useCase("violation-i-class");
     const reported = findingsOf(testCase, "i");
     expect(reported.map((entry) => [entry.file, entry.message])).toEqual([
-      [UC_FILE, `use case calls ${UC_FILE}#FinishInvoice.execute`],
+      [UC_FILE, `use case calls ${UC_FILE}#FinishInvoiceUseCase.execute`],
     ]);
     expect(reported[0].line).toBe(lineOf(sourceOf(testCase, UC_FILE), "other.execute();"));
   });
@@ -236,7 +236,7 @@ describe("the use-case findings name the argument, the use case, the getter and 
   test("a use case imported under another name is named where it is declared", () => {
     const reported = findingsOf(useCase("violation-i-imported-class"), "i");
     expect(reported.map((entry) => entry.message)).toEqual([
-      `use case calls ${USE_CASE_DIR}/src/finish.ts#FinishInvoice.execute`,
+      `use case calls ${USE_CASE_DIR}/src/finish.ts#FinishInvoiceUseCase.execute`,
     ]);
   });
 
@@ -450,7 +450,7 @@ const THING: LayerPackage = {
 
 describe("each gate reads the sources its rules decide from, and reports what the Rust gate reports", () => {
   test("the use-case gate does not report the layer of a claimed package it does not decide", () => {
-    const testCase = claiming(useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n" }, [THING]), [
+    const testCase = claiming(useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" }, [THING]), [
       UC_FILE,
       `${THING.dir}/src/index.ts`,
     ]);
@@ -460,7 +460,7 @@ describe("each gate reads the sources its rules decide from, and reports what th
   });
 
   test("a claimed file no package owns is reported by the use-case gate", () => {
-    const testCase = claiming(useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n" }), [
+    const testCase = claiming(useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" }), [
       UC_FILE,
       "scripts/seed.ts",
     ]);
@@ -474,7 +474,7 @@ describe("each gate reads the sources its rules decide from, and reports what th
 
   test("an unreadable source of the interface-adapter package does not stop the use-case gate", () => {
     const verdict = verdictOf(
-      useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n" }, [
+      useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" }, [
         interfaceAdapterPackage({ "src/index.ts": "const = ;\n" }),
       ]),
     );
@@ -523,8 +523,8 @@ const USE_CASE_UNDECIDED: [string, string, string][] = [
     "const execute = (): void => {};\n\nexport function go(): void {\n  execute();\n}\n",
     "execute();",
   ],
-  ["a syntax error", "export class IssueInvoice {}\nconst = ;\n", "const = ;"],
-  ["a decorator", "@sealed\nexport class IssueInvoice {}\n", "@sealed"],
+  ["a syntax error", "export class IssueInvoiceUseCase {}\nconst = ;\n", "const = ;"],
+  ["a decorator", "@sealed\nexport class IssueInvoiceUseCase {}\n", "@sealed"],
   [
     "a getter receiver without a stated type",
     'import { Invoice } from "@acme/billing-domain";\n\nexport function run(): string {\n  const invoice = Invoice.open("x", 0);\n  return invoice.id();\n}\n',
@@ -537,12 +537,12 @@ const USE_CASE_UNDECIDED: [string, string, string][] = [
   ],
   [
     "an execute parameter without a stated type",
-    "export class IssueInvoice {\n  execute(invoice): void {}\n}\n",
+    "export class IssueInvoiceUseCase {\n  execute(invoice): void {}\n}\n",
     "execute(invoice)",
   ],
   [
     "an execute parameter holding the aggregate in another type",
-    'import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoice {\n  execute(byId: Map<string, Invoice>): void {}\n}\n',
+    'import { Invoice } from "@acme/billing-domain";\n\nexport class IssueInvoiceUseCase {\n  execute(byId: Map<string, Invoice>): void {}\n}\n',
     "execute(byId",
   ],
   [
@@ -552,7 +552,7 @@ const USE_CASE_UNDECIDED: [string, string, string][] = [
   ],
   [
     "a specifier the package does not map",
-    'import { X } from "#internal";\n\nexport class IssueInvoice {}\n',
+    'import { X } from "#internal";\n\nexport class IssueInvoiceUseCase {}\n',
     "#internal",
   ],
 ];
@@ -571,14 +571,14 @@ describe("what the use-case gate cannot decide stops it", () => {
 
   test("an unreadable unclaimed source of the use-case package stops the gate", () => {
     const run = runInProcess(
-      useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n", "src/other.ts": "const = ;\n" }),
+      useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n", "src/other.ts": "const = ;\n" }),
     );
     expectStopped(run);
     expect(run.stderr).toContain(`${USE_CASE_DIR}/src/other.ts:1 syntax-error`);
   });
 
   test("an unreadable unclaimed source of the domain package stops the gate", () => {
-    const testCase = useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n" });
+    const testCase = useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" });
     (testCase.workspace ?? {})[`${DOMAIN_DIR}/src/amount.ts`] = "const = ;\n";
     const run = runInProcess(testCase);
     expectStopped(run);
@@ -586,7 +586,7 @@ describe("what the use-case gate cannot decide stops it", () => {
   });
 
   test("a use-case package the root tsconfig.json does not reference stops the gate", () => {
-    const testCase = useCaseWith({ "src/index.ts": "export class IssueInvoice {}\n" });
+    const testCase = useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" });
     (testCase.workspace ?? {})["tsconfig.json"] =
       `${JSON.stringify({ files: [], references: [{ path: `./${DOMAIN_DIR}` }] })}\n`;
     const run = runInProcess(testCase);

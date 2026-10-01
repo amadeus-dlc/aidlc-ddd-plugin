@@ -48,6 +48,10 @@ Generic-bound resolution, trait implementation selection, associated-function ca
 
 Ports are declared in the use-case layer. The domain gate reports a trait named `…Repository` declared in a domain crate as `port-placement`, with the message `repository port InvoiceRepository is declared in the domain layer; declare it in the use-case layer`. A port is known by its name, as rules l and m know it; other ports, and a domain type that holds or calls a port, are left to review.
 
+## A use case type is named `<Verb><Object>UseCase`
+
+The use-case gate reports the type of an impl block that declares `execute` when its name does not end with `UseCase`, as `use-case-name`, with the message `use case IssueInvoice is not named <Verb><Object>UseCase; name it IssueInvoiceUseCase`. Generic parameters and a path prefix are ignored. A free `fn execute` has no type to name.
+
 ## Permit replay through explicit declarations
 
 Each aggregate mapping may contain `replay_methods`; omission in an existing row means an empty list. The canonical model schema itself is unchanged.

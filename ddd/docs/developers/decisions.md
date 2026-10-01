@@ -2,7 +2,7 @@
 
 English | [Japanese](decisions.ja.md)
 
-Updated: 2026-09-30. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
+Updated: 2026-10-01. Record current policy and its rationale. The [document index](../README.md) links designs; [remaining work](completion-tasks.md) tracks unimplemented items.
 
 ## Current policy
 
@@ -53,6 +53,10 @@ Two alternatives were rejected. Keeping the allow list in the rule layer would s
 Status: in force ([#92](https://github.com/amadeus-dlc/aidlc-ddd-plugin/issues/92)). The #80 stop also fired on two inputs it was not needed for. First, an attribute macro under `#[cfg(test)]` — `#[tokio::test]` in an inline test module is the common case — stopped a gate because the file is the unit rules `a` and `d` decide from, although the normal build never compiles that code and so it cannot change the declarations those rules read. The extractor now leaves it out, reusing the distinction its declaration walk already draws to mark an item or a file auxiliary: an item carrying `#[cfg(test)]`, together with its own attributes and everything inside it, and a file that opens with `#![cfg(test)]`. `#[cfg(test)]` itself is still recorded as `conditional-compilation`, and any other configuration predicate keeps the handling #80 gave it. Second, `#[async_trait]`, common on the asynchronous ports and repositories of the use-case and domain layers, stopped a gate although it only rewrites the signatures of `async fn` and adds no public member rule `a` reads and no getter rule `d` reads. The extractor now keeps an allow list of attribute macros whose expansion is known, `ATTRIBUTE_MACRO_ALLOW_LIST`, beside `DERIVE_HELPER_ALLOW_LIST` and in the same form, matched by the last path segment so `#[async_trait]` and `#[async_trait::async_trait]` are both left out. It holds `async_trait` alone, and every other attribute macro still stops a gate. `protocol_version` stays 7, because the answer's shape is unchanged and an extractor still on the #80 build only records more. The details, including the boundary of the `#[cfg(test)]` distinction, are in [how attribute macros are handled](rust-syn-spike.md#how-attribute-macros-are-handled).
 
 Several alternatives were rejected. Keeping an attribute macro under `#[cfg(test)]` as a note that does not stop a gate, rather than not recording it, would add a new kind of note for code that cannot affect the rules. Extending the `#[cfg(test)]` distinction to a method or associated item of an impl or trait block would draw a configuration distinction the extractor does not draw today, and evaluating `cfg` is outside #92. For `async_trait`, stopping as before was rejected for the practical cost above, and answering with a note for every attribute macro was rejected because it would let one that does add a member or a getter pass. Deciding either exception in the rule layer was rejected for the same reason as in #80: what to record is the extractor's part. Raising `protocol_version` was rejected because no record kind or field changed.
+
+## 2026-10-01: Name use case types `<Verb><Object>UseCase`
+
+Status: in force. A use case implementation is a type of its own, and its name says so: `IssueInvoiceUseCase`, not `IssueInvoice`. The knowledge, the generation samples and the golden cases used the bare verb-object name, so generated code in both languages followed it. The use-case gates report the type whose method is `execute` when its name does not end with `UseCase` (`use-case-name`, requirement `DEC-2026-10-01`); a use case written as a bare function has no type to name. Verification records of earlier runs keep the names they ran with.
 
 ## 2026-09-30: Declare ports in the use-case layer; the aggregate keeps the applied command IDs
 

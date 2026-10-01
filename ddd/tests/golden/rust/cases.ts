@@ -176,7 +176,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "use billing_domain::Invoice;\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn execute(&self, invoice: Invoice) {}\n}\n",
+          lib: "use billing_domain::Invoice;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase {\n    pub fn execute(&self, invoice: Invoice) {}\n}\n",
           deps: ["billing-domain"],
         },
       ],
@@ -184,6 +184,46 @@ const BASE_RUST_CASES: GoldenCase[] = [
       ["packages/use-case/billing-use-case/src/lib.rs"],
     ),
     expect: withFiles({ pass: false, rules: ["h"] }, "packages/use-case/billing-use-case/src/lib.rs"),
+  },
+  {
+    sensor: "ddd-rust-use-case",
+    name: "violation-use-case-name",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn execute(&self, invoice_id: &str) {}\n}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: withFiles({ pass: false, rules: ["use-case-name"] }, "packages/use-case/billing-use-case/src/lib.rs"),
+  },
+  {
+    sensor: "ddd-rust-use-case",
+    name: "clean-use-case-name-free-function",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub fn execute(invoice_id: &str) {}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: { pass: true, rules: [] },
   },
   {
     sensor: "ddd-rust-use-case",
@@ -195,7 +235,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct FinishInvoice;\nimpl FinishInvoice { pub fn execute(&self) {} }\npub struct IssueInvoice;\nimpl IssueInvoice {\n    pub fn run(&self, other: &FinishInvoice) { other.execute(); }\n}\n",
+          lib: "pub struct FinishInvoiceUseCase;\nimpl FinishInvoiceUseCase { pub fn execute(&self) {} }\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase {\n    pub fn run(&self, other: &FinishInvoiceUseCase) { other.execute(); }\n}\n",
         },
       ],
       STATE,
