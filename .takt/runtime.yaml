@@ -21,7 +21,7 @@ provider:
     # coder（implement・write_tests・fix・reimplement など、長く動くステップ）だけは claude-sdk で動かす。
     #
     # provider: claude は Claude CLI の stdout を文字列に溜め、10MB を超えるとステップを失敗させる
-    # （takt 0.66 の claude-headless/headless-spawn.js。上限は設定で変えられない）。長い実装ステップが
+    # （takt 0.66・0.67 の claude-headless/headless-spawn.js。上限は設定で変えられない）。長い実装ステップが
     # 87 分動いた後にこれで失敗した実績がある（#70）。claude-sdk は出力を逐次受け取るため、この上限が無い。
     #
     # takt はセッションをプロバイダ名込みで管理する。coder のステップは同じ claude-sdk を使うので、
