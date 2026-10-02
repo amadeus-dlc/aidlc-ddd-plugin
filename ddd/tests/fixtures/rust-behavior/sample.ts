@@ -54,25 +54,46 @@ export function otherParentModuleFile(layout: RustModuleLayout): string {
 const DOMAIN_LIB = `pub mod invoice;
 `;
 
-const INVOICE_LINE = `#[derive(Clone)]
+const INVOICE_LINE = `#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Money(i64);
+
+impl Money {
+    pub fn of(value: i64) -> Self {
+        Money(value)
+    }
+
+    pub fn zero() -> Self {
+        Money(0)
+    }
+
+    pub fn add(self, other: Money) -> Money {
+        Money(self.0 + other.0)
+    }
+
+    pub fn is_negative(self) -> bool {
+        self.0 < 0
+    }
+}
+
+#[derive(Clone)]
 pub struct InvoiceLine {
-    amount: i64,
+    amount: Money,
 }
 
 impl InvoiceLine {
-    pub fn of(amount: i64) -> Self {
+    pub fn of(amount: Money) -> Self {
         InvoiceLine { amount }
     }
 
-    pub fn add_to(&self, total: i64) -> i64 {
-        total + self.amount
+    pub fn add_to(&self, total: Money) -> Money {
+        total.add(self.amount)
     }
 }
 `;
 
 const INVOICE = `pub mod line;
 
-use self::line::InvoiceLine;
+use self::line::{InvoiceLine, Money};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenInvoiceError {
@@ -93,8 +114,8 @@ pub enum IssueInvoiceError {
 }
 
 /// The invoice total: the invariant forbids a negative one.
-fn sum_of(lines: &[InvoiceLine]) -> i64 {
-    lines.iter().fold(0, |sum, line| line.add_to(sum))
+fn sum_of(lines: &[InvoiceLine]) -> Money {
+    lines.iter().fold(Money::zero(), |sum, line| line.add_to(sum))
 }
 
 #[derive(Clone)]
@@ -109,7 +130,7 @@ impl Invoice {
         if customer.is_empty() {
             return Err(OpenInvoiceError::MissingCustomer);
         }
-        if sum_of(&lines) < 0 {
+        if sum_of(&lines).is_negative() {
             return Err(OpenInvoiceError::NegativeTotal);
         }
         Ok(Invoice { customer: customer.to_string(), lines, issued: false })
@@ -118,7 +139,7 @@ impl Invoice {
     /// Rebuilds a persisted invoice. A state the invariants forbid is corrupt storage, not a business
     /// error, so it panics rather than returning one.
     pub fn restore(customer: &str, lines: Vec<InvoiceLine>, issued: bool) -> Self {
-        if customer.is_empty() || (issued && lines.is_empty()) || sum_of(&lines) < 0 {
+        if customer.is_empty() || (issued && lines.is_empty()) || sum_of(&lines).is_negative() {
             panic!("corrupt invoice state");
         }
         Invoice { customer: customer.to_string(), lines, issued }
@@ -128,7 +149,7 @@ impl Invoice {
         if self.issued {
             return Err(AddInvoiceLineError::AlreadyIssued);
         }
-        if line.add_to(sum_of(&self.lines)) < 0 {
+        if line.add_to(sum_of(&self.lines)).is_negative() {
             return Err(AddInvoiceLineError::NegativeTotal);
         }
         self.lines.push(line);
@@ -150,7 +171,7 @@ impl Invoice {
         self.customer == customer
     }
 
-    pub fn total(&self) -> i64 {
+    pub fn total(&self) -> Money {
         sum_of(&self.lines)
     }
 
@@ -209,7 +230,7 @@ const INTERFACE_ADAPTER_LIB = `pub mod in_memory_invoice_repository;
 const IN_MEMORY_INVOICE_REPOSITORY = `use std::cell::RefCell;
 use std::collections::HashMap;
 
-use billing_domain::invoice::line::InvoiceLine;
+use billing_domain::invoice::line::{InvoiceLine, Money};
 use billing_domain::invoice::Invoice;
 use billing_use_case::invoice_repository::{InvoiceNotFound, InvoiceRepository};
 
@@ -237,7 +258,7 @@ impl InvoiceRepository for InMemoryInvoiceRepository {
             return Ok(stored.clone());
         }
         let record = self.records.get(invoice_id).ok_or(InvoiceNotFound)?;
-        let lines: Vec<InvoiceLine> = record.amounts.iter().map(|amount| InvoiceLine::of(*amount)).collect();
+        let lines: Vec<InvoiceLine> = record.amounts.iter().map(|amount| InvoiceLine::of(Money::of(*amount))).collect();
         Ok(Invoice::restore(&record.customer, lines, record.issued))
     }
 
@@ -299,7 +320,7 @@ const MAPPING = [
   "domain_packages:",
   `  - { term: Billing, model_refs: [bc.billing], rationale: owns the billing business, code: ${location([])} }`,
   `  - { term: Invoice, model_refs: [aggregate.invoice], rationale: opens and issues invoices, code: ${location(["invoice"])} }`,
-  `  - { term: Invoice line, model_refs: [vo.invoice-line], rationale: the amounts an invoice adds up, code: ${location(["invoice", "line"])} }`,
+  `  - { term: Invoice line, model_refs: [vo.invoice-line, primitive.money], rationale: the amounts an invoice adds up, code: ${location(["invoice", "line"])} }`,
   "```",
   "",
 ].join("\n");

@@ -13,14 +13,17 @@ import { expect } from "bun:test";
 
 type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
+export interface Money {
+  equals(other: Money): boolean;
+}
 export interface InvoiceLine {
-  addTo(total: number): number;
+  addTo(total: Money): Money;
 }
 export interface Invoice {
   addLine(line: InvoiceLine): Result<void, string>;
   issue(): Result<void, string>;
   isBilledTo(customer: string): boolean;
-  total(): number;
+  total(): Money;
   lines(): readonly InvoiceLine[];
 }
 export interface InvoiceRecord {
@@ -39,7 +42,8 @@ export interface SampleModules {
     open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, string>;
     restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice;
   };
-  readonly InvoiceLine: { of(amount: number): InvoiceLine };
+  readonly Money: { of(value: number): Money };
+  readonly InvoiceLine: { of(amount: Money): InvoiceLine };
   readonly IssueInvoiceUseCase: new (invoiceRepository: InvoiceRepository) => {
     execute(invoiceId: string): Result<void, string>;
   };
@@ -63,6 +67,16 @@ function expectOk(result: Result<void, string>): void {
   expect(result).toEqual({ ok: true, value: undefined });
 }
 
+/** Lines built from amounts, and totals checked through the value equality of `Money`, which exposes no number. */
+function amounts({ Money, InvoiceLine }: SampleModules) {
+  return {
+    line: (amount: number): InvoiceLine => InvoiceLine.of(Money.of(amount)),
+    expectTotal: (invoice: Invoice, amount: number): void => {
+      expect(invoice.total().equals(Money.of(amount))).toBe(true);
+    },
+  };
+}
+
 const CUSTOMER = "acme";
 const DRAFT = "invoice-draft";
 const EMPTY_DRAFT = "invoice-empty";
@@ -82,16 +96,18 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
   {
     id: "state-change",
     description: "a command that succeeds changes the aggregate's state, and an issued invoice accepts no further change",
-    run: ({ Invoice, InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
-      const invoice = value(Invoice.open(CUSTOMER, [InvoiceLine.of(100)]));
-      expect(invoice.total()).toBe(100);
-      expectOk(invoice.addLine(InvoiceLine.of(50)));
-      expect(invoice.total()).toBe(150);
+    run: (modules) => {
+      const { Invoice, IssueInvoiceUseCase, InMemoryInvoiceRepository } = modules;
+      const { line, expectTotal } = amounts(modules);
+      const invoice = value(Invoice.open(CUSTOMER, [line(100)]));
+      expectTotal(invoice, 100);
+      expectOk(invoice.addLine(line(50)));
+      expectTotal(invoice, 150);
       expect(invoice.lines()).toHaveLength(2);
       expectOk(invoice.issue());
-      expectError(invoice.addLine(InvoiceLine.of(1)), "already-issued");
+      expectError(invoice.addLine(line(1)), "already-issued");
       expectError(invoice.issue(), "already-issued");
-      expect(invoice.total()).toBe(150);
+      expectTotal(invoice, 150);
 
       expectOk(new IssueInvoiceUseCase(new InMemoryInvoiceRepository(records())).execute(DRAFT));
     },
@@ -99,47 +115,53 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
   {
     id: "business-error-keeps-state",
     description: "a command refused with a business error leaves the aggregate's state as it was",
-    run: ({ Invoice, InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
-      const invoice = value(Invoice.open(CUSTOMER, [InvoiceLine.of(100)]));
-      expectError(invoice.addLine(InvoiceLine.of(-150)), "negative-total");
-      expect(invoice.total()).toBe(100);
+    run: (modules) => {
+      const { Invoice, IssueInvoiceUseCase, InMemoryInvoiceRepository } = modules;
+      const { line, expectTotal } = amounts(modules);
+      const invoice = value(Invoice.open(CUSTOMER, [line(100)]));
+      expectError(invoice.addLine(line(-150)), "negative-total");
+      expectTotal(invoice, 100);
       expect(invoice.lines()).toHaveLength(1);
 
       const empty = value(Invoice.open(CUSTOMER, []));
       expectError(empty.issue(), "empty-lines");
       // Still a draft: a refused issue did not issue it.
-      expectOk(empty.addLine(InvoiceLine.of(10)));
+      expectOk(empty.addLine(line(10)));
       expectOk(empty.issue());
 
       const repository = new InMemoryInvoiceRepository(records());
       expectError(new IssueInvoiceUseCase(repository).execute(ISSUED), "already-issued");
       expectError(new IssueInvoiceUseCase(repository).execute(EMPTY_DRAFT), "empty-lines");
       const issued = value(repository.findById(ISSUED));
-      expect(issued.total()).toBe(5);
-      expectError(issued.addLine(InvoiceLine.of(1)), "already-issued");
+      expectTotal(issued, 5);
+      expectError(issued.addLine(line(1)), "already-issued");
       const stillEmpty = value(repository.findById(EMPTY_DRAFT));
       expect(stillEmpty.lines()).toHaveLength(0);
-      expectOk(stillEmpty.addLine(InvoiceLine.of(1)));
+      expectOk(stillEmpty.addLine(line(1)));
     },
   },
   {
     id: "invalid-value-rejected",
     description: "an aggregate is never constructed from values its invariants forbid",
-    run: ({ Invoice, InvoiceLine }) => {
-      expectError(Invoice.open("", [InvoiceLine.of(1)]), "missing-customer");
-      expectError(Invoice.open(CUSTOMER, [InvoiceLine.of(-1)]), "negative-total");
-      expect(() => Invoice.restore("", [InvoiceLine.of(1)], false)).toThrow("corrupt invoice state");
+    run: (modules) => {
+      const { Invoice } = modules;
+      const { line } = amounts(modules);
+      expectError(Invoice.open("", [line(1)]), "missing-customer");
+      expectError(Invoice.open(CUSTOMER, [line(-1)]), "negative-total");
+      expect(() => Invoice.restore("", [line(1)], false)).toThrow("corrupt invoice state");
       expect(() => Invoice.restore(CUSTOMER, [], true)).toThrow("corrupt invoice state");
-      expect(() => Invoice.restore(CUSTOMER, [InvoiceLine.of(-1)], false)).toThrow("corrupt invoice state");
+      expect(() => Invoice.restore(CUSTOMER, [line(-1)], false)).toThrow("corrupt invoice state");
     },
   },
   {
     id: "restore-after-persistence",
     description: "an aggregate read back from its persisted state has the state that was persisted",
-    run: ({ InvoiceLine, IssueInvoiceUseCase, InMemoryInvoiceRepository }) => {
+    run: (modules) => {
+      const { IssueInvoiceUseCase, InMemoryInvoiceRepository } = modules;
+      const { line, expectTotal } = amounts(modules);
       const repository = new InMemoryInvoiceRepository(records());
       const draft = value(repository.findById(DRAFT));
-      expect(draft.total()).toBe(120);
+      expectTotal(draft, 120);
       expect(draft.lines()).toHaveLength(2);
       expect(draft.isBilledTo(CUSTOMER)).toBe(true);
       expect(draft.isBilledTo("another-customer")).toBe(false);
@@ -150,9 +172,9 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expectOk(issueInvoice.execute(DRAFT));
       // The stored invoice, not the draft record it was read from, is what the next read returns.
       const stored = value(persisted.findById(DRAFT));
-      expect(stored.total()).toBe(120);
+      expectTotal(stored, 120);
       expect(stored.isBilledTo(CUSTOMER)).toBe(true);
-      expectError(stored.addLine(InvoiceLine.of(1)), "already-issued");
+      expectError(stored.addLine(line(1)), "already-issued");
       expectError(issueInvoice.execute(DRAFT), "already-issued");
 
       expectError(repository.findById(UNKNOWN), "invoice-not-found");

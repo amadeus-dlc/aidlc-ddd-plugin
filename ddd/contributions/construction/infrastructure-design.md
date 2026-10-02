@@ -23,7 +23,11 @@ Add these question topics, and follow the conventions while designing:
   language that spells it together with its name: `language: rust` for a Cargo
   crate and `language: typescript` for a TypeScript package with its
   `package.json`. The allowed directions are fixed by the layer rules; the
-  command and query sides must not depend on each other.
+  command and query sides must not depend on each other. A dependency row lists
+  every package its `Cargo.toml` or `package.json` depends on directly. A shared
+  package outside the context, such as the TypeScript language-extensions
+  package that declares `Result`, stands on no side and has no `packages` row;
+  name it only in the `depends_on` of the packages that use it.
 - **Port conventions.** Classify each port as `repository`, `external-client`
   or `es-infrastructure` and name its verbs (`find_by_id`, `store`,
   `delete_by_id` for repositories).
