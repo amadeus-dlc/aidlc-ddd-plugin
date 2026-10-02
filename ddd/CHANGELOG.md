@@ -4,6 +4,11 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Domain types grouped into Modules
+
+- **Group domain types into Modules by business concept.** Real runs of a downstream workflow built on these conventions placed the invoice ID, the add-line command ID, the customer ID and the amount side by side at the root of the domain package. The packaging knowledge forbade technical names but did not say how to group. It now treats a module as a Module in Evans's sense (`K.domain-packaging.9`) and places a type that belongs to one concept under that concept's module, with shared values and reference IDs allowed at the root only while the concepts are few (`K.domain-packaging.10`), with the small layout and how it regroups as concepts grow. No rule ID was renumbered, and no sensor changed: grouping by concept stays a design review.
+- **Give `Money` a module of its own.** The TypeScript generation samples and the Rust behavior sample move `Money` out of the line module into `money` (`src/money.ts`, `src/money.rs`), and the aggregate mapping declares it as its own domain package.
+
 ## Unreleased — Amounts as a Domain Primitive, shared packages in the layer declaration
 
 - **Carry amounts and totals as the Domain Primitive `Money` in the examples.** The TypeScript knowledge, the generation samples and the Rust behavior sample passed line amounts and the invoice total as bare `number` / `i64` and compared the total with `< 0`, although a primitive with business meaning is wrapped in a dedicated type (`K.always-valid-model.6`). The canonical model of the samples declares `primitive.money`, the aggregate mapping lists it for the line module, and `InvoiceLine.of` takes a `Money`. `Money` adds two values inside its own type, answers `isNegative` / `is_negative`, and compares by value; the companion representation asks the other value to `plus` or `matches`. The TypeScript knowledge adds a Domain Primitives section with the `invoice/line.ts` example, and both languages' behavior scenarios check totals through `Money`. The golden cases keep their `total(): number` inputs, which exercise the gates rather than teach the convention. No rule, sensor or golden expectation changed.

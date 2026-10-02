@@ -32,12 +32,12 @@ The TypeScript gates decide from stated types and syntax, without a type checker
 
 ## Class representation
 
-State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` rebuilds a persisted one through it after validating the whole state. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the instance and throws on a corrupt state, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
+State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` rebuilds a persisted one through it after validating the whole state. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the instance and throws on a corrupt state, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts, and places each wrapped type by the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) Modules. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
-import { Money } from "./invoice/line.ts";
 import type { InvoiceLine } from "./invoice/line.ts";
+import { Money } from "./money.ts";
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
@@ -106,8 +106,8 @@ A `type` literal and a `const` object share the name of the domain type in one f
 
 ```ts
 import type { Result } from "@acme/language-extensions";
-import { Money } from "./invoice/line.ts";
 import type { InvoiceLine } from "./invoice/line.ts";
+import { Money } from "./money.ts";
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
@@ -172,7 +172,7 @@ Do not build an instance with a spread, `as` or `satisfies`, do not export the b
 
 ## Domain Primitives
 
-A primitive with business meaning, such as an amount, is wrapped in a Domain Primitive that the model declares as `kind: domain-primitive` with its one attribute. `Money` holds the line amounts and the total in the module of the line, and the aggregate mapping lists `primitive.money` beside `vo.invoice-line` for that module. `add` reads the other value's `#value` inside the class: a `#` field is readable from other instances of the same class, so no getter takes the number out to add it outside the class, and `equals` compares two values the same way. `InvoiceLine` does not expose its amount; `addTo` returns the `Money` it gets by adding its amount to the total it receives. In the companion representation `add` asks the other value to add this one's value (`other.plus(state.value)`), and `equals` asks it to match (`other.matches(state.value)`); each companion type in the module has its own brand.
+A primitive with business meaning, such as an amount, is wrapped in a Domain Primitive that the model declares as `kind: domain-primitive` with its one attribute. `Money` is the amount of a line and the total of an invoice; it lives in a module of its own, `money`, which the aggregate mapping declares with `primitive.money`. `add` reads the other value's `#value` inside the class: a `#` field is readable from other instances of the same class, so no getter takes the number out to add it outside the class, and `equals` compares two values the same way. `InvoiceLine` does not expose its amount; `addTo` returns the `Money` it gets by adding its amount to the total it receives. In the companion representation `add` asks the other value to add this one's value (`other.plus(state.value)`), and `equals` asks it to match (`other.matches(state.value)`); each companion type in the module has its own brand.
 
 ```ts
 export class Money {
@@ -202,6 +202,10 @@ export class Money {
     return other.#value === this.#value;
   }
 }
+```
+
+```ts
+import type { Money } from "../money.ts";
 
 export class InvoiceLine {
   #amount: Money;
@@ -248,7 +252,8 @@ The package entry `src/index.ts` publishes each name explicitly, never with `exp
 ```ts
 export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice.ts";
 export { Invoice } from "./invoice.ts";
-export { InvoiceLine, Money } from "./invoice/line.ts";
+export { InvoiceLine } from "./invoice/line.ts";
+export { Money } from "./money.ts";
 ```
 
 Under `index-file`:
@@ -256,10 +261,11 @@ Under `index-file`:
 ```ts
 export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice/index.ts";
 export { Invoice } from "./invoice/index.ts";
-export { InvoiceLine, Money } from "./invoice/line.ts";
+export { InvoiceLine } from "./invoice/line.ts";
+export { Money } from "./money.ts";
 ```
 
-When a module file moves between the layouts, update every specifier that names it. The declarations placed in TypeScript under `domain_packages` follow the placement: `src/index.ts` is the package root `[]`, `src/invoice.ts` and `src/invoice/index.ts` are `[invoice]`, and `src/invoice/line.ts` is `[invoice, line]`.
+When a module file moves between the layouts, update every specifier that names it. The declarations placed in TypeScript under `domain_packages` follow the placement: `src/index.ts` is the package root `[]`, `src/invoice.ts` and `src/invoice/index.ts` are `[invoice]`, `src/invoice/line.ts` is `[invoice, line]`, and `src/money.ts` is `[money]`.
 
 ## Use-case and Interface Adapter layers
 

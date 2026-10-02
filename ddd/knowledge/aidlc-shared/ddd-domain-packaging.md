@@ -16,6 +16,8 @@ Name domain packages (Cargo crates and TypeScript packages) and their internal m
 | K.domain-packaging.6 | Match declarations to real modules, including empty, private, and inline modules. | domain-packaging.coverage / unresolved |
 | K.domain-packaging.7 | Do not confuse model-kind IDs, Rust impl syntax, or external use references with owned package declarations. | Distinguish them through the AST and owning crate. |
 | K.domain-packaging.8 | domain-design owns physical placement; downstream stages must not reclassify it independently. | Stage instructions and review. |
+| K.domain-packaging.9 | Treat a module as a Module in Evans's sense: part of the model that groups cohesive concepts, with few dependencies between Modules, named in the ubiquitous language so the list of Modules tells how the domain is organized, and regrouped when the model changes. | Design review. |
+| K.domain-packaging.10 | Place a type that belongs to one business concept — the identifier of an aggregate root, its value objects, the command IDs the aggregate remembers — under that concept's module, not beside it at the package root. While the concepts are few, a value several concepts use (`money`) and an ID that refers to another aggregate (`customer-id`) may sit at the root as modules named by their responsibility; regroup them into Modules once the root no longer shows which concepts belong together. | Design review. |
 
 Reserved names are `aggregate`, `aggregates`, `impl`, `impls`, `implementation`, `implementations`, `vo`, `vos`, `entity`, `entities`, `value_object`, `value_objects`, `valueobject`, and `valueobjects`. Normalize case and Rust raw identifiers and compare complete name components, not substrings. Review the suitability of names such as common, shared, and utils.
 
@@ -24,6 +26,22 @@ Keep the existing layer markers `-domain` in `billing-domain` and `packages/doma
 ## Examples
 
 If invoice, invoice number, and invoice line are established business terms, group their responsibilities under `invoice/`. Avoid splitting them into `aggregates/invoice`, `vo/invoice_number`, and `entities/invoice_line`.
+
+While the concepts are few, a handful of modules at the package root is enough. With the identifiers wrapped, a TypeScript package under `named-file` looks like this:
+
+```text
+packages/command/billing-domain/src/
+  index.ts
+  invoice.ts          # the invoice: aggregate root and its errors
+  invoice/
+    invoice-id.ts     # identifies the invoice
+    command-id.ts     # the add-line command ID the invoice remembers
+    line.ts           # a line
+  customer-id.ts      # identifies the customer billed
+  money.ts            # the amount of a line and the total of an invoice
+```
+
+Once the concepts grow and the root no longer shows which belong together, regroup cohesive concepts into Modules: when credit is handled, the customer ID moves with the credit limit into a `customer` Module, and handling payments brings a `payment` Module. Do not make Modules that group types by kind, such as `ids`, `primitives`, or `value-objects`. Rust is the same: under the `file` layout, `invoice.rs` and `invoice/invoice_id.rs`.
 
 This does not require one package per aggregate. Explain the term and placement rationale when grouping several model elements. Code identifiers need not match natural-language terms literally. Passing sensors does not prove semantic correctness.
 
