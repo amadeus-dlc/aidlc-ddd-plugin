@@ -52,9 +52,10 @@ export function otherParentModuleFile(layout: RustModuleLayout): string {
 }
 
 const DOMAIN_LIB = `pub mod invoice;
+pub mod money;
 `;
 
-const INVOICE_LINE = `#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+const MONEY = `#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Money(i64);
 
 impl Money {
@@ -74,6 +75,9 @@ impl Money {
         self.0 < 0
     }
 }
+`;
+
+const INVOICE_LINE = `use crate::money::Money;
 
 #[derive(Clone)]
 pub struct InvoiceLine {
@@ -93,7 +97,8 @@ impl InvoiceLine {
 
 const INVOICE = `pub mod line;
 
-use self::line::{InvoiceLine, Money};
+use self::line::InvoiceLine;
+use crate::money::Money;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenInvoiceError {
@@ -230,8 +235,9 @@ const INTERFACE_ADAPTER_LIB = `pub mod in_memory_invoice_repository;
 const IN_MEMORY_INVOICE_REPOSITORY = `use std::cell::RefCell;
 use std::collections::HashMap;
 
-use billing_domain::invoice::line::{InvoiceLine, Money};
+use billing_domain::invoice::line::InvoiceLine;
 use billing_domain::invoice::Invoice;
+use billing_domain::money::Money;
 use billing_use_case::invoice_repository::{InvoiceNotFound, InvoiceRepository};
 
 pub struct InvoiceRecord {
@@ -320,7 +326,8 @@ const MAPPING = [
   "domain_packages:",
   `  - { term: Billing, model_refs: [bc.billing], rationale: owns the billing business, code: ${location([])} }`,
   `  - { term: Invoice, model_refs: [aggregate.invoice], rationale: opens and issues invoices, code: ${location(["invoice"])} }`,
-  `  - { term: Invoice line, model_refs: [vo.invoice-line, primitive.money], rationale: the amounts an invoice adds up, code: ${location(["invoice", "line"])} }`,
+  `  - { term: Invoice line, model_refs: [vo.invoice-line], rationale: one amount an invoice adds up, code: ${location(["invoice", "line"])} }`,
+  `  - { term: Money, model_refs: [primitive.money], rationale: the amount of a line and the total of an invoice, code: ${location(["money"])} }`,
   "```",
   "",
 ].join("\n");
@@ -354,6 +361,7 @@ function rustBehaviorSample(layout: RustModuleLayout): RustBehaviorSample {
     [`${DOMAIN_DIR}/src/lib.rs`]: DOMAIN_LIB,
     [parentModuleFile(layout)]: INVOICE,
     [`${DOMAIN_DIR}/src/invoice/line.rs`]: INVOICE_LINE,
+    [`${DOMAIN_DIR}/src/money.rs`]: MONEY,
     [`${USE_CASE_DIR}/src/lib.rs`]: USE_CASE_LIB,
     [`${USE_CASE_DIR}/src/invoice_repository.rs`]: INVOICE_REPOSITORY_PORT,
     [`${USE_CASE_DIR}/src/issue_invoice.rs`]: ISSUE_INVOICE,

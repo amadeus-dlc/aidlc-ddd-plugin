@@ -10,8 +10,9 @@
 use std::collections::HashMap;
 use std::panic::{catch_unwind, UnwindSafe};
 
-use billing_domain::invoice::line::{InvoiceLine, Money};
+use billing_domain::invoice::line::InvoiceLine;
 use billing_domain::invoice::{AddInvoiceLineError, Invoice, IssueInvoiceError, OpenInvoiceError};
+use billing_domain::money::Money;
 use billing_interface_adapter::in_memory_invoice_repository::{InMemoryInvoiceRepository, InvoiceRecord};
 use billing_use_case::invoice_repository::InvoiceRepository;
 use billing_use_case::issue_invoice::{IssueInvoiceUseCase, IssueInvoiceFailure};

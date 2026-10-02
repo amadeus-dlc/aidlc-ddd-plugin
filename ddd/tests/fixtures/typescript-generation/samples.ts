@@ -63,7 +63,7 @@ const RESULT_SOURCE = `export type Result<T, E> =
 const RESULT_INDEX = `export type { Result } from "./result.ts";
 `;
 
-const CLASS_LINE = `export class Money {
+const CLASS_MONEY = `export class Money {
   #value: number;
 
   private constructor(value: number) {
@@ -90,6 +90,9 @@ const CLASS_LINE = `export class Money {
     return other.#value === this.#value;
   }
 }
+`;
+
+const CLASS_LINE = `import type { Money } from "../money.ts";
 
 export class InvoiceLine {
   #amount: Money;
@@ -108,10 +111,10 @@ export class InvoiceLine {
 }
 `;
 
-const COMPANION_LINE = `const moneyBrand: unique symbol = Symbol("Money");
+const COMPANION_MONEY = `const brand: unique symbol = Symbol("Money");
 
 export type Money = {
-  readonly [moneyBrand]: true;
+  readonly [brand]: true;
   add(other: Money): Money;
   plus(value: number): Money;
   isNegative(): boolean;
@@ -123,7 +126,7 @@ export const Money = {
   of(value: number): Money {
     const state = { value };
     const instance: Money = {
-      [moneyBrand]: true,
+      [brand]: true,
       add(other: Money): Money {
         return other.plus(state.value);
       },
@@ -146,11 +149,14 @@ export const Money = {
     return Money.of(0);
   },
 };
+`;
 
-const lineBrand: unique symbol = Symbol("InvoiceLine");
+const COMPANION_LINE = `import type { Money } from "../money.ts";
+
+const brand: unique symbol = Symbol("InvoiceLine");
 
 export type InvoiceLine = {
-  readonly [lineBrand]: true;
+  readonly [brand]: true;
   addTo(total: Money): Money;
 };
 
@@ -158,7 +164,7 @@ export const InvoiceLine = {
   of(amount: Money): InvoiceLine {
     const state = { amount };
     const instance: InvoiceLine = {
-      [lineBrand]: true,
+      [brand]: true,
       addTo(total: Money): Money {
         return total.add(state.amount);
       },
@@ -173,10 +179,10 @@ export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
 `;
 
-function imports(lineSpecifier: string): string {
+function imports(lineSpecifier: string, moneySpecifier: string): string {
   return `import type { Result } from "${RESULT_NAME}";
-import { Money } from "${lineSpecifier}";
 import type { InvoiceLine } from "${lineSpecifier}";
+import { Money } from "${moneySpecifier}";
 `;
 }
 
@@ -186,8 +192,8 @@ const SUM_OF = `function sumOf(lines: readonly InvoiceLine[]): Money {
 }
 `;
 
-function classInvoice(lineSpecifier: string): string {
-  return `${imports(lineSpecifier)}
+function classInvoice(lineSpecifier: string, moneySpecifier: string): string {
+  return `${imports(lineSpecifier, moneySpecifier)}
 ${ERROR_TYPES}
 ${SUM_OF}
 export class Invoice {
@@ -242,8 +248,8 @@ export class Invoice {
 `;
 }
 
-function companionInvoice(lineSpecifier: string): string {
-  return `${imports(lineSpecifier)}
+function companionInvoice(lineSpecifier: string, moneySpecifier: string): string {
+  return `${imports(lineSpecifier, moneySpecifier)}
 ${ERROR_TYPES}
 ${SUM_OF}
 const brand: unique symbol = Symbol("Invoice");
@@ -301,7 +307,8 @@ export const Invoice = {
 function domainIndex(parentSpecifier: string): string {
   return `export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "${parentSpecifier}";
 export { Invoice } from "${parentSpecifier}";
-export { InvoiceLine, Money } from "./invoice/line.ts";
+export { InvoiceLine } from "./invoice/line.ts";
+export { Money } from "./money.ts";
 `;
 }
 
@@ -472,7 +479,8 @@ const MAPPING = [
   "domain_packages:",
   `  - { term: Billing, model_refs: [bc.billing], rationale: owns the billing business, code: ${location([])} }`,
   `  - { term: Invoice, model_refs: [aggregate.invoice], rationale: opens and issues invoices, code: ${location(["invoice"])} }`,
-  `  - { term: Invoice line, model_refs: [vo.invoice-line, primitive.money], rationale: the amounts an invoice adds up, code: ${location(["invoice", "line"])} }`,
+  `  - { term: Invoice line, model_refs: [vo.invoice-line], rationale: one amount an invoice adds up, code: ${location(["invoice", "line"])} }`,
+  `  - { term: Money, model_refs: [primitive.money], rationale: the amount of a line and the total of an invoice, code: ${location(["money"])} }`,
   "```",
   "",
 ].join("\n");
@@ -525,14 +533,16 @@ export interface GenerationSample {
 function generationSample(representation: Representation, layout: Layout): GenerationSample {
   const named = layout === "named-file";
   const lineSpecifier = named ? "./invoice/line.ts" : "./line.ts";
+  const moneySpecifier = named ? "./money.ts" : "../money.ts";
   const parentSpecifier = named ? "./invoice.ts" : "./invoice/index.ts";
   const sources: Record<string, string> = {
     [`${RESULT_DIR}/src/index.ts`]: RESULT_INDEX,
     [`${RESULT_DIR}/src/result.ts`]: RESULT_SOURCE,
     [`${DOMAIN_DIR}/src/index.ts`]: domainIndex(parentSpecifier),
     [parentModuleFile(layout)]:
-      representation === "class" ? classInvoice(lineSpecifier) : companionInvoice(lineSpecifier),
+      representation === "class" ? classInvoice(lineSpecifier, moneySpecifier) : companionInvoice(lineSpecifier, moneySpecifier),
     [`${DOMAIN_DIR}/src/invoice/line.ts`]: representation === "class" ? CLASS_LINE : COMPANION_LINE,
+    [`${DOMAIN_DIR}/src/money.ts`]: representation === "class" ? CLASS_MONEY : COMPANION_MONEY,
     [`${USE_CASE_DIR}/src/index.ts`]: USE_CASE_INDEX,
     [`${USE_CASE_DIR}/src/invoice-repository.ts`]: INVOICE_REPOSITORY_PORT,
     [`${USE_CASE_DIR}/src/issue-invoice.ts`]: ISSUE_INVOICE,
