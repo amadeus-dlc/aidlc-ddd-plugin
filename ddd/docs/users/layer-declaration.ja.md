@@ -68,6 +68,8 @@ layer_structures:
         code: { language: typescript, package: "@acme/billing-query" }
 ```
 
+言語拡張パッケージ（`@acme/language-extensions`）から `Result` を読み込む TypeScript のパッケージは、そのパッケージも `depends_on` に書きます。言語拡張パッケージはどの文脈にも属さず、どの側にも立たないので、`packages` に行を持ちません。それを使うパッケージの `depends_on` にだけ現れます。依存行には、そのパッケージの `package.json` が直接依存するパッケージをすべて書きます。
+
 ここに挙げたキーが全体です。省略できるのは `restoration_paths[].note` だけで、他のキーはすべて必須です。中身のないリストは、キーを省略せず `[]` と書きます。
 
 | キー | 値 |

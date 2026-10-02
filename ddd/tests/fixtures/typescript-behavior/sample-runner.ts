@@ -28,6 +28,7 @@ async function loadModules(root: string): Promise<SampleModules> {
   ]);
   return {
     Invoice: domain.Invoice,
+    Money: domain.Money,
     InvoiceLine: domain.InvoiceLine,
     IssueInvoiceUseCase: useCase.IssueInvoiceUseCase,
     InMemoryInvoiceRepository: interfaceAdapter.InMemoryInvoiceRepository,

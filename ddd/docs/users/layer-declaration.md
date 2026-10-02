@@ -68,6 +68,8 @@ The TypeScript declaration of the same context differs only in how the packages 
         code: { language: typescript, package: "@acme/billing-query" }
 ```
 
+A TypeScript package that imports `Result` from the language-extensions package (`@acme/language-extensions`) also names that package in its `depends_on`. The language-extensions package belongs to no context and stands on no side, so it has no `packages` row: it appears only in the `depends_on` of the packages that use it, and every dependency row lists each package its `package.json` depends on directly.
+
 Every key listed here is the whole key set. Only `restoration_paths[].note` may be left out; every other key is required, and a list the context has nothing to put in is written as `[]` rather than omitted.
 
 | Key | Values |

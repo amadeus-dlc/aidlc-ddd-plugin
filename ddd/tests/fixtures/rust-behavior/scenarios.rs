@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::panic::{catch_unwind, UnwindSafe};
 
-use billing_domain::invoice::line::InvoiceLine;
+use billing_domain::invoice::line::{InvoiceLine, Money};
 use billing_domain::invoice::{AddInvoiceLineError, Invoice, IssueInvoiceError, OpenInvoiceError};
 use billing_interface_adapter::in_memory_invoice_repository::{InMemoryInvoiceRepository, InvoiceRecord};
 use billing_use_case::invoice_repository::InvoiceRepository;
@@ -52,6 +52,10 @@ fn record(amounts: Vec<i64>, issued: bool) -> InvoiceRecord {
     InvoiceRecord { customer: CUSTOMER.to_string(), amounts, issued }
 }
 
+fn line(amount: i64) -> InvoiceLine {
+    InvoiceLine::of(Money::of(amount))
+}
+
 /// The persisted records a repository starts from: a draft with lines, a draft without, an issued one.
 fn records() -> HashMap<String, InvoiceRecord> {
     HashMap::from([
@@ -78,15 +82,15 @@ fn expect_not_found(result: Result<(), IssueInvoiceFailure>) {
 /// scenarios.ts "state-change".
 #[test]
 fn state_change() {
-    let mut invoice = value(Invoice::open(CUSTOMER, vec![InvoiceLine::of(100)]));
-    assert_eq!(invoice.total(), 100);
-    value(invoice.add_line(InvoiceLine::of(50)));
-    assert_eq!(invoice.total(), 150);
+    let mut invoice = value(Invoice::open(CUSTOMER, vec![line(100)]));
+    assert_eq!(invoice.total(), Money::of(100));
+    value(invoice.add_line(line(50)));
+    assert_eq!(invoice.total(), Money::of(150));
     assert_eq!(invoice.lines().len(), 2);
     value(invoice.issue());
-    assert_eq!(error_of(invoice.add_line(InvoiceLine::of(1))), AddInvoiceLineError::AlreadyIssued);
+    assert_eq!(error_of(invoice.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     assert_eq!(error_of(invoice.issue()), IssueInvoiceError::AlreadyIssued);
-    assert_eq!(invoice.total(), 150);
+    assert_eq!(invoice.total(), Money::of(150));
 
     let repository = InMemoryInvoiceRepository::new(records());
     value(IssueInvoiceUseCase::new(&repository).execute(DRAFT));
@@ -95,36 +99,36 @@ fn state_change() {
 /// scenarios.ts "business-error-keeps-state".
 #[test]
 fn business_error_keeps_state() {
-    let mut invoice = value(Invoice::open(CUSTOMER, vec![InvoiceLine::of(100)]));
-    assert_eq!(error_of(invoice.add_line(InvoiceLine::of(-150))), AddInvoiceLineError::NegativeTotal);
-    assert_eq!(invoice.total(), 100);
+    let mut invoice = value(Invoice::open(CUSTOMER, vec![line(100)]));
+    assert_eq!(error_of(invoice.add_line(line(-150))), AddInvoiceLineError::NegativeTotal);
+    assert_eq!(invoice.total(), Money::of(100));
     assert_eq!(invoice.lines().len(), 1);
 
     let mut empty = value(Invoice::open(CUSTOMER, vec![]));
     assert_eq!(error_of(empty.issue()), IssueInvoiceError::EmptyLines);
     // Still a draft: a refused issue did not issue it.
-    value(empty.add_line(InvoiceLine::of(10)));
+    value(empty.add_line(line(10)));
     value(empty.issue());
 
     let repository = InMemoryInvoiceRepository::new(records());
     expect_rejected(IssueInvoiceUseCase::new(&repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
     expect_rejected(IssueInvoiceUseCase::new(&repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
     let mut issued = value(repository.find_by_id(ISSUED));
-    assert_eq!(issued.total(), 5);
-    assert_eq!(error_of(issued.add_line(InvoiceLine::of(1))), AddInvoiceLineError::AlreadyIssued);
+    assert_eq!(issued.total(), Money::of(5));
+    assert_eq!(error_of(issued.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     let mut still_empty = value(repository.find_by_id(EMPTY_DRAFT));
     assert_eq!(still_empty.lines().len(), 0);
-    value(still_empty.add_line(InvoiceLine::of(1)));
+    value(still_empty.add_line(line(1)));
 }
 
 /// scenarios.ts "invalid-value-rejected".
 #[test]
 fn invalid_value_rejected() {
-    assert_eq!(error_of(Invoice::open("", vec![InvoiceLine::of(1)])), OpenInvoiceError::MissingCustomer);
-    assert_eq!(error_of(Invoice::open(CUSTOMER, vec![InvoiceLine::of(-1)])), OpenInvoiceError::NegativeTotal);
-    assert!(panic_message(|| Invoice::restore("", vec![InvoiceLine::of(1)], false)).contains("corrupt invoice state"));
+    assert_eq!(error_of(Invoice::open("", vec![line(1)])), OpenInvoiceError::MissingCustomer);
+    assert_eq!(error_of(Invoice::open(CUSTOMER, vec![line(-1)])), OpenInvoiceError::NegativeTotal);
+    assert!(panic_message(|| Invoice::restore("", vec![line(1)], false)).contains("corrupt invoice state"));
     assert!(panic_message(|| Invoice::restore(CUSTOMER, vec![], true)).contains("corrupt invoice state"));
-    assert!(panic_message(|| Invoice::restore(CUSTOMER, vec![InvoiceLine::of(-1)], false)).contains("corrupt invoice state"));
+    assert!(panic_message(|| Invoice::restore(CUSTOMER, vec![line(-1)], false)).contains("corrupt invoice state"));
 }
 
 /// scenarios.ts "restore-after-persistence".
@@ -132,7 +136,7 @@ fn invalid_value_rejected() {
 fn restore_after_persistence() {
     let repository = InMemoryInvoiceRepository::new(records());
     let draft = value(repository.find_by_id(DRAFT));
-    assert_eq!(draft.total(), 120);
+    assert_eq!(draft.total(), Money::of(120));
     assert_eq!(draft.lines().len(), 2);
     assert!(draft.is_billed_to(CUSTOMER));
     assert!(!draft.is_billed_to("another-customer"));
@@ -143,9 +147,9 @@ fn restore_after_persistence() {
     value(issue_invoice.execute(DRAFT));
     // The stored invoice, not the draft record it was read from, is what the next read returns.
     let mut stored = value(persisted.find_by_id(DRAFT));
-    assert_eq!(stored.total(), 120);
+    assert_eq!(stored.total(), Money::of(120));
     assert!(stored.is_billed_to(CUSTOMER));
-    assert_eq!(error_of(stored.add_line(InvoiceLine::of(1))), AddInvoiceLineError::AlreadyIssued);
+    assert_eq!(error_of(stored.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     expect_rejected(issue_invoice.execute(DRAFT), IssueInvoiceError::AlreadyIssued);
 
     assert!(repository.find_by_id(UNKNOWN).is_err());

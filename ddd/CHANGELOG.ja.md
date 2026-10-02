@@ -4,6 +4,11 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — 金額を Domain Primitive で持ち、層構造宣言に共有パッケージの書き方を示す
+
+- **例の金額と合計を Domain Primitive `Money` で持つ。** TypeScript のナレッジ・生成見本・Rust の振る舞いテストの見本は、業務上の意味を持つプリミティブを専用の型で包むという規約（`K.always-valid-model.6`）があるのに、明細の金額と請求書の合計を裸の `number` / `i64` で受け渡し、合計を `< 0` で比べていた。見本の正準モデルに `primitive.money` を宣言し、集約写像で明細のモジュールに結び付け、`InvoiceLine.of` は `Money` を受け取るようにした。`Money` は 2 つの値を自分の型の中で足し、`isNegative` / `is_negative` に答え、値で比べる。companion 表現では、相手に `plus` や `matches` を頼む。TypeScript のナレッジに Domain Primitive の節と `invoice/line.ts` の例を加え、両言語の振る舞いシナリオは合計を `Money` で確かめる。ゴールデンケースの `total(): number` はゲートを試す入力であり規約を教えるものではないため、そのまま残す。ルール・センサー・ゴールデンの期待値は変えていない。
+- **文脈の外にある共有パッケージの書き方を示す。** 言語拡張パッケージから `Result` を読み込む TypeScript のパッケージは、そのパッケージを `depends_on` に書く。言語拡張パッケージはどの側にも立たないので、`packages` に行を持たない。インフラ設計の手順と[層構造宣言](docs/users/layer-declaration.ja.md)の案内にそう書いた。ローダーはもともとこの依存辺を受け付けている。
+
 ## 未リリース — ユースケースの型名を `<動詞><対象>UseCase` にする
 
 - **`<動詞><対象>UseCase` という名前でないユースケースの型を報告する。** `ddd-rust-use-case` と `ddd-typescript-use-case` は、`execute` を持つ型（Rust の impl ブロックの型、TypeScript の class）の名前が `UseCase` で終わらなければ `use-case-name` として報告する。関数だけで書いたユースケースには名付ける型がない。ナレッジ・生成手順・生成見本・振る舞いテストのフィクスチャ・ゴールデンケースで、`IssueInvoice` を `IssueInvoiceUseCase` に、`FinishInvoice` を `FinishInvoiceUseCase` に改名した。過去の検証の記録は、実行したときの名前のまま残す。

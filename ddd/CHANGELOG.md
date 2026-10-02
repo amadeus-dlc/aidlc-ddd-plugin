@@ -4,6 +4,11 @@ English | [Japanese](CHANGELOG.ja.md)
 
 All notable changes to the ddd plugin are recorded here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased — Amounts as a Domain Primitive, shared packages in the layer declaration
+
+- **Carry amounts and totals as the Domain Primitive `Money` in the examples.** The TypeScript knowledge, the generation samples and the Rust behavior sample passed line amounts and the invoice total as bare `number` / `i64` and compared the total with `< 0`, although a primitive with business meaning is wrapped in a dedicated type (`K.always-valid-model.6`). The canonical model of the samples declares `primitive.money`, the aggregate mapping lists it for the line module, and `InvoiceLine.of` takes a `Money`. `Money` adds two values inside its own type, answers `isNegative` / `is_negative`, and compares by value; the companion representation asks the other value to `plus` or `matches`. The TypeScript knowledge adds a Domain Primitives section with the `invoice/line.ts` example, and both languages' behavior scenarios check totals through `Money`. The golden cases keep their `total(): number` inputs, which exercise the gates rather than teach the convention. No rule, sensor or golden expectation changed.
+- **State how a shared package outside the context is declared.** A TypeScript package that imports `Result` from the language-extensions package names that package in its `depends_on`; the language-extensions package stands on no side, so it has no `packages` row. The infrastructure-design instructions and the [layer declaration](docs/users/layer-declaration.md) guide say so; the loader already accepted such an edge.
+
 ## Unreleased — Use case types named `<Verb><Object>UseCase`
 
 - **Report a use case type not named `<Verb><Object>UseCase`.** `ddd-rust-use-case` and `ddd-typescript-use-case` report the type whose method is `execute` — the type of a Rust impl block, a TypeScript class — when its name does not end with `UseCase`, as `use-case-name`; a use case written as a bare function has no type to name. The knowledge, the generation instructions, the generation samples, the behavior fixtures and the golden cases rename `IssueInvoice` to `IssueInvoiceUseCase` and `FinishInvoice` to `FinishInvoiceUseCase`. Verification records of earlier runs keep the names they ran with.

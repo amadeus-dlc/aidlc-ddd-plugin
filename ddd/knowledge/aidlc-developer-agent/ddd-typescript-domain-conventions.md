@@ -1,6 +1,6 @@
 # TypeScript domain conventions
 
-Updated: 2026-10-01. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -32,18 +32,19 @@ The TypeScript gates decide from stated types and syntax, without a type checker
 
 ## Class representation
 
-State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` rebuilds a persisted one through it after validating the whole state. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the instance and throws on a corrupt state, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add itself instead of reading its amount. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
+State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` rebuilds a persisted one through it after validating the whole state. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the instance and throws on a corrupt state, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
+import { Money } from "./invoice/line.ts";
 import type { InvoiceLine } from "./invoice/line.ts";
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
 
-function sumOf(lines: readonly InvoiceLine[]): number {
-  return lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+function sumOf(lines: readonly InvoiceLine[]): Money {
+  return lines.reduce((sum: Money, line: InvoiceLine) => line.addTo(sum), Money.zero());
 }
 
 export class Invoice {
@@ -59,19 +60,19 @@ export class Invoice {
 
   static open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
-    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
+    if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
     return { ok: true, value: new Invoice(customer, lines, false) };
   }
 
   static restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
       throw new Error("corrupt invoice state");
     return new Invoice(customer, lines, issued);
   }
 
   addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
-    if (line.addTo(sumOf(this.#lines)) < 0) return { ok: false, error: "negative-total" };
+    if (line.addTo(sumOf(this.#lines)).isNegative()) return { ok: false, error: "negative-total" };
     this.#lines = [...this.#lines, line];
     return { ok: true, value: undefined };
   }
@@ -87,7 +88,7 @@ export class Invoice {
     return this.#customer === customer;
   }
 
-  total(): number {
+  total(): Money {
     return sumOf(this.#lines);
   }
 
@@ -105,14 +106,15 @@ A `type` literal and a `const` object share the name of the domain type in one f
 
 ```ts
 import type { Result } from "@acme/language-extensions";
+import { Money } from "./invoice/line.ts";
 import type { InvoiceLine } from "./invoice/line.ts";
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
 
-function sumOf(lines: readonly InvoiceLine[]): number {
-  return lines.reduce((sum: number, line: InvoiceLine) => line.addTo(sum), 0);
+function sumOf(lines: readonly InvoiceLine[]): Money {
+  return lines.reduce((sum: Money, line: InvoiceLine) => line.addTo(sum), Money.zero());
 }
 
 const brand: unique symbol = Symbol("Invoice");
@@ -122,18 +124,18 @@ export type Invoice = {
   addLine(line: InvoiceLine): Result<void, AddInvoiceLineError>;
   issue(): Result<void, IssueInvoiceError>;
   isBilledTo(customer: string): boolean;
-  total(): number;
+  total(): Money;
   lines(): readonly InvoiceLine[];
 };
 
 export const Invoice = {
   open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
-    if (sumOf(lines) < 0) return { ok: false, error: "negative-total" };
+    if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
     return { ok: true, value: Invoice.restore(customer, lines, false) };
   },
   restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines) < 0)
+    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
       throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
     const state = { customer, lines: kept, issued };
@@ -141,7 +143,7 @@ export const Invoice = {
       [brand]: true,
       addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
-        if (line.addTo(sumOf(state.lines)) < 0) return { ok: false, error: "negative-total" };
+        if (line.addTo(sumOf(state.lines)).isNegative()) return { ok: false, error: "negative-total" };
         state.lines = [...state.lines, line];
         return { ok: true, value: undefined };
       },
@@ -154,7 +156,7 @@ export const Invoice = {
       isBilledTo(customer: string): boolean {
         return state.customer === customer;
       },
-      total(): number {
+      total(): Money {
         return sumOf(state.lines);
       },
       lines(): readonly InvoiceLine[] {
@@ -168,6 +170,56 @@ export const Invoice = {
 
 Do not build an instance with a spread, `as` or `satisfies`, do not export the brand or create it with `Symbol.for`, and do not write the domain type as an `interface`: an `interface` paired with a `const` is not a companion.
 
+## Domain Primitives
+
+A primitive with business meaning, such as an amount, is wrapped in a Domain Primitive that the model declares as `kind: domain-primitive` with its one attribute. `Money` holds the line amounts and the total in the module of the line, and the aggregate mapping lists `primitive.money` beside `vo.invoice-line` for that module. `add` reads the other value's `#value` inside the class: a `#` field is readable from other instances of the same class, so no getter takes the number out to add it outside the class, and `equals` compares two values the same way. `InvoiceLine` does not expose its amount; `addTo` returns the `Money` it gets by adding its amount to the total it receives. In the companion representation `add` asks the other value to add this one's value (`other.plus(state.value)`), and `equals` asks it to match (`other.matches(state.value)`); each companion type in the module has its own brand.
+
+```ts
+export class Money {
+  #value: number;
+
+  private constructor(value: number) {
+    this.#value = value;
+  }
+
+  static of(value: number): Money {
+    return new Money(value);
+  }
+
+  static zero(): Money {
+    return new Money(0);
+  }
+
+  add(other: Money): Money {
+    return new Money(this.#value + other.#value);
+  }
+
+  isNegative(): boolean {
+    return this.#value < 0;
+  }
+
+  equals(other: Money): boolean {
+    return other.#value === this.#value;
+  }
+}
+
+export class InvoiceLine {
+  #amount: Money;
+
+  private constructor(amount: Money) {
+    this.#amount = amount;
+  }
+
+  static of(amount: Money): InvoiceLine {
+    return new InvoiceLine(amount);
+  }
+
+  addTo(total: Money): Money {
+    return total.add(this.#amount);
+  }
+}
+```
+
 ## Result and method-specific errors
 
 `Result` is a type of the infrastructure package for language extensions (here `@acme/language-extensions` at `packages/infrastructure/language-extensions`), published through its `exports` entry `src/index.ts`. Domain packages list it in `dependencies` and import it by the package name with `import type`. No library such as neverthrow, Effect or fp-ts is part of this convention.
@@ -178,7 +230,7 @@ export type Result<T, E> =
   | { readonly ok: false; readonly error: E };
 ```
 
-Each factory and command the aggregate mapping binds in `operations` states its own error type as its return type. The type is named by `code.error_type` of the operation in the aggregate mapping and is the union of the string literals of its `code.case` values: `IssueInvoiceError` holds `"already-issued"` and `"empty-lines"`, and nothing of `open` or `addLine`. Do not share one error type between operations or widen it with `string`, `any` or `unknown`. Return an expected business failure as `{ ok: false, error: "<case>" }`; unexpected runtime failures are not business errors. A factory the mapping binds to no operation, such as `restore` above or `InvoiceLine.of`, has no error type and returns the value itself; when a factory has business failures, declare it upstream as a factory rule of the canonical model instead of inventing its errors in code.
+Each factory and command the aggregate mapping binds in `operations` states its own error type as its return type. The type is named by `code.error_type` of the operation in the aggregate mapping and is the union of the string literals of its `code.case` values: `IssueInvoiceError` holds `"already-issued"` and `"empty-lines"`, and nothing of `open` or `addLine`. Do not share one error type between operations or widen it with `string`, `any` or `unknown`. Return an expected business failure as `{ ok: false, error: "<case>" }`; unexpected runtime failures are not business errors. A factory the mapping binds to no operation, such as `restore` above, `Money.of` or `InvoiceLine.of`, has no error type and returns the value itself; when a factory has business failures, declare it upstream as a factory rule of the canonical model instead of inventing its errors in code.
 
 ## Ownership
 
@@ -196,7 +248,7 @@ The package entry `src/index.ts` publishes each name explicitly, never with `exp
 ```ts
 export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice.ts";
 export { Invoice } from "./invoice.ts";
-export { InvoiceLine } from "./invoice/line.ts";
+export { InvoiceLine, Money } from "./invoice/line.ts";
 ```
 
 Under `index-file`:
@@ -204,7 +256,7 @@ Under `index-file`:
 ```ts
 export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice/index.ts";
 export { Invoice } from "./invoice/index.ts";
-export { InvoiceLine } from "./invoice/line.ts";
+export { InvoiceLine, Money } from "./invoice/line.ts";
 ```
 
 When a module file moves between the layouts, update every specifier that names it. The declarations placed in TypeScript under `domain_packages` follow the placement: `src/index.ts` is the package root `[]`, `src/invoice.ts` and `src/invoice/index.ts` are `[invoice]`, and `src/invoice/line.ts` is `[invoice, line]`.
@@ -255,10 +307,10 @@ export class IssueInvoiceUseCase {
 }
 ```
 
-The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
+The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`, with the amount wrapped by `Money.of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
 
 ```ts
-import { Invoice, InvoiceLine } from "@acme/billing-domain";
+import { Invoice, InvoiceLine, Money } from "@acme/billing-domain";
 import type { InvoiceNotFound, InvoiceRepository } from "@acme/billing-use-case";
 import type { Result } from "@acme/language-extensions";
 
@@ -282,7 +334,7 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     if (stored !== undefined) return { ok: true, value: stored };
     const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
     if (record === undefined) return { ok: false, error: "invoice-not-found" };
-    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(amount));
+    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(Money.of(amount)));
     return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
   }
 
