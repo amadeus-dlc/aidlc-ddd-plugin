@@ -148,10 +148,19 @@ const EXECUTE_SCENES: readonly Scene[] = [
   [
     "clean-repository-result",
     source(
-      "export interface PaymentRepository {\n  findById(paymentId: string): Result<string | undefined, RepositoryError>;\n  store(paymentId: string): Result<void, RepositoryError>;\n}\n",
+      "export interface PaymentRepository {\n  findById(paymentId: string): Result<string | undefined, RepositoryError>;\n  store(paymentId: string): Result<void, RepositoryError>;\n  remove(paymentId: string): (Result<void, RepositoryError>);\n  count(): Result<number, RepositoryError> | Result<0, RepositoryError>;\n}\n",
     ),
     [],
     pass,
+  ],
+  // A union is a Result only when every member is one: `undefined` beside it returns without a failure.
+  [
+    "violation-repository-result-optional",
+    source(
+      "export interface PaymentRepository {\n  store(paymentId: string): Result<void, RepositoryError> | undefined;\n}\n",
+    ),
+    [],
+    fails("repository-result"),
   ],
   [
     "clean-h-value-object",

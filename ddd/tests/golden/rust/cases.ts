@@ -256,7 +256,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&mut self, invoice_id: &str) -> std::result::Result<(), RepositoryError>;\n}\n",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&mut self, invoice_id: &str) -> std::result::Result<(), RepositoryError>;\n    fn delete_by_id(&mut self, invoice_id: &str) -> ::std::result::Result<(), RepositoryError>;\n}\n",
           deps: ["billing-domain"],
         },
       ],
