@@ -162,6 +162,13 @@ const EXECUTE_SCENES: readonly Scene[] = [
     [],
     fails("repository-result"),
   ],
+  // A property whose arrow-function type is wrapped in parentheses states a return type all the same.
+  [
+    "violation-repository-result-parenthesized-property",
+    source("export type PaymentRepository = {\n  store: ((paymentId: string) => void);\n};\n"),
+    [],
+    fails("repository-result"),
+  ],
   [
     "clean-h-value-object",
     source(
