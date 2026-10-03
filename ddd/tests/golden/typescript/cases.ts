@@ -278,7 +278,8 @@ export const COMPANION_WITH_ID_GETTER = edit(
 );
 
 /** The repository port of the aggregate, shared with the layer golden cases. */
-export const INVOICE_REPOSITORY_PORT = "export interface InvoiceRepository {\n  remove(id: string): void;\n}\n";
+export const INVOICE_REPOSITORY_PORT =
+  "export interface InvoiceRepository {\n  remove(id: string): Result<void, RepositoryError>;\n}\n";
 
 /**
  * A domain function handing the result of the getter `id` unchanged to a repository port it declares:

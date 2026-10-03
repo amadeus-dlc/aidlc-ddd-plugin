@@ -315,19 +315,20 @@ export { Money } from "./money.ts";
 const INVOICE_REPOSITORY_PORT = `import type { Invoice } from "${DOMAIN_NAME}";
 import type { Result } from "${RESULT_NAME}";
 
-export type InvoiceNotFound = "invoice-not-found";
+export type RepositoryError = { readonly kind: "repository-error"; readonly message: string };
 
 export interface InvoiceRepository {
-  findById(invoiceId: string): Result<Invoice, InvoiceNotFound>;
-  store(invoiceId: string, invoice: Invoice): void;
+  findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
+  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
 }
 `;
 
 const ISSUE_INVOICE = `import type { Invoice, IssueInvoiceError } from "${DOMAIN_NAME}";
 import type { Result } from "${RESULT_NAME}";
-import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
+import type { InvoiceRepository, RepositoryError } from "./invoice-repository.ts";
 
-export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
+export type InvoiceNotFound = "invoice-not-found";
+export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError | RepositoryError;
 
 export class IssueInvoiceUseCase {
   readonly #invoiceRepository: InvoiceRepository;
@@ -337,24 +338,26 @@ export class IssueInvoiceUseCase {
   }
 
   execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
-    const found: Result<Invoice, InvoiceNotFound> = this.#invoiceRepository.findById(invoiceId);
+    const found: Result<Invoice | undefined, RepositoryError> = this.#invoiceRepository.findById(invoiceId);
     if (!found.ok) return found;
+    if (found.value === undefined) return { ok: false, error: "invoice-not-found" };
     const invoice: Invoice = found.value;
     const issued: Result<void, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    this.#invoiceRepository.store(invoiceId, invoice);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, invoice);
+    if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
 }
 `;
 
-const USE_CASE_INDEX = `export type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
-export type { IssueInvoiceFailure } from "./issue-invoice.ts";
+const USE_CASE_INDEX = `export type { InvoiceRepository, RepositoryError } from "./invoice-repository.ts";
+export type { InvoiceNotFound, IssueInvoiceFailure } from "./issue-invoice.ts";
 export { IssueInvoiceUseCase } from "./issue-invoice.ts";
 `;
 
 const IN_MEMORY_INVOICE_REPOSITORY = `import { Invoice, InvoiceLine, Money } from "${DOMAIN_NAME}";
-import type { InvoiceNotFound, InvoiceRepository } from "${USE_CASE_NAME}";
+import type { InvoiceRepository, RepositoryError } from "${USE_CASE_NAME}";
 import type { Result } from "${RESULT_NAME}";
 
 export type InvoiceRecord = {
@@ -372,17 +375,18 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     this.#stored = new Map();
   }
 
-  findById(invoiceId: string): Result<Invoice, InvoiceNotFound> {
+  findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
     const stored: Invoice | undefined = this.#stored.get(invoiceId);
     if (stored !== undefined) return { ok: true, value: stored };
     const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
-    if (record === undefined) return { ok: false, error: "invoice-not-found" };
+    if (record === undefined) return { ok: true, value: undefined };
     const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(Money.of(amount)));
     return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
   }
 
-  store(invoiceId: string, invoice: Invoice): void {
+  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError> {
     this.#stored.set(invoiceId, invoice);
+    return { ok: true, value: undefined };
   }
 }
 `;

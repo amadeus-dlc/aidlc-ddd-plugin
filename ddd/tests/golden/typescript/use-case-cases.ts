@@ -45,6 +45,8 @@ export const USE_CASE_RUST_COUNTERPARTS: Readonly<Record<string, string>> = {
   "violation-h": "violation-h",
   "violation-use-case-name": "violation-use-case-name",
   "clean-use-case-name-free-function": "clean-use-case-name-function",
+  "violation-repository-result": "violation-repository-result",
+  "clean-repository-result": "clean-repository-result",
   "violation-h-import-alias": "violation-h-import-alias",
   "clean-h-value-object": "clean-h-value-object",
   "clean-h-local-name-collision": "clean-h-local-name-collision",
@@ -134,6 +136,23 @@ const EXECUTE_SCENES: readonly Scene[] = [
     fails("use-case-name"),
   ],
   ["clean-use-case-name-function", source("export function execute(invoiceId: string): void {}\n"), [], pass],
+  // Every method of a repository port returns Result, so a failed load or store reaches the use case.
+  [
+    "violation-repository-result",
+    source(
+      "export interface PaymentRepository {\n  findById(paymentId: string): string | undefined;\n  store(paymentId: string): void;\n}\n",
+    ),
+    [],
+    { pass: false, rules: ["repository-result"] },
+  ],
+  [
+    "clean-repository-result",
+    source(
+      "export interface PaymentRepository {\n  findById(paymentId: string): Result<string | undefined, RepositoryError>;\n  store(paymentId: string): Result<void, RepositoryError>;\n}\n",
+    ),
+    [],
+    pass,
+  ],
   [
     "clean-h-value-object",
     source(
@@ -261,7 +280,7 @@ const GETTER_SCENES: readonly Scene[] = [
   [
     "clean-d-repository-use-case-port",
     source(
-      `import { Invoice } from "@acme/billing-domain";\n\nexport interface InvoiceRepository {\n  remove(id: string): void;\n}\n\nexport function run(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`,
+      `import { Invoice } from "@acme/billing-domain";\n\nexport interface InvoiceRepository {\n  remove(id: string): Result<void, RepositoryError>;\n}\n\nexport function run(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`,
     ),
     [],
     pass,
@@ -270,7 +289,7 @@ const GETTER_SCENES: readonly Scene[] = [
   [
     "clean-d-repository-type-literal-port",
     source(
-      `import { Invoice } from "@acme/billing-domain";\n\nexport type InvoiceRepository = { remove(id: string): void };\n\nexport function run(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`,
+      `import { Invoice } from "@acme/billing-domain";\n\nexport type InvoiceRepository = { remove(id: string): Result<void, RepositoryError> };\n\nexport function run(invoice: Invoice, repo: InvoiceRepository): void {\n  repo.remove(invoice.id());\n}\n`,
     ),
     [],
     pass,

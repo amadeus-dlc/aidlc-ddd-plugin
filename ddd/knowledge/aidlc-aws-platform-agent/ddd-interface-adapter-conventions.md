@@ -1,6 +1,6 @@
 # Interface Adapter conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -21,6 +21,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.interface-adapter-conventions.9 | Put DB/RPC clients in the Interface Adapter layer, not in infrastructure intended for language extensions. | Design convention. g alone does not guarantee placement of every client. |
 | K.interface-adapter-conventions.10 | State whether an external model is adopted directly or translated at the boundary. | Review. |
 | K.interface-adapter-conventions.11 | Declare context, CQRS, packages with their roles, dependencies, ports, restoration, and storage in the layer declaration; each package is named by its language and its name. | layer-structure.item and related checks. Normal approval is connected; standalone completion has limits. |
+| K.interface-adapter-conventions.12 | Return `Result` from every method of a repository port and report a failed load or store as `RepositoryError`, an infrastructure failure declared beside the port; the lookup returns a missing aggregate as absent (`undefined`, `None`), not as a failure. | repository-result reports a method of a `…Repository` port that does not return `Result`. Review the lookup's absence. |
 
 ## Rationale
 

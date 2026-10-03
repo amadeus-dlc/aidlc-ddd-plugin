@@ -79,6 +79,7 @@ command 側と query 側のパッケージ間の参照は、このドメイン�
 | i: ユースケースの連鎖 | 書かれた型が、`execute` を宣言するユースケースパッケージの class である受け手に対する `execute` の呼び出し。`this`、呼び出し元の class 自身の値、interface（ポート）に対する呼び出しと、同じファイルが宣言した関数 `execute` の呼び出しは許可する | `use case calls packages/use-case/billing-use-case/src/finish.ts#FinishInvoiceUseCase.execute`。呼ばれた class を、宣言したファイルで名指す |
 | d: getter の呼び出し | ドメインゲートと同じ getter の呼び出しを、use-case 層からの呼び出しとして報告する。ただし、getter の結果を、リポジトリポートが宣言するメソッドへ変更せずに渡すことは許可する。渡し方は、その呼び出しの引数（括弧だけで囲んでもよい）か、すべての参照がそうした引数である `const` の束縛（そうした束縛の連鎖を含む）である。`case` 節または `default` 節の直下で宣言した `const` は、後の節から読めるため、この束縛に当たらない。節をブロックで囲めば、その中の `const` を通して渡せる。リポジトリポートとは、ユースケースのパッケージのポート（規則 m と同じく `interface` または型リテラルの型別名）で、名前が `…Repository` で終わり、呼んだメソッドを宣言しているものであり、受け手に書かれた型がそれを名指している必要がある。結果を計算・変換・分岐に使うことや、ほかのもの（関数、別のポート、`…Repository` という名前の class）へ渡すことは、引き続き所見になる | `getter total called from use-case layer (Tell, Don't Ask)` |
 | use-case-name: ユースケースの型名 | 申告したユースケースのソースで `execute` を宣言し、名前が `UseCase` で終わらない class。最上位の関数で書いたユースケースには名付ける型がない | `use case IssueInvoice is not named <Verb><Object>UseCase; name it IssueInvoiceUseCase` |
+| repository-result: 失敗を返すリポジトリポート | 申告したユースケースのソースで、名前が `…Repository` の interface か型リテラルの別名のメソッドのうち、明記した戻り値の型が `Result<…>` でないもの。戻り値を明記しないメソッドシグネチャと、アロー関数の型を持つプロパティを含む。見つからない集約を検索が `undefined` で返すかどうかは、レビューで判断する | `repository port method InvoiceRepository.store returns void; return Result<…, RepositoryError> so the use case sees a failed load or store` |
 
 Rust のゲートと同じく、リポジトリへの受け渡しを証明できないときは、ゲートを止めずに d の所見のままにする。
 

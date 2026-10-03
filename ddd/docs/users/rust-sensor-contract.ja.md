@@ -52,6 +52,10 @@ repo.remove(invoice.id() + 1); // 引数内でも計算は違反
 
 ユースケースゲートは、`execute` を宣言するimplブロックの型について、名前が `UseCase` で終わらなければ `use-case-name` として報告する。文言は `use case IssueInvoice is not named <Verb><Object>UseCase; name it IssueInvoiceUseCase` である。ジェネリック引数とパスの前置きは無視する。implに属さない `fn execute` には名付ける型がない。
 
+## リポジトリポートは失敗を返し、保存先を `&mut self` で変える
+
+ユースケースゲートは、名前が `…Repository` の trait のメソッドが `Result<…>`（パス付きの `std::result::Result<…>` を含む）を返さなければ `repository-result` として報告する。文言は `repository port method InvoiceRepository::store returns (); return Result<…, RepositoryError> so the use case sees a failed load or store` である。また、その trait の `store…` か `delete…` のメソッドが `&mut self` を取らなければ `repository-mut-self` として報告する。文言は `repository port method InvoiceRepository::store changes what is stored but does not take &mut self; take &mut self, or declare the port Send + Sync when it is shared across threads behind a lock` である。ただし trait が上位トレイトに `Sync` を宣言していれば報告しない。スレッド間で共有するポートは保存先をロックで守り、`&self` を取るためである。検索は `&self` のままでよい。見つからない集約を検索が `None` で返すかどうかは、レビューで判断する。
+
 ## replayは明示した契約で許可する
 
 集約写像の各行に、任意の `replay_methods` を追加した。既存の行で省略した場合は空配列として扱う。正規モデルのスキーマ自体は変更していない。

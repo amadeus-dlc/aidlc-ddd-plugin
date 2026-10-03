@@ -53,6 +53,8 @@ export interface MemberFact {
   readonly type_text?: string;
   /** The parameters of a method, a method signature or a constructor. */
   readonly params?: readonly ParamFact[];
+  /** The return type a method or a method signature states. */
+  readonly return_type_text?: string;
   /** What a member with a body writes; present on members with a body only. */
   readonly writes?: readonly WriteFact[];
   /**

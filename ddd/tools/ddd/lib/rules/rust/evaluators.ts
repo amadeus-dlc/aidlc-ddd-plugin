@@ -289,6 +289,60 @@ function ruleUseCaseName(target: InspectionTarget, context: InspectionContext): 
   return out;
 }
 
+// --- (repository-result) a repository port reports its failures ------------
+// Every method of a repository port (a trait named `…Repository`) returns `Result<…>`. Loading and
+// storing reach outside the process and can fail; a `store` that returns `()` leaves the use case no
+// way to see that the state it changed was never kept.
+function ruleRepositoryResult(target: InspectionTarget, context: InspectionContext): FindingInput[] {
+  if (!target.file) return [];
+  const file = target.file;
+  const out: FindingInput[] = [];
+  for (const trait of declarationsOf(context, file).traits) {
+    if (!trait.name.endsWith("Repository")) continue;
+    for (const signature of trait.signatures) {
+      const returned = signature.return_type_text?.trim();
+      if (returned !== undefined && /^(?:\w+::)*Result\s*</.test(returned)) continue;
+      out.push(
+        finding(
+          "repository-result",
+          file,
+          `repository port method ${trait.name}::${signature.name} returns ${returned ?? "()"}; return Result<…, RepositoryError> so the use case sees a failed load or store`,
+          signature.line,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
+// --- (repository-mut-self) a repository port changes its storage through &mut self ----
+// A method of a repository port (a trait named `…Repository`) that changes what is stored —
+// `store…` or `delete…` — takes `&mut self` by default. Taking `&self` hides the change behind
+// interior mutability in every implementation, which ownership would otherwise show. The one
+// exception is a port shared across threads, which declares `Sync` as a supertrait and guards its
+// storage with a lock.
+function ruleRepositoryMutSelf(target: InspectionTarget, context: InspectionContext): FindingInput[] {
+  if (!target.file) return [];
+  const file = target.file;
+  const out: FindingInput[] = [];
+  for (const trait of declarationsOf(context, file).traits) {
+    if (!trait.name.endsWith("Repository")) continue;
+    if (trait.supertraits.some((bound) => /(?:^|::)Sync$/.test(bound.trim()))) continue;
+    for (const signature of trait.signatures) {
+      if (!/^(?:store|delete)/.test(signature.name) || signature.receiver === "mut-self") continue;
+      out.push(
+        finding(
+          "repository-mut-self",
+          file,
+          `repository port method ${trait.name}::${signature.name} changes what is stored but does not take &mut self; take &mut self, or declare the port Send + Sync when it is shared across threads behind a lock`,
+          signature.line,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
 // --- (i) use case chaining --------------------------------------------------
 function ruleI(target: InspectionTarget, context: InspectionContext): FindingInput[] {
   if (!target.file) return [];
@@ -464,6 +518,8 @@ export const PER_FILE_EVALUATORS: Record<
   h: ruleH,
   i: ruleI,
   "use-case-name": ruleUseCaseName,
+  "repository-result": ruleRepositoryResult,
+  "repository-mut-self": ruleRepositoryMutSelf,
   l: ruleL,
   m: ruleM,
   n: ruleN,

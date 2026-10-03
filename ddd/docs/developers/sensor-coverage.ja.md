@@ -4,7 +4,7 @@
 
 この表は `bun scripts/report-sensor-coverage.ts --write` で生成する。変更元は [契約表](../../tests/golden/contract/coverage.ts) と [ケース一覧](../../tests/golden/catalog.ts)。手作業で件数を更新しない。
 
-対象は14センサー・94規則項目。92項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では632ケースを各環境で実行する。承認経路には、この表から選んだ216入力を各環境で通す。
+対象は14センサー・97規則項目。95項目は対応する所見を直接検証し、2項目はローダーによる先行拒否を検証する。配布物では640ケースを各環境で実行する。承認経路には、この表から選んだ222入力を各環境で通す。
 
 規則IDが同じでも、別センサーのケースで検証済みとは扱わない。正常例は対象構造を持つ入力、境界例は対象外・最小件数・別表記・別経路などの区別を確認する入力として選ぶ。この表は宣言した検査契約への対応を示し、Rustの全構文・業務上の意味・全分岐の網羅を保証しない。
 
@@ -79,6 +79,8 @@
 | ddd-rust-use-case<br>`g` | `clean-g-use-case-to-infrastructure-use` | `violation-g-use-case-to-interface-adapter-use`<br>`violation-g-use-case-to-interface-adapter-cargo`<br>`violation-g-use-case-to-rmu-use`<br>`violation-g-use-case-to-rmu-cargo`<br>`violation-g-use-case-to-composition-root-use`<br>`violation-g-use-case-to-composition-root-cargo`<br>`violation-g-use-case-external-io-use`<br>`violation-g-use-case-external-io-cargo` | `clean-g-use-case-to-infrastructure-cargo`<br>独立した層の許可表をuseとCargoのみの依存で検証し、外部I/Oも含める。 |
 | ddd-rust-use-case<br>`h` | `clean-h-value-object` | `violation-h`<br>`violation-h-import-alias`<br>`violation-h-type-alias`<br>`violation-h-qualified`<br>`violation-h-grouped-alias`<br>`violation-h-imported-box` | `clean-h-domain-primitive`<br>VOとDomain Primitiveの引数は許可し、集約引数は拒否する。 |
 | ddd-rust-use-case<br>`i` | `clean-i-port-execute` | `violation-i`<br>`violation-i-field-use-case`<br>`violation-i-associated-call`<br>`violation-i-imported-use-case` | `clean-i-own-associated-call`<br>ポート呼出しと同型自身への呼出しを別ユースケースと混同しない。 |
+| ddd-rust-use-case<br>`repository-mut-self` | `clean-repository-mut-self-sync` | `violation-repository-mut-self` | `violation-repository-mut-self`<br>&selfを取るstoreは、スレッド間で共有するためSyncを宣言したポートでだけ許可する。 |
+| ddd-rust-use-case<br>`repository-result` | `clean-repository-result` | `violation-repository-result` | `violation-repository-result`<br>リポジトリポートのメソッドはパス付きを含めResultを返し、()を返すstoreは拒否する。 |
 | ddd-rust-use-case<br>`use-case-name` | `clean-h-value-object` | `violation-use-case-name` | `clean-use-case-name-free-function`<br>ユースケースの型名は<動詞><対象>UseCaseとし、型を持たない関数executeは対象外とする。 |
 | ddd-typescript-domain<br>`a` | `clean-class` | `violation-a-class`<br>`violation-a-companion`<br>`violation-a-class-private`<br>`violation-a-class-readonly`<br>`violation-a-class-parameter-property` | `violation-a-class-private`<br>実行時に状態を隠すのは # フィールドだけで、消去される private キーワードは隠蔽にならない。 |
 | ddd-typescript-domain<br>`b` | `clean-class` | `violation-b-class`<br>`violation-b-companion`<br>`violation-b-undeclared-replay` | `clean-b-declared-replay`<br>宣言済みコマンドと、写像が宣言したreplayメソッドを許可する。 |
@@ -107,6 +109,7 @@
 | ddd-typescript-use-case<br>`g` | `clean-g-use-case-to-infrastructure-import-class` | `violation-g-use-case-to-interface-adapter-import-class`<br>`violation-g-use-case-type-only-class`<br>`violation-g-use-case-to-interface-adapter-package-json-class`<br>`violation-g-use-case-external-io-class`<br>`violation-g-use-case-to-interface-adapter-import-companion`<br>`violation-g-use-case-type-only-companion`<br>`violation-g-use-case-to-interface-adapter-package-json-companion`<br>`violation-g-use-case-external-io-companion` | `clean-g-use-case-to-infrastructure-package-json-class`<br>層の許可表をimportとpackage.jsonのみの依存で検証し、外部I/Oも含める。 |
 | ddd-typescript-use-case<br>`h` | `clean-h-id-class` | `violation-h-class`<br>`violation-h-function-class`<br>`violation-h-import-alias-class`<br>`violation-h-readonly-array-class`<br>`violation-h-companion`<br>`violation-h-function-companion`<br>`violation-h-import-alias-companion`<br>`violation-h-readonly-array-companion` | `clean-h-value-object-class`<br>IDと値オブジェクトの引数は許可し、集約引数は拒否する。 |
 | ddd-typescript-use-case<br>`i` | `clean-i-port-execute-class` | `violation-i-class`<br>`violation-i-field-class`<br>`violation-i-imported-class`<br>`violation-i-companion`<br>`violation-i-field-companion`<br>`violation-i-imported-companion` | `clean-i-own-call-class`<br>ポート呼出しと同型自身への呼出しを別ユースケースと混同しない。 |
+| ddd-typescript-use-case<br>`repository-result` | `clean-repository-result-class` | `violation-repository-result-class`<br>`violation-repository-result-companion` | `violation-repository-result-class`<br>リポジトリポートのメソッドはResultを返し、値をそのまま返す検索や保存は拒否する。 |
 | ddd-typescript-use-case<br>`use-case-name` | `clean-h-id-class` | `violation-use-case-name-class`<br>`violation-use-case-name-companion` | `clean-use-case-name-function-class`<br>ユースケースのclass名は<動詞><対象>UseCaseとし、型を持たない関数executeは対象外とする。 |
 
 ## 承認経路と対象外
