@@ -81,12 +81,23 @@ describe("typescript golden cases", () => {
         "ddd-typescript-use-case",
       ].sort(),
     );
-    // The layer gates declare exactly the rule ids of their Rust counterparts.
+    // The layer gates declare exactly the rule ids of their Rust counterparts, less the Rust-only
+    // receiver rule: TypeScript has no `&mut self` for a repository write to take.
+    const rustOnly = new Set(["repository-mut-self"]);
     for (const layer of ["use-case", "interface-adapter"]) {
       const rust = declaredRules(sensorsDir, [`aidlc-ddd-rust-${layer}.md`]).get(`ddd-rust-${layer}`);
-      expect([...(declared.get(`ddd-typescript-${layer}`) ?? [])].sort()).toEqual([...(rust ?? [])].sort());
+      expect([...(declared.get(`ddd-typescript-${layer}`) ?? [])].sort()).toEqual(
+        [...(rust ?? [])].filter((rule) => !rustOnly.has(rule)).sort(),
+      );
     }
-    expect([...(declared.get("ddd-typescript-use-case") ?? [])].sort()).toEqual(["d", "g", "h", "i", "use-case-name"]);
+    expect([...(declared.get("ddd-typescript-use-case") ?? [])].sort()).toEqual([
+      "d",
+      "g",
+      "h",
+      "i",
+      "repository-result",
+      "use-case-name",
+    ]);
     expect([...(declared.get("ddd-typescript-interface-adapter") ?? [])].sort()).toEqual(["g", "k", "l", "m", "n"]);
     // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
     expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(

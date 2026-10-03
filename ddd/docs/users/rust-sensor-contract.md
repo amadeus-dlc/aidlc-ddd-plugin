@@ -52,6 +52,10 @@ Ports are declared in the use-case layer. The domain gate reports a trait named 
 
 The use-case gate reports the type of an impl block that declares `execute` when its name does not end with `UseCase`, as `use-case-name`, with the message `use case IssueInvoice is not named <Verb><Object>UseCase; name it IssueInvoiceUseCase`. Generic parameters and a path prefix are ignored. A free `fn execute` has no type to name.
 
+## A repository port reports its failures and changes its storage through `&mut self`
+
+The use-case gate reports a method of a trait named `…Repository` that does not return `Result<…>` (a path-qualified `std::result::Result<…>` or `::std::result::Result<…>` included) as `repository-result`, with the message `repository port method InvoiceRepository::store returns (); return Result<…, RepositoryError> so the use case sees a failed load or store`. It also reports a `store…` or `delete…` method of such a trait that does not take `&mut self` as `repository-mut-self`, with the message `repository port method InvoiceRepository::store changes what is stored but does not take &mut self; take &mut self, or declare the port Send + Sync when it is shared across threads behind a lock`, unless the trait declares `Sync` as a supertrait: a port shared across threads guards its storage with a lock and takes `&self`. The lookup keeps `&self`. Whether the lookup returns a missing aggregate as `None` is left to review.
+
 ## Permit replay through explicit declarations
 
 Each aggregate mapping may contain `replay_methods`; omission in an existing row means an empty list. The canonical model schema itself is unchanged.

@@ -4,6 +4,13 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — 失敗を返すリポジトリポートと、Rust の `&mut self` の書き込み
+
+- **`Result` を返さないリポジトリポートのメソッドを報告する。** 例の `store` は何も返さず、検索は見つからないことをエラーとして返していたので、生成されたコードは読み込みや保存の失敗をユースケースに伝えられなかった。リポジトリポートのメソッドは、どれも `Result<…, RepositoryError>` を返す。検索は `Result<Invoice | undefined, RepositoryError>`（Rust は `Result<Option<Invoice>, RepositoryError>`）を返し、ユースケースは「ない」を自分の `InvoiceNotFound` にし、保存の失敗を返す。`ddd-rust-use-case` と `ddd-typescript-use-case` は、`…Repository` ポートのメソッドが `Result` を返さなければ `repository-result` として報告する。
+- **`&mut self` を取らない Rust のリポジトリの書き込みを報告する。** `store` と `delete_by_id` は `&mut self` を取り、検索は `&self` のままにする。スレッド間で共有してロックが必要なポートは `Send + Sync` を宣言して `&self` を取る。`ddd-rust-use-case` は、`store…` か `delete…` のメソッドが `&mut self` を取らなければ、trait が `Sync` を宣言していない限り `repository-mut-self` として報告する。Rust の例はポートを trait オブジェクトではなくジェネリック引数の `&'a mut R` で持ち、インメモリのアダプタは `RefCell` ではなく `HashMap` をそのまま持つ。
+- **trait の各メソッドが何を取り何を返すかを報告する。** ネイティブ抽出器の `domain-facts/1` protocol を版 9 にした。trait は各メソッドのレシーバ・戻り値の型・行と、上位トレイトを報告する。TypeScript の事実は、メソッドとメソッドシグネチャが明記する戻り値の型を報告する。
+- ナレッジ・コード生成の手順・生成見本・振る舞いテストのフィクスチャ・ゴールデンケース・センサー契約・カバレッジの報告もこれに合わせた。getter の受け渡しを試すゴールデンケースのポートは、`Result` を返すようにして通る状態を保った。
+
 ## 未リリース — ドメインの型を業務概念のモジュールにまとめる
 
 - **ドメインの型を業務概念ごとのモジュールにまとめる。** この規約を使う下流のワークフローの実走では、請求書 ID・明細追加のコマンド ID・顧客 ID・金額がドメインパッケージの直下に並んだ。packaging のナレッジは技術的な名前を禁じていたが、どうまとめるかを書いていなかった。モジュールをエヴァンスのいうモジュールとして扱い（`K.domain-packaging.9`）、1 つの概念に属する型はその概念のモジュールの下に置く。共有の値と参照 ID は、概念が少ないあいだだけルートに置ける（`K.domain-packaging.10`）。小さいときの構成と、概念が増えたときのまとめ直し方の例も加えた。ルール ID の振り直しはなく、センサーも変えていない。概念ごとのまとまりは、引き続き設計レビューで判断する。

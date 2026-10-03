@@ -31,9 +31,13 @@ export interface InvoiceRecord {
   readonly amounts: readonly number[];
   readonly issued: boolean;
 }
+export interface RepositoryError {
+  readonly kind: "repository-error";
+  readonly message: string;
+}
 export interface InvoiceRepository {
-  findById(invoiceId: string): Result<Invoice, string>;
-  store(invoiceId: string, invoice: Invoice): void;
+  findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
+  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
 }
 
 /** What the domain, use-case and interface-adapter packages of a sample export. */
@@ -45,7 +49,7 @@ export interface SampleModules {
   readonly Money: { of(value: number): Money };
   readonly InvoiceLine: { of(amount: Money): InvoiceLine };
   readonly IssueInvoiceUseCase: new (invoiceRepository: InvoiceRepository) => {
-    execute(invoiceId: string): Result<void, string>;
+    execute(invoiceId: string): Result<void, string | RepositoryError>;
   };
   readonly InMemoryInvoiceRepository: new (records: ReadonlyMap<string, InvoiceRecord>) => InvoiceRepository;
 }
@@ -60,10 +64,16 @@ function value<T>(result: Result<T, string>): T {
   if (!result.ok) throw new Error(`expected success, got the error ${result.error}`);
   return result.value;
 }
-function expectError(result: Result<unknown, string>, error: string): void {
+/** The invoice a repository found; the port answers a missing one with `undefined`, not a failure. */
+function found(result: Result<Invoice | undefined, RepositoryError>): Invoice {
+  if (!result.ok) throw new Error(`expected a load, got the repository error ${result.error.message}`);
+  if (result.value === undefined) throw new Error("expected a stored invoice, found none");
+  return result.value;
+}
+function expectError(result: Result<unknown, unknown>, error: string): void {
   expect(result).toEqual({ ok: false, error });
 }
-function expectOk(result: Result<void, string>): void {
+function expectOk(result: Result<void, unknown>): void {
   expect(result).toEqual({ ok: true, value: undefined });
 }
 
@@ -132,10 +142,10 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       const repository = new InMemoryInvoiceRepository(records());
       expectError(new IssueInvoiceUseCase(repository).execute(ISSUED), "already-issued");
       expectError(new IssueInvoiceUseCase(repository).execute(EMPTY_DRAFT), "empty-lines");
-      const issued = value(repository.findById(ISSUED));
+      const issued = found(repository.findById(ISSUED));
       expectTotal(issued, 5);
       expectError(issued.addLine(line(1)), "already-issued");
-      const stillEmpty = value(repository.findById(EMPTY_DRAFT));
+      const stillEmpty = found(repository.findById(EMPTY_DRAFT));
       expect(stillEmpty.lines()).toHaveLength(0);
       expectOk(stillEmpty.addLine(line(1)));
     },
@@ -160,24 +170,25 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       const { IssueInvoiceUseCase, InMemoryInvoiceRepository } = modules;
       const { line, expectTotal } = amounts(modules);
       const repository = new InMemoryInvoiceRepository(records());
-      const draft = value(repository.findById(DRAFT));
+      const draft = found(repository.findById(DRAFT));
       expectTotal(draft, 120);
       expect(draft.lines()).toHaveLength(2);
       expect(draft.isBilledTo(CUSTOMER)).toBe(true);
       expect(draft.isBilledTo("another-customer")).toBe(false);
-      expectError(value(repository.findById(ISSUED)).issue(), "already-issued");
+      expectError(found(repository.findById(ISSUED)).issue(), "already-issued");
 
       const persisted = new InMemoryInvoiceRepository(records());
       const issueInvoice = new IssueInvoiceUseCase(persisted);
       expectOk(issueInvoice.execute(DRAFT));
       // The stored invoice, not the draft record it was read from, is what the next read returns.
-      const stored = value(persisted.findById(DRAFT));
+      const stored = found(persisted.findById(DRAFT));
       expectTotal(stored, 120);
       expect(stored.isBilledTo(CUSTOMER)).toBe(true);
       expectError(stored.addLine(line(1)), "already-issued");
       expectError(issueInvoice.execute(DRAFT), "already-issued");
 
-      expectError(repository.findById(UNKNOWN), "invoice-not-found");
+      // A missing invoice is no failure of the port; the use case turns it into its own error.
+      expect(repository.findById(UNKNOWN)).toEqual({ ok: true, value: undefined });
       expectError(issueInvoice.execute(UNKNOWN), "invoice-not-found");
     },
   },

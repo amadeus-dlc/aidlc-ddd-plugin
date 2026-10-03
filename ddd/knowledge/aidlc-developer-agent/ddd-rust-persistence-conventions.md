@@ -1,6 +1,6 @@
 # Rust persistence conventions
 
-Updated: 2026-09-30. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -20,6 +20,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-persistence-conventions.8 | Safely re-persist state; append to immutable history for event persistence. | Review. Current upsert advisories do not adequately distinguish persistence modes. |
 | K.rust-persistence-conventions.9 | Distinguish first success, duplicate success, and rejection. | Design convention. Concrete return types remain T-03 work. |
 | K.rust-persistence-conventions.10 | Validate invariants when restoring from DTOs and distinguish restoration from replay. | n checks construction-call shapes. Review and test all invariants. |
+| K.rust-persistence-conventions.11 | Take `&mut self` in a repository port method that changes what is stored (`store`, `delete_by_id`) and keep `&self` for the lookup; do not hide the change behind a `RefCell`. Only a port shared across threads that needs a lock declares `Send + Sync`, takes `&self`, and guards its storage with a `Mutex` or an `RwLock`. A use case holds the port as `&'a mut R` and its `execute` takes `&mut self`. | repository-mut-self reports a `store…` or `delete…` method of a `…Repository` trait that does not take `&mut self` unless the trait declares `Sync`. |
 
 ## Rationale
 

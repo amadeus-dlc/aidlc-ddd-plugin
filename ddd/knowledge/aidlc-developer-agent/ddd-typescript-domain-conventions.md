@@ -271,17 +271,17 @@ When a module file moves between the layouts, update every specifier that names 
 
 The use-case package `@acme/billing-use-case` (`packages/command/billing-use-case`) and the interface-adapter package `@acme/billing-interface-adapter` (`packages/command/billing-interface-adapter`) follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md). Both list the domain and language-extensions packages in `dependencies`, and the adapter also lists the use-case package. Their sources are the same in both code representations and both module layouts: they call only `restore`, `of` and the command `issue`, which both representations spell alike, and they hold leaf modules only.
 
-The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Its lookup returns its own error type through `Result`:
+The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Loading and storing reach outside the process and can fail, so every method returns `Result` and reports a failure as `RepositoryError`, an infrastructure failure declared beside the port rather than a business error; the per-operation error-type rules do not apply to it. The lookup does not treat a missing invoice as a failure and returns `undefined`, and the store returns `Result<void, RepositoryError>`:
 
 ```ts
 import type { Invoice } from "@acme/billing-domain";
 import type { Result } from "@acme/language-extensions";
 
-export type InvoiceNotFound = "invoice-not-found";
+export type RepositoryError = { readonly kind: "repository-error"; readonly message: string };
 
 export interface InvoiceRepository {
-  findById(invoiceId: string): Result<Invoice, InvoiceNotFound>;
-  store(invoiceId: string, invoice: Invoice): void;
+  findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
+  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
 }
 ```
 
@@ -290,9 +290,10 @@ The use case is a class named `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). `
 ```ts
 import type { Invoice, IssueInvoiceError } from "@acme/billing-domain";
 import type { Result } from "@acme/language-extensions";
-import type { InvoiceNotFound, InvoiceRepository } from "./invoice-repository.ts";
+import type { InvoiceRepository, RepositoryError } from "./invoice-repository.ts";
 
-export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError;
+export type InvoiceNotFound = "invoice-not-found";
+export type IssueInvoiceFailure = InvoiceNotFound | IssueInvoiceError | RepositoryError;
 
 export class IssueInvoiceUseCase {
   readonly #invoiceRepository: InvoiceRepository;
@@ -302,22 +303,24 @@ export class IssueInvoiceUseCase {
   }
 
   execute(invoiceId: string): Result<void, IssueInvoiceFailure> {
-    const found: Result<Invoice, InvoiceNotFound> = this.#invoiceRepository.findById(invoiceId);
+    const found: Result<Invoice | undefined, RepositoryError> = this.#invoiceRepository.findById(invoiceId);
     if (!found.ok) return found;
+    if (found.value === undefined) return { ok: false, error: "invoice-not-found" };
     const invoice: Invoice = found.value;
     const issued: Result<void, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    this.#invoiceRepository.store(invoiceId, invoice);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, invoice);
+    if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
 }
 ```
 
-The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`, with the amount wrapped by `Money.of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
+The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`, with the amount wrapped by `Money.of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. It returns `undefined` when there is no record and reports a failure of the storage as `RepositoryError`; the in-memory implementation never fails. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
 
 ```ts
 import { Invoice, InvoiceLine, Money } from "@acme/billing-domain";
-import type { InvoiceNotFound, InvoiceRepository } from "@acme/billing-use-case";
+import type { InvoiceRepository, RepositoryError } from "@acme/billing-use-case";
 import type { Result } from "@acme/language-extensions";
 
 export type InvoiceRecord = {
@@ -335,17 +338,18 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     this.#stored = new Map();
   }
 
-  findById(invoiceId: string): Result<Invoice, InvoiceNotFound> {
+  findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
     const stored: Invoice | undefined = this.#stored.get(invoiceId);
     if (stored !== undefined) return { ok: true, value: stored };
     const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
-    if (record === undefined) return { ok: false, error: "invoice-not-found" };
+    if (record === undefined) return { ok: true, value: undefined };
     const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(Money.of(amount)));
     return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
   }
 
-  store(invoiceId: string, invoice: Invoice): void {
+  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError> {
     this.#stored.set(invoiceId, invoice);
+    return { ok: true, value: undefined };
   }
 }
 ```

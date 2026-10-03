@@ -227,6 +227,86 @@ const BASE_RUST_CASES: GoldenCase[] = [
   },
   {
     sensor: "ddd-rust-use-case",
+    name: "violation-repository-result",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Option<String>;\n    fn store(&mut self, invoice_id: &str);\n}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: withFiles({ pass: false, rules: ["repository-result"] }, "packages/use-case/billing-use-case/src/lib.rs"),
+  },
+  {
+    sensor: "ddd-rust-use-case",
+    name: "clean-repository-result",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&mut self, invoice_id: &str) -> std::result::Result<(), RepositoryError>;\n    fn delete_by_id(&mut self, invoice_id: &str) -> ::std::result::Result<(), RepositoryError>;\n}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-rust-use-case",
+    name: "violation-repository-mut-self",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: withFiles({ pass: false, rules: ["repository-mut-self"] }, "packages/use-case/billing-use-case/src/lib.rs"),
+  },
+  {
+    sensor: "ddd-rust-use-case",
+    name: "clean-repository-mut-self-sync",
+    stage: "code-generation",
+    output: OUTPUT,
+    ...project(
+      [
+        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice;\n" },
+        {
+          path: "packages/use-case/billing-use-case",
+          name: "billing-use-case",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository: Send + Sync {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
+          deps: ["billing-domain"],
+        },
+      ],
+      STATE,
+      ["packages/use-case/billing-use-case/src/lib.rs"],
+    ),
+    expect: { pass: true, rules: [] },
+  },
+  {
+    sensor: "ddd-rust-use-case",
     name: "violation-i",
     stage: "code-generation",
     output: OUTPUT,

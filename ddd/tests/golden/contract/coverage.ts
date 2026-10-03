@@ -387,6 +387,22 @@ cover(
 );
 cover(
   use,
+  ["repository-result"],
+  "clean-repository-result",
+  "violation-repository-result",
+  "Every repository port method returns Result, path-qualified or not; a store returning () does not.",
+  "リポジトリポートのメソッドはパス付きを含めResultを返し、()を返すstoreは拒否する。",
+);
+cover(
+  use,
+  ["repository-mut-self"],
+  "clean-repository-mut-self-sync",
+  "violation-repository-mut-self",
+  "A store taking &self is accepted only on a port declared Sync for sharing across threads.",
+  "&selfを取るstoreは、スレッド間で共有するためSyncを宣言したポートでだけ許可する。",
+);
+cover(
+  use,
   ["i"],
   "clean-i-port-execute",
   "clean-i-own-associated-call",
@@ -612,6 +628,14 @@ cover(
   "clean-use-case-name-function-class",
   "A use case class is named <Verb><Object>UseCase; a top-level execute function has no type to name.",
   "ユースケースのclass名は<動詞><対象>UseCaseとし、型を持たない関数executeは対象外とする。",
+);
+cover(
+  tsUse,
+  ["repository-result"],
+  "clean-repository-result-class",
+  "violation-repository-result-class",
+  "Every repository port method returns Result; a lookup or store that returns a bare value does not.",
+  "リポジトリポートのメソッドはResultを返し、値をそのまま返す検索や保存は拒否する。",
 );
 cover(
   tsUse,

@@ -192,38 +192,47 @@ pub mod issue_invoice;
 
 const INVOICE_REPOSITORY_PORT = `use billing_domain::invoice::Invoice;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct InvoiceNotFound;
+/// A load or a store that did not complete: a failure of the infrastructure, not a business error.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepositoryError {
+    pub message: String,
+}
 
 pub trait InvoiceRepository {
-    fn find_by_id(&self, invoice_id: &str) -> Result<Invoice, InvoiceNotFound>;
-    fn store(&self, invoice_id: &str, invoice: Invoice);
+    fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;
+    fn store(&mut self, invoice_id: &str, invoice: Invoice) -> Result<(), RepositoryError>;
 }
 `;
 
 const ISSUE_INVOICE = `use billing_domain::invoice::IssueInvoiceError;
 
-use crate::invoice_repository::{InvoiceNotFound, InvoiceRepository};
+use crate::invoice_repository::{InvoiceRepository, RepositoryError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InvoiceNotFound;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IssueInvoiceFailure {
     NotFound(InvoiceNotFound),
     Rejected(IssueInvoiceError),
+    Repository(RepositoryError),
 }
 
-pub struct IssueInvoiceUseCase<'a> {
-    invoice_repository: &'a dyn InvoiceRepository,
+pub struct IssueInvoiceUseCase<'a, R: InvoiceRepository> {
+    invoice_repository: &'a mut R,
 }
 
-impl<'a> IssueInvoiceUseCase<'a> {
-    pub fn new(invoice_repository: &'a dyn InvoiceRepository) -> Self {
+impl<'a, R: InvoiceRepository> IssueInvoiceUseCase<'a, R> {
+    pub fn new(invoice_repository: &'a mut R) -> Self {
         IssueInvoiceUseCase { invoice_repository }
     }
 
-    pub fn execute(&self, invoice_id: &str) -> Result<(), IssueInvoiceFailure> {
-        let mut invoice = self.invoice_repository.find_by_id(invoice_id).map_err(IssueInvoiceFailure::NotFound)?;
+    pub fn execute(&mut self, invoice_id: &str) -> Result<(), IssueInvoiceFailure> {
+        let Some(mut invoice) = self.invoice_repository.find_by_id(invoice_id).map_err(IssueInvoiceFailure::Repository)? else {
+            return Err(IssueInvoiceFailure::NotFound(InvoiceNotFound));
+        };
         invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
-        self.invoice_repository.store(invoice_id, invoice);
+        self.invoice_repository.store(invoice_id, invoice).map_err(IssueInvoiceFailure::Repository)?;
         Ok(())
     }
 }
@@ -232,13 +241,12 @@ impl<'a> IssueInvoiceUseCase<'a> {
 const INTERFACE_ADAPTER_LIB = `pub mod in_memory_invoice_repository;
 `;
 
-const IN_MEMORY_INVOICE_REPOSITORY = `use std::cell::RefCell;
-use std::collections::HashMap;
+const IN_MEMORY_INVOICE_REPOSITORY = `use std::collections::HashMap;
 
 use billing_domain::invoice::line::InvoiceLine;
 use billing_domain::invoice::Invoice;
 use billing_domain::money::Money;
-use billing_use_case::invoice_repository::{InvoiceNotFound, InvoiceRepository};
+use billing_use_case::invoice_repository::{InvoiceRepository, RepositoryError};
 
 pub struct InvoiceRecord {
     pub customer: String,
@@ -249,27 +257,30 @@ pub struct InvoiceRecord {
 /// The invoices stored here take precedence over the records they were first read from.
 pub struct InMemoryInvoiceRepository {
     records: HashMap<String, InvoiceRecord>,
-    stored: RefCell<HashMap<String, Invoice>>,
+    stored: HashMap<String, Invoice>,
 }
 
 impl InMemoryInvoiceRepository {
     pub fn new(records: HashMap<String, InvoiceRecord>) -> Self {
-        InMemoryInvoiceRepository { records, stored: RefCell::new(HashMap::new()) }
+        InMemoryInvoiceRepository { records, stored: HashMap::new() }
     }
 }
 
 impl InvoiceRepository for InMemoryInvoiceRepository {
-    fn find_by_id(&self, invoice_id: &str) -> Result<Invoice, InvoiceNotFound> {
-        if let Some(stored) = self.stored.borrow().get(invoice_id) {
-            return Ok(stored.clone());
+    fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError> {
+        if let Some(stored) = self.stored.get(invoice_id) {
+            return Ok(Some(stored.clone()));
         }
-        let record = self.records.get(invoice_id).ok_or(InvoiceNotFound)?;
+        let Some(record) = self.records.get(invoice_id) else {
+            return Ok(None);
+        };
         let lines: Vec<InvoiceLine> = record.amounts.iter().map(|amount| InvoiceLine::of(Money::of(*amount))).collect();
-        Ok(Invoice::restore(&record.customer, lines, record.issued))
+        Ok(Some(Invoice::restore(&record.customer, lines, record.issued)))
     }
 
-    fn store(&self, invoice_id: &str, invoice: Invoice) {
-        self.stored.borrow_mut().insert(invoice_id.to_string(), invoice);
+    fn store(&mut self, invoice_id: &str, invoice: Invoice) -> Result<(), RepositoryError> {
+        self.stored.insert(invoice_id.to_string(), invoice);
+        Ok(())
     }
 }
 `;

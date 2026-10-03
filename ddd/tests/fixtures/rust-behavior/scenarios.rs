@@ -14,7 +14,7 @@ use billing_domain::invoice::line::InvoiceLine;
 use billing_domain::invoice::{AddInvoiceLineError, Invoice, IssueInvoiceError, OpenInvoiceError};
 use billing_domain::money::Money;
 use billing_interface_adapter::in_memory_invoice_repository::{InMemoryInvoiceRepository, InvoiceRecord};
-use billing_use_case::invoice_repository::InvoiceRepository;
+use billing_use_case::invoice_repository::{InvoiceRepository, RepositoryError};
 use billing_use_case::issue_invoice::{IssueInvoiceUseCase, IssueInvoiceFailure};
 
 const CUSTOMER: &str = "acme";
@@ -66,6 +66,15 @@ fn records() -> HashMap<String, InvoiceRecord> {
     ])
 }
 
+/// The invoice a repository found; the port answers a missing one with `None`, not a failure.
+fn found(result: Result<Option<Invoice>, RepositoryError>) -> Invoice {
+    match result {
+        Ok(Some(invoice)) => invoice,
+        Ok(None) => panic!("expected a stored invoice, found none"),
+        Err(error) => panic!("expected a load, got the repository error {:?}", error),
+    }
+}
+
 fn expect_rejected(result: Result<(), IssueInvoiceFailure>, expected: IssueInvoiceError) {
     match error_of(result) {
         IssueInvoiceFailure::Rejected(error) => assert_eq!(error, expected),
@@ -93,8 +102,8 @@ fn state_change() {
     assert_eq!(error_of(invoice.issue()), IssueInvoiceError::AlreadyIssued);
     assert_eq!(invoice.total(), Money::of(150));
 
-    let repository = InMemoryInvoiceRepository::new(records());
-    value(IssueInvoiceUseCase::new(&repository).execute(DRAFT));
+    let mut repository = InMemoryInvoiceRepository::new(records());
+    value(IssueInvoiceUseCase::new(&mut repository).execute(DRAFT));
 }
 
 /// scenarios.ts "business-error-keeps-state".
@@ -111,13 +120,13 @@ fn business_error_keeps_state() {
     value(empty.add_line(line(10)));
     value(empty.issue());
 
-    let repository = InMemoryInvoiceRepository::new(records());
-    expect_rejected(IssueInvoiceUseCase::new(&repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
-    expect_rejected(IssueInvoiceUseCase::new(&repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
-    let mut issued = value(repository.find_by_id(ISSUED));
+    let mut repository = InMemoryInvoiceRepository::new(records());
+    expect_rejected(IssueInvoiceUseCase::new(&mut repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
+    expect_rejected(IssueInvoiceUseCase::new(&mut repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
+    let mut issued = found(repository.find_by_id(ISSUED));
     assert_eq!(issued.total(), Money::of(5));
     assert_eq!(error_of(issued.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
-    let mut still_empty = value(repository.find_by_id(EMPTY_DRAFT));
+    let mut still_empty = found(repository.find_by_id(EMPTY_DRAFT));
     assert_eq!(still_empty.lines().len(), 0);
     value(still_empty.add_line(line(1)));
 }
@@ -136,23 +145,23 @@ fn invalid_value_rejected() {
 #[test]
 fn restore_after_persistence() {
     let repository = InMemoryInvoiceRepository::new(records());
-    let draft = value(repository.find_by_id(DRAFT));
+    let draft = found(repository.find_by_id(DRAFT));
     assert_eq!(draft.total(), Money::of(120));
     assert_eq!(draft.lines().len(), 2);
     assert!(draft.is_billed_to(CUSTOMER));
     assert!(!draft.is_billed_to("another-customer"));
-    assert_eq!(error_of(value(repository.find_by_id(ISSUED)).issue()), IssueInvoiceError::AlreadyIssued);
+    assert_eq!(error_of(found(repository.find_by_id(ISSUED)).issue()), IssueInvoiceError::AlreadyIssued);
 
-    let persisted = InMemoryInvoiceRepository::new(records());
-    let issue_invoice = IssueInvoiceUseCase::new(&persisted);
-    value(issue_invoice.execute(DRAFT));
+    let mut persisted = InMemoryInvoiceRepository::new(records());
+    value(IssueInvoiceUseCase::new(&mut persisted).execute(DRAFT));
     // The stored invoice, not the draft record it was read from, is what the next read returns.
-    let mut stored = value(persisted.find_by_id(DRAFT));
+    let mut stored = found(persisted.find_by_id(DRAFT));
     assert_eq!(stored.total(), Money::of(120));
     assert!(stored.is_billed_to(CUSTOMER));
     assert_eq!(error_of(stored.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
-    expect_rejected(issue_invoice.execute(DRAFT), IssueInvoiceError::AlreadyIssued);
+    expect_rejected(IssueInvoiceUseCase::new(&mut persisted).execute(DRAFT), IssueInvoiceError::AlreadyIssued);
 
-    assert!(repository.find_by_id(UNKNOWN).is_err());
-    expect_not_found(issue_invoice.execute(UNKNOWN));
+    // A missing invoice is no failure of the port; the use case turns it into its own error.
+    assert!(matches!(repository.find_by_id(UNKNOWN), Ok(None)));
+    expect_not_found(IssueInvoiceUseCase::new(&mut persisted).execute(UNKNOWN));
 }

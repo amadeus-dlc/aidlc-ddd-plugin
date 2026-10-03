@@ -54,8 +54,8 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
 }
 
 /** This protocol, and the one it replaced: an installation left on the latter must be refused. */
-const PROTOCOL_VERSION = 7;
-const REPLACED_PROTOCOL_VERSION = 6;
+const PROTOCOL_VERSION = 9;
+const REPLACED_PROTOCOL_VERSION = 8;
 
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
 function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTOCOL_VERSION): string {
@@ -100,7 +100,17 @@ test(
     // A tuple element is reached by position, so the type declares no field a rule resolves through.
     // The line is what a finding against the declaration sends a reader to.
     expect(declared.types).toEqual([{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [], line: 1 }]);
-    expect(declared.traits).toEqual([{ name: "Shown", module: [], methods: ["shown"], line: 2 }]);
+    // A trait method reports its receiver and what it returns, so a rule can read a port's contract.
+    expect(declared.traits).toEqual([
+      {
+        name: "Shown",
+        module: [],
+        methods: ["shown"],
+        signatures: [{ name: "shown", receiver: "ref-self", return_type_text: "u64", line: 2 }],
+        supertraits: [],
+        line: 2,
+      },
+    ]);
     // A function outside an impl block carries the same parameter decision an impl method carries,
     // so rule (h) reads both from this one answer rather than from a second parse.
     expect(declared.functions).toEqual([

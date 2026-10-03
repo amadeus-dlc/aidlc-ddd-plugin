@@ -9,10 +9,17 @@
  */
 
 import type { FindingInput } from "../../shared/findings.ts";
-import type { ParamFact, TypeScriptFileFacts } from "../../typescript/domain-facts/index.ts";
+import type { MemberFact, ParamFact, TypeScriptFileFacts } from "../../typescript/domain-facts/index.ts";
 import { aggregateBinding } from "./aggregate-binding.ts";
 import { enclosingClass, factsOf, receiverType } from "./file-facts.ts";
-import { isNamedType, passedType, resolveDeclaredType, resolveTypeName, typeNamesIn } from "./symbols.ts";
+import {
+  isNamedType,
+  isPortDeclaration,
+  passedType,
+  resolveDeclaredType,
+  resolveTypeName,
+  typeNamesIn,
+} from "./symbols.ts";
 import type { TsDomainType, TsInspection, TsTarget } from "./types.ts";
 
 // --- (h) execute aggregate argument --------------------------------------------------------------
@@ -127,6 +134,88 @@ export function ruleUseCaseName(inspection: TsInspection, target: TsTarget): Fin
       message: `use case ${declaration.name} is not named <Verb><Object>UseCase; name it ${declaration.name}UseCase`,
       line: declaration.span.start_line,
     }));
+}
+
+// --- (repository-result) a repository port reports its failures --------------------------------
+
+/** The return type a callable member of a port states: a method signature's, or an arrow-typed property's. */
+function statedReturn(member: MemberFact): string | undefined | null {
+  if (member.kind === "method") return member.return_type_text;
+  if (member.kind !== "property" || member.type_text === undefined) return null;
+  let depth = 0;
+  const text = unparenthesized(member.type_text);
+  for (let index = 0; index < text.length - 1; index += 1) {
+    const char = text[index];
+    if (char === "(" || char === "<" || char === "{" || char === "[") depth += 1;
+    else if (char === ")" || char === "}" || char === "]" || (char === ">" && text[index - 1] !== "=")) depth -= 1;
+    else if (depth === 0 && char === "=" && text[index + 1] === ">") return text.slice(index + 2).trim();
+  }
+  return null;
+}
+
+/** `text` less the parentheses that enclose it as a whole: `(Result<…>)` states `Result<…>`. */
+function unparenthesized(text: string): string {
+  let current = text.trim();
+  while (current.startsWith("(") && current.endsWith(")")) {
+    let depth = 0;
+    for (let index = 0; index < current.length - 1; index += 1) {
+      if (current[index] === "(") depth += 1;
+      else if (current[index] === ")") depth -= 1;
+      if (depth === 0) return current;
+    }
+    current = current.slice(1, -1).trim();
+  }
+  return current;
+}
+
+/** The members of the union `text` states outside any bracket, or `text` alone. */
+function unionMembers(text: string): string[] {
+  const members: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === "(" || char === "<" || char === "{" || char === "[") depth += 1;
+    else if (char === ")" || char === "}" || char === "]" || (char === ">" && text[index - 1] !== "=")) depth -= 1;
+    else if (depth === 0 && char === "|") {
+      members.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  members.push(text.slice(start));
+  return members.map((member) => member.trim()).filter((member) => member.length > 0);
+}
+
+/**
+ * Whether a stated return type is `Result<…>`, or a union of nothing else. A member such as
+ * `undefined` beside it is a way to return without reporting the failure.
+ */
+function statesResult(returned: string): boolean {
+  const members = unionMembers(unparenthesized(returned));
+  return members.length > 0 && members.every((member) => /^(?:[\w$]+\.)*Result\s*</.test(unparenthesized(member)));
+}
+
+/**
+ * Every method of a repository port — an interface, or a type literal alias, named `…Repository` —
+ * returns `Result<…>`. Loading and storing reach outside the process and can fail, and a port whose
+ * `store` returns `void` leaves the use case no way to see that the state it changed was never kept.
+ */
+export function ruleRepositoryResult(inspection: TsInspection, target: TsTarget): FindingInput[] {
+  return factsOf(inspection, target.file).declarations.flatMap((declaration) => {
+    if (!isPortDeclaration(declaration) || !declaration.name.endsWith("Repository")) return [];
+    return declaration.members.flatMap((member): FindingInput[] => {
+      const returned = statedReturn(member);
+      if (returned === null || (returned !== undefined && statesResult(returned))) return [];
+      return [
+        {
+          rule_id: "repository-result",
+          file: target.file,
+          message: `repository port method ${declaration.name}.${member.name} returns ${returned ?? "nothing it states"}; return Result<…, RepositoryError> so the use case sees a failed load or store`,
+          line: member.span.start_line,
+        },
+      ];
+    });
+  });
 }
 
 // --- (i) use case chaining -----------------------------------------------------------------------

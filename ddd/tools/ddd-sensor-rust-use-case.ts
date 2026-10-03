@@ -22,7 +22,7 @@ process.exit(
           includes_query_side: false,
           domain_facts: extractor,
         },
-        ["g", "h", "i", "d", "use-case-name"],
+        ["g", "h", "i", "d", "use-case-name", "repository-result", "repository-mut-self"],
         api,
       ),
   }),

@@ -129,6 +129,9 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
         ambient: hasModifier(node, api.SyntaxKind.DeclareKeyword),
         abstract: hasModifier(node, api.SyntaxKind.AbstractKeyword),
         ...(typed && node.type ? { type_text: node.type.getText(file) } : {}),
+        ...((api.isMethodDeclaration(node) || api.isMethodSignature(node)) && node.type
+          ? { return_type_text: node.type.getText(file) }
+          : {}),
         ...(signature ? { params: paramsOf(node.parameters) } : {}),
         ...(body ? { writes: body.writes, returns_state_only: body.returns_state_only } : {}),
         span: spanOf(node),

@@ -6,7 +6,8 @@ const domain = `pub struct Invoice { id: i64 }
 impl Invoice { pub fn id(&self) -> i64 { self.id } }
 `;
 /** The repository port, declared in the use-case crate: ports belong to the use-case layer. */
-const port = "pub trait InvoiceRepository { fn remove(&self, id: i64); fn by_ref(&self, id: &i64); }";
+const port =
+  "pub trait InvoiceRepository { fn remove(&self, id: i64) -> Result<(), RepositoryError>; fn by_ref(&self, id: &i64) -> Result<(), RepositoryError>; }";
 
 export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
   const source = base.find((entry) => entry.name === "violation-h");
@@ -89,7 +90,7 @@ export function getterArgumentCases(base: readonly GoldenCase[]): GoldenCase[] {
     make(
       "use-case-port",
       `use billing_domain::Invoice;
-      pub trait InvoiceRepository { fn remove(&self, id: i64); }
+      pub trait InvoiceRepository { fn remove(&self, id: i64) -> Result<(), RepositoryError>; }
       pub fn run(invoice: &Invoice, repo: &dyn InvoiceRepository) { repo.remove(invoice.id()); }`,
       true,
     ),

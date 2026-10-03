@@ -44,7 +44,7 @@ the section of each language the change generates.
 - **Use-case layer.** Declare the ports here, and name a field or parameter that
   holds one after the port (`invoice_repository`, `#invoiceRepository`). Name the
   type whose method is `execute` `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). `execute`
-  takes IDs and value objects, never an aggregate; a use case never calls another use case. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations.
+  takes IDs and value objects, never an aggregate; a use case never calls another use case. Every method of a repository port returns `Result` and reports a failed load or store as `RepositoryError`, declared beside the port; the lookup returns a missing aggregate as absent, and the use case turns that into its own error (`InvoiceNotFound`) and returns a failed store instead of dropping it. Do not use domain getters for business decisions. Getter results may be forwarded unchanged to repository port arguments, directly or through immutable locals whose every use is such a forwarding. Compare or calculate in domain operations.
 - **Interface Adapter layer.** The command side and query side do not depend on
   each other; the query side never references a domain type or repository port;
   repositories are named `<Aggregate>Repository`; adapters restore aggregates
@@ -59,7 +59,7 @@ layout of each affected domain package.
 - **Rust module layout.** Read `ddd-rust-module-layout.md` shared knowledge and the project-root `.ddd.toml`. Establish one explicit layout before generating Rust. Follow it across all packages; do not infer it from edition or introduce `mod.rs` when `file` is selected.
 - **Domain package names.** Only the declarations placed in Rust reach the Rust code checks. Inline modules and path-attribute layouts are included.
 - **Domain layer.** Match Rust replay to `replay_methods` in the aggregate mapping, where each entry states the event it applies under `event_ref` and the method that applies it under `code.method`: event-sourcing mode, the aggregate's package and module path, the target event ID, and a single event parameter type must agree. Names such as `apply` alone do not exempt mutation methods.
-- **Use-case layer.** See the getter argument contract in `ddd-rust-domain-conventions.md`.
+- **Use-case layer.** See the getter argument contract in `ddd-rust-domain-conventions.md`. A repository port method that changes what is stored (`store`, `delete_by_id`) takes `&mut self`, the lookup keeps `&self`, and the use case holds the port as `&'a mut R` with `execute(&mut self, …)`; only a port shared across threads that needs a lock declares `Send + Sync` and takes `&self`.
 
 Rust checks match type declarations, explicit parameter/variable/field types, and module-level use statements and aliases. Do not report ambiguous bindings or expressions requiring type inference as confirmed violations. Inspect the `note` in each directly executed Rust sensor JSON result and record `syntax.unresolved` / `model.unresolved` coverage gaps in code-summary for review. The standard dispatcher may omit notes on success, so passing a gate does not prove that every location was checked.
 
@@ -90,7 +90,7 @@ Type check the generated TypeScript and run its tests; the TypeScript gates deci
 
 The three layer-specific Rust sensors fire on `code-summary.md`: `ddd-rust-domain`
 (rules a, b, c, d, port-placement, g plus the layer diagnostics), `ddd-rust-use-case`
-(rules g, h, i, d, use-case-name) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
+(rules g, h, i, d, use-case-name, repository-result, repository-mut-self) and `ddd-rust-interface-adapter` (rules k, l, m, n, g, and
 every query-side file). Fix the code as the finding names the rule; a repeated
 failure means the plan did not carry the conventions above.
 
@@ -108,7 +108,7 @@ package, since a type declared in any of them can be constructed, called or repl
 one; a syntax error or a construct the extraction leaves unresolved stops the gate there too,
 claimed or not.
 
-`ddd-typescript-use-case` (rules g, h, i, d, use-case-name) and `ddd-typescript-interface-adapter` (rules k, l, m,
+`ddd-typescript-use-case` (rules g, h, i, d, use-case-name, repository-result) and `ddd-typescript-interface-adapter` (rules k, l, m,
 n, g, over the interface-adapter and rmu layers and every query-side package) fire on the same
 `code-summary.md` for claimed `.ts` / `.tsx` sources of those layers, with the rule ids and finding
 meanings of `ddd-rust-use-case` and `ddd-rust-interface-adapter`. State the type of every `execute`

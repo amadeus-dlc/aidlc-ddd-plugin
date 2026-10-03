@@ -21,7 +21,7 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # 1プラットフォーム�
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | 操作エラー集合の照合 |
 | `state-exposure/1` | `--state-exposure-version` | 2 | 状態公開の検査 |
-| `domain-facts/1` | `--domain-facts-version` | 7 | `ddd-rust-domain`・`ddd-rust-use-case`・`ddd-rust-interface-adapter` が報告するすべての規則、およびそれらとモジュール走査が用いるプログラム解決・モジュール解決 |
+| `domain-facts/1` | `--domain-facts-version` | 9 | `ddd-rust-domain`・`ddd-rust-use-case`・`ddd-rust-interface-adapter` が報告するすべての規則、およびそれらとモジュール走査が用いるプログラム解決・モジュール解決 |
 
 呼び出し側は `extractRust` に明示的な command を渡せます。これは制御された検証シナリオで観測する対象プロセスを指すため、渡されたまま起動し、設置済み抽出器の解決も検証も行いません。
 

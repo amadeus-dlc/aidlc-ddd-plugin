@@ -21,7 +21,7 @@ tools/ddd/bin/<platform-key>/ddd-rust-syn-spike    # the build for one platform
 |---|---|---|---|
 | `error-contract/1` | `--error-contract-version` | 3 | the operation error-set comparison |
 | `state-exposure/1` | `--state-exposure-version` | 2 | the state-exposure inspection |
-| `domain-facts/1` | `--domain-facts-version` | 7 | every rule `ddd-rust-domain`, `ddd-rust-use-case` and `ddd-rust-interface-adapter` report, and the program and module resolution they and the module walk are built on |
+| `domain-facts/1` | `--domain-facts-version` | 9 | every rule `ddd-rust-domain`, `ddd-rust-use-case` and `ddd-rust-interface-adapter` report, and the program and module resolution they and the module walk are built on |
 
 A caller may still pass an explicit command to `extractRust`. That names a process to observe for a controlled verification scenario, so it is launched as given and the installed extractor is neither resolved nor verified.
 

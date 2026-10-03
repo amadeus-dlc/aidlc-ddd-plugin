@@ -1,6 +1,6 @@
 # Use-case conventions
 
-Updated: 2026-10-01. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -22,6 +22,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.use-case-conventions.10 | Distinguish CQS from a contract returning update results, new state, or events. | Design convention. |
 | K.use-case-conventions.11 | Name a field or parameter that holds a port after the port (`invoice_repository`, `#invoiceRepository` for `InvoiceRepository`), not after a plural of the aggregate such as `invoices`. | Review. |
 | K.use-case-conventions.12 | Name the type whose method is `execute` `<Verb><Object>UseCase` (`IssueInvoiceUseCase`); a use case written as a bare function has no type to name. | use-case-name |
+| K.use-case-conventions.13 | Turn an aggregate the repository did not find into the use case's own error (`InvoiceNotFound`), and return a failed load or store as an error of the use case instead of dropping the port's `Result`; return no event after a failed store. | Review and behavior tests. |
 
 ## Rationale
 
