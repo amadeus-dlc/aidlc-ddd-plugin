@@ -23,7 +23,7 @@ export function rulePrimaryConstructor(target: InspectionTarget, context: Inspec
   const source = context.program.files.get(target.file);
   if (!source) return []; // Unowned claims are diagnosed by the layer and packaging gates.
   for (const type of context.program.types.filter(
-    (entry) => entry.layer === "domain" && entry.kind === "struct" && entry.field_count > 0,
+    (entry) => entry.layer === "domain" && !entry.auxiliary && entry.kind === "struct" && entry.field_count > 0,
   )) {
     const primaries = primaryConstructor(type, context);
     const report = (message: string, file = type.file, line?: number) => {

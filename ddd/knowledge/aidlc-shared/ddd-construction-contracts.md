@@ -42,7 +42,7 @@ An in-memory Event Sourcing repository retains `HashMap<Id, Vec<Event>>` or `Map
 
 ## Automated coverage
 
-Both domain gates report `primitive-initialization`, `factory-naming` and `primary-constructor`. Both use-case gates report `repository-result-contract`. Both adapter gates report `event-sourcing-storage` and `in-memory-restoration`, using the declared persistence mode and backend. The native Rust domain-facts protocol is 11.
+Both domain gates report `primitive-initialization`, `factory-naming` and `primary-constructor`. Both use-case gates report `repository-result-contract`. Both adapter gates report `event-sourcing-storage` and `in-memory-restoration`, using the declared persistence mode and backend. The native Rust domain-facts protocol is 12.
 
 The gates check stated signatures, call paths and supported initialization guards. Review and behavior tests still establish the meaning and completeness of invariants, replay validity, conversion semantics, caching and generation algorithms. An opaque construction path does not become an approved one.
 

@@ -9,7 +9,9 @@ export function rulePrimitiveInitialization(target: InspectionTarget, context: I
   if (!target.file || context.rustMapping.kind !== "loaded") return [];
   const targetFile = target.file;
   const findings: FindingInput[] = [];
-  for (const type of context.program.types.filter((entry) => entry.file === targetFile && entry.kind !== "trait")) {
+  for (const type of context.program.types.filter(
+    (entry) => entry.file === targetFile && !entry.auxiliary && entry.kind !== "trait",
+  )) {
     const operations = context.rustMapping.view.aggregates
       .filter((entry) => entry.crate.replace(/-/g, "_") === type.crate)
       .flatMap((entry) => entry.operations)

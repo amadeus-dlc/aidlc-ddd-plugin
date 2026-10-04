@@ -92,3 +92,15 @@ test("TypeScript constructor overload signatures keep one primary implementation
   const result = runGoldenCase(join(import.meta.dir, "../tools"), entry);
   expect(result.problems, JSON.stringify(result.verdict)).toEqual([]);
 });
+
+test("Rust excludes cfg(test) helper structs from construction rules", () => {
+  const base = CONSTRUCTION_CASES.find((entry) => entry.name === "clean-construction-rust-clean");
+  if (!base?.workspace) throw new Error("missing Rust fixture");
+  const entry = structuredClone(base);
+  const file = Object.keys(base.workspace).find((path) => path.endsWith("/src/invoice.rs"));
+  if (!file || !entry.workspace) throw new Error("missing Invoice fixture");
+  entry.workspace[file] +=
+    "\n#[cfg(test)] struct Fixture { value: i64 }\n#[cfg(test)] mod tests { struct Helper { value: i64 } }\n";
+  const result = runGoldenCase(join(import.meta.dir, "../tools"), entry);
+  expect(result.problems, JSON.stringify(result.verdict)).toEqual([]);
+});
