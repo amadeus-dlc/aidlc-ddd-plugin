@@ -9,6 +9,9 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: primitive-initialization, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: factory-naming, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: primary-constructor, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
   - { rule_id: domain-packaging.declaration, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
   - { rule_id: domain-packaging.technical-name, requirement: T-07, inputs: [modules, cargo-targets], outcome: finding }
   - { rule_id: domain-packaging.coverage, requirement: T-07, inputs: [modules, ddd-aggregate-mapping], outcome: finding }
@@ -40,3 +43,5 @@ the state file, and reachable modules of affected domain crates. Reports rules (
 a repository port declared in a domain crate (port-placement; ports belong to the
 use-case layer), the dependency safety net (g), and the U2 layer diagnostics (this manifest is
 the single reporter for them).
+
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `primitive-initialization`, `factory-naming`, `primary-constructor`.

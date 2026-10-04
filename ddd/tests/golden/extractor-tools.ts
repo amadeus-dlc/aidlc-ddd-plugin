@@ -17,7 +17,7 @@ const PRODUCT_BIN_DIR = join(PRODUCT_TOOLS_DIR, "ddd", "bin");
 const HOST_KEY = `${process.platform}-${process.arch}`;
 const EXTRACTOR_NAME = "ddd-rust-syn-spike";
 /** The protocol the Rust decision base is read over, fixed by the inspection contract. */
-const DOMAIN_FACTS_VERSION = 9;
+const DOMAIN_FACTS_VERSION = 11;
 /** The unresolved reason the extractor records for an attribute that may replace what it annotates. */
 const ATTRIBUTE_MACRO_REASON = "attribute-macro";
 

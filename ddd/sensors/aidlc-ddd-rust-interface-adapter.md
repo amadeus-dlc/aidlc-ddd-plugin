@@ -9,6 +9,8 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: event-sourcing-storage, requirement: DEC-2026-10-04, inputs: [fields, calls, ddd-layer-structure, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: in-memory-restoration, requirement: DEC-2026-10-04, inputs: [fields, calls, ddd-layer-structure, ddd-aggregate-mapping], outcome: finding }
   - { rule_id: k, requirement: FR7.8, inputs: [uses, cargo-dependencies, layer-assignment], outcome: finding }
   - { rule_id: l, requirement: FR7.9, inputs: [uses, structs, impls, domain-symbols], outcome: finding }
   - { rule_id: m, requirement: FR7.10, inputs: [structs], outcome: finding }
@@ -29,3 +31,5 @@ plus every file whose CQRS side is query (whatever its effective layer):
 cross-side references (k), query-side domain / repository references (l),
 repository naming (m), restoration bypass (n), and the dependency safety net
 (g).
+
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `event-sourcing-storage`, `in-memory-restoration`.

@@ -54,8 +54,8 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
 }
 
 /** This protocol, and the one it replaced: an installation left on the latter must be refused. */
-const PROTOCOL_VERSION = 9;
-const REPLACED_PROTOCOL_VERSION = 8;
+const PROTOCOL_VERSION = 11;
+const REPLACED_PROTOCOL_VERSION = 9;
 
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
 function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTOCOL_VERSION): string {
@@ -81,7 +81,16 @@ function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTO
 }
 
 const SPAN = { start_line: 1, start_col: 1, end_line: 1, end_col: 2 };
-const METHOD = { name: "total", receiver: "ref-self", params: [], return_type_text: null, line: 4 };
+const METHOD = {
+  name: "total",
+  receiver: "ref-self",
+  params: [],
+  return_type_text: null,
+  line: 4,
+  visibility: "private",
+  span: SPAN,
+  initialization: { creations: [], delegations: [] },
+};
 const FUNCTION = { module: [], name: "restore", params: [{ name: "raw", type_text: "u64" }], line: 5 };
 
 test(
@@ -99,7 +108,9 @@ test(
     expect(declared.publicMembers).toEqual([{ typeName: "Invoice", name: "0", line: 1 }]);
     // A tuple element is reached by position, so the type declares no field a rule resolves through.
     // The line is what a finding against the declaration sends a reader to.
-    expect(declared.types).toEqual([{ name: "Invoice", kind: "struct", module: [], fields: [], derives: [], line: 1 }]);
+    expect(declared.types).toEqual([
+      { name: "Invoice", kind: "struct", module: [], fields: [], field_count: 1, derives: [], line: 1 },
+    ]);
     // A trait method reports its receiver and what it returns, so a rule can read a port's contract.
     expect(declared.traits).toEqual([
       {
@@ -277,10 +288,15 @@ const REFUSED: [string, string][] = [
     "a member carries a line that is not a whole number",
     record({ members: [{ type: "Invoice", member: "0", line: 1.5 }] }),
   ],
-  ["a type carries no kind", record({ types: [{ name: "Invoice", module: [], fields: [], derives: [], line: 1 }] })],
+  [
+    "a type carries no kind",
+    record({ types: [{ name: "Invoice", module: [], fields: [], field_count: 1, derives: [], line: 1 }] }),
+  ],
   [
     "a type carries a kind this protocol does not name",
-    record({ types: [{ name: "Invoice", kind: "union", module: [], fields: [], derives: [], line: 1 }] }),
+    record({
+      types: [{ name: "Invoice", kind: "union", module: [], fields: [], field_count: 1, derives: [], line: 1 }],
+    }),
   ],
   // A declaration a rule reports on is reported at a line, so a declaration without one cannot be
   // handed to a reader and cannot be told apart from another declaration of the same name.

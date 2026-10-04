@@ -148,7 +148,7 @@ const EXECUTE_SCENES: readonly Scene[] = [
   [
     "clean-repository-result",
     source(
-      "export interface PaymentRepository {\n  findById(paymentId: string): Result<string | undefined, RepositoryError>;\n  store(paymentId: string): Result<void, RepositoryError>;\n  remove(paymentId: string): (Result<void, RepositoryError>);\n  count(): Result<number, RepositoryError> | Result<0, RepositoryError>;\n}\n",
+      "export interface PaymentRepository {\n  findById(paymentId: string): Result<Payment | undefined, RepositoryError>;\n  store(paymentId: string): Result<void, RepositoryError>;\n  remove(paymentId: string): (Result<void, RepositoryError>);\n  count(): Result<number, RepositoryError> | Result<0, RepositoryError>;\n}\n",
     ),
     [],
     pass,

@@ -195,7 +195,11 @@ describe("the findings name the member, the method and the line", () => {
     [
       "a class method that only pushes onto a field stated as an array",
       edit(
-        edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  #lines: string[] = [];"),
+        edit(
+          edit(CLASS_CLEAN, "#issued = false;", "#issued = false;\n  #lines: string[] = [];"),
+          "this.#amount = amount;",
+          "this.#amount = amount;\n    this.#lines = [];",
+        ),
         "total(): number {",
         "addLine(line: string): void {\n    this.#lines.push(line);\n  }\n\n  total(): number {",
       ),
@@ -238,7 +242,9 @@ describe("the findings name the member, the method and the line", () => {
 
   test("a post-init method is an incomplete construction, not an undeclared command", () => {
     const verdict = verdictOf(caseNamed("violation-c-post-init"));
-    expect(verdict.findings.map((entry) => entry.rule_id)).toEqual(["c"]);
+    expect(
+      verdict.findings.filter((entry) => entry.rule_id !== "primary-constructor").map((entry) => entry.rule_id),
+    ).toEqual(["c"]);
     expect(verdict.findings[0].message).toContain("reset");
   });
 
@@ -302,8 +308,14 @@ describe("each scene means what the Rust domain gate's same scene means", () => 
         if (!rust) throw new Error(`${rustName} has no verdict`);
         const typescript = verdictOf(caseNamed(name));
         expect(typescript.pass).toBe(rust.pass);
-        const rules = (verdict: SensorVerdict) => [...new Set(verdict.findings.map((entry) => entry.rule_id))].sort();
+        const rules = (verdict: SensorVerdict) =>
+          [
+            ...new Set(
+              verdict.findings.filter((entry) => entry.rule_id !== "primary-constructor").map((entry) => entry.rule_id),
+            ),
+          ].sort();
         expect(rules(typescript)).toEqual(rules(rust));
+        // Primary-constructor raw initialization differs by representation and has its own contract cases.
         // Rules a, b and d name a type and a member; both gates name the same ones in the same words.
         for (const rule of ["a", "b", "d"]) {
           const messages = (verdict: SensorVerdict) =>

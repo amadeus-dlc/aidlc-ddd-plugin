@@ -51,6 +51,8 @@ export interface MemberFact {
   readonly computed_key?: string;
   /** The type the member states: a property's annotation, a parameter property's parameter type. */
   readonly type_text?: string;
+  /** Explicit type arguments of a property's new expression, without type inference. */
+  readonly initializer_type_text?: string;
   /** The parameters of a method, a method signature or a constructor. */
   readonly params?: readonly ParamFact[];
   /** The return type a method or a method signature states. */
@@ -63,7 +65,19 @@ export interface MemberFact {
    * enclosing function declares, not one at the top of the file. Present on members with a body only.
    */
   readonly returns_state_only?: boolean;
+  readonly initialization?: InitializationFact;
+  /** The sole field to which a constructor assigns its unchanged single parameter. */
+  readonly input_field?: string;
+  /** Constructor implementation and its explicit direct assignments; absent assignments are opaque. */
+  readonly has_body?: boolean;
+  readonly constructor_fields?: readonly string[];
   readonly span: Span;
+}
+
+export interface InitializationFact {
+  readonly creations: readonly { readonly type_text: string; readonly guarded: boolean; readonly span: Span }[];
+  /** The receiver whose parse result is checked, thrown on failure and returned unchanged on success. */
+  readonly parse_delegate?: string;
 }
 
 /** A type a class names after `extends` or `implements`, as the source spells it. */
@@ -103,6 +117,7 @@ export interface DeclarationFact {
   readonly type_literal?: boolean;
   /** The type a variable states; present on variables that state one. */
   readonly type_text?: string;
+  readonly generic?: boolean;
   /** How a variable is initialized; present on variables that have an initializer. */
   readonly initializer?: InitializerFact;
   /** The parameters of a function declaration; present on function declarations only. */

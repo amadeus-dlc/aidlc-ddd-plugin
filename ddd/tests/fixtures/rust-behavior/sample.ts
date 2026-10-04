@@ -55,25 +55,29 @@ const DOMAIN_LIB = `pub mod invoice;
 pub mod money;
 `;
 
-const MONEY = `#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Money(i64);
+const MONEY = `#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Money(f64);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParseMoneyError { NonFiniteAmount }
 
 impl Money {
-    pub fn of(value: i64) -> Self {
-        Money(value)
+    fn new(value: f64) -> Self { Self(value) }
+
+    pub fn of(value: f64) -> Self {
+        Self::parse(value).expect("Money requires a finite amount")
     }
 
-    pub fn zero() -> Self {
-        Money(0)
+    pub fn parse(value: f64) -> Result<Self, ParseMoneyError> {
+        if !value.is_finite() { return Err(ParseMoneyError::NonFiniteAmount); }
+        Ok(Self::new(value))
     }
 
-    pub fn add(self, other: Money) -> Money {
-        Money(self.0 + other.0)
-    }
+    pub fn zero() -> Self { Self::of(0.0) }
 
-    pub fn is_negative(self) -> bool {
-        self.0 < 0
-    }
+    pub fn add(self, other: Money) -> Money { Self::of(self.0 + other.0) }
+
+    pub fn is_negative(self) -> bool { self.0 < 0.0 }
 }
 `;
 
@@ -85,9 +89,9 @@ pub struct InvoiceLine {
 }
 
 impl InvoiceLine {
-    pub fn of(amount: Money) -> Self {
-        InvoiceLine { amount }
-    }
+    fn new(amount: Money) -> Self { Self { amount } }
+
+    pub fn of(amount: Money) -> Self { Self::new(amount) }
 
     pub fn add_to(&self, total: Money) -> Money {
         total.add(self.amount)
@@ -118,6 +122,23 @@ pub enum IssueInvoiceError {
     EmptyLines,
 }
 
+#[derive(Clone)]
+pub struct LineAdded { line: InvoiceLine }
+impl LineAdded {
+    fn new(line: InvoiceLine) -> Self { Self { line } }
+    pub fn create(line: InvoiceLine) -> Self { Self::new(line) }
+}
+
+#[derive(Clone, Copy)]
+pub struct Issued;
+
+#[derive(Clone)]
+pub enum InvoiceEvent {
+    Opened { customer: String, lines: Vec<InvoiceLine> },
+    LineAdded(LineAdded),
+    Issued(Issued),
+}
+
 /// The invoice total: the invariant forbids a negative one.
 fn sum_of(lines: &[InvoiceLine]) -> Money {
     lines.iter().fold(Money::zero(), |sum, line| line.add_to(sum))
@@ -131,6 +152,10 @@ pub struct Invoice {
 }
 
 impl Invoice {
+    fn new(customer: String, lines: Vec<InvoiceLine>, issued: bool) -> Self {
+        Self { customer, lines, issued }
+    }
+
     pub fn open(customer: &str, lines: Vec<InvoiceLine>) -> Result<Self, OpenInvoiceError> {
         if customer.is_empty() {
             return Err(OpenInvoiceError::MissingCustomer);
@@ -138,38 +163,55 @@ impl Invoice {
         if sum_of(&lines).is_negative() {
             return Err(OpenInvoiceError::NegativeTotal);
         }
-        Ok(Invoice { customer: customer.to_string(), lines, issued: false })
+        Ok(Self::new(customer.to_string(), lines, false))
     }
 
-    /// Rebuilds a persisted invoice. A state the invariants forbid is corrupt storage, not a business
-    /// error, so it panics rather than returning one.
-    pub fn restore(customer: &str, lines: Vec<InvoiceLine>, issued: bool) -> Self {
-        if customer.is_empty() || (issued && lines.is_empty()) || sum_of(&lines).is_negative() {
-            panic!("corrupt invoice state");
+    /// Replays persisted facts and rejects corrupt history.
+    pub fn restore(history: &[InvoiceEvent]) -> Self {
+        let Some(InvoiceEvent::Opened { customer, lines }) = history.first() else { panic!("corrupt invoice history"); };
+        let mut invoice = Self::open(customer, lines.clone()).expect("corrupt invoice history");
+        for event in history.iter().skip(1) {
+            match event {
+                InvoiceEvent::LineAdded(event) => invoice.apply_line_added(event.clone()),
+                InvoiceEvent::Issued(event) => invoice.apply_issued(*event),
+                InvoiceEvent::Opened { .. } => panic!("corrupt invoice history"),
+            }
         }
-        Invoice { customer: customer.to_string(), lines, issued }
+        invoice
     }
 
-    pub fn add_line(&mut self, line: InvoiceLine) -> Result<(), AddInvoiceLineError> {
+    pub fn add_line(&mut self, line: InvoiceLine) -> Result<LineAdded, AddInvoiceLineError> {
         if self.issued {
             return Err(AddInvoiceLineError::AlreadyIssued);
         }
         if line.add_to(sum_of(&self.lines)).is_negative() {
             return Err(AddInvoiceLineError::NegativeTotal);
         }
-        self.lines.push(line);
-        Ok(())
+        let event = LineAdded::create(line);
+        self.apply_line_added(event.clone());
+        Ok(event)
     }
 
-    pub fn issue(&mut self) -> Result<(), IssueInvoiceError> {
+    pub fn issue(&mut self) -> Result<Issued, IssueInvoiceError> {
         if self.issued {
             return Err(IssueInvoiceError::AlreadyIssued);
         }
         if self.lines.is_empty() {
             return Err(IssueInvoiceError::EmptyLines);
         }
+        let event = Issued;
+        self.apply_issued(event);
+        Ok(event)
+    }
+
+    pub fn apply_line_added(&mut self, event: LineAdded) {
+        if self.issued || event.line.add_to(sum_of(&self.lines)).is_negative() { panic!("corrupt invoice history"); }
+        self.lines.push(event.line);
+    }
+
+    pub fn apply_issued(&mut self, _event: Issued) {
+        if self.issued || self.lines.is_empty() { panic!("corrupt invoice history"); }
         self.issued = true;
-        Ok(())
     }
 
     pub fn is_billed_to(&self, customer: &str) -> bool {
@@ -190,7 +232,7 @@ const USE_CASE_LIB = `pub mod invoice_repository;
 pub mod issue_invoice;
 `;
 
-const INVOICE_REPOSITORY_PORT = `use billing_domain::invoice::Invoice;
+const INVOICE_REPOSITORY_PORT = `use billing_domain::invoice::{Invoice, InvoiceEvent};
 
 /// A load or a store that did not complete: a failure of the infrastructure, not a business error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -200,11 +242,11 @@ pub struct RepositoryError {
 
 pub trait InvoiceRepository {
     fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;
-    fn store(&mut self, invoice_id: &str, invoice: Invoice) -> Result<(), RepositoryError>;
+    fn store(&mut self, invoice_id: &str, event: InvoiceEvent) -> Result<(), RepositoryError>;
 }
 `;
 
-const ISSUE_INVOICE = `use billing_domain::invoice::IssueInvoiceError;
+const ISSUE_INVOICE = `use billing_domain::invoice::{IssueInvoiceError, InvoiceEvent};
 
 use crate::invoice_repository::{InvoiceRepository, RepositoryError};
 
@@ -231,8 +273,8 @@ impl<'a, R: InvoiceRepository> IssueInvoiceUseCase<'a, R> {
         let Some(mut invoice) = self.invoice_repository.find_by_id(invoice_id).map_err(IssueInvoiceFailure::Repository)? else {
             return Err(IssueInvoiceFailure::NotFound(InvoiceNotFound));
         };
-        invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
-        self.invoice_repository.store(invoice_id, invoice).map_err(IssueInvoiceFailure::Repository)?;
+        let event = invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
+        self.invoice_repository.store(invoice_id, InvoiceEvent::Issued(event)).map_err(IssueInvoiceFailure::Repository)?;
         Ok(())
     }
 }
@@ -242,44 +284,30 @@ const INTERFACE_ADAPTER_LIB = `pub mod in_memory_invoice_repository;
 `;
 
 const IN_MEMORY_INVOICE_REPOSITORY = `use std::collections::HashMap;
+use std::panic::catch_unwind;
 
-use billing_domain::invoice::line::InvoiceLine;
-use billing_domain::invoice::Invoice;
-use billing_domain::money::Money;
+use billing_domain::invoice::{Invoice, InvoiceEvent};
 use billing_use_case::invoice_repository::{InvoiceRepository, RepositoryError};
 
-pub struct InvoiceRecord {
-    pub customer: String,
-    pub amounts: Vec<i64>,
-    pub issued: bool,
-}
-
-/// The invoices stored here take precedence over the records they were first read from.
 pub struct InMemoryInvoiceRepository {
-    records: HashMap<String, InvoiceRecord>,
-    stored: HashMap<String, Invoice>,
+    events: HashMap<String, Vec<InvoiceEvent>>,
 }
 
 impl InMemoryInvoiceRepository {
-    pub fn new(records: HashMap<String, InvoiceRecord>) -> Self {
-        InMemoryInvoiceRepository { records, stored: HashMap::new() }
+    pub fn new(events: HashMap<String, Vec<InvoiceEvent>>) -> Self {
+        Self { events }
     }
 }
 
 impl InvoiceRepository for InMemoryInvoiceRepository {
     fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError> {
-        if let Some(stored) = self.stored.get(invoice_id) {
-            return Ok(Some(stored.clone()));
-        }
-        let Some(record) = self.records.get(invoice_id) else {
-            return Ok(None);
-        };
-        let lines: Vec<InvoiceLine> = record.amounts.iter().map(|amount| InvoiceLine::of(Money::of(*amount))).collect();
-        Ok(Some(Invoice::restore(&record.customer, lines, record.issued)))
+        let Some(events) = self.events.get(invoice_id) else { return Ok(None); };
+        catch_unwind(|| Invoice::restore(events)).map(Some)
+            .map_err(|_| RepositoryError { message: "corrupt invoice history".to_string() })
     }
 
-    fn store(&mut self, invoice_id: &str, invoice: Invoice) -> Result<(), RepositoryError> {
-        self.stored.insert(invoice_id.to_string(), invoice);
+    fn store(&mut self, invoice_id: &str, event: InvoiceEvent) -> Result<(), RepositoryError> {
+        self.events.entry(invoice_id.to_string()).or_default().push(event);
         Ok(())
     }
 }
@@ -315,10 +343,17 @@ const MAPPING = [
   "aggregate_mappings:",
   "  - aggregate_ref: aggregate.invoice",
   "    programming_model: class",
-  "    persistence_method: state-sourcing",
+  "    persistence_method: event-sourcing",
+  "    replay_methods:",
+  "      - { event_ref: event.invoice.line-added, code: { method: apply_line_added } }",
+  "      - { event_ref: event.invoice.issued, code: { method: apply_issued } }",
   "    reference_ids: [entity.invoice]",
   `    code: { language: rust, package: ${DOMAIN_CRATE}, module: [invoice], type: Invoice }`,
   "    operations:",
+  "      - operation_ref: factory.invoice.parse-money",
+  "        code: { method: parse, error_type: ParseMoneyError }",
+  "        errors:",
+  "          - { error_ref: error.invoice.parse-money.non-finite-amount, code: { case: NonFiniteAmount } }",
   "      - operation_ref: factory.invoice.open",
   "        code: { method: open, error_type: OpenInvoiceError }",
   "        errors:",

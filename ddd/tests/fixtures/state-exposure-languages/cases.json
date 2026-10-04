@@ -537,7 +537,7 @@
               "file": "model.ts",
               "line": 1,
               "byteStart": 0,
-              "byteEnd": 27
+              "byteEnd": 74
             }
           ],
           "members": {
@@ -553,7 +553,7 @@
                       "file": "model.ts",
                       "line": 1,
                       "byteStart": 14,
-                      "byteEnd": 25
+                      "byteEnd": 29
                     }
                   ]
                 }

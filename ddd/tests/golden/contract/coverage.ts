@@ -694,6 +694,25 @@ cover(
   "Test the layer permission table through imports and package.json-only dependencies; external I/O is allowed here.",
   "層の許可表をimportとpackage.jsonのみの依存で検証し、この層では外部I/Oを許可する。",
 );
+for (const language of ["rust", "typescript"] as const) {
+  const prefix = language === "rust" ? "construction-rust" : "construction-class";
+  for (const [layer, rule, normal, boundary] of [
+    ["domain", "primitive-initialization", "clean", "guard-bypass"],
+    ["domain", "factory-naming", "clean", "factory-copy"],
+    ["domain", "primary-constructor", "clean", "aux-cycle"],
+    ["use-case", "repository-result-contract", "repository-clean", "repository-envelope"],
+    ["interface-adapter", "event-sourcing-storage", "event-storage-clean", "event-storage-state"],
+    ["interface-adapter", "in-memory-restoration", "state-storage-clean", "state-storage-record"],
+  ])
+    cover(
+      `ddd-${language}-${layer}`,
+      [rule],
+      `clean-${prefix}-${normal}`,
+      `violation-${prefix}-${boundary}`,
+      "Proven construction and repository paths versus guard, delegation or persistence bypasses.",
+      "検証済みの生成・保存経路と、検証・委譲・永続化方式の迂回を区別する。",
+    );
+}
 export const COVERAGE = rows;
 
 export function violations(row: CoverageRow, cases: readonly GoldenCase[] = ALL_CASES): GoldenCase[] {

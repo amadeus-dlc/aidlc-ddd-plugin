@@ -9,6 +9,9 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: primitive-initialization, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: factory-naming, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
+  - { rule_id: primary-constructor, requirement: DEC-2026-10-04, inputs: [members, constructions, calls, ddd-domain-model-yaml, ddd-aggregate-mapping], outcome: finding }
   - { rule_id: domain-packaging.declaration, requirement: T-07, inputs: [ddd-aggregate-mapping], outcome: finding }
   - { rule_id: domain-packaging.technical-name, requirement: T-07, inputs: [modules, package-json], outcome: finding }
   - { rule_id: domain-packaging.coverage, requirement: T-07, inputs: [modules, ddd-aggregate-mapping], outcome: finding }
@@ -43,3 +46,5 @@ of the packages it is handed, with the rule ids and finding meanings of `ddd-rus
 
 A construct the facts or the rules cannot decide, and a compiler that cannot be launched, stop the
 gate as uninspectable (exit 127) instead of answering, so neither is ever approved.
+
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `primitive-initialization`, `factory-naming`, `primary-constructor`.

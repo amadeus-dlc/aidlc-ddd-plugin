@@ -2,7 +2,7 @@ import type { GoldenCase } from "../runner.ts";
 
 const DOMAIN = "packages/domain/billing-domain/src/lib.rs";
 const USE_CASE = "packages/use-case/billing-use-case/src/lib.rs";
-const domain = `pub struct Invoice { id: i64 }
+const domain = `pub struct Invoice { id: i64 } impl Invoice { fn new(id: i64) -> Self { Self { id } } }
 impl Invoice { pub fn id(&self) -> i64 { self.id } }
 `;
 /** The repository port, declared in the use-case crate: ports belong to the use-case layer. */

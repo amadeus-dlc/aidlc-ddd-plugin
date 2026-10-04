@@ -96,9 +96,18 @@ describe("typescript golden cases", () => {
       "h",
       "i",
       "repository-result",
+      "repository-result-contract",
       "use-case-name",
     ]);
-    expect([...(declared.get("ddd-typescript-interface-adapter") ?? [])].sort()).toEqual(["g", "k", "l", "m", "n"]);
+    expect([...(declared.get("ddd-typescript-interface-adapter") ?? [])].sort()).toEqual([
+      "event-sourcing-storage",
+      "g",
+      "in-memory-restoration",
+      "k",
+      "l",
+      "m",
+      "n",
+    ]);
     // The rule ids are the Rust domain gate's, less the Cargo-only mixed-targets diagnostic.
     expect([...(declared.get("ddd-typescript-domain") ?? [])].sort()).toEqual(
       [
@@ -107,6 +116,9 @@ describe("typescript golden cases", () => {
         "c",
         "d",
         "port-placement",
+        "primitive-initialization",
+        "factory-naming",
+        "primary-constructor",
         "g",
         "domain-packaging.declaration",
         "domain-packaging.technical-name",

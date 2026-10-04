@@ -11,7 +11,8 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
     return { ...structuredClone(source), workspace: structuredClone(source.workspace), name: nextName };
   };
   const value = clone("violation-h", "clean-h-value-object");
-  value.workspace[DOMAIN] = "pub struct Invoice;\npub struct Amount { value: i64 }\n";
+  value.workspace[DOMAIN] =
+    "pub struct Invoice;\npub struct Amount { value: i64 } impl Amount { fn new(value: i64) -> Self { Self { value } } }\n";
   value.workspace[USE_CASE] =
     "use billing_domain::Amount;\npub struct IssueInvoiceUseCase;\nimpl IssueInvoiceUseCase { pub fn execute(&self, amount: Amount) {} }\n";
   value.files[MODEL] = value.files[MODEL].replace(
@@ -25,7 +26,8 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
   port.expect = { pass: true, rules: [] };
   const split = clone("clean-domain", "violation-b-split-impl");
   const operations = "packages/domain/billing-domain/src/operations.rs";
-  split.workspace[DOMAIN] = "pub struct Invoice { amount: i64 }\nmod operations;\n";
+  split.workspace[DOMAIN] =
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\nmod operations;\n";
   split.workspace[operations] =
     "use super::Invoice;\nimpl Invoice { pub fn set_amount(&mut self, amount: i64) { self.amount = amount; } }\n";
   const manifest = "construction/u1/code-generation/source-manifest.json";
@@ -43,11 +45,11 @@ export function t2Cases(base: readonly GoldenCase[]): GoldenCase[] {
   command.expect = { pass: true, rules: [] };
   const arbitrary = clone("clean-domain", "violation-b-arbitrary-apply");
   arbitrary.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\nimpl Invoice { pub fn apply(&mut self, amount: i64) { self.amount = amount; } }\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\nimpl Invoice { pub fn apply(&mut self, amount: i64) { self.amount = amount; } }\n";
   arbitrary.expect = { pass: false, rules: ["b"], files: { b: DOMAIN } };
   const replay = clone("clean-domain", "clean-b-declared-replay");
   replay.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\npub struct Issued { amount: i64 }\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\npub struct Issued { amount: i64 } impl Issued { fn new(amount: i64) -> Self { Self { amount } } }\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n";
   replay.files["inception/domain-design/ddd-aggregate-mapping.md"] = `# 集約写像
 
 \`\`\`yaml
@@ -84,7 +86,7 @@ aggregate_mappings:
   local.expect = { pass: true, rules: [] };
   const getter = clone("violation-h", "clean-d-unrelated-getter-name");
   getter.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\nimpl Invoice { pub fn total(&self) -> i64 { self.amount } }\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\nimpl Invoice { pub fn total(&self) -> i64 { self.amount } }\n";
   getter.workspace[USE_CASE] =
     "pub struct Statistics;\nimpl Statistics { pub fn total(&self) -> i64 { 42 } }\npub fn render(stats: &Statistics) -> i64 { stats.total() }\n";
   getter.expect = { pass: true, rules: [] };
@@ -153,7 +155,7 @@ aggregate_mappings:
   cases.push(getterAlias);
   const getterSplit = clone("violation-d", "violation-d-split-getter");
   getterSplit.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\nmod operations;\npub fn peek(inv: &Invoice) -> i64 { inv.total() }\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\nmod operations;\npub fn peek(inv: &Invoice) -> i64 { inv.total() }\n";
   getterSplit.workspace[operations] =
     "use super::Invoice; impl Invoice { pub fn total(&self) -> i64 { self.amount } }\n";
   cases.push(getterSplit);
@@ -196,7 +198,7 @@ aggregate_mappings:
   const splitReplay = structuredClone(replay);
   splitReplay.name = "clean-b-split-replay";
   splitReplay.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\npub struct Issued { amount: i64 }\nmod operations;\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\npub struct Issued { amount: i64 } impl Issued { fn new(amount: i64) -> Self { Self { amount } } }\nmod operations;\n";
   splitReplay.workspace[operations] =
     "use super::{Invoice, Issued};\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n";
   splitReplay.files[manifest] = split.files[manifest];

@@ -20,38 +20,37 @@ export interface InvoiceLine {
   addTo(total: Money): Money;
 }
 export interface Invoice {
-  addLine(line: InvoiceLine): Result<void, string>;
-  issue(): Result<void, string>;
+  addLine(line: InvoiceLine): Result<InvoiceEvent, string>;
+  issue(): Result<InvoiceEvent, string>;
   isBilledTo(customer: string): boolean;
   total(): Money;
   lines(): readonly InvoiceLine[];
 }
-export interface InvoiceRecord {
-  readonly customer: string;
-  readonly amounts: readonly number[];
-  readonly issued: boolean;
-}
+export type InvoiceEvent =
+  | { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] }
+  | { readonly kind: "line-added"; readonly line: InvoiceLine }
+  | { readonly kind: "issued" };
 export interface RepositoryError {
   readonly kind: "repository-error";
   readonly message: string;
 }
 export interface InvoiceRepository {
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
-  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
+  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError>;
 }
 
 /** What the domain, use-case and interface-adapter packages of a sample export. */
 export interface SampleModules {
   readonly Invoice: {
     open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, string>;
-    restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice;
+    restore(history: readonly InvoiceEvent[]): Invoice;
   };
-  readonly Money: { of(value: number): Money };
+  readonly Money: { of(value: number): Money; parse(value: number): Result<Money, string> };
   readonly InvoiceLine: { of(amount: Money): InvoiceLine };
   readonly IssueInvoiceUseCase: new (invoiceRepository: InvoiceRepository) => {
     execute(invoiceId: string): Result<void, string | RepositoryError>;
   };
-  readonly InMemoryInvoiceRepository: new (records: ReadonlyMap<string, InvoiceRecord>) => InvoiceRepository;
+  readonly InMemoryInvoiceRepository: new (records: ReadonlyMap<string, readonly InvoiceEvent[]>) => InvoiceRepository;
 }
 
 export interface BehaviorScenario {
@@ -93,13 +92,20 @@ const EMPTY_DRAFT = "invoice-empty";
 const ISSUED = "invoice-issued";
 const UNKNOWN = "invoice-unknown";
 
-/** The persisted records a repository starts from: a draft with lines, a draft without, an issued one. */
-function records(): ReadonlyMap<string, InvoiceRecord> {
-  return new Map<string, InvoiceRecord>([
-    [DRAFT, { customer: CUSTOMER, amounts: [100, 20], issued: false }],
-    [EMPTY_DRAFT, { customer: CUSTOMER, amounts: [], issued: false }],
-    [ISSUED, { customer: CUSTOMER, amounts: [5], issued: true }],
+/** Initial event streams, followed by an issuance event where applicable. */
+function records(modules: SampleModules): ReadonlyMap<string, readonly InvoiceEvent[]> {
+  const { line } = amounts(modules);
+  return new Map<string, readonly InvoiceEvent[]>([
+    [DRAFT, [{ kind: "opened", customer: CUSTOMER, lines: [line(100), line(20)] }]],
+    [EMPTY_DRAFT, [{ kind: "opened", customer: CUSTOMER, lines: [] }]],
+    [ISSUED, [{ kind: "opened", customer: CUSTOMER, lines: [line(5)] }, { kind: "issued" }]],
   ]);
+}
+
+function expectEvent(result: Result<InvoiceEvent, unknown>, kind: "line-added" | "issued"): void {
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw new Error("expected a domain event");
+  expect(result.value.kind).toBe(kind);
 }
 
 export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
@@ -111,15 +117,15 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       const { line, expectTotal } = amounts(modules);
       const invoice = value(Invoice.open(CUSTOMER, [line(100)]));
       expectTotal(invoice, 100);
-      expectOk(invoice.addLine(line(50)));
+      expectEvent(invoice.addLine(line(50)), "line-added");
       expectTotal(invoice, 150);
       expect(invoice.lines()).toHaveLength(2);
-      expectOk(invoice.issue());
+      expectEvent(invoice.issue(), "issued");
       expectError(invoice.addLine(line(1)), "already-issued");
       expectError(invoice.issue(), "already-issued");
       expectTotal(invoice, 150);
 
-      expectOk(new IssueInvoiceUseCase(new InMemoryInvoiceRepository(records())).execute(DRAFT));
+      expectOk(new IssueInvoiceUseCase(new InMemoryInvoiceRepository(records(modules))).execute(DRAFT));
     },
   },
   {
@@ -136,10 +142,10 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       const empty = value(Invoice.open(CUSTOMER, []));
       expectError(empty.issue(), "empty-lines");
       // Still a draft: a refused issue did not issue it.
-      expectOk(empty.addLine(line(10)));
-      expectOk(empty.issue());
+      expectEvent(empty.addLine(line(10)), "line-added");
+      expectEvent(empty.issue(), "issued");
 
-      const repository = new InMemoryInvoiceRepository(records());
+      const repository = new InMemoryInvoiceRepository(records(modules));
       expectError(new IssueInvoiceUseCase(repository).execute(ISSUED), "already-issued");
       expectError(new IssueInvoiceUseCase(repository).execute(EMPTY_DRAFT), "empty-lines");
       const issued = found(repository.findById(ISSUED));
@@ -147,20 +153,23 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expectError(issued.addLine(line(1)), "already-issued");
       const stillEmpty = found(repository.findById(EMPTY_DRAFT));
       expect(stillEmpty.lines()).toHaveLength(0);
-      expectOk(stillEmpty.addLine(line(1)));
+      expectEvent(stillEmpty.addLine(line(1)), "line-added");
     },
   },
   {
     id: "invalid-value-rejected",
     description: "an aggregate is never constructed from values its invariants forbid",
     run: (modules) => {
-      const { Invoice } = modules;
+      const { Invoice, Money } = modules;
+      expectError(Money.parse(Number.NaN), "non-finite-amount");
+      expectError(Money.parse(Number.POSITIVE_INFINITY), "non-finite-amount");
+      expect(() => Money.of(Number.NaN)).toThrow("non-finite-amount");
       const { line } = amounts(modules);
       expectError(Invoice.open("", [line(1)]), "missing-customer");
       expectError(Invoice.open(CUSTOMER, [line(-1)]), "negative-total");
-      expect(() => Invoice.restore("", [line(1)], false)).toThrow("corrupt invoice state");
-      expect(() => Invoice.restore(CUSTOMER, [], true)).toThrow("corrupt invoice state");
-      expect(() => Invoice.restore(CUSTOMER, [line(-1)], false)).toThrow("corrupt invoice state");
+      expect(() => Invoice.restore([{ kind: "opened", customer: "", lines: [line(1)] }])).toThrow("corrupt invoice history");
+      expect(() => Invoice.restore([{ kind: "opened", customer: CUSTOMER, lines: [] }, { kind: "issued" }])).toThrow("corrupt invoice history");
+      expect(() => Invoice.restore([{ kind: "opened", customer: CUSTOMER, lines: [line(-1)] }])).toThrow("corrupt invoice history");
     },
   },
   {
@@ -169,18 +178,33 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
     run: (modules) => {
       const { IssueInvoiceUseCase, InMemoryInvoiceRepository } = modules;
       const { line, expectTotal } = amounts(modules);
-      const repository = new InMemoryInvoiceRepository(records());
+      const inputLines: InvoiceLine[] = [line(7)];
+      const inputEvents: InvoiceEvent[] = [{ kind: "opened", customer: CUSTOMER, lines: inputLines }];
+      const isolated = new InMemoryInvoiceRepository(new Map([[DRAFT, inputEvents]]));
+      inputLines.push(line(8));
+      inputEvents.push({ kind: "issued" });
+      expectTotal(found(isolated.findById(DRAFT)), 7);
+      expectEvent(found(isolated.findById(DRAFT)).issue(), "issued");
+      const appendedLines: InvoiceLine[] = [line(11)];
+      expectOk(isolated.store(UNKNOWN, { kind: "opened", customer: CUSTOMER, lines: appendedLines }));
+      appendedLines.push(line(2));
+      expectTotal(found(isolated.findById(UNKNOWN)), 11);
+
+      const repository = new InMemoryInvoiceRepository(records(modules));
       const draft = found(repository.findById(DRAFT));
-      expectTotal(draft, 120);
-      expect(draft.lines()).toHaveLength(2);
+      const detachedEvent = value(draft.addLine(line(3)));
+      expect(detachedEvent.kind).toBe("line-added");
+      expectTotal(found(repository.findById(DRAFT)), 120);
+      expectTotal(draft, 123);
+      expect(draft.lines()).toHaveLength(3);
       expect(draft.isBilledTo(CUSTOMER)).toBe(true);
       expect(draft.isBilledTo("another-customer")).toBe(false);
       expectError(found(repository.findById(ISSUED)).issue(), "already-issued");
 
-      const persisted = new InMemoryInvoiceRepository(records());
+      const persisted = new InMemoryInvoiceRepository(records(modules));
       const issueInvoice = new IssueInvoiceUseCase(persisted);
       expectOk(issueInvoice.execute(DRAFT));
-      // The stored invoice, not the draft record it was read from, is what the next read returns.
+      // The appended issuance event determines the next replayed aggregate.
       const stored = found(persisted.findById(DRAFT));
       expectTotal(stored, 120);
       expect(stored.isBilledTo(CUSTOMER)).toBe(true);

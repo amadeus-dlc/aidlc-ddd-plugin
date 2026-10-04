@@ -10,10 +10,12 @@
 
 import { join } from "node:path";
 import type { FindingInput } from "../../shared/findings.ts";
+import { eventStreamElement, inMemoryAggregates, isAggregateStateElement, storedMapValue } from "../in-memory.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
+import { aggregateMappings } from "./aggregate-binding.ts";
 import { packageContaining, resolveSpecifier } from "./edges.ts";
 import { factsOf } from "./file-facts.ts";
-import { importedDomainType, isPortDeclaration, resolveConstructedType } from "./symbols.ts";
+import { importedDomainType, isPortDeclaration, resolveConstructedType, resolveTypeName } from "./symbols.ts";
 import type { TsInspection, TsTarget } from "./types.ts";
 
 // --- (l) query side domain / repository reference ------------------------------------------------
@@ -185,6 +187,98 @@ export function ruleN(inspection: TsInspection, target: TsTarget): FindingInput[
       file: target.file,
       message: `adapter constructs ${resolved.type.name} via ${site.kind} instead of a full constructor`,
       line: site.span.start_line,
+    });
+  }
+  return findings;
+}
+
+/** A State Sourcing memory repository retains aggregate objects without decoding state records. */
+export function ruleInMemoryRestoration(inspection: TsInspection, target: TsTarget): FindingInput[] {
+  return inMemoryStorage(inspection, target, "in-memory-restoration");
+}
+
+export function ruleEventSourcingStorage(inspection: TsInspection, target: TsTarget): FindingInput[] {
+  return inMemoryStorage(inspection, target, "event-sourcing-storage");
+}
+
+function inMemoryStorage(
+  inspection: TsInspection,
+  target: TsTarget,
+  rule: "in-memory-restoration" | "event-sourcing-storage",
+): FindingInput[] {
+  const references = inMemoryAggregates(inspection.run, target.pkg.name, "typescript");
+  if (!references.size) return [];
+  const facts = factsOf(inspection, target.file);
+  if (!facts.declarations.some((entry) => entry.kind === "class" && entry.name.endsWith("Repository"))) return [];
+  const state = rule === "in-memory-restoration";
+  const aggregates = aggregateMappings(inspection).filter(
+    (entry) =>
+      references.has(entry.aggregate_ref) && entry.persistence_method === (state ? "state-sourcing" : "event-sourcing"),
+  );
+  if (!aggregates.length) return [];
+  const findings: FindingInput[] = [];
+  for (const repository of facts.declarations.filter(
+    (entry) => entry.kind === "class" && entry.name.endsWith("Repository"),
+  )) {
+    const owned = aggregates.filter((entry) =>
+      repository.heritage?.some(
+        (port) => port.kind === "implements" && port.type_text.split(".").pop() === `${entry.type}Repository`,
+      ),
+    );
+    if (!owned.length) continue;
+    for (const field of repository.members.filter((entry) => entry.kind === "property")) {
+      const values = new Set(
+        [field.type_text, field.initializer_type_text]
+          .map(storedMapValue)
+          .filter((entry): entry is string => entry !== undefined),
+      );
+      for (const value of values) {
+        const element = state ? value : eventStreamElement(value, "typescript");
+        const resolved = resolveTypeName(inspection.packages, inspection.symbols, target.file, facts, element ?? value);
+        const direct =
+          resolved.kind === "domain" &&
+          owned.some((entry) => entry.type === resolved.type.name && entry.package === resolved.type.pkg.name);
+        const stateElement =
+          resolved.kind === "domain" &&
+          owned.some((entry) => isAggregateStateElement(inspection.model, entry.aggregate_ref, resolved.type.name));
+        const imported =
+          element === undefined
+            ? undefined
+            : facts.imports.find((entry) => entry.bindings.some((binding) => binding.name === element.split(".")[0]));
+        const eventPackage = imported
+          ? resolveSpecifier(
+              inspection.packages,
+              target.pkg,
+              join(inspection.packages.workspaceRoot, target.file),
+              imported.specifier,
+            )
+          : undefined;
+        const domainEvent =
+          eventPackage?.kind === "package" && owned.some((entry) => entry.package === eventPackage.pkg.name);
+        if (state ? direct : element !== undefined && domainEvent && !direct && !stateElement) continue;
+        findings.push({
+          rule_id: rule,
+          file: target.file,
+          line: field.span.start_line,
+          message: `${repository.name}.${field.name} stores ${value}; ${state ? "its map must retain the aggregate directly" : "Event Sourcing stores event streams rather than aggregate state"}`,
+        });
+      }
+    }
+  }
+  if (!state) return findings;
+  for (const call of facts.calls) {
+    if (call.kind !== "method-call" || call.callee_text !== "restore" || !call.receiver_text) continue;
+    const resolved = resolveTypeName(inspection.packages, inspection.symbols, target.file, facts, call.receiver_text);
+    if (
+      resolved.kind !== "domain" ||
+      !aggregates.some((entry) => entry.type === resolved.type.name && entry.package === resolved.type.pkg.name)
+    )
+      continue;
+    findings.push({
+      rule_id: "in-memory-restoration",
+      file: target.file,
+      line: call.span.start_line,
+      message: `in-memory repository reconstructs ${resolved.type.name}; retain the aggregate object directly instead of a persistence record`,
     });
   }
   return findings;

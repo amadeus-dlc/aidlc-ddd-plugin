@@ -27,7 +27,7 @@ Add these question topics to this stage's question file:
 - **Packaging by business vocabulary.** Read the shared `ddd-domain-packaging.md` knowledge and establish a business term, related model IDs, and placement rationale for each domain package and internal module. Do not create technical classifications such as `aggregate/`, `impl/`, `vo/`, or `entities/`. Record the package root and every hierarchy level in `domain_packages`. Clarify missing vocabulary; do not invent aggregates solely to justify a package.
 - **Two axes per Aggregate.** For every `aggregate.*` in the canonical model ask
   for its `programming_model` (`actor` or `class`) and its `persistence_method`
-  (`state-sourcing` or `event-sourcing`). Actor-modelled aggregates later
+  (default `event-sourcing`; `state-sourcing` only when the project explicitly selects it). Actor-modelled aggregates later
   require a Process Manager for multi-aggregate use cases.
 - **Mapping target.** For every Aggregate ask where its implementation lives —
   the `package`, the `module` path below that package root, the `type` that

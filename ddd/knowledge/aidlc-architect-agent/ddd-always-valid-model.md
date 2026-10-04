@@ -39,3 +39,7 @@ The distribution does not include tests or docs, so these links are for the deve
 ## Resolving policy conflicts
 
 Do not automatically override explicit project policy with plugin conventions. Record the conflict, its scope, and the reason for the resolution.
+
+## Construction and repository defaults
+
+Follow the [shared construction and repository contracts](../aidlc-shared/ddd-construction-contracts.md): checked `of` and `parse` for Domain Primitives, one primary constructor with delegated auxiliary paths, factory naming by intent, direct aggregate lookup with the common `RepositoryError`, and Event Sourcing for the standard example.

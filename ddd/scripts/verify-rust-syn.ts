@@ -217,12 +217,15 @@ try {
   //
   // Which experiment cases are also run through the sensor is read from this table: an entry here is
   // a form whose gate answer is worth recording beside the extractor's own.
-  const SENSOR_EXPECTATIONS: Record<string, { sensor_a: number; sensor_d: number; syn_fields: number }> = {
+  const SENSOR_EXPECTATIONS: Record<
+    string,
+    { sensor_a: number; sensor_d: number; syn_fields: number; missing_primary?: boolean }
+  > = {
     "clean-domain": { sensor_a: 0, sensor_d: 0, syn_fields: 0 },
     "violation-a": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
-    "public-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
-    "restricted-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1 },
-    "explicit-return-getter": { sensor_a: 0, sensor_d: 1, syn_fields: 0 },
+    "public-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1, missing_primary: true },
+    "restricted-tuple": { sensor_a: 1, sensor_d: 0, syn_fields: 1, missing_primary: true },
+    "explicit-return-getter": { sensor_a: 0, sensor_d: 1, syn_fields: 0, missing_primary: true },
   };
   const clean = RUST_CASES.find((entry) => entry.name === "clean-domain");
   const violation = RUST_CASES.find((entry) => entry.name === "violation-a");
@@ -239,7 +242,11 @@ try {
         // entry is the one that can fail, because `clean` and `violation` reach it from RUST_CASES
         // rather than through this filter.
         const expected = SENSOR_EXPECTATIONS[entry.name];
-        const rules = [...(expected.sensor_a ? ["a"] : []), ...(expected.sensor_d ? ["d"] : [])];
+        const rules = [
+          ...(expected.sensor_a ? ["a"] : []),
+          ...(expected.sensor_d ? ["d"] : []),
+          ...(expected.missing_primary ? ["primary-constructor"] : []),
+        ];
         return {
           ...clean,
           name: entry.name,

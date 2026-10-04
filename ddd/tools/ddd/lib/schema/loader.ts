@@ -871,7 +871,24 @@ function validateAggregate(report: Report, index: ElementIndex, bc: BoundedConte
         `${where}.events: ${event.element_id}.aggregate must be ${aggregate.element_id}`,
       );
     }
-    requireRef(report, index, `${where}.events.${event.element_id}.produced_by`, event.produced_by, "command");
+    const creation = event.produced_by.startsWith("factory.");
+    requireRef(
+      report,
+      index,
+      `${where}.events.${event.element_id}.produced_by`,
+      event.produced_by,
+      creation ? "factory" : "command",
+    );
+    if (
+      creation &&
+      !aggregate.factory_rules.some(
+        (factory) => factory.element_id === event.produced_by && factory.target_element === aggregate.root_element,
+      )
+    )
+      report.add(
+        "schema.creation-event-producer",
+        `${where}.events.${event.element_id}: a creation event must be produced by this aggregate root's factory`,
+      );
   }
 
   for (const transition of aggregate.transitions) {
@@ -921,13 +938,14 @@ function validateAggregate(report: Report, index: ElementIndex, bc: BoundedConte
   }
 
   for (const factory of aggregate.factory_rules) {
-    requireRef(
-      report,
-      index,
-      `${where}.factory_rules.${factory.element_id}.target_element`,
-      factory.target_element,
-      "entity",
-    );
+    const targetWhere = `${where}.factory_rules.${factory.element_id}.target_element`;
+    if (requireRef(report, index, targetWhere, factory.target_element)) {
+      if (!aggregate.elements.some((element) => element.element_id === factory.target_element))
+        report.add(
+          "schema.ref-kind",
+          `${targetWhere}: "${factory.target_element}" is not an element of ${aggregate.element_id}`,
+        );
+    }
     const parsed = parseElementId(factory.element_id);
     if (parsed.ok && aggregateSegment !== undefined && parsed.id.segments[0] !== aggregateSegment) {
       report.add(

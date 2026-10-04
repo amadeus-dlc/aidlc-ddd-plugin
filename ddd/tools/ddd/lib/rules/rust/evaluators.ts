@@ -7,9 +7,14 @@
 import type { CallFact, ParamFact, RustFileFacts, Span } from "../../rust/domain-facts/index.ts";
 import { finding } from "../../sensors/common.ts";
 import type { FindingInput } from "../../shared/findings.ts";
+import { eventStreamElement, inMemoryAggregates, isAggregateStateElement, storedMapValue } from "../in-memory.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
+import { expandGenericStoreResult, repositoryContractProblem, resultArguments } from "../repository-contract.ts";
 import type { DomainTypeSymbol, InspectionContext, InspectionTarget } from "../types.ts";
+import { rulePrimaryConstructor } from "./constructors.ts";
+import { ruleFactoryNaming } from "./factories.ts";
 import { evaluateDomainPackaging } from "./packaging.ts";
+import { rulePrimitiveInitialization } from "./primitives.ts";
 import { within as withinSpan } from "./program.ts";
 
 function within(span: Span, outer: Span): boolean {
@@ -301,7 +306,10 @@ function ruleRepositoryResult(target: InspectionTarget, context: InspectionConte
   for (const trait of declarationsOf(context, file).traits) {
     if (!trait.name.endsWith("Repository")) continue;
     for (const signature of trait.signatures) {
-      const returned = signature.return_type_text?.trim();
+      const returned = expandGenericStoreResult(
+        signature.return_type_text?.trim(),
+        declarationsOf(context, file).aliases,
+      );
       if (returned !== undefined && /^(?:::)?(?:\w+::)*Result\s*</.test(returned)) continue;
       out.push(
         finding(
@@ -330,7 +338,7 @@ function ruleRepositoryMutSelf(target: InspectionTarget, context: InspectionCont
     if (!trait.name.endsWith("Repository")) continue;
     if (trait.supertraits.some((bound) => /(?:^|::)Sync$/.test(bound.trim()))) continue;
     for (const signature of trait.signatures) {
-      if (!/^(?:store|delete)/.test(signature.name) || signature.receiver === "mut-self") continue;
+      if (!/^(?:store|append|delete)/.test(signature.name) || signature.receiver === "mut-self") continue;
       out.push(
         finding(
           "repository-mut-self",
@@ -507,10 +515,135 @@ function ruleN(target: InspectionTarget, context: InspectionContext): FindingInp
   return out;
 }
 
+function ruleRepositoryContract(target: InspectionTarget, context: InspectionContext): FindingInput[] {
+  if (!target.file) return [];
+  const facts = declarationsOf(context, target.file);
+  const ports = facts.traits.filter((entry) => entry.name.endsWith("Repository"));
+  if (!ports.length) return [];
+  const findings: FindingInput[] = [];
+  for (const port of ports) {
+    const aggregate = port.name.slice(0, -"Repository".length);
+    for (const method of port.signatures) {
+      const problem = repositoryContractProblem(
+        method.name,
+        expandGenericStoreResult(method.return_type_text, facts.aliases),
+        aggregate,
+        "rust",
+      );
+      if (problem)
+        findings.push(
+          finding("repository-result-contract", target.file, `${port.name}::${method.name}: ${problem}`, method.line),
+        );
+    }
+  }
+  for (const alias of facts.aliases.filter((entry) => !entry.generic)) {
+    const parts = resultArguments(alias.type_text);
+    if (parts && parts[1] === "RepositoryError")
+      findings.push(
+        finding(
+          "repository-result-contract",
+          target.file,
+          `${alias.name} only renames a repository Result; use Result directly or a reusable generic alias`,
+        ),
+      );
+  }
+  return findings;
+}
+
+function ruleInMemoryRestoration(target: InspectionTarget, context: InspectionContext): FindingInput[] {
+  return inMemoryStorage(target, context, "in-memory-restoration");
+}
+
+function ruleEventSourcingStorage(target: InspectionTarget, context: InspectionContext): FindingInput[] {
+  return inMemoryStorage(target, context, "event-sourcing-storage");
+}
+
+function inMemoryStorage(
+  target: InspectionTarget,
+  context: InspectionContext,
+  rule: "in-memory-restoration" | "event-sourcing-storage",
+): FindingInput[] {
+  if (!target.file || !target.crate_name || context.rustMapping.kind !== "loaded") return [];
+  const file = target.file;
+  const references = inMemoryAggregates(context.run, target.crate_name, "rust");
+  if (!references.size) return [];
+  const facts = declarationsOf(context, target.file);
+  if (!facts.impls.some((entry) => entry.trait_text?.replace(/<.*$/, "").endsWith("Repository"))) return [];
+  const state = rule === "in-memory-restoration";
+  const aggregates = context.rustMapping.view.aggregates.filter(
+    (entry) =>
+      references.has(entry.aggregate_ref) && entry.persistence_method === (state ? "state-sourcing" : "event-sourcing"),
+  );
+  if (!aggregates.length) return [];
+  const source = context.program.files.get(file);
+  if (!source) throw new Error(`missing inspected source ${file}`);
+  const module = source.module;
+  const findings: FindingInput[] = [];
+  const repositories = facts.impls.filter((entry) => entry.trait_text?.replace(/<.*$/, "").endsWith("Repository"));
+  for (const repository of facts.types) {
+    const owned = aggregates.filter((entry) =>
+      repositories.some(
+        (port) =>
+          port.target_type_text === repository.name && port.trait_text?.split("::").pop() === `${entry.type}Repository`,
+      ),
+    );
+    if (!owned.length) continue;
+    for (const field of repository.fields) {
+      const value = storedMapValue(field.type_text);
+      if (value === undefined) continue;
+      const element = state ? value : eventStreamElement(value, "rust");
+      const type = context.program.resolveType(target.file, [...module, ...repository.module], element ?? value);
+      const direct = Boolean(
+        type && owned.some((entry) => entry.type === type.name && entry.crate.replace(/-/g, "_") === type.crate),
+      );
+      const stateElement = Boolean(
+        type && owned.some((entry) => isAggregateStateElement(context.model, entry.aggregate_ref, type.name)),
+      );
+      const domainEvent = Boolean(type && owned.some((entry) => entry.crate.replace(/-/g, "_") === type.crate));
+      if (state ? direct : element !== undefined && domainEvent && !direct && !stateElement) continue;
+      findings.push(
+        finding(
+          rule,
+          target.file,
+          `${repository.name}.${field.name} stores ${value}; ${state ? "its map must retain the aggregate directly" : "Event Sourcing stores event streams rather than aggregate state"}`,
+          field.line,
+        ),
+      );
+    }
+  }
+  if (!state) return findings;
+  return [
+    ...findings,
+    ...facts.constructions.flatMap((site) => {
+      if (site.kind !== "associated-call" || site.callee_text !== "restore") return [];
+      const type = context.program.resolveType(file, module, site.type_text);
+      if (
+        !type ||
+        !aggregates.some((entry) => entry.type === type.name && entry.crate.replace(/-/g, "_") === type.crate)
+      )
+        return [];
+      return [
+        finding(
+          "in-memory-restoration",
+          file,
+          `in-memory repository reconstructs ${type.name}; retain the aggregate object directly instead of a persistence record`,
+          site.span.start_line,
+        ),
+      ];
+    }),
+  ];
+}
+
 export const PER_FILE_EVALUATORS: Record<
   string,
   (target: InspectionTarget, context: InspectionContext) => FindingInput[]
 > = {
+  "primitive-initialization": rulePrimitiveInitialization,
+  "factory-naming": ruleFactoryNaming,
+  "primary-constructor": rulePrimaryConstructor,
+  "repository-result-contract": ruleRepositoryContract,
+  "in-memory-restoration": ruleInMemoryRestoration,
+  "event-sourcing-storage": ruleEventSourcingStorage,
   a: ruleA,
   b: ruleB,
   c: ruleC,

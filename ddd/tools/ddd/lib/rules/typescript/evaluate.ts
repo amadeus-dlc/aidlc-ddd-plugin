@@ -19,14 +19,17 @@ import type { SensorRunContext } from "../../runtime/context.ts";
 import { type SensorApi, type SensorEvaluation, ToolUnavailableError } from "../../runtime/runtime.ts";
 import type { FindingInput } from "../../shared/findings.ts";
 import { dedupe } from "../evaluate.ts";
+import { rulePrimaryConstructor } from "./constructors.ts";
 import { assembleTypeScriptInspection } from "./context.ts";
 import { buildEdges, ruleG, ruleK } from "./edges.ts";
 import { ruleB, ruleC, ruleD, ruleDomainPackaging, rulePortPlacement } from "./evaluators.ts";
+import { ruleFactoryNaming } from "./factories.ts";
 import { factsOf } from "./file-facts.ts";
-import { ruleL, ruleM, ruleN } from "./interface-adapter.ts";
+import { ruleEventSourcingStorage, ruleInMemoryRestoration, ruleL, ruleM, ruleN } from "./interface-adapter.ts";
+import { rulePrimitiveInitialization } from "./primitives.ts";
 import { ruleA } from "./state-hiding.ts";
 import type { TsGate, TsInspection, TsTarget } from "./types.ts";
-import { ruleH, ruleI, ruleRepositoryResult, ruleUseCaseName } from "./use-case.ts";
+import { ruleH, ruleI, ruleRepositoryContract, ruleRepositoryResult, ruleUseCaseName } from "./use-case.ts";
 
 const DOMAIN: TsGate = {
   label: "domain",
@@ -87,6 +90,9 @@ export function evaluateTypeScriptDomain(run: SensorRunContext, api: SensorApi):
     perFile: (inspection, target) => [
       ...ruleA(target.file, factsOf(inspection, target.file), inspection.undecided),
       ...ruleB(inspection, target),
+      ...rulePrimitiveInitialization(inspection, target),
+      ...ruleFactoryNaming(inspection, target),
+      ...rulePrimaryConstructor(inspection, target),
       ...ruleC(inspection, target),
       ...ruleD(inspection, target),
       ...rulePortPlacement(inspection, target),
@@ -110,6 +116,7 @@ export function evaluateTypeScriptUseCase(run: SensorRunContext, api: SensorApi)
       ...ruleD(inspection, target),
       ...ruleUseCaseName(inspection, target),
       ...ruleRepositoryResult(inspection, target),
+      ...ruleRepositoryContract(inspection, target),
     ],
     whole: (inspection) => ruleG(buildEdges(inspection)),
   });
@@ -121,6 +128,8 @@ export function evaluateTypeScriptInterfaceAdapter(run: SensorRunContext, api: S
       ...ruleL(inspection, target),
       ...ruleM(inspection, target),
       ...ruleN(inspection, target),
+      ...ruleInMemoryRestoration(inspection, target),
+      ...ruleEventSourcingStorage(inspection, target),
     ],
     whole: (inspection) => {
       const edges = buildEdges(inspection);
