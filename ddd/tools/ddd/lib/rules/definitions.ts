@@ -18,6 +18,70 @@ export interface RuleDefinition {
 
 export const RULES: readonly RuleDefinition[] = [
   {
+    rule_id: "primary-constructor",
+    name: "unique-primary-constructor",
+    statement:
+      "a domain type lacks one complete primary constructor, directly initializes elsewhere, or has cyclic/unconnected auxiliary construction paths",
+    target_layers: ["domain"],
+    requires_model: false,
+    facts: ["constructors", "calls", "fields"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "factory-naming",
+    name: "domain-factory-contract",
+    statement:
+      "a domain factory's of, parse, from, or try_from signature contradicts its value construction or conversion contract",
+    target_layers: ["domain"],
+    requires_model: false,
+    facts: ["methods", "domain-model", "aggregate-mapping"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "event-sourcing-storage",
+    name: "event-stream-in-memory-storage",
+    statement: "an in-memory Event Sourcing repository stores aggregate state instead of event streams",
+    target_layers: ["interface-adapter"],
+    requires_model: true,
+    facts: ["fields", "layer-structure", "aggregate-mapping"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "repository-result-contract",
+    name: "simple-repository-result",
+    statement:
+      "a repository wraps its Result without additional meaning, returns a persistence envelope, or uses a per-operation infrastructure error",
+    target_layers: ["use-case"],
+    requires_model: false,
+    facts: ["traits", "aliases"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "in-memory-restoration",
+    name: "direct-in-memory-aggregate-storage",
+    statement: "an in-memory state-sourcing repository reconstructs an aggregate instead of retaining its object",
+    target_layers: ["interface-adapter"],
+    requires_model: true,
+    facts: ["calls", "layer-structure", "aggregate-mapping"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "primitive-initialization",
+    name: "invariant-based-primitive-initialization",
+    statement: "a Domain Primitive lacks checked parse and panicking of, or initializes outside its invariant guard",
+    target_layers: ["domain"],
+    requires_model: true,
+    facts: ["impls", "domain-model", "factory-initialization"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+
+  {
     rule_id: "domain-packaging",
     name: "domain-package-vocabulary",
     statement: "affected domain crates use declared business packages rather than technical classifications",

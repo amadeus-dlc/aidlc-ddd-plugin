@@ -54,3 +54,7 @@ Follow the [shared packaging convention](../aidlc-shared/ddd-domain-packaging.md
 Use-case code may pass a getter result unchanged to a repository port method, directly or through immutable local bindings. Parentheses and shared borrowing are allowed. Every use of a local value must reach a repository argument; comparison, arithmetic, transformation calls, mutable bindings, macros, and other consumers do not qualify. This does not authorize getter calls from the domain layer.
 
 The Rust check resolves the receiving type to an inner-layer trait named `<Aggregate>Repository` and verifies that the called method is declared on that trait. A variable named `repo` or a method named `save` is insufficient. Explicit parameter/field types, `impl`/`dyn` ports, and module-level import/type aliases are supported. Generic-bound resolution, trait implementation selection, associated-function syntax, and type inference remain outside this exception's coverage. Unknown recipients do not gain an exemption; the getter finding remains blocking and unresolved receiver information appears in the sensor note.
+
+## Construction and repository defaults
+
+Follow the [shared construction and repository contracts](../aidlc-shared/ddd-construction-contracts.md): checked `of` and `parse` for Domain Primitives, one primary constructor with delegated auxiliary paths, factory naming by intent, direct aggregate lookup with the common `RepositoryError`, and Event Sourcing for the standard example.

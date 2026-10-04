@@ -87,6 +87,7 @@ const INVOICE = `pub struct Invoice {
     amount: i64,
 }
 impl Invoice {
+    fn new(id: String, amount: i64) -> Self { Self { id, amount } }
     pub fn issue(&mut self) {}
 }
 `;
@@ -117,6 +118,7 @@ test("a mutating method the model does not declare is reported on its own declar
     amount: i64,
 }
 impl Invoice {
+    fn new(id: String, amount: i64) -> Self { Self { id, amount } }
     pub fn issue(&mut self) {}
     pub fn rename(&mut self, name: String) { self.id = name; }
 }
@@ -157,7 +159,8 @@ test("the same construction inside the inherent impl, and spelled in a literal o
     amount: i64,
 }
 impl Invoice {
-    pub fn new(id: String) -> Self { Invoice { id, amount: 0 } }
+    fn new(id: String, amount: i64) -> Self { Self { id, amount } }
+    pub fn open(id: String) -> Self { Self::new(id, 0) }
     pub fn issue(&mut self) {}
 }
 const DOC: &str = "Invoice { id: String::new(), amount: 0 }";

@@ -63,7 +63,11 @@ const RESULT_SOURCE = `export type Result<T, E> =
 const RESULT_INDEX = `export type { Result } from "./result.ts";
 `;
 
-const CLASS_MONEY = `export class Money {
+const CLASS_MONEY = `import type { Result } from "${RESULT_NAME}";
+
+export type ParseMoneyError = "non-finite-amount";
+
+export class Money {
   #value: number;
 
   private constructor(value: number) {
@@ -71,15 +75,22 @@ const CLASS_MONEY = `export class Money {
   }
 
   static of(value: number): Money {
-    return new Money(value);
+    const parsed = Money.parse(value);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.value;
+  }
+
+  static parse(value: number): Result<Money, ParseMoneyError> {
+    if (!Number.isFinite(value)) return { ok: false, error: "non-finite-amount" };
+    return { ok: true, value: new Money(value) };
   }
 
   static zero(): Money {
-    return new Money(0);
+    return Money.of(0);
   }
 
   add(other: Money): Money {
-    return new Money(this.#value + other.#value);
+    return Money.of(this.#value + other.#value);
   }
 
   isNegative(): boolean {
@@ -111,7 +122,11 @@ export class InvoiceLine {
 }
 `;
 
-const COMPANION_MONEY = `const brand: unique symbol = Symbol("Money");
+const COMPANION_MONEY = `import type { Result } from "${RESULT_NAME}";
+
+export type ParseMoneyError = "non-finite-amount";
+
+const brand: unique symbol = Symbol("Money");
 
 export type Money = {
   readonly [brand]: true;
@@ -124,6 +139,12 @@ export type Money = {
 
 export const Money = {
   of(value: number): Money {
+    const parsed = Money.parse(value);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.value;
+  },
+  parse(value: number): Result<Money, ParseMoneyError> {
+    if (!Number.isFinite(value)) return { ok: false, error: "non-finite-amount" };
     const state = { value };
     const instance: Money = {
       [brand]: true,
@@ -143,7 +164,7 @@ export const Money = {
         return state.value === value;
       },
     };
-    return instance;
+    return { ok: true, value: instance };
   },
   zero(): Money {
     return Money.of(0);
@@ -174,7 +195,12 @@ export const InvoiceLine = {
 };
 `;
 
-const ERROR_TYPES = `export type OpenInvoiceError = "missing-customer" | "negative-total";
+const ERROR_TYPES = `export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued" };
+export type InvoiceEvent = Opened | LineAdded | Issued;
+
+export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
 export type IssueInvoiceError = "already-issued" | "empty-lines";
 `;
@@ -213,24 +239,44 @@ export class Invoice {
     return { ok: true, value: new Invoice(customer, lines, false) };
   }
 
-  static restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
-      throw new Error("corrupt invoice state");
-    return new Invoice(customer, lines, issued);
+  static restore(history: readonly InvoiceEvent[]): Invoice {
+    const first: InvoiceEvent | undefined = history[0];
+    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
+    const opened = Invoice.open(first.customer, first.lines);
+    if (!opened.ok) throw new Error("corrupt invoice history");
+    const invoice: Invoice = opened.value;
+    for (const event of history.slice(1)) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
   }
 
-  addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
+  addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (line.addTo(sumOf(this.#lines)).isNegative()) return { ok: false, error: "negative-total" };
-    this.#lines = [...this.#lines, line];
-    return { ok: true, value: undefined };
+    const event: LineAdded = { kind: "line-added", line };
+    this.applyLineAdded(event);
+    return { ok: true, value: event };
   }
 
-  issue(): Result<void, IssueInvoiceError> {
+  issue(): Result<Issued, IssueInvoiceError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (this.#lines.length === 0) return { ok: false, error: "empty-lines" };
+    const event: Issued = { kind: "issued" };
+    this.applyIssued(event);
+    return { ok: true, value: event };
+  }
+
+  applyLineAdded(event: LineAdded): void {
+    if (this.#issued || event.line.addTo(sumOf(this.#lines)).isNegative()) throw new Error("corrupt invoice history");
+    this.#lines = [...this.#lines, event.line];
+  }
+
+  applyIssued(_event: Issued): void {
+    if (this.#issued || this.#lines.length === 0) throw new Error("corrupt invoice history");
     this.#issued = true;
-    return { ok: true, value: undefined };
   }
 
   isBilledTo(customer: string): boolean {
@@ -256,37 +302,57 @@ const brand: unique symbol = Symbol("Invoice");
 
 export type Invoice = {
   readonly [brand]: true;
-  addLine(line: InvoiceLine): Result<void, AddInvoiceLineError>;
-  issue(): Result<void, IssueInvoiceError>;
+  addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError>;
+  issue(): Result<Issued, IssueInvoiceError>;
+  applyLineAdded(event: LineAdded): void;
+  applyIssued(event: Issued): void;
   isBilledTo(customer: string): boolean;
   total(): Money;
   lines(): readonly InvoiceLine[];
 };
 
 export const Invoice = {
+  restore(history: readonly InvoiceEvent[]): Invoice {
+    const first: InvoiceEvent | undefined = history[0];
+    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
+    const opened = Invoice.open(first.customer, first.lines);
+    if (!opened.ok) throw new Error("corrupt invoice history");
+    const invoice: Invoice = opened.value;
+    for (const event of history.slice(1)) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
+  },
   open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
-    return { ok: true, value: Invoice.restore(customer, lines, false) };
-  },
-  restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
-      throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
-    const state = { customer, lines: kept, issued };
+    const state = { customer, lines: kept, issued: false };
     const instance: Invoice = {
       [brand]: true,
-      addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
+      addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (line.addTo(sumOf(state.lines)).isNegative()) return { ok: false, error: "negative-total" };
-        state.lines = [...state.lines, line];
-        return { ok: true, value: undefined };
+        const event: LineAdded = { kind: "line-added", line };
+        instance.applyLineAdded(event);
+        return { ok: true, value: event };
       },
-      issue(): Result<void, IssueInvoiceError> {
+      issue(): Result<Issued, IssueInvoiceError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (state.lines.length === 0) return { ok: false, error: "empty-lines" };
+        const event: Issued = { kind: "issued" };
+        instance.applyIssued(event);
+        return { ok: true, value: event };
+      },
+      applyLineAdded(event: LineAdded): void {
+        if (state.issued || event.line.addTo(sumOf(state.lines)).isNegative()) throw new Error("corrupt invoice history");
+        state.lines = [...state.lines, event.line];
+      },
+      applyIssued(_event: Issued): void {
+        if (state.issued || state.lines.length === 0) throw new Error("corrupt invoice history");
         state.issued = true;
-        return { ok: true, value: undefined };
       },
       isBilledTo(customer: string): boolean {
         return state.customer === customer;
@@ -298,32 +364,32 @@ export const Invoice = {
         return [...state.lines];
       },
     };
-    return instance;
+    return { ok: true, value: instance };
   },
 };
 `;
 }
 
 function domainIndex(parentSpecifier: string): string {
-  return `export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "${parentSpecifier}";
+  return `export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError, InvoiceEvent, Opened, LineAdded, Issued } from "${parentSpecifier}";
 export { Invoice } from "${parentSpecifier}";
 export { InvoiceLine } from "./invoice/line.ts";
 export { Money } from "./money.ts";
 `;
 }
 
-const INVOICE_REPOSITORY_PORT = `import type { Invoice } from "${DOMAIN_NAME}";
+const INVOICE_REPOSITORY_PORT = `import type { Invoice, InvoiceEvent } from "${DOMAIN_NAME}";
 import type { Result } from "${RESULT_NAME}";
 
 export type RepositoryError = { readonly kind: "repository-error"; readonly message: string };
 
 export interface InvoiceRepository {
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
-  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
+  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError>;
 }
 `;
 
-const ISSUE_INVOICE = `import type { Invoice, IssueInvoiceError } from "${DOMAIN_NAME}";
+const ISSUE_INVOICE = `import type { Invoice, IssueInvoiceError, Issued } from "${DOMAIN_NAME}";
 import type { Result } from "${RESULT_NAME}";
 import type { InvoiceRepository, RepositoryError } from "./invoice-repository.ts";
 
@@ -342,9 +408,9 @@ export class IssueInvoiceUseCase {
     if (!found.ok) return found;
     if (found.value === undefined) return { ok: false, error: "invoice-not-found" };
     const invoice: Invoice = found.value;
-    const issued: Result<void, IssueInvoiceError> = invoice.issue();
+    const issued: Result<Issued, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, invoice);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, issued.value);
     if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
@@ -356,43 +422,44 @@ export type { InvoiceNotFound, IssueInvoiceFailure } from "./issue-invoice.ts";
 export { IssueInvoiceUseCase } from "./issue-invoice.ts";
 `;
 
-const IN_MEMORY_INVOICE_REPOSITORY = `import { Invoice, InvoiceLine, Money } from "${DOMAIN_NAME}";
+const IN_MEMORY_INVOICE_REPOSITORY = `import { Invoice } from "${DOMAIN_NAME}";
+import type { InvoiceEvent } from "${DOMAIN_NAME}";
 import type { InvoiceRepository, RepositoryError } from "${USE_CASE_NAME}";
 import type { Result } from "${RESULT_NAME}";
 
-export type InvoiceRecord = {
-  readonly customer: string;
-  readonly amounts: readonly number[];
-  readonly issued: boolean;
-};
-
 export class InMemoryInvoiceRepository implements InvoiceRepository {
-  readonly #records: ReadonlyMap<string, InvoiceRecord>;
-  readonly #stored: Map<string, Invoice>;
+  readonly #events: Map<string, readonly InvoiceEvent[]>;
 
-  constructor(records: ReadonlyMap<string, InvoiceRecord>) {
-    this.#records = records;
-    this.#stored = new Map();
+  constructor(streams: ReadonlyMap<string, readonly InvoiceEvent[]>) {
+    this.#events = new Map();
+    for (const [id, events] of streams) this.#events.set(id, events.map((event: InvoiceEvent) => InMemoryInvoiceRepository.copyEvent(event)));
+  }
+
+  private static copyEvent(event: InvoiceEvent): InvoiceEvent {
+    if (event.kind === "opened") return Object.freeze({ kind: "opened", customer: event.customer, lines: Object.freeze([...event.lines]) });
+    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", line: event.line });
+    return Object.freeze({ kind: "issued" });
   }
 
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
-    const stored: Invoice | undefined = this.#stored.get(invoiceId);
-    if (stored !== undefined) return { ok: true, value: stored };
-    const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
-    if (record === undefined) return { ok: true, value: undefined };
-    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(Money.of(amount)));
-    return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
+    const events: readonly InvoiceEvent[] | undefined = this.#events.get(invoiceId);
+    if (events === undefined) return { ok: true, value: undefined };
+    try {
+      return { ok: true, value: Invoice.restore(events) };
+    } catch (error) {
+      return { ok: false, error: { kind: "repository-error", message: String(error) } };
+    }
   }
 
-  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError> {
-    this.#stored.set(invoiceId, invoice);
+  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError> {
+    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
+    this.#events.set(invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
     return { ok: true, value: undefined };
   }
 }
 `;
 
-const INTERFACE_ADAPTER_INDEX = `export type { InvoiceRecord } from "./in-memory-invoice-repository.ts";
-export { InMemoryInvoiceRepository } from "./in-memory-invoice-repository.ts";
+const INTERFACE_ADAPTER_INDEX = `export { InMemoryInvoiceRepository } from "./in-memory-invoice-repository.ts";
 `;
 
 /** The canonical model: `open` is a factory, `addLine` and `issue` are commands, each with its own errors. */
@@ -411,6 +478,7 @@ bounded_contexts:
           - { element_id: vo.invoice-line, kind: value-object, name: InvoiceLine, aggregate: aggregate.invoice }
           - { element_id: primitive.money, kind: domain-primitive, name: Money, aggregate: aggregate.invoice, attributes: [{ name: value, type: decimal, required: true }] }
         invariants:
+          - { element_id: invariant.invoice.money-finite, name: FiniteAmount, aggregate: aggregate.invoice, statement: monetary amounts are finite }
           - { element_id: invariant.invoice.total-positive, name: TotalPositive, aggregate: aggregate.invoice, statement: the total is not negative }
         commands:
           - element_id: command.invoice.add-line
@@ -421,6 +489,7 @@ bounded_contexts:
             domain_errors:
               - { element_id: error.invoice.add-line.already-issued, name: AlreadyIssued, operation: command.invoice.add-line, condition: the invoice is issued }
               - { element_id: error.invoice.add-line.negative-total, name: NegativeTotal, operation: command.invoice.add-line, condition: the line would make the total negative }
+            events: [event.invoice.line-added]
             idempotency: { strategy: none }
           - element_id: command.invoice.issue
             name: Issue
@@ -434,10 +503,18 @@ bounded_contexts:
             events: [event.invoice.issued]
             idempotency: { strategy: none }
         events:
+          - { element_id: event.invoice.opened, name: Opened, aggregate: aggregate.invoice, produced_by: factory.invoice.open }
+          - { element_id: event.invoice.line-added, name: LineAdded, aggregate: aggregate.invoice, produced_by: command.invoice.add-line }
           - { element_id: event.invoice.issued, name: Issued, aggregate: aggregate.invoice, produced_by: command.invoice.issue }
         transitions:
           - { element_id: transition.invoice.issue, name: Issue, aggregate: aggregate.invoice, from_state: draft, to_state: issued, command: command.invoice.issue }
         factory_rules:
+          - element_id: factory.invoice.parse-money
+            name: ParseMoney
+            target_element: primitive.money
+            preconditions: [invariant.invoice.money-finite]
+            domain_errors:
+              - { element_id: error.invoice.parse-money.non-finite-amount, name: NonFiniteAmount, operation: factory.invoice.parse-money, condition: the amount is not finite }
           - element_id: factory.invoice.open
             name: Open
             target_element: entity.invoice
@@ -461,10 +538,17 @@ const MAPPING = [
   "aggregate_mappings:",
   "  - aggregate_ref: aggregate.invoice",
   "    programming_model: class",
-  "    persistence_method: state-sourcing",
+  "    persistence_method: event-sourcing",
+  "    replay_methods:",
+  "      - { event_ref: event.invoice.line-added, code: { method: applyLineAdded } }",
+  "      - { event_ref: event.invoice.issued, code: { method: applyIssued } }",
   "    reference_ids: [entity.invoice]",
   `    code: { language: typescript, package: "${DOMAIN_NAME}", module: [invoice], type: Invoice }`,
   "    operations:",
+  "      - operation_ref: factory.invoice.parse-money",
+  "        code: { method: parse, error_type: ParseMoneyError }",
+  "        errors:",
+  "          - { error_ref: error.invoice.parse-money.non-finite-amount, code: { case: non-finite-amount } }",
   "      - operation_ref: factory.invoice.open",
   "        code: { method: open, error_type: OpenInvoiceError }",
   "        errors:",

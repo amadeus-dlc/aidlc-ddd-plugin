@@ -14,7 +14,7 @@ Conventions for generating TypeScript code that the TypeScript gates pass: both 
 | K.typescript-domain-conventions.2 | Hide the state of a class in `#` fields only. `private`, `protected`, `readonly` and parameter properties do not hide state. | a |
 | K.typescript-domain-conventions.3 | Hide the state of a companion in the closure its factory binds. The type literal declares the brand and the method signatures only. | a |
 | K.typescript-domain-conventions.4 | Give each companion type one non-exported top-level `const` of type `unique symbol` created by `Symbol("…")`, and key its instances by it. | A brand the gate cannot identify stops it as uninspectable. |
-| K.typescript-domain-conventions.5 | Construct only through the full constructor, which takes the whole state: for a class, the `private constructor`; for a companion, the factory that writes an instance literal annotated with the type. Other factories go through it. Restore persisted state through a `restore` factory that validates the whole state before building and throws on a corrupt one; adapters call it. Validate before building, and write no post-init method. | c |
+| K.typescript-domain-conventions.5 | Construct only through the full constructor, which takes the whole state: for a class, the `private constructor`; for a companion, the factory that writes an instance literal annotated with the type. Other factories go through it. Restore persisted event history through a `restore` factory that validates its creation event, constructs through the primary constructor and applies the declared replay methods; adapters call it and report corrupt history as `RepositoryError`. Validate before building, and write no post-init method. | c |
 | K.typescript-domain-conventions.6 | Limit methods that change state to declared commands, named by the command slug, or to the replay methods the aggregate mapping declares. | b |
 | K.typescript-domain-conventions.7 | Do not call domain getters from domain code, and state the type of every receiver of a domain method. | d. A getter-named call on a receiver without a stated named type stops the gate. |
 | K.typescript-domain-conventions.8 | Declare `Result` in the language-extensions package of the infrastructure layer and import it into the domain by the package name with `import type`. Declare no `Result` in a domain package. | g checks the direction and the package boundary of the import. The placement of `Result` itself is review. |
@@ -32,12 +32,17 @@ The TypeScript gates decide from stated types and syntax, without a type checker
 
 ## Class representation
 
-State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` rebuilds a persisted one through it after validating the whole state. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the instance and throws on a corrupt state, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts, and places each wrapped type by the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) Modules. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
+State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` validates the opening event through `open`, then applies subsequent events through the declared replay methods. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the replayed instance and throws on corrupt history, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts, and places each wrapped type by the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) Modules. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 import { Money } from "./money.ts";
+
+export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued" };
+export type InvoiceEvent = Opened | LineAdded | Issued;
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
@@ -64,24 +69,44 @@ export class Invoice {
     return { ok: true, value: new Invoice(customer, lines, false) };
   }
 
-  static restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
-      throw new Error("corrupt invoice state");
-    return new Invoice(customer, lines, issued);
+  static restore(history: readonly InvoiceEvent[]): Invoice {
+    const first: InvoiceEvent | undefined = history[0];
+    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
+    const opened = Invoice.open(first.customer, first.lines);
+    if (!opened.ok) throw new Error("corrupt invoice history");
+    const invoice: Invoice = opened.value;
+    for (const event of history.slice(1)) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
   }
 
-  addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
+  addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (line.addTo(sumOf(this.#lines)).isNegative()) return { ok: false, error: "negative-total" };
-    this.#lines = [...this.#lines, line];
-    return { ok: true, value: undefined };
+    const event: LineAdded = { kind: "line-added", line };
+    this.applyLineAdded(event);
+    return { ok: true, value: event };
   }
 
-  issue(): Result<void, IssueInvoiceError> {
+  issue(): Result<Issued, IssueInvoiceError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (this.#lines.length === 0) return { ok: false, error: "empty-lines" };
+    const event: Issued = { kind: "issued" };
+    this.applyIssued(event);
+    return { ok: true, value: event };
+  }
+
+  applyLineAdded(event: LineAdded): void {
+    if (this.#issued || event.line.addTo(sumOf(this.#lines)).isNegative()) throw new Error("corrupt invoice history");
+    this.#lines = [...this.#lines, event.line];
+  }
+
+  applyIssued(_event: Issued): void {
+    if (this.#issued || this.#lines.length === 0) throw new Error("corrupt invoice history");
     this.#issued = true;
-    return { ok: true, value: undefined };
   }
 
   isBilledTo(customer: string): boolean {
@@ -102,12 +127,17 @@ Do not write accessors (`get` / `set`), `extends`, `implements`, decorators, `de
 
 ## Companion representation
 
-A `type` literal and a `const` object share the name of the domain type in one file. The type literal holds the brand and the method signatures only. The factory that takes the whole state, `restore` here, is the full constructor: it validates the whole state, copies its input into the closure state, holding collections as `readonly` arrays, and writes the instance inside the companion as a literal annotated with the type, implementing every method. It throws on a corrupt state, which is not a business failure. `open` builds a new invoice through it, and adapters restore an invoice through it. The same aggregate module in the companion representation:
+A `type` literal and a `const` object share the name of the domain type in one file. The type literal holds the brand and the method signatures only. In this example `open` is the primary constructor: it validates the opening inputs, copies them into complete closure state, holds collections as `readonly` arrays and writes the typed instance literal implementing every method. `restore` is an auxiliary path: it validates the opening event through `Invoice.open`, then applies subsequent events with the declared replay methods. It throws on corrupt history. Adapters call `restore` to return a replayed invoice. The same aggregate module in the companion representation:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 import { Money } from "./money.ts";
+
+export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued" };
+export type InvoiceEvent = Opened | LineAdded | Issued;
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
 export type AddInvoiceLineError = "already-issued" | "negative-total";
@@ -121,37 +151,57 @@ const brand: unique symbol = Symbol("Invoice");
 
 export type Invoice = {
   readonly [brand]: true;
-  addLine(line: InvoiceLine): Result<void, AddInvoiceLineError>;
-  issue(): Result<void, IssueInvoiceError>;
+  addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError>;
+  issue(): Result<Issued, IssueInvoiceError>;
+  applyLineAdded(event: LineAdded): void;
+  applyIssued(event: Issued): void;
   isBilledTo(customer: string): boolean;
   total(): Money;
   lines(): readonly InvoiceLine[];
 };
 
 export const Invoice = {
+  restore(history: readonly InvoiceEvent[]): Invoice {
+    const first: InvoiceEvent | undefined = history[0];
+    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
+    const opened = Invoice.open(first.customer, first.lines);
+    if (!opened.ok) throw new Error("corrupt invoice history");
+    const invoice: Invoice = opened.value;
+    for (const event of history.slice(1)) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
+  },
   open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
-    return { ok: true, value: Invoice.restore(customer, lines, false) };
-  },
-  restore(customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
-    if (customer.length === 0 || (issued && lines.length === 0) || sumOf(lines).isNegative())
-      throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
-    const state = { customer, lines: kept, issued };
+    const state = { customer, lines: kept, issued: false };
     const instance: Invoice = {
       [brand]: true,
-      addLine(line: InvoiceLine): Result<void, AddInvoiceLineError> {
+      addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (line.addTo(sumOf(state.lines)).isNegative()) return { ok: false, error: "negative-total" };
-        state.lines = [...state.lines, line];
-        return { ok: true, value: undefined };
+        const event: LineAdded = { kind: "line-added", line };
+        instance.applyLineAdded(event);
+        return { ok: true, value: event };
       },
-      issue(): Result<void, IssueInvoiceError> {
+      issue(): Result<Issued, IssueInvoiceError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (state.lines.length === 0) return { ok: false, error: "empty-lines" };
+        const event: Issued = { kind: "issued" };
+        instance.applyIssued(event);
+        return { ok: true, value: event };
+      },
+      applyLineAdded(event: LineAdded): void {
+        if (state.issued || event.line.addTo(sumOf(state.lines)).isNegative()) throw new Error("corrupt invoice history");
+        state.lines = [...state.lines, event.line];
+      },
+      applyIssued(_event: Issued): void {
+        if (state.issued || state.lines.length === 0) throw new Error("corrupt invoice history");
         state.issued = true;
-        return { ok: true, value: undefined };
       },
       isBilledTo(customer: string): boolean {
         return state.customer === customer;
@@ -163,7 +213,7 @@ export const Invoice = {
         return [...state.lines];
       },
     };
-    return instance;
+    return { ok: true, value: instance };
   },
 };
 ```
@@ -175,6 +225,10 @@ Do not build an instance with a spread, `as` or `satisfies`, do not export the b
 A primitive with business meaning, such as an amount, is wrapped in a Domain Primitive that the model declares as `kind: domain-primitive` with its one attribute. `Money` is the amount of a line and the total of an invoice; it lives in a module of its own, `money`, which the aggregate mapping declares with `primitive.money`. `add` reads the other value's `#value` inside the class: a `#` field is readable from other instances of the same class, so no getter takes the number out to add it outside the class, and `equals` compares two values the same way. `InvoiceLine` does not expose its amount; `addTo` returns the `Money` it gets by adding its amount to the total it receives. In the companion representation `add` asks the other value to add this one's value (`other.plus(state.value)`), and `equals` asks it to match (`other.matches(state.value)`); each companion type in the module has its own brand.
 
 ```ts
+import type { Result } from "@acme/language-extensions";
+
+export type ParseMoneyError = "non-finite-amount";
+
 export class Money {
   #value: number;
 
@@ -183,15 +237,22 @@ export class Money {
   }
 
   static of(value: number): Money {
-    return new Money(value);
+    const parsed = Money.parse(value);
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.value;
+  }
+
+  static parse(value: number): Result<Money, ParseMoneyError> {
+    if (!Number.isFinite(value)) return { ok: false, error: "non-finite-amount" };
+    return { ok: true, value: new Money(value) };
   }
 
   static zero(): Money {
-    return new Money(0);
+    return Money.of(0);
   }
 
   add(other: Money): Money {
-    return new Money(this.#value + other.#value);
+    return Money.of(this.#value + other.#value);
   }
 
   isNegative(): boolean {
@@ -250,7 +311,7 @@ Inside a package, name a module by a relative specifier with its `.ts` extension
 The package entry `src/index.ts` publishes each name explicitly, never with `export *`. Under `named-file`:
 
 ```ts
-export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice.ts";
+export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError, InvoiceEvent, Opened, LineAdded, Issued } from "./invoice.ts";
 export { Invoice } from "./invoice.ts";
 export { InvoiceLine } from "./invoice/line.ts";
 export { Money } from "./money.ts";
@@ -259,7 +320,7 @@ export { Money } from "./money.ts";
 Under `index-file`:
 
 ```ts
-export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError } from "./invoice/index.ts";
+export type { AddInvoiceLineError, IssueInvoiceError, OpenInvoiceError, InvoiceEvent, Opened, LineAdded, Issued } from "./invoice/index.ts";
 export { Invoice } from "./invoice/index.ts";
 export { InvoiceLine } from "./invoice/line.ts";
 export { Money } from "./money.ts";
@@ -274,21 +335,21 @@ The use-case package `@acme/billing-use-case` (`packages/command/billing-use-cas
 The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Loading and storing reach outside the process and can fail, so every method returns `Result` and reports a failure as `RepositoryError`, an infrastructure failure declared beside the port rather than a business error; the per-operation error-type rules do not apply to it. The lookup does not treat a missing invoice as a failure and returns `undefined`, and the store returns `Result<void, RepositoryError>`:
 
 ```ts
-import type { Invoice } from "@acme/billing-domain";
+import type { Invoice, InvoiceEvent } from "@acme/billing-domain";
 import type { Result } from "@acme/language-extensions";
 
 export type RepositoryError = { readonly kind: "repository-error"; readonly message: string };
 
 export interface InvoiceRepository {
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
-  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError>;
+  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError>;
 }
 ```
 
 The use case is a class named `<Verb><Object>UseCase` (`IssueInvoiceUseCase`). `execute` takes an ID and never an aggregate, and every parameter states its type. The use case holds the port in a `#` field typed as the port and named after it (`#invoiceRepository`), states one named type on every receiver it calls, and asks the aggregate to run the command instead of reading its state. It calls no other use case's `execute`. A getter result may only be handed unchanged to a method of a repository port, directly or through a `const`.
 
 ```ts
-import type { Invoice, IssueInvoiceError } from "@acme/billing-domain";
+import type { Invoice, IssueInvoiceError, Issued } from "@acme/billing-domain";
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceRepository, RepositoryError } from "./invoice-repository.ts";
 
@@ -307,48 +368,50 @@ export class IssueInvoiceUseCase {
     if (!found.ok) return found;
     if (found.value === undefined) return { ok: false, error: "invoice-not-found" };
     const invoice: Invoice = found.value;
-    const issued: Result<void, IssueInvoiceError> = invoice.issue();
+    const issued: Result<Issued, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, invoice);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, issued.value);
     if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
 }
 ```
 
-The adapter implements the port and may prefix its name with the storage medium. It restores the aggregate through `restore` and each line through `of`, with the amount wrapped by `Money.of`; it never builds a domain type with `new`, a literal annotated with the type, or `as`. It returns `undefined` when there is no record and reports a failure of the storage as `RepositoryError`; the in-memory implementation never fails. The collections are typed on their fields, so `new Map()` names no domain type. The command side and the query side do not depend on each other, and a query-side source imports no domain type and no repository port.
+The adapter implements the port and may prefix its name with the storage medium. The standard example uses Event Sourcing: it stores event streams in a map, returns an aggregate replayed from its history, and appends the event returned by the command. It introduces no aggregate-state record or snapshot. Lookup returns `undefined` for a missing stream and reports corrupt history through the common `RepositoryError`. The use case never loads or replays raw history. Query-side sources import no domain type and no repository port.
 
 ```ts
-import { Invoice, InvoiceLine, Money } from "@acme/billing-domain";
+import { Invoice } from "@acme/billing-domain";
+import type { InvoiceEvent } from "@acme/billing-domain";
 import type { InvoiceRepository, RepositoryError } from "@acme/billing-use-case";
 import type { Result } from "@acme/language-extensions";
 
-export type InvoiceRecord = {
-  readonly customer: string;
-  readonly amounts: readonly number[];
-  readonly issued: boolean;
-};
-
 export class InMemoryInvoiceRepository implements InvoiceRepository {
-  readonly #records: ReadonlyMap<string, InvoiceRecord>;
-  readonly #stored: Map<string, Invoice>;
+  readonly #events: Map<string, readonly InvoiceEvent[]>;
 
-  constructor(records: ReadonlyMap<string, InvoiceRecord>) {
-    this.#records = records;
-    this.#stored = new Map();
+  constructor(streams: ReadonlyMap<string, readonly InvoiceEvent[]>) {
+    this.#events = new Map();
+    for (const [id, events] of streams) this.#events.set(id, events.map((event: InvoiceEvent) => InMemoryInvoiceRepository.copyEvent(event)));
+  }
+
+  private static copyEvent(event: InvoiceEvent): InvoiceEvent {
+    if (event.kind === "opened") return Object.freeze({ kind: "opened", customer: event.customer, lines: Object.freeze([...event.lines]) });
+    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", line: event.line });
+    return Object.freeze({ kind: "issued" });
   }
 
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
-    const stored: Invoice | undefined = this.#stored.get(invoiceId);
-    if (stored !== undefined) return { ok: true, value: stored };
-    const record: InvoiceRecord | undefined = this.#records.get(invoiceId);
-    if (record === undefined) return { ok: true, value: undefined };
-    const lines: readonly InvoiceLine[] = record.amounts.map((amount: number) => InvoiceLine.of(Money.of(amount)));
-    return { ok: true, value: Invoice.restore(record.customer, lines, record.issued) };
+    const events: readonly InvoiceEvent[] | undefined = this.#events.get(invoiceId);
+    if (events === undefined) return { ok: true, value: undefined };
+    try {
+      return { ok: true, value: Invoice.restore(events) };
+    } catch (error) {
+      return { ok: false, error: { kind: "repository-error", message: String(error) } };
+    }
   }
 
-  store(invoiceId: string, invoice: Invoice): Result<void, RepositoryError> {
-    this.#stored.set(invoiceId, invoice);
+  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError> {
+    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
+    this.#events.set(invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
     return { ok: true, value: undefined };
   }
 }
@@ -371,3 +434,7 @@ The distribution does not include tests or docs, so these links are for the deve
 - [TypeScript domain sensor contract](../../docs/users/typescript-sensor-contract.md)
 - [TypeScript module layout contract](../../docs/users/typescript-module-layout.md)
 - [Language-independent design](../../docs/developers/language-independent-design.md)
+
+## Construction and repository defaults
+
+Follow the [shared construction and repository contracts](../aidlc-shared/ddd-construction-contracts.md): checked `of` and `parse` for Domain Primitives, one primary constructor with delegated auxiliary paths, factory naming by intent, direct aggregate lookup with the common `RepositoryError`, and Event Sourcing for the standard example.

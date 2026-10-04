@@ -1,5 +1,5 @@
 /**
- * Protocol version 9 of the native extractor: the facts every Rust rule decides on.
+ * Protocol version 12 of the native extractor: the facts every Rust rule decides on.
  *
  * The launch classification is the shared one in `native/launch.ts`; this module owns the protocol
  * identity, the one batch this inspection sends, and the strict conversion of native spellings into
@@ -15,7 +15,7 @@ import { ToolUnavailableError } from "../../runtime/runtime.ts";
 import { classifyNativeExtractor, type NativeOutcome, nativeIssue } from "../native/launch.ts";
 import { NATIVE_BIN_DIR, PLATFORM_KEY } from "../native/manifest.ts";
 
-const PROTOCOL = { flag: "--domain-facts-version", version: 9 };
+const PROTOCOL = { flag: "--domain-facts-version", version: 12 };
 /** The unresolved reason the extractor gives an attribute that may replace the item it annotates. */
 const ATTRIBUTE_MACRO_REASON = "attribute-macro";
 /** The extractor refuses a larger request, so an oversized batch is refused before it is sent. */
@@ -55,6 +55,8 @@ export interface TypeFact {
   readonly module: readonly string[];
   /** Named fields only: a tuple element is reached by position and declares no name to resolve. */
   readonly fields: readonly FieldFact[];
+  readonly field_count: number;
+  readonly auxiliary: boolean;
   readonly derives: readonly string[];
   /** Where the declaration opens, which is where a finding against it sends a reader. */
   readonly line: number;
@@ -91,6 +93,25 @@ export interface MethodFact {
   readonly return_type_text?: string;
   /** Whether the body only hands back a member of `self`. */
   readonly returns_field_only: boolean;
+  readonly visibility: Visibility;
+  readonly span: Span;
+  readonly initialization: {
+    readonly creations: readonly {
+      readonly type_text: string;
+      readonly guarded: boolean;
+      readonly input_unchanged: boolean;
+      readonly line: number;
+      readonly span: Span;
+    }[];
+    readonly delegations: readonly {
+      readonly type_text: string;
+      readonly callee_text: string;
+      readonly guarded: boolean;
+      readonly input_unchanged: boolean;
+      readonly span: Span;
+    }[];
+    readonly parse_delegate?: string;
+  };
   readonly line: number;
 }
 
@@ -247,6 +268,12 @@ function line(value: unknown): number {
   return value;
 }
 
+function integer(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0)
+    throw new Error("expected nonnegative integer");
+  return value;
+}
+
 function words(value: unknown): string[] {
   return array(value).map(nonempty);
 }
@@ -295,6 +322,8 @@ function declaredType(value: unknown): TypeFact {
     kind: oneOf(raw.kind, ["struct", "enum"] as const),
     module: words(raw.module),
     fields: array(raw.fields).map(field),
+    field_count: integer(raw.field_count),
+    auxiliary: flag(raw.auxiliary),
     derives: words(raw.derives),
     line: line(raw.line),
   };
@@ -336,12 +365,39 @@ function declaredFunction(value: unknown): FunctionFact {
 function method(value: unknown): MethodFact {
   const raw = object(value);
   const returnType = optional(raw.return_type_text);
+  const initialization = object(raw.initialization);
+  const delegate = optional(initialization.parse_delegate);
   return {
     name: nonempty(raw.name),
     receiver: oneOf(raw.receiver, ["none", "self", "ref-self", "mut-self", "other"] as const),
     params: array(raw.params).map(parameter),
     ...(returnType === undefined ? {} : { return_type_text: returnType }),
     returns_field_only: flag(raw.returns_field_only),
+    visibility: oneOf(raw.visibility, ["private", "pub", "pub-crate", "pub-super", "pub-in"] as const),
+    span: span(raw.span),
+    initialization: {
+      creations: array(initialization.creations).map((entry) => {
+        const creation = object(entry);
+        return {
+          type_text: nonempty(creation.type_text),
+          guarded: flag(creation.guarded),
+          input_unchanged: flag(creation.input_unchanged),
+          line: line(creation.line),
+          span: span(creation.span),
+        };
+      }),
+      delegations: array(initialization.delegations).map((entry) => {
+        const call = object(entry);
+        return {
+          type_text: nonempty(call.type_text),
+          callee_text: nonempty(call.callee_text),
+          guarded: flag(call.guarded),
+          input_unchanged: flag(call.input_unchanged),
+          span: span(call.span),
+        };
+      }),
+      ...(delegate === undefined ? {} : { parse_delegate: delegate }),
+    },
     line: line(raw.line),
   };
 }

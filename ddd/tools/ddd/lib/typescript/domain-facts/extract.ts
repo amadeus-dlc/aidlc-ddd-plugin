@@ -35,6 +35,7 @@ import type {
   Visibility,
 } from "./contract.ts";
 import { forwardedTo } from "./forwarding.ts";
+import { constructorFields, constructorInputField, initializationFacts } from "./initialization.ts";
 
 /** Members a literal spells, and whether a spread or an unspellable computed name hides others. */
 interface LiteralMembers {
@@ -129,11 +130,22 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
         ambient: hasModifier(node, api.SyntaxKind.DeclareKeyword),
         abstract: hasModifier(node, api.SyntaxKind.AbstractKeyword),
         ...(typed && node.type ? { type_text: node.type.getText(file) } : {}),
+        ...(api.isPropertyDeclaration(node) &&
+        node.initializer &&
+        api.isNewExpression(node.initializer) &&
+        node.initializer.typeArguments?.length
+          ? {
+              initializer_type_text: `${node.initializer.expression.getText(file)}<${node.initializer.typeArguments.map((type) => type.getText(file)).join(",")}>`,
+            }
+          : {}),
+        ...(signature ? { params: paramsOf(node.parameters) } : {}),
         ...((api.isMethodDeclaration(node) || api.isMethodSignature(node)) && node.type
           ? { return_type_text: node.type.getText(file) }
           : {}),
-        ...(signature ? { params: paramsOf(node.parameters) } : {}),
         ...(body ? { writes: body.writes, returns_state_only: body.returns_state_only } : {}),
+        ...(api.isMethodDeclaration(node) && node.body
+          ? { initialization: initializationFacts(api, node, file, spanOf) }
+          : {}),
         span: spanOf(node),
       },
     ];
@@ -161,6 +173,9 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
           ambient: false,
           abstract: false,
           params: paramsOf(element.parameters),
+          input_field: constructorInputField(api, element),
+          has_body: !!element.body,
+          constructor_fields: constructorFields(api, element),
           span: spanOf(element),
         };
         const parameterProperties = element.parameters
@@ -227,7 +242,7 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
   /** What only some kinds of declaration record: heritage, a type literal, a stated type, an initializer. */
   type DeclarationDetail = Pick<
     DeclarationFact,
-    "binding" | "heritage" | "type_literal" | "type_text" | "initializer" | "params"
+    "binding" | "heritage" | "type_literal" | "type_text" | "initializer" | "params" | "generic"
   >;
 
   function recordDeclaration(
@@ -386,7 +401,11 @@ export function extractFileFacts(api: CompilerApi, file: ts.SourceFile): TypeScr
       const aliased = statement.type;
       const literal = api.isTypeLiteralNode(aliased);
       const members = literal ? typeMembers(aliased.members) : [];
-      recordDeclaration(statement, statement, statement.name, "type-alias", members, { type_literal: literal });
+      recordDeclaration(statement, statement, statement.name, "type-alias", members, {
+        type_literal: literal,
+        type_text: aliased.getText(file),
+        generic: (statement.typeParameters?.length ?? 0) > 0,
+      });
     } else if (api.isEnumDeclaration(statement)) {
       const members = statement.members.flatMap((element) =>
         member(element, element.name, "enum-member", "public", unresolvedAt),

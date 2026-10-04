@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["tools/ddd/lib/rules/**/*.ts"]
+}

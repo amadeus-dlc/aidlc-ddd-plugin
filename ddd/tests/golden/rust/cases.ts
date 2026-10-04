@@ -99,6 +99,8 @@ const DOMAIN_CLEAN = `pub struct Invoice {
     amount: i64,
 }
 impl Invoice {
+    fn new(id: String, amount: i64) -> Self { Self { id, amount } }
+    pub fn open(id: String, amount: i64) -> Self { Self::new(id, amount) }
     pub fn issue(&mut self) {}
     pub fn total(&self) -> i64 { self.amount }
 }
@@ -138,7 +140,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
   domainCase(
     "violation-c-literal",
     `${DOMAIN_CLEAN}\npub fn build() -> Invoice { Invoice { id: String::new(), amount: 0 } }\n`,
-    { pass: false, rules: ["c"] },
+    { pass: false, rules: ["c", "primary-constructor"] },
   ),
   domainCase("violation-c-default", `#[derive(Default)]\n${DOMAIN_CLEAN}`, { pass: false, rules: ["c"] }),
   domainCase("violation-d", `${DOMAIN_CLEAN}\npub fn peek(inv: &Invoice) -> i64 { inv.total() }\n`, {
@@ -256,7 +258,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&mut self, invoice_id: &str) -> std::result::Result<(), RepositoryError>;\n    fn delete_by_id(&mut self, invoice_id: &str) -> ::std::result::Result<(), RepositoryError>;\n}\n",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;\n    fn store(&mut self, invoice_id: &str) -> std::result::Result<(), RepositoryError>;\n    fn delete_by_id(&mut self, invoice_id: &str) -> ::std::result::Result<(), RepositoryError>;\n}\n",
           deps: ["billing-domain"],
         },
       ],
@@ -276,7 +278,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
           deps: ["billing-domain"],
         },
       ],
@@ -296,7 +298,7 @@ const BASE_RUST_CASES: GoldenCase[] = [
         {
           path: "packages/use-case/billing-use-case",
           name: "billing-use-case",
-          lib: "pub struct RepositoryError;\npub trait InvoiceRepository: Send + Sync {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<String>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
+          lib: "pub struct RepositoryError;\npub trait InvoiceRepository: Send + Sync {\n    fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;\n    fn store(&self, invoice_id: &str) -> Result<(), RepositoryError>;\n}\n",
           deps: ["billing-domain"],
         },
       ],
@@ -358,7 +360,11 @@ const BASE_RUST_CASES: GoldenCase[] = [
     output: OUTPUT,
     ...project(
       [
-        { path: "packages/domain/billing-domain", name: "billing-domain", lib: "pub struct Invoice { id: String }\n" },
+        {
+          path: "packages/domain/billing-domain",
+          name: "billing-domain",
+          lib: "pub struct Invoice { id: String } impl Invoice { fn new(id: String) -> Self { Self { id } } }\n",
+        },
         {
           path: "packages/interface-adapter/billing-interface-adapter",
           name: "billing-interface-adapter",

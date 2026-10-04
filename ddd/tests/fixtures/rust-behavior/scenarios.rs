@@ -11,9 +11,9 @@ use std::collections::HashMap;
 use std::panic::{catch_unwind, UnwindSafe};
 
 use billing_domain::invoice::line::InvoiceLine;
-use billing_domain::invoice::{AddInvoiceLineError, Invoice, IssueInvoiceError, OpenInvoiceError};
+use billing_domain::invoice::{AddInvoiceLineError, Invoice, InvoiceEvent, Issued, IssueInvoiceError, OpenInvoiceError};
 use billing_domain::money::Money;
-use billing_interface_adapter::in_memory_invoice_repository::{InMemoryInvoiceRepository, InvoiceRecord};
+use billing_interface_adapter::in_memory_invoice_repository::InMemoryInvoiceRepository;
 use billing_use_case::invoice_repository::{InvoiceRepository, RepositoryError};
 use billing_use_case::issue_invoice::{IssueInvoiceUseCase, IssueInvoiceFailure};
 
@@ -49,20 +49,20 @@ fn panic_message<T>(construct: impl FnOnce() -> T + UnwindSafe) -> String {
     }
 }
 
-fn record(amounts: Vec<i64>, issued: bool) -> InvoiceRecord {
-    InvoiceRecord { customer: CUSTOMER.to_string(), amounts, issued }
+fn line(amount: i64) -> InvoiceLine { InvoiceLine::of(Money::of(amount as f64)) }
+
+fn stream(amounts: Vec<i64>, issued: bool) -> Vec<InvoiceEvent> {
+    let lines = amounts.into_iter().map(line).collect();
+    let mut history = vec![InvoiceEvent::Opened { customer: CUSTOMER.to_string(), lines }];
+    if issued { history.push(InvoiceEvent::Issued(Issued)); }
+    history
 }
 
-fn line(amount: i64) -> InvoiceLine {
-    InvoiceLine::of(Money::of(amount))
-}
-
-/// The persisted records a repository starts from: a draft with lines, a draft without, an issued one.
-fn records() -> HashMap<String, InvoiceRecord> {
+fn records() -> HashMap<String, Vec<InvoiceEvent>> {
     HashMap::from([
-        (DRAFT.to_string(), record(vec![100, 20], false)),
-        (EMPTY_DRAFT.to_string(), record(vec![], false)),
-        (ISSUED.to_string(), record(vec![5], true)),
+        (DRAFT.to_string(), stream(vec![100, 20], false)),
+        (EMPTY_DRAFT.to_string(), stream(vec![], false)),
+        (ISSUED.to_string(), stream(vec![5], true)),
     ])
 }
 
@@ -93,14 +93,14 @@ fn expect_not_found(result: Result<(), IssueInvoiceFailure>) {
 #[test]
 fn state_change() {
     let mut invoice = value(Invoice::open(CUSTOMER, vec![line(100)]));
-    assert_eq!(invoice.total(), Money::of(100));
+    assert_eq!(invoice.total(), Money::of(100.0));
     value(invoice.add_line(line(50)));
-    assert_eq!(invoice.total(), Money::of(150));
+    assert_eq!(invoice.total(), Money::of(150.0));
     assert_eq!(invoice.lines().len(), 2);
     value(invoice.issue());
     assert_eq!(error_of(invoice.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     assert_eq!(error_of(invoice.issue()), IssueInvoiceError::AlreadyIssued);
-    assert_eq!(invoice.total(), Money::of(150));
+    assert_eq!(invoice.total(), Money::of(150.0));
 
     let mut repository = InMemoryInvoiceRepository::new(records());
     value(IssueInvoiceUseCase::new(&mut repository).execute(DRAFT));
@@ -111,7 +111,7 @@ fn state_change() {
 fn business_error_keeps_state() {
     let mut invoice = value(Invoice::open(CUSTOMER, vec![line(100)]));
     assert_eq!(error_of(invoice.add_line(line(-150))), AddInvoiceLineError::NegativeTotal);
-    assert_eq!(invoice.total(), Money::of(100));
+    assert_eq!(invoice.total(), Money::of(100.0));
     assert_eq!(invoice.lines().len(), 1);
 
     let mut empty = value(Invoice::open(CUSTOMER, vec![]));
@@ -124,7 +124,7 @@ fn business_error_keeps_state() {
     expect_rejected(IssueInvoiceUseCase::new(&mut repository).execute(ISSUED), IssueInvoiceError::AlreadyIssued);
     expect_rejected(IssueInvoiceUseCase::new(&mut repository).execute(EMPTY_DRAFT), IssueInvoiceError::EmptyLines);
     let mut issued = found(repository.find_by_id(ISSUED));
-    assert_eq!(issued.total(), Money::of(5));
+    assert_eq!(issued.total(), Money::of(5.0));
     assert_eq!(error_of(issued.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     let mut still_empty = found(repository.find_by_id(EMPTY_DRAFT));
     assert_eq!(still_empty.lines().len(), 0);
@@ -136,9 +136,9 @@ fn business_error_keeps_state() {
 fn invalid_value_rejected() {
     assert_eq!(error_of(Invoice::open("", vec![line(1)])), OpenInvoiceError::MissingCustomer);
     assert_eq!(error_of(Invoice::open(CUSTOMER, vec![line(-1)])), OpenInvoiceError::NegativeTotal);
-    assert!(panic_message(|| Invoice::restore("", vec![line(1)], false)).contains("corrupt invoice state"));
-    assert!(panic_message(|| Invoice::restore(CUSTOMER, vec![], true)).contains("corrupt invoice state"));
-    assert!(panic_message(|| Invoice::restore(CUSTOMER, vec![line(-1)], false)).contains("corrupt invoice state"));
+    assert!(panic_message(|| Invoice::restore(&[InvoiceEvent::Opened { customer: "".to_string(), lines: vec![line(1)] }])).contains("corrupt invoice history"));
+    assert!(panic_message(|| Invoice::restore(&stream(vec![], true))).contains("corrupt invoice history"));
+    assert!(panic_message(|| Invoice::restore(&stream(vec![-1], false))).contains("corrupt invoice history"));
 }
 
 /// scenarios.ts "restore-after-persistence".
@@ -146,7 +146,7 @@ fn invalid_value_rejected() {
 fn restore_after_persistence() {
     let repository = InMemoryInvoiceRepository::new(records());
     let draft = found(repository.find_by_id(DRAFT));
-    assert_eq!(draft.total(), Money::of(120));
+    assert_eq!(draft.total(), Money::of(120.0));
     assert_eq!(draft.lines().len(), 2);
     assert!(draft.is_billed_to(CUSTOMER));
     assert!(!draft.is_billed_to("another-customer"));
@@ -156,7 +156,7 @@ fn restore_after_persistence() {
     value(IssueInvoiceUseCase::new(&mut persisted).execute(DRAFT));
     // The stored invoice, not the draft record it was read from, is what the next read returns.
     let mut stored = found(persisted.find_by_id(DRAFT));
-    assert_eq!(stored.total(), Money::of(120));
+    assert_eq!(stored.total(), Money::of(120.0));
     assert!(stored.is_billed_to(CUSTOMER));
     assert_eq!(error_of(stored.add_line(line(1))), AddInvoiceLineError::AlreadyIssued);
     expect_rejected(IssueInvoiceUseCase::new(&mut persisted).execute(DRAFT), IssueInvoiceError::AlreadyIssued);

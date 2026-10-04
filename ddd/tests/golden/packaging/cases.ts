@@ -449,7 +449,7 @@ const replaySource = "packages/domain/billing-domain/src/billing.rs";
 pathReplay.workspace = {
   ...pathReplay.workspace,
   [replaySource]:
-    "pub struct Invoice { amount: i64 }\npub struct Issued { amount: i64 }\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n",
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\npub struct Issued { amount: i64 } impl Issued { fn new(amount: i64) -> Self { Self { amount } } }\nimpl Invoice { pub fn apply_event(&mut self, event: Issued) { self.amount = event.amount; } }\n",
 };
 pathReplay.files["construction/u1/code-generation/source-manifest.json"] = JSON.stringify({
   stage: "code-generation",

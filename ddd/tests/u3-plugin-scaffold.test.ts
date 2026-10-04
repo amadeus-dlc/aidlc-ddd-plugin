@@ -35,6 +35,7 @@ const CHECK_STEPS = [
   "bun run typecheck:state-exposure",
   "bun run typecheck:error-contract",
   "bun run typecheck:typescript-facts",
+  "bun run typecheck:construction-contracts",
 ];
 
 /** FR11.5 forbids relying on these: `adds.required_sections` is not enforced and `adds.requires_stage` is deferred. */

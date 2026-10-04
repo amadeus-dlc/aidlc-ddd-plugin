@@ -16,11 +16,12 @@ const MOD_RS = "packages/domain/billing-domain/src/invoice/mod.rs";
 const MANIFEST = "construction/u1/code-generation/source-manifest.json";
 
 /** A crate whose one public member is the unnamed member of a tuple declaration. */
-const TUPLE_PUBLIC = "pub struct Invoice(pub i64);\n";
+const TUPLE_PUBLIC = "pub struct Invoice(pub i64); impl Invoice { fn new(value: i64) -> Self { Self(value) } }\n";
 /** The same declaration with its member private: the tuple form itself is not the violation. */
-const TUPLE_PRIVATE = "pub struct Invoice(i64);\n";
+const TUPLE_PRIVATE = "pub struct Invoice(i64); impl Invoice { fn new(value: i64) -> Self { Self(value) } }\n";
 /** One restricted member and one private member, each on its own line. */
-export const TUPLE_RESTRICTED = "pub struct Invoice(\n    pub(crate) i64,\n    i64,\n);\n";
+export const TUPLE_RESTRICTED =
+  "pub struct Invoice(\n    pub(crate) i64,\n    i64,\n); impl Invoice { fn new(first: i64, second: i64) -> Self { Self(first, second) } }\n";
 /** Enum variant members carry the visibility of the enum; they are not public fields. */
 const ENUM_VARIANTS = `${TUPLE_PRIVATE}pub enum Kind {
     Draft,
@@ -38,22 +39,22 @@ const DOC: &str = "pub amount: i64";
 // pub amount: i64
 `;
 /** A getter whose body is an explicit \`return\`, beside a same-named method of another type. */
-export const EXPLICIT_RETURN = `pub struct Invoice { amount: i64 }
+export const EXPLICIT_RETURN = `pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }
 impl Invoice { pub fn total(&self) -> i64 { return self.amount; } }
-pub struct Ledger { entries: i64 }
+pub struct Ledger { entries: i64 } impl Ledger { fn new(entries: i64) -> Self { Self { entries } } }
 impl Ledger { pub fn total(&self) -> i64 { self.entries + 1 } }
 pub fn peek(inv: &Invoice) -> i64 { inv.total() }
 pub fn count(ledger: &Ledger) -> i64 { ledger.total() }
 `;
 /** A trait implementation returns a field: a trait method is not an inherent getter. */
-const TRAIT_IMPL_GETTER = `pub struct Invoice { amount: i64 }
+const TRAIT_IMPL_GETTER = `pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }
 pub trait Shown { fn shown(&self) -> i64; }
 impl Shown for Invoice { fn shown(&self) -> i64 { self.amount } }
 pub fn peek(inv: &Invoice) -> i64 { inv.shown() }
 `;
 /** Both missed forms in one module file, so either module layout reports the same two rules. */
-const MODULE_SOURCE = `pub struct Invoice(pub i64);
-pub struct Ledger { amount: i64 }
+const MODULE_SOURCE = `pub struct Invoice(pub i64); impl Invoice { fn new(value: i64) -> Self { Self(value) } }
+pub struct Ledger { amount: i64 } impl Ledger { fn new(amount: i64) -> Self { Self { amount } } }
 impl Ledger { pub fn total(&self) -> i64 { return self.amount; } }
 pub fn peek(ledger: &Ledger) -> i64 { ledger.total() }
 `;
@@ -94,7 +95,7 @@ export function domainFactsCases(base: readonly GoldenCase[]): GoldenCase[] {
   // files alone.
   const useCase = clone("violation-h", "violation-d-use-case-explicit-return");
   useCase.workspace[DOMAIN] =
-    "pub struct Invoice { amount: i64 }\nimpl Invoice { pub fn total(&self) -> i64 { return self.amount; } }\n";
+    "pub struct Invoice { amount: i64 } impl Invoice { fn new(amount: i64) -> Self { Self { amount } } }\nimpl Invoice { pub fn total(&self) -> i64 { return self.amount; } }\n";
   useCase.workspace[USE_CASE] = "use billing_domain::Invoice;\npub fn render(inv: &Invoice) -> i64 { inv.total() }\n";
   useCase.expect = { pass: false, rules: ["d"], files: { d: USE_CASE } };
   cases.push(useCase);

@@ -76,7 +76,13 @@ function isReplay(inspection: TsInspection, type: TsDomainType, method: TsMethod
     factsOf(inspection, method.file),
     stated,
   );
-  if (resolved.kind !== "domain") return false;
+  if (resolved.kind !== "domain") {
+    // Immutable event records may be declared as local type literals without a companion.
+    const declarations = factsOf(inspection, method.file).declarations.filter(
+      (entry) => entry.kind === "type-alias" && entry.type_literal && entry.name === stated,
+    );
+    return declarations.length === 1 && names.includes(declarations[0].name);
+  }
   const event = resolved.type;
   return (
     event.pkg.root === type.pkg.root &&

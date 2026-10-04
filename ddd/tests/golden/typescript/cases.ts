@@ -141,6 +141,7 @@ export const CLASS_CLEAN = `export class Invoice {
   private constructor(id: string, amount: number) {
     this.#id = id;
     this.#amount = amount;
+    this.#issued = false;
   }
 
   static open(id: string, amount: number): Invoice {
@@ -367,13 +368,16 @@ function stateHidingCases(): GoldenCase[] {
     // Only a `#` field is hidden at run time; the rest of the class is operations.
     tsCase(
       "clean-a-private-name-only",
-      { source: "export class Invoice { #amount = 0; issue() { this.#amount = 1; } }\n" },
+      {
+        source:
+          "export class Invoice { #amount: number; private constructor() { this.#amount = 0; } issue() { this.#amount = 1; } }\n",
+      },
       { pass: true, rules: [] },
     ),
     // `private` is erased by the compiler, so the field is an own property anyone can read.
     tsCase(
       "violation-a-class-private",
-      { source: "export class Invoice { private amount = 0; }\n" },
+      { source: "export class Invoice { private amount: number; private constructor() { this.amount = 0; } }\n" },
       { pass: false, rules: ["a"] },
     ),
     tsCase(
@@ -390,7 +394,7 @@ function stateHidingCases(): GoldenCase[] {
           "private constructor(protected id: string, amount: number) {\n",
         ),
       },
-      { pass: false, rules: ["a"] },
+      { pass: false, rules: ["a", "primary-constructor"] },
     ),
     // Static members belong to the class object, not to an instance's state.
     tsCase(
@@ -404,11 +408,13 @@ function stateHidingCases(): GoldenCase[] {
 /** Undeclared mutation (b): a replay method is exempt only when the mapping declares it. */
 function mutationCases(): GoldenCase[] {
   const replaySource = `export class Issued {
-  #amount = 0;
+  #amount: number;
+  private constructor() { this.#amount = 0; }
 }
 
 export class Invoice {
-  #amount = 0;
+  #amount: number;
+  private constructor() { this.#amount = 0; }
 
   applyEvent(event: Issued): void {
     this.#amount = 1;

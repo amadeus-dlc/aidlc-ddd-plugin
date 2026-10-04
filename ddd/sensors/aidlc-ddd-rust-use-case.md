@@ -9,6 +9,7 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: repository-result-contract, requirement: DEC-2026-10-04, inputs: [traits, declarations, aliases], outcome: finding }
   - { rule_id: g, requirement: FR7.5, inputs: [uses, cargo-dependencies, layer-assignment], outcome: finding }
   - { rule_id: h, requirement: FR7.6, inputs: [impls, fns, domain-symbols], outcome: finding }
   - { rule_id: i, requirement: FR7.7, inputs: [calls], outcome: finding }
@@ -32,3 +33,5 @@ and external I/O (g), aggregate arguments to `execute` (h), use-case chaining
 (use-case-name), a method of a repository port that does not return `Result`
 (repository-result), and a `store…` or `delete…` method of a repository port that does not take
 `&mut self` unless the port declares `Sync` (repository-mut-self). Rule d permits unchanged getter-result forwarding to resolved repository port methods, directly or through immutable local bindings used only for repository arguments. Business branching and calculation remain forbidden; naming a variable `repo` is not an exemption.
+
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`.

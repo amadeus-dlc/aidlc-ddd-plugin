@@ -169,6 +169,8 @@ const DOMAIN_CLEAN = `pub struct Invoice {
     amount: i64,
 }
 impl Invoice {
+    fn new(id: String, amount: i64) -> Self { Self { id, amount } }
+    pub fn open(id: String, amount: i64) -> Self { Self::new(id, amount) }
     pub fn issue(&mut self) {}
     pub fn total(&self) -> i64 { self.amount }
 }

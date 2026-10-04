@@ -213,7 +213,8 @@ derive("ddd-rust-domain", "clean-domain", "violation-layer-unowned", (entry) => 
 });
 derive("ddd-rust-domain", "clean-domain", "clean-full-constructor", (entry) => {
   const path = "packages/domain/billing-domain/src/lib.rs";
-  workspace(entry)[path] += "\nimpl Invoice { pub fn new(id: String, amount: i64) -> Self { Self { id, amount } } }\n";
+  workspace(entry)[path] +=
+    "\nimpl Invoice { pub fn create(id: String, amount: i64) -> Self { Self::new(id, amount) } }\n";
 });
 derive("ddd-rust-domain", "clean-domain", "clean-self-getter", (entry) => {
   const path = "packages/domain/billing-domain/src/lib.rs";

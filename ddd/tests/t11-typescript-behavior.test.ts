@@ -119,9 +119,9 @@ for (const sample of generationSamples()) {
 
     // The behavior record names the execution model and persistence method each scenario exercises;
     // they are the ones the sample's own mapping declares.
-    test("declares the class programming model and state-sourcing persistence it is exercised under", () => {
+    test("declares the class programming model and event-sourcing persistence it is exercised under", () => {
       expect(mappingValue(sample, "programming_model")).toBe("class");
-      expect(mappingValue(sample, "persistence_method")).toBe("state-sourcing");
+      expect(mappingValue(sample, "persistence_method")).toBe("event-sourcing");
     });
   });
 }

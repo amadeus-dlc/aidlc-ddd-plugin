@@ -9,6 +9,7 @@ category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
 checks:
+  - { rule_id: repository-result-contract, requirement: DEC-2026-10-04, inputs: [traits, declarations, aliases], outcome: finding }
   - { rule_id: g, requirement: FR7.5, inputs: [imports, exports, package-json, tsconfig-paths, layer-assignment], outcome: finding }
   - { rule_id: h, requirement: FR7.6, inputs: [declarations, members, domain-symbols], outcome: finding }
   - { rule_id: i, requirement: FR7.7, inputs: [calls, declarations], outcome: finding }
@@ -36,3 +37,5 @@ port, directly or through `const` bindings whose every reference is such a forwa
 
 A construct the facts or the rules cannot decide, and a compiler that cannot be launched, stop the
 gate as uninspectable (exit 127) instead of answering, so neither is ever approved.
+
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`.

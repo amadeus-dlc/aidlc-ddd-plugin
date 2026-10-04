@@ -1,1 +1,1 @@
-class Model { #value = 0; }
+class Model { #value: number; private constructor() { this.#value = 0; } }
