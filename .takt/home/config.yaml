@@ -1,6 +1,6 @@
 # takt のグローバル層として、このリポジトリが所有する設定。
 #
-# scripts/run-takt.sh が TAKT_CONFIG_DIR をこのディレクトリへ向けるため、~/.takt は読まれない。
+# .takt/bin/run-takt.sh が TAKT_CONFIG_DIR をこのディレクトリへ向けるため、~/.takt は読まれない。
 # ~/.takt は他のプロジェクトが書き換えることがあり、その変更がこのリポジトリの takt 実行へ
 # 混ざらないようにするためである。
 #

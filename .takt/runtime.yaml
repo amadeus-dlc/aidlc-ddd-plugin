@@ -1,5 +1,5 @@
 # このリポジトリで takt が使うプロバイダとモデル。~/.takt/runtime.yaml は読まない
-# (起動時に TAKT_CONFIG_DIR を .takt/global へ向けるため)。
+# (.takt/bin/run-takt.sh が TAKT_CONFIG_DIR を .takt/home へ向けるため)。
 #
 # 割り当て (2026-10-05 に合意):
 # - 計画 (planner) は Claude Opus 5.5
@@ -7,9 +7,9 @@
 # - レビュー (coding-reviewer) は GPT-6.1-Sol (effort high)。実装と別の系統で独立に見る
 # - そのほか (companion・moderator など) は Claude Sonnet 5.5
 #
-# Claude と Codex のアカウントは起動のたびに選ぶ。TAKT_CLAUDE_CLI_PATH に scripts/takt-claude.sh、
-# TAKT_CODEX_CLI_PATH に scripts/takt-codex.sh を絶対パスで渡し、TAKT_CLAUDE_ACCOUNT_DIR と
-# TAKT_CODEX_ACCOUNT_DIR に使うアカウントの設定ディレクトリを渡す。
+# Claude と Codex のアカウントは起動のたびに選ぶ:
+#   .takt/bin/run-takt.sh --claude-account <dir> --codex-account <dir> [takt の引数...]
+# .takt/bin/ の起動スクリプトは takt-workflows から導入する (use-lang.sh ja <このリポジトリ> --launchers-only)。
 version: 1
 # 実装中に並走するレビュー companion を有効にする。
 companion:

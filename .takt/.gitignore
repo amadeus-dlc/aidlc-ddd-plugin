@@ -8,10 +8,10 @@
 !config.yaml
 !runtime.yaml
 
-# The global layer this repository owns (scripts/run-takt.sh points TAKT_CONFIG_DIR here)
-!global/
-!global/config.yaml
-!global/runtime.yaml
+# The global layer this repository owns (.takt/bin/run-takt.sh points TAKT_CONFIG_DIR here)
+!home/
+!home/config.yaml
+!home/runtime.yaml
 
 # Facets and workflows (version-controlled)
 !workflows/
@@ -29,3 +29,7 @@
 !facets/instructions/**
 !facets/output-contracts/
 !facets/output-contracts/**
+
+# takt launchers installed from takt-workflows (use-lang.sh --launchers-only)
+!bin/
+!bin/**
