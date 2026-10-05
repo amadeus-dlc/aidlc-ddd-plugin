@@ -2,7 +2,7 @@
 # Renovate の mise マネージャがここと CI の固定を同時に上げる。
 # node >= 23 は SMT センサーの z3 子プロセスに必要（docs/decisions A1）。
 [tools]
-# scripts/run-takt.sh が使う takt。グローバルに入っている版にかかわらず、このリポジトリでは
+# .takt/bin/run-takt.sh が使う takt。グローバルに入っている版にかかわらず、このリポジトリでは
 # この版を使う。node のディレクトリにもグローバルの takt があり、mise は書いた順に PATH へ
 # 並べるので、node より前に書く。
 "npm:takt" = "0.67.0"
