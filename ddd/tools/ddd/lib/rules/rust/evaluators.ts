@@ -573,7 +573,7 @@ function ruleEventSourcingStore(target: InspectionTarget, context: InspectionCon
   if (!target.file || context.rustMapping.kind !== "loaded") return [];
   const file = target.file;
   const source = context.program.files.get(file);
-  if (!source) throw new Error(`missing inspected source ${file}`);
+  if (!source) return []; // The program leaves out a file shared by several module namespaces and notes it as syntax.unresolved.
   const facts = declarationsOf(context, file);
   const findings: FindingInput[] = [];
   for (const port of facts.traits.filter((entry) => entry.name.endsWith("Repository"))) {
@@ -622,7 +622,7 @@ interface RepositoryImpl {
  */
 function repositoryImpls(context: InspectionContext, file: string): RepositoryImpl[] {
   const source = context.program.files.get(file);
-  if (!source) throw new Error(`missing inspected source ${file}`);
+  if (!source) return []; // The program leaves out a file shared by several module namespaces and notes it as syntax.unresolved.
   return source.impls.flatMap((impl) => {
     if (impl.trait_text === undefined) return [];
     const scope = [...source.module, ...impl.module];
@@ -643,7 +643,7 @@ function ruleRepositoryAdapterSurface(target: InspectionTarget, context: Inspect
   if (!target.file) return [];
   const file = target.file;
   const source = context.program.files.get(file);
-  if (!source) throw new Error(`missing inspected source ${file}`);
+  if (!source) return []; // The program leaves out a file shared by several module namespaces and notes it as syntax.unresolved.
   const facts = declarationsOf(context, file);
   const resolve = (module: readonly string[], text: string) =>
     context.program.resolveType(file, [...source.module, ...module], text);

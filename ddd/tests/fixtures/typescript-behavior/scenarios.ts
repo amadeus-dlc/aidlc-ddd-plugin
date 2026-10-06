@@ -305,20 +305,22 @@ export const BEHAVIOR_SCENARIOS: readonly BehaviorScenario[] = [
       expect(guarded.findById(UNKNOWN)).toEqual({ ok: true, value: undefined });
 
       // The snapshot is replaced at number 1 and at each multiple of the interval, and a read starts from it.
-      const timing = (interval: number): Result<Invoice | undefined, RepositoryError> => {
+      // A command's event and the aggregate it returned read back the same either way: interval 2 starts from
+      // the snapshot at number 2, and interval 3 replays the event at number 2 over the snapshot at number 1.
+      const timing = (interval: number): Invoice => {
         const timed = new InMemoryInvoiceRepository(interval);
         openAndStore(modules, timed, DRAFT, []);
         const loaded = found(timed.findById(DRAFT));
-        expectEvent(loaded.addLine(line(5)), "line-added");
-        expectOk(timed.store(issuedAt(DRAFT, 2), loaded));
-        return timed.findById(DRAFT);
+        const added = expectEvent(loaded.addLine(line(5)), "line-added");
+        expectOk(timed.store(added, loaded));
+        return found(timed.findById(DRAFT));
       };
-      // Interval 2 replaces the snapshot at number 2, so nothing is replayed.
-      const snapshotted = found(timing(2));
-      expectTotal(snapshotted, 5);
-      expectEvent(snapshotted.issue(), "issued");
-      // Interval 3 keeps the snapshot at number 1, so the event at number 2 is replayed over it and is refused.
-      expectRepositoryError(timing(3));
+      for (const interval of [2, 3]) {
+        const read = timing(interval);
+        expectTotal(read, 5);
+        expect(read.sequenceNumber()).toBe(2);
+        expectEvent(read.issue(), "issued");
+      }
     },
   },
 ];

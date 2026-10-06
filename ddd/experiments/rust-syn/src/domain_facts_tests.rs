@@ -972,7 +972,7 @@ fn domain_facts_refuses_a_request_that_is_not_this_protocol() {
         json!({"protocol_version":6,"files":[{"path":"lib.rs","source":""}]}),
         json!({"protocol_version":13,"files":[]}),
         json!({"protocol_version":13,"files":[{"path":"lib.rs"}]}),
-        json!({"protocol_version":12,"files":[{"path":"lib.rs","source":"","extra":true}]}),
+        json!({"protocol_version":13,"files":[{"path":"lib.rs","source":"","extra":true}]}),
     ] {
         assert!(run(request).is_err());
     }

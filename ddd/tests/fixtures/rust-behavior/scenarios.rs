@@ -257,18 +257,20 @@ fn restore_after_persistence() {
     assert!(matches!(guarded.find_by_id(UNKNOWN), Ok(None)));
 
     // The snapshot is replaced at number 1 and at each multiple of the interval, and a read starts from it.
+    // A command's event and the aggregate it returned read back the same either way: interval 2 starts from
+    // the snapshot at number 2, and interval 3 replays the event at number 2 over the snapshot at number 1.
     let timing = |interval: u64| {
         let mut timed = InMemoryInvoiceRepository::new(interval);
         open_and_store(&mut timed, DRAFT, vec![]);
         let mut loaded = found(timed.find_by_id(DRAFT));
-        value(loaded.add_line(line(5)));
-        value(timed.store(issued_at(DRAFT, 2), loaded));
-        timed.find_by_id(DRAFT)
+        let added = InvoiceEvent::LineAdded(value(loaded.add_line(line(5))));
+        value(timed.store(added, loaded));
+        found(timed.find_by_id(DRAFT))
     };
-    // Interval 2 replaces the snapshot at number 2, so nothing is replayed.
-    let mut snapshotted = found(timing(2));
-    assert_eq!(snapshotted.total(), Money::of(5.0));
-    value(snapshotted.issue());
-    // Interval 3 keeps the snapshot at number 1, so the event at number 2 is replayed over it and is refused.
-    assert!(timing(3).is_err());
+    for interval in [2, 3] {
+        let mut read = timing(interval);
+        assert_eq!(read.total(), Money::of(5.0));
+        assert_eq!(read.sequence_number(), 2);
+        value(read.issue());
+    }
 }
