@@ -8,10 +8,19 @@
  * annotation spells, and what those do not decide is left undecided rather than passed.
  */
 
+import { join } from "node:path";
 import type { FindingInput } from "../../shared/findings.ts";
 import type { MemberFact, ParamFact, TypeScriptFileFacts } from "../../typescript/domain-facts/index.ts";
-import { expandGenericStoreResult, repositoryContractProblem, resultArguments } from "../repository-contract.ts";
-import { aggregateBinding } from "./aggregate-binding.ts";
+import { isAggregateStateElement } from "../in-memory.ts";
+import { domainEventTypeNames } from "../mutations.ts";
+import {
+  EVENT_SOURCING_STORE,
+  expandGenericStoreResult,
+  repositoryContractProblem,
+  resultArguments,
+} from "../repository-contract.ts";
+import { aggregateBinding, aggregateMappings } from "./aggregate-binding.ts";
+import { resolveSpecifier } from "./edges.ts";
 import { enclosingClass, factsOf, receiverType } from "./file-facts.ts";
 import {
   isNamedType,
@@ -312,6 +321,72 @@ export function ruleRepositoryContract(inspection: TsInspection, target: TsTarge
         line: alias.span.start_line,
         message: `${alias.name} only renames a repository Result; use Result directly or a reusable generic alias`,
       });
+  }
+  return findings;
+}
+
+/**
+ * An Event Sourcing repository port stores the domain event with the aggregate right after it,
+ * `store(event, snapshot)`: the event already carries its aggregate id, and the snapshot lets
+ * `findById` replay only the events after it. The event is a single named type imported from the
+ * aggregate's domain package that is neither the aggregate nor one of its state elements, and the name the package declares for it is the aggregate's `<Aggregate>Event` or an event the model declares for it.
+ */
+export function ruleEventSourcingStore(inspection: TsInspection, target: TsTarget): FindingInput[] {
+  const facts = factsOf(inspection, target.file);
+  const findings: FindingInput[] = [];
+  for (const port of facts.declarations.filter(
+    (entry) => isPortDeclaration(entry) && entry.name.endsWith("Repository"),
+  )) {
+    const aggregate = aggregateMappings(inspection).find(
+      (entry) => entry.persistence_method === "event-sourcing" && `${entry.type}Repository` === port.name,
+    );
+    if (!aggregate) continue;
+    const eventNames = domainEventTypeNames(inspection.model, aggregate.aggregate_ref, aggregate.type);
+    const domainType = (text: string | undefined) => {
+      if (text === undefined) return undefined;
+      const resolved = resolveTypeName(inspection.packages, inspection.symbols, target.file, facts, text);
+      return resolved.kind === "domain" ? resolved.type : undefined;
+    };
+    const isSnapshot = (text: string | undefined) => {
+      const type = domainType(text);
+      return type !== undefined && type.name === aggregate.type && type.pkg.name === aggregate.package;
+    };
+    const isEvent = (text: string | undefined) => {
+      if (text === undefined || !/^[\w$]+(?:\.[\w$]+)*$/.test(text)) return false;
+      const type = domainType(text);
+      if (
+        type &&
+        (type.name === aggregate.type || isAggregateStateElement(inspection.model, aggregate.aggregate_ref, type.name))
+      )
+        return false;
+      const [head, ...rest] = text.split(".");
+      const imported = facts.imports.find((entry) => entry.bindings.some((binding) => binding.name === head));
+      // The name the domain package declares: the one a renaming import (`X as Event`) reads, or the
+      // member a namespace import is dotted with.
+      const declared =
+        rest.length > 0 ? rest[rest.length - 1] : imported?.bindings.find((b) => b.name === head)?.imported;
+      if (declared === undefined || !eventNames.has(declared)) return false;
+      const from = imported
+        ? resolveSpecifier(
+            inspection.packages,
+            target.pkg,
+            join(inspection.packages.workspaceRoot, target.file),
+            imported.specifier,
+          )
+        : undefined;
+      return from?.kind === "package" && from.pkg.name === aggregate.package;
+    };
+    for (const member of port.members.filter((entry) => entry.name === "store")) {
+      const params = member.params ?? [];
+      if (params.length === 2 && isEvent(params[0]?.type_text) && isSnapshot(params[1]?.type_text)) continue;
+      const spelled = params.map((param) => `${param.name}: ${param.type_text ?? "?"}`).join(", ");
+      findings.push({
+        rule_id: "event-sourcing-store",
+        file: target.file,
+        line: member.span.start_line,
+        message: `${port.name}.store(${spelled}): ${EVENT_SOURCING_STORE}`,
+      });
+    }
   }
   return findings;
 }

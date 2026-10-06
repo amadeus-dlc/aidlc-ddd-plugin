@@ -113,6 +113,8 @@ export interface TsInspection {
   readonly symbols: TsSymbolTable;
   /** Every class and port the read sources declare, whatever their layer. */
   readonly declarations: readonly TsDeclared[];
+  /** Every alias of a type that is no type literal, which the read sources declare; a port can be named through one. */
+  readonly aliases: readonly TsDeclared[];
   readonly model: ModelAvailability;
   readonly mapping: MappingViewLoad;
   /** Coverage notes the verdict carries, such as an ambiguous model binding. */

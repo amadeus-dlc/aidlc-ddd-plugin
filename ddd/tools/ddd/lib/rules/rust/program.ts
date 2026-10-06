@@ -51,6 +51,12 @@ export interface RustProgram {
   /** The native facts this program was built from, keyed by workspace-relative file. */
   facts: DomainFactSet;
   resolveType(file: string, module: string[], text: string): RustType | undefined;
+  /**
+   * The type `text` names when it is one named type path, and no wrapper, reference or generic is
+   * written around it, either where it is spelled or in any alias it goes through. Where a rule
+   * asks for one type itself, `resolveType` would answer for what a `Vec<T>` or `Option<T>` holds.
+   */
+  resolveNamedType(file: string, module: string[], text: string): RustType | undefined;
   receiver(file: string, call: CallFact): RustType | undefined;
 }
 
@@ -123,10 +129,18 @@ function importNames(text: string, prefix = ""): { name: string; target: string 
   return [{ name: alias ?? target.split("::").at(-1) ?? "", target }];
 }
 
+/** `text` without one leading reference, `&`, `&'a`, `&mut` or `&'a mut`. */
+export function withoutReference(text: string): string {
+  return text.trim().replace(/^&\s*(?:'\w+\s*)?(?:mut\s+)?/, "");
+}
+
+/** Whether `text` is one named type path, such as `Invoice` or `billing_domain::invoice::Invoice`, and nothing wrapped around it. */
+export function isTypePath(text: string): boolean {
+  return /^(?:::\s*)?[A-Za-z_]\w*(?:\s*::\s*[A-Za-z_]\w*)*$/.test(text.trim());
+}
+
 function bareType(text: string): string {
-  return text
-    .trim()
-    .replace(/^&\s*(?:'\w+\s*)?(?:mut\s+)?/, "")
+  return withoutReference(text)
     .replace(/^(impl|dyn)\s+/, "")
     .trim();
 }
@@ -224,13 +238,20 @@ export function buildProgram(sources: RustSourceInventory, facts: DomainFactSet)
     }
   }
   const crates = sources.workspaceCrates;
-  function lookup(file: string, module: string[], raw: string, seen: Set<string>): RustType | undefined {
+  function lookup(
+    file: string,
+    module: string[],
+    raw: string,
+    seen: Set<string>,
+    strict = false,
+  ): RustType | undefined {
     const owner = files.get(file);
     if (!owner || owner.localImports) return undefined;
-    const text = bareType(raw);
-    const wrapper = /^(?:(?:std|core|alloc)::(?:boxed|sync|rc|option|vec)::)?(Box|Arc|Rc|Option|Vec)\s*<(.+)>$/.exec(
-      text,
-    );
+    if (strict && !isTypePath(raw)) return undefined;
+    const text = strict ? raw.replace(/\s+/g, "") : bareType(raw);
+    const wrapper = strict
+      ? null
+      : /^(?:(?:std|core|alloc)::(?:boxed|sync|rc|option|vec)::)?(Box|Arc|Rc|Option|Vec)\s*<(.+)>$/.exec(text);
     if (wrapper) {
       const key = [owner.crate, ...module, wrapper[1]].join("::");
       const imported = aliases.filter((alias) => alias.key === key);
@@ -270,11 +291,13 @@ export function buildProgram(sources: RustSourceInventory, facts: DomainFactSet)
       if (!candidates.length) continue;
       if (candidates.length !== 1 || candidates[0].generic) return undefined;
       const alias = candidates[0];
-      return lookup(alias.file, alias.module, [alias.target, ...parts.slice(n)].join("::"), next);
+      return lookup(alias.file, alias.module, [alias.target, ...parts.slice(n)].join("::"), next, strict);
     }
     return undefined;
   }
   const resolveType = (file: string, module: string[], text: string) => lookup(file, module, text, new Set());
+  const resolveNamedType = (file: string, module: string[], text: string) =>
+    lookup(file, module, text, new Set(), true);
   for (const [file, data] of files) {
     for (const block of data.impls) {
       const module = [...data.module, ...block.module];
@@ -310,5 +333,5 @@ export function buildProgram(sources: RustSourceInventory, facts: DomainFactSet)
     }
     return type;
   }
-  return { files, types, notes, moduleInventories, facts, resolveType, receiver };
+  return { files, types, notes, moduleInventories, facts, resolveType, resolveNamedType, receiver };
 }

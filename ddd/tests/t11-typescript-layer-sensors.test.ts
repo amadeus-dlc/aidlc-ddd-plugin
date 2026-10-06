@@ -481,13 +481,15 @@ describe("each gate reads the sources its rules decide from, and reports what th
     expect(verdict.pass).toBe(true);
   });
 
-  test("an unreadable source of the use-case package does not stop the interface-adapter gate", () => {
-    const verdict = verdictOf(
+  // `repository-adapter-surface` resolves the port an adapter implements from the use-case package that declares
+  // it, so a use-case source the facts cannot describe may hide that declaration and stops the gate.
+  test("an unreadable source of the use-case package stops the interface-adapter gate, which resolves ports from it", () => {
+    const run = runInProcess(
       adapterWith(interfaceAdapterPackage({ "src/index.ts": "export class Adapter {}\n" }), [
         useCasePackage({ "src/index.ts": "const = ;\n" }),
       ]),
     );
-    expect(verdict.pass).toBe(true);
+    expectStopped(run);
   });
 
   test("a query-side file of the use-case layer is decided by the interface-adapter gate", () => {
@@ -577,6 +579,96 @@ describe("what the use-case gate cannot decide stops it", () => {
     expect(run.stderr).toContain(`${USE_CASE_DIR}/src/other.ts:1 syntax-error`);
   });
 
+  // A name imported from a source of a package whose sources were not all read is decided from what was read.
+  test("an alias of a repository port in a read source of the adapter package is followed to the port", () => {
+    const clean = [
+      'import type { Port } from "./port.ts";',
+      "export class InMemoryInvoiceRepository implements Port {}",
+      "",
+    ].join("\n\n");
+    const read = claiming(
+      adapterWith(interfaceAdapterPackage({ "src/index.ts": clean, "src/port.ts": ADAPTER_PORT_ALIAS })),
+      [ADAPTER_FILE, `${INTERFACE_ADAPTER_DIR}/src/port.ts`],
+    );
+    const verdict = verdictOf(read);
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.pass).toBe(true);
+  });
+
+  test("a declaration other than an alias in a read source is no reason to stop the gate", () => {
+    const files = {
+      "src/index.ts":
+        'import type { Ticker } from "./ticker.ts";\n\nexport class Clock implements Ticker {\n  tick(): void {}\n}\n',
+      "src/ticker.ts": "export interface Ticker {\n  tick(): void;\n}\n",
+    };
+    const read = claiming(adapterWith(interfaceAdapterPackage(files)), [
+      ADAPTER_FILE,
+      `${INTERFACE_ADAPTER_DIR}/src/ticker.ts`,
+    ]);
+    expect(verdictOf(read).pass).toBe(true);
+    expectStopped(runInProcess(adapterWith(interfaceAdapterPackage(files))));
+  });
+
+  // A package whose sources were not all read says nothing of the file an import names through its other files.
+  const claimAdapter = (
+    files: Record<string, string>,
+    claimed: readonly string[],
+    others: readonly LayerPackage[] = [],
+  ) =>
+    claiming(adapterWith(interfaceAdapterPackage(files), others), [
+      ADAPTER_FILE,
+      ...claimed.map((file) => `${INTERFACE_ADAPTER_DIR}/${file}`),
+    ]);
+  const implementing = (specifier: string) =>
+    `import type { Port } from "${specifier}";\n\nexport class InMemoryInvoiceRepository implements Port {}\n`;
+
+  test("a same-named declaration in another read source does not stand for an unread file the import names", () => {
+    const files = {
+      "src/index.ts": implementing("./port.ts"),
+      "src/port.ts": ADAPTER_PORT_ALIAS,
+      "src/other.ts": "export interface Port {\n  unrelated(): void;\n}\n",
+    };
+    const run = runInProcess(claimAdapter(files, ["src/other.ts"]));
+    expectStopped(run);
+    expect(run.stderr).toContain(
+      `${ADAPTER_FILE}:${lineOf(files["src/index.ts"], "export class InMemoryInvoiceRepository")}`,
+    );
+    const read = claimAdapter(files, ["src/other.ts", "src/port.ts"]);
+    expect(verdictOf(read).pass).toBe(true);
+  });
+
+  test("a same-named alias in another read source is not followed for a read file that declares something else", () => {
+    const repository = useCasePackage({
+      "src/index.ts": "export interface InvoiceRepository {\n  findById(id: string): string;\n}\n",
+    });
+    const files = {
+      "src/index.ts":
+        'import type { Ticker } from "./ticker.ts";\n\nexport class Clock implements Ticker {\n  tick(): void {}\n}\n',
+      "src/ticker.ts": "export interface Ticker {\n  tick(): void;\n}\n",
+      "src/other.ts":
+        'import type { InvoiceRepository } from "@acme/billing-use-case";\n\nexport type Ticker = InvoiceRepository;\n',
+    };
+    const read = claimAdapter(files, ["src/ticker.ts", "src/other.ts"], [repository]);
+    const verdict = verdictOf(read);
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.pass).toBe(true);
+  });
+
+  test("a file that only re-exports the name is not followed, and stops the gate", () => {
+    const files = {
+      "src/index.ts": implementing("./ports.ts"),
+      "src/ports.ts": 'export type { Port } from "./port.ts";\n',
+      "src/port.ts": ADAPTER_PORT_ALIAS,
+    };
+    const run = runInProcess(claimAdapter(files, ["src/ports.ts", "src/port.ts"]));
+    expectStopped(run);
+    expect(run.stderr).toContain(
+      `${ADAPTER_FILE}:${lineOf(files["src/index.ts"], "export class InMemoryInvoiceRepository")}`,
+    );
+    const direct = { ...files, "src/index.ts": implementing("./port.ts") };
+    expect(verdictOf(claimAdapter(direct, ["src/ports.ts", "src/port.ts"])).pass).toBe(true);
+  });
+
   test("an unreadable unclaimed source of the domain package stops the gate", () => {
     const testCase = useCaseWith({ "src/index.ts": "export class IssueInvoiceUseCase {}\n" });
     (testCase.workspace ?? {})[`${DOMAIN_DIR}/src/amount.ts`] = "const = ;\n";
@@ -614,6 +706,13 @@ describe("what the use-case gate cannot decide stops it", () => {
   );
 });
 
+/** An alias of a repository port, which the adapter package declares in a source of its own. */
+const ADAPTER_PORT_ALIAS = [
+  'import type { InvoiceRepository } from "@acme/billing-use-case";',
+  "export type Port = InvoiceRepository;",
+  "",
+].join("\n");
+
 /** Interface-adapter sources a rule or the facts cannot decide, each with the construct the stop names. */
 const ADAPTER_UNDECIDED: [string, LayerPackage, string, string][] = [
   [
@@ -643,6 +742,32 @@ const ADAPTER_UNDECIDED: [string, LayerPackage, string, string][] = [
     "export * from",
   ],
   ["a syntax error", commandApi("export class CommandApi {}\nconst = ;\n"), COMMAND_API_FILE, "const = ;"],
+  [
+    "a repository port named through an alias that is not one named type",
+    interfaceAdapterPackage({
+      "src/index.ts": [
+        "export interface InvoiceRepository {\n  findById(id: string): string;\n}",
+        "type Port = InvoiceRepository & { readonly tag: true };",
+        "export class InMemoryInvoiceRepository implements Port {}",
+        "",
+      ].join("\n\n"),
+    }),
+    ADAPTER_FILE,
+    "export class InMemoryInvoiceRepository",
+  ],
+  [
+    "a repository port named through an alias of a source the gate did not read",
+    interfaceAdapterPackage({
+      "src/index.ts": [
+        'import type { Port } from "./port.ts";',
+        "export class InMemoryInvoiceRepository implements Port {}",
+        "",
+      ].join("\n\n"),
+      "src/port.ts": ADAPTER_PORT_ALIAS,
+    }),
+    ADAPTER_FILE,
+    "export class InMemoryInvoiceRepository",
+  ],
   [
     "a construction whose type holds the aggregate in another type",
     interfaceAdapterPackage({

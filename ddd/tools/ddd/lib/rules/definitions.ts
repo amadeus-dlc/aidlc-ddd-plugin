@@ -42,10 +42,32 @@ export const RULES: readonly RuleDefinition[] = [
   {
     rule_id: "event-sourcing-storage",
     name: "event-stream-in-memory-storage",
-    statement: "an in-memory Event Sourcing repository stores aggregate state instead of event streams",
+    statement:
+      "an in-memory Event Sourcing repository does not keep exactly one map of event streams and one map of snapshots, each the aggregate itself",
     target_layers: ["interface-adapter"],
     requires_model: true,
     facts: ["fields", "layer-structure", "aggregate-mapping"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "event-sourcing-store",
+    name: "event-sourcing-store-port",
+    statement:
+      "an Event Sourcing repository port's store does not take the domain event and the aggregate right after it",
+    target_layers: ["use-case"],
+    requires_model: true,
+    facts: ["traits", "aggregate-mapping"],
+    source: "DEC-2026-10-04",
+    per_file: true,
+  },
+  {
+    rule_id: "repository-adapter-surface",
+    name: "repository-adapter-public-surface",
+    statement: "a repository implementation exposes a public member beyond its port's methods and its constructor",
+    target_layers: ["interface-adapter"],
+    requires_model: false,
+    facts: ["impls", "structs"],
     source: "DEC-2026-10-04",
     per_file: true,
   },

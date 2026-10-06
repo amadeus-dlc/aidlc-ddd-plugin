@@ -701,7 +701,9 @@ for (const language of ["rust", "typescript"] as const) {
     ["domain", "factory-naming", "clean", "factory-copy"],
     ["domain", "primary-constructor", "clean", "aux-cycle"],
     ["use-case", "repository-result-contract", "repository-clean", "repository-envelope"],
+    ["use-case", "event-sourcing-store", "repository-clean", "event-store-id-event"],
     ["interface-adapter", "event-sourcing-storage", "event-storage-clean", "event-storage-state"],
+    ["interface-adapter", "repository-adapter-surface", "event-storage-clean", "adapter-surface-accessor"],
     ["interface-adapter", "in-memory-restoration", "state-storage-clean", "state-storage-record"],
   ])
     cover(

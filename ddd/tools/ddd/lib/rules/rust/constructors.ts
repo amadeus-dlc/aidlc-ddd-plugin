@@ -46,10 +46,20 @@ export function rulePrimaryConstructor(target: InspectionTarget, context: Inspec
     const key = (entry: LocatedMethod) => `${entry.file}:${entry.method.span.start_line}:${entry.method.name}`;
     const owns = (entry: LocatedMethod, text: string) =>
       text === "Self" || context.program.resolveType(entry.file, entry.module, text)?.key === type.key;
+    // A function that takes an instance of its own type by value evolves it (Event Sourcing
+    // `replay(events, snapshot)`); it constructs nothing new. The parameter has to be that type
+    // itself, written as `Self` or as a name, or an alias, that leads to it: a borrowed, wrapped or
+    // collected instance (`&Self`, `Option<Self>`, an alias of either) still leaves a constructor.
+    const evolves = (entry: LocatedMethod) =>
+      entry.method.params.some(
+        (param) =>
+          param.type_text.trim() === "Self" ||
+          context.program.resolveNamedType(entry.file, entry.module, param.type_text)?.key === type.key,
+      );
     const paths = methods
       .filter((entry) => {
         const returned = entry.method.return_type_text ?? "";
-        return owns(entry, resultArguments(returned)?.[0] ?? returned);
+        return owns(entry, resultArguments(returned)?.[0] ?? returned) && !evolves(entry);
       })
       .map((entry) => {
         const facts = context.program.facts.files.get(entry.file);

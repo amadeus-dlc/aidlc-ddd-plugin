@@ -4,7 +4,7 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-typescript-use-case.ts
 default_severity: blocking
 fire_on: gate
-description: The code-generation gate for the TypeScript use-case layer — forbidden dependencies and external I/O (g), execute arguments (h), use-case chaining (i), getter calls (d), use case type names (use-case-name) and repository ports that do not return Result (repository-result), with the rule ids of ddd-rust-use-case.
+description: The code-generation gate for the TypeScript use-case layer — forbidden dependencies and external I/O (g), execute arguments (h), use-case chaining (i), getter calls (d), use case type names (use-case-name) repository ports that do not return Result (repository-result), and an Event Sourcing port whose store does not take the event and the aggregate after it (event-sourcing-store), with the rule ids of ddd-rust-use-case.
 category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
@@ -16,6 +16,7 @@ checks:
   - { rule_id: d, requirement: FR7.4, inputs: [calls, domain-symbols, declarations], outcome: finding }
   - { rule_id: use-case-name, requirement: DEC-2026-10-01, inputs: [declarations, members], outcome: finding }
   - { rule_id: repository-result, requirement: DEC-2026-10-03, inputs: [declarations, members], outcome: finding }
+  - { rule_id: event-sourcing-store, requirement: DEC-2026-10-04, inputs: [declarations, imports, ddd-aggregate-mapping], outcome: finding }
 input_schema:
   output_path: string
   stage_slug: string
@@ -31,11 +32,12 @@ files as entry points and also reads each package's `package.json` and `tsconfig
 the state file, the aggregate mapping, and every source below `src/` of each domain and use-case
 package. Reports the dependency direction and external I/O (g), aggregate arguments to `execute`
 (h), use-case chaining (i), getter calls (d), a use case type not named `<Verb><Object>UseCase`
-(use-case-name) and a method of a repository port that does not return `Result` (repository-result), with the rule ids and finding meanings of
-`ddd-rust-use-case`. Rule d permits a getter result handed unchanged to a method of a repository
+(use-case-name) and a method of a repository port that does not return `Result` (repository-result) and a port of an Event Sourcing aggregate whose `store` does not take the
+domain event and the aggregate after it (event-sourcing-store), with the rule ids and finding
+meanings of `ddd-rust-use-case`. Rule d permits a getter result handed unchanged to a method of a repository
 port, directly or through `const` bindings whose every reference is such a forwarding.
 
 A construct the facts or the rules cannot decide, and a compiler that cannot be launched, stop the
 gate as uninspectable (exit 127) instead of answering, so neither is ever approved.
 
-See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`.
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`, `event-sourcing-store`.

@@ -1,3 +1,10 @@
+/** An Event Sourcing port stores one event together with the aggregate right after it, nothing else. */
+export const EVENT_SOURCING_STORE =
+  "store must take the domain event and then the aggregate right after it, and nothing else; the event carries the aggregate id";
+
+/** A repository implementation offers the port and its constructor to a caller, and nothing more. */
+export const ADAPTER_SURFACE = "a repository implementation exposes only the port's methods and its constructor";
+
 /** Explicit Result spellings only; no inference or alias expansion. */
 export function resultArguments(text: string | undefined): readonly [string, string] | undefined {
   if (!text) return undefined;

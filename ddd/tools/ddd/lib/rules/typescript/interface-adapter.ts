@@ -10,13 +10,28 @@
 
 import { join } from "node:path";
 import type { FindingInput } from "../../shared/findings.ts";
-import { eventStreamElement, inMemoryAggregates, isAggregateStateElement, storedMapValue } from "../in-memory.ts";
+import type { DeclarationFact } from "../../typescript/domain-facts/index.ts";
+import {
+  EVENT_SOURCING_STORAGE,
+  eventSourcingStorageGaps,
+  eventStreamElement,
+  inMemoryAggregates,
+  isAggregateStateElement,
+  storedMapValue,
+} from "../in-memory.ts";
 import { containsMediaWord, toPascal } from "../lists.ts";
+import { ADAPTER_SURFACE } from "../repository-contract.ts";
 import { aggregateMappings } from "./aggregate-binding.ts";
 import { packageContaining, resolveSpecifier } from "./edges.ts";
 import { factsOf } from "./file-facts.ts";
-import { importedDomainType, isPortDeclaration, resolveConstructedType, resolveTypeName } from "./symbols.ts";
-import type { TsInspection, TsTarget } from "./types.ts";
+import {
+  importedDomainType,
+  isPortDeclaration,
+  resolveConstructedType,
+  resolvePortDeclaration,
+  resolveTypeName,
+} from "./symbols.ts";
+import type { TsDeclared, TsInspection, TsTarget } from "./types.ts";
 
 // --- (l) query side domain / repository reference ------------------------------------------------
 
@@ -192,6 +207,81 @@ export function ruleN(inspection: TsInspection, target: TsTarget): FindingInput[
   return findings;
 }
 
+/** The repository ports a class implements, resolved, and whether any `implements` of it could not be decided. */
+interface ImplementedPorts {
+  readonly ports: readonly TsDeclared[];
+  readonly undecided: boolean;
+}
+
+/**
+ * Each `implements` of `adapter` is resolved before it is judged, so a renamed import
+ * (`InvoiceRepository as Port`) or an alias of the port still names it. What resolves to a port
+ * named `…Repository` is a repository port; a name spelled as a repository that is none, or that
+ * cannot be resolved, leaves the class undecided.
+ */
+function implementedRepositoryPorts(
+  inspection: TsInspection,
+  file: string,
+  adapter: DeclarationFact,
+): ImplementedPorts {
+  const ports: TsDeclared[] = [];
+  let undecided = false;
+  for (const entry of (adapter.heritage ?? []).filter((candidate) => candidate.kind === "implements")) {
+    const spelled = entry.type_text.replace(/<.*$/, "");
+    const spelledAsRepository = spelled.split(".").pop()?.endsWith("Repository") ?? false;
+    const resolved = resolvePortDeclaration(
+      inspection.packages,
+      inspection.declarations,
+      inspection.aliases,
+      inspection.facts.files,
+      file,
+      spelled,
+    );
+    if (resolved.kind === "undecided") undecided = true;
+    else if (resolved.kind === "found" && isPortDeclaration(resolved.entry.declaration)) {
+      if (resolved.entry.declaration.name.endsWith("Repository")) ports.push(resolved.entry);
+    } else if (spelledAsRepository) undecided = true;
+  }
+  return { ports, undecided };
+}
+
+/**
+ * A class that implements a repository port exposes only that port and its constructor: a public
+ * member the port does not declare (an accessor that hands the stored history to tests) widens
+ * the adapter beyond the contract the use case relies on. A port that cannot be resolved is left
+ * undecided.
+ */
+export function ruleRepositoryAdapterSurface(inspection: TsInspection, target: TsTarget): FindingInput[] {
+  const facts = factsOf(inspection, target.file);
+  const findings: FindingInput[] = [];
+  for (const adapter of facts.declarations.filter((entry) => entry.kind === "class")) {
+    const { ports, undecided } = implementedRepositoryPorts(inspection, target.file, adapter);
+    if (undecided) {
+      inspection.undecided.add(target.file, adapter.span.start_line, `the repository port ${adapter.name} implements`);
+      continue;
+    }
+    if (!ports.length) continue;
+    const allowed = new Set(ports.flatMap((port) => port.declaration.members.map((member) => member.name)));
+    for (const member of adapter.members) {
+      if (
+        member.kind === "constructor" ||
+        member.visibility === "private" ||
+        member.visibility === "private-name" ||
+        member.visibility === "protected"
+      )
+        continue;
+      if (allowed.has(member.name)) continue;
+      findings.push({
+        rule_id: "repository-adapter-surface",
+        file: target.file,
+        line: member.span.start_line,
+        message: `${adapter.name}.${member.name} is not part of its port: ${ADAPTER_SURFACE}`,
+      });
+    }
+  }
+  return findings;
+}
+
 /** A State Sourcing memory repository retains aggregate objects without decoding state records. */
 export function ruleInMemoryRestoration(inspection: TsInspection, target: TsTarget): FindingInput[] {
   return inMemoryStorage(inspection, target, "in-memory-restoration");
@@ -220,12 +310,16 @@ function inMemoryStorage(
   for (const repository of facts.declarations.filter(
     (entry) => entry.kind === "class" && entry.name.endsWith("Repository"),
   )) {
-    const owned = aggregates.filter((entry) =>
-      repository.heritage?.some(
-        (port) => port.kind === "implements" && port.type_text.split(".").pop() === `${entry.type}Repository`,
-      ),
-    );
+    // A class the surface rule leaves undecided is reported there, and owns nothing here.
+    const implemented = implementedRepositoryPorts(inspection, target.file, repository);
+    const owned = implemented.undecided
+      ? []
+      : aggregates.filter((entry) =>
+          implemented.ports.some((port) => port.declaration.name === `${entry.type}Repository`),
+        );
     if (!owned.length) continue;
+    const streams = new Set<string>();
+    const snapshots = new Set<string>();
     for (const field of repository.members.filter((entry) => entry.kind === "property")) {
       const values = new Set(
         [field.type_text, field.initializer_type_text]
@@ -255,15 +349,31 @@ function inMemoryStorage(
           : undefined;
         const domainEvent =
           eventPackage?.kind === "package" && owned.some((entry) => entry.package === eventPackage.pkg.name);
-        if (state ? direct : element !== undefined && domainEvent && !direct && !stateElement) continue;
+        if (state && direct) continue;
+        if (!state && element !== undefined && domainEvent && !direct && !stateElement) {
+          streams.add(field.name);
+          continue;
+        }
+        if (!state && element === undefined && direct) {
+          snapshots.add(field.name);
+          continue;
+        }
         findings.push({
           rule_id: rule,
           file: target.file,
           line: field.span.start_line,
-          message: `${repository.name}.${field.name} stores ${value}; ${state ? "its map must retain the aggregate directly" : "Event Sourcing stores event streams rather than aggregate state"}`,
+          message: `${repository.name}.${field.name} stores ${value}; ${state ? "its map must retain the aggregate directly" : EVENT_SOURCING_STORAGE}`,
         });
       }
     }
+    if (state) continue;
+    for (const problem of eventSourcingStorageGaps(streams.size, snapshots.size))
+      findings.push({
+        rule_id: rule,
+        file: target.file,
+        line: repository.span.start_line,
+        message: `${repository.name} ${problem}`,
+      });
   }
   if (!state) return findings;
   for (const call of facts.calls) {

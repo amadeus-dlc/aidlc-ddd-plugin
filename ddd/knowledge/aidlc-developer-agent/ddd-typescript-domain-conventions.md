@@ -1,6 +1,6 @@
 # TypeScript domain conventions
 
-Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-06. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -14,15 +14,16 @@ Conventions for generating TypeScript code that the TypeScript gates pass: both 
 | K.typescript-domain-conventions.2 | Hide the state of a class in `#` fields only. `private`, `protected`, `readonly` and parameter properties do not hide state. | a |
 | K.typescript-domain-conventions.3 | Hide the state of a companion in the closure its factory binds. The type literal declares the brand and the method signatures only. | a |
 | K.typescript-domain-conventions.4 | Give each companion type one non-exported top-level `const` of type `unique symbol` created by `Symbol("…")`, and key its instances by it. | A brand the gate cannot identify stops it as uninspectable. |
-| K.typescript-domain-conventions.5 | Construct only through the full constructor, which takes the whole state: for a class, the `private constructor`; for a companion, the factory that writes an instance literal annotated with the type. Other factories go through it. Restore persisted event history through a `restore` factory that validates its creation event, constructs through the primary constructor and applies the declared replay methods; adapters call it and report corrupt history as `RepositoryError`. Validate before building, and write no post-init method. | c |
+| K.typescript-domain-conventions.5 | Construct only through the full constructor, which takes the whole state: for a class, the `private constructor`; for a companion, the factory that writes an instance literal annotated with the type. Other factories go through it. Give the aggregate and each of its events a sequence number: the creation event is 1, and each event the aggregate produces is the previous number plus 1. Rebuild persisted history through `replay(events, snapshot)`, which takes the snapshot (the aggregate itself) and the events after it, checks the aggregate ID and the consecutive numbers, and applies the declared replay methods in order; it takes an instance of its own type, so it is not an auxiliary constructor. A broken continuation (another ID, a missing number, a second creation event, a transition the state forbids) is not a business error: `replay` throws, and adapters report it as `RepositoryError`. Validate before building, and write no post-init method. | c |
 | K.typescript-domain-conventions.6 | Limit methods that change state to declared commands, named by the command slug, or to the replay methods the aggregate mapping declares. | b |
 | K.typescript-domain-conventions.7 | Do not call domain getters from domain code, and state the type of every receiver of a domain method. | d. A getter-named call on a receiver without a stated named type stops the gate. |
 | K.typescript-domain-conventions.8 | Declare `Result` in the language-extensions package of the infrastructure layer and import it into the domain by the package name with `import type`. Declare no `Result` in a domain package. | g checks the direction and the package boundary of the import. The placement of `Result` itself is review. |
-| K.typescript-domain-conventions.9 | Return `Result<success, E>` with the return type stated from every factory and command the aggregate mapping binds in `operations`, where `E` is the operation's own error type: the union of the string literals of its mapped error cases. A factory the mapping binds to no operation, such as `restore` or a value object's `of`, returns the value itself; declare a factory with business failures upstream as a factory rule. | Type checking and review. The production gate does not compare the error sets yet. |
+| K.typescript-domain-conventions.9 | Return `Result<success, E>` with the return type stated from every factory and command the aggregate mapping binds in `operations`, where `E` is the operation's own error type: the union of the string literals of its mapped error cases. A factory the mapping binds to no operation, such as `create`, `replay` or a value object's `of`, returns the value itself; declare a factory with business failures upstream as a factory rule. | Type checking and review. The production gate does not compare the error sets yet. |
 | K.typescript-domain-conventions.10 | Share no mutable array or object with the outside of the domain: copy what comes in, return copies or readonly values, and return a business failure before changing any state. | Review and behavior tests. |
 | K.typescript-domain-conventions.11 | Name another package only by its package name and an entry its `exports` publish; write no `paths` alias into another package, no `baseUrl`, and no `export *` in a published entry. | g |
 | K.typescript-domain-conventions.12 | Place modules by the selected layout and write the relative specifiers that layout gives them. | `ddd-typescript-module-layout` checks the placement; the compiler checks the specifiers. |
-| K.typescript-domain-conventions.13 | In the use-case layer, give `execute` IDs and value objects with stated types, and state one named type on every receiver of `execute` or of a domain method. In the Interface Adapter layer, restore aggregates through `restore` and keep the command and query sides apart. | `ddd-typescript-use-case` (g, h, i, d) and `ddd-typescript-interface-adapter` (k, l, m, n, g). |
+| K.typescript-domain-conventions.13 | In the use-case layer, give `execute` IDs and value objects with stated types, and state one named type on every receiver of `execute` or of a domain method. In the Interface Adapter layer, rebuild aggregates through `replay(events, snapshot)` and keep the command and query sides apart. | `ddd-typescript-use-case` (g, h, i, d) and `ddd-typescript-interface-adapter` (k, l, m, n, g). |
+| K.typescript-domain-conventions.14 | For an Event Sourcing aggregate, declare the repository port's `store` as `store(event, snapshot)`, the domain event first and the aggregate right after it, and nothing else. The event is the aggregate's `<Aggregate>Event` or an event the model declares for it (an import under another name is read by the name the domain package declares), never a business error type. Keep exactly one map of event streams and one map of snapshots, each value the aggregate itself, in the in-memory adapter, and expose nothing of it but the port methods and the constructor. | `ddd-typescript-use-case` (`event-sourcing-store`) and `ddd-typescript-interface-adapter` (`event-sourcing-storage`, `repository-adapter-surface`). |
 
 ## Rationale
 
@@ -32,16 +33,16 @@ The TypeScript gates decide from stated types and syntax, without a type checker
 
 ## Class representation
 
-State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it, and `restore` validates the opening event through `open`, then applies subsequent events through the declared replay methods. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `restore`, bound to no operation, returns the replayed instance and throws on corrupt history, which is not a business failure. Adapters restore an invoice through `restore`. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts, and places each wrapped type by the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) Modules. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
+State is held in `#` fields. The private constructor takes the whole state and is the full constructor: `open` builds a new invoice through it with sequence number 1. `replay(events, snapshot)` copies the snapshot through the same constructor, then applies the events that follow it through the declared replay methods; each replay method checks the invoice ID and that the number is the next one, and sets the new number. `open`, which the aggregate mapping binds to `factory.invoice.open`, returns `Result`; `replay`, bound to no operation, returns the replayed copy, leaves the snapshot as it was and throws on a broken continuation, which is not a business failure. Adapters rebuild an invoice through `replay`. Each command stamps the event it returns with the invoice ID and the next sequence number. `new` of the type appears only inside the class body. The command `addLine` spells the slug of `command.invoice.add-line` and replaces the readonly array instead of changing it. `lines()` returns a copy, and `total()` asks each line to add its amount to a `Money` total instead of reading the amount; the total stays a `Money`, and whether it is negative is asked of it (`isNegative`). The customer stays a bare `string` only to keep the example short; real code wraps it the same way, as it wraps the amounts, and places each wrapped type by the [domain packaging](../aidlc-shared/ddd-domain-packaging.md) Modules. This is the aggregate module under `named-file`, where the parent names its child `./invoice/line.ts`:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 import { Money } from "./money.ts";
 
-export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
-export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
-export type Issued = { readonly kind: "issued" };
+export type Opened = { readonly kind: "opened"; readonly invoiceId: string; readonly sequenceNumber: number; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly invoiceId: string; readonly sequenceNumber: number; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued"; readonly invoiceId: string; readonly sequenceNumber: number };
 export type InvoiceEvent = Opened | LineAdded | Issued;
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
@@ -53,29 +54,29 @@ function sumOf(lines: readonly InvoiceLine[]): Money {
 }
 
 export class Invoice {
+  #id: string;
+  #sequenceNumber: number;
   #customer: string;
   #lines: readonly InvoiceLine[];
   #issued: boolean;
 
-  private constructor(customer: string, lines: readonly InvoiceLine[], issued: boolean) {
+  private constructor(id: string, sequenceNumber: number, customer: string, lines: readonly InvoiceLine[], issued: boolean) {
+    this.#id = id;
+    this.#sequenceNumber = sequenceNumber;
     this.#customer = customer;
     this.#lines = [...lines];
     this.#issued = issued;
   }
 
-  static open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
+  static open(invoiceId: string, customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
-    return { ok: true, value: new Invoice(customer, lines, false) };
+    return { ok: true, value: new Invoice(invoiceId, 1, customer, lines, false) };
   }
 
-  static restore(history: readonly InvoiceEvent[]): Invoice {
-    const first: InvoiceEvent | undefined = history[0];
-    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
-    const opened = Invoice.open(first.customer, first.lines);
-    if (!opened.ok) throw new Error("corrupt invoice history");
-    const invoice: Invoice = opened.value;
-    for (const event of history.slice(1)) {
+  static replay(events: readonly InvoiceEvent[], snapshot: Invoice): Invoice {
+    const invoice = new Invoice(snapshot.#id, snapshot.#sequenceNumber, snapshot.#customer, snapshot.#lines, snapshot.#issued);
+    for (const event of events) {
       if (event.kind === "line-added") invoice.applyLineAdded(event);
       else if (event.kind === "issued") invoice.applyIssued(event);
       else throw new Error("corrupt invoice history");
@@ -86,7 +87,7 @@ export class Invoice {
   addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (line.addTo(sumOf(this.#lines)).isNegative()) return { ok: false, error: "negative-total" };
-    const event: LineAdded = { kind: "line-added", line };
+    const event: LineAdded = { kind: "line-added", invoiceId: this.#id, sequenceNumber: this.#sequenceNumber + 1, line };
     this.applyLineAdded(event);
     return { ok: true, value: event };
   }
@@ -94,19 +95,31 @@ export class Invoice {
   issue(): Result<Issued, IssueInvoiceError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (this.#lines.length === 0) return { ok: false, error: "empty-lines" };
-    const event: Issued = { kind: "issued" };
+    const event: Issued = { kind: "issued", invoiceId: this.#id, sequenceNumber: this.#sequenceNumber + 1 };
     this.applyIssued(event);
     return { ok: true, value: event };
   }
 
   applyLineAdded(event: LineAdded): void {
+    if (event.invoiceId !== this.#id || event.sequenceNumber !== this.#sequenceNumber + 1) throw new Error("corrupt invoice history");
     if (this.#issued || event.line.addTo(sumOf(this.#lines)).isNegative()) throw new Error("corrupt invoice history");
     this.#lines = [...this.#lines, event.line];
+    this.#sequenceNumber = event.sequenceNumber;
   }
 
-  applyIssued(_event: Issued): void {
+  applyIssued(event: Issued): void {
+    if (event.invoiceId !== this.#id || event.sequenceNumber !== this.#sequenceNumber + 1) throw new Error("corrupt invoice history");
     if (this.#issued || this.#lines.length === 0) throw new Error("corrupt invoice history");
     this.#issued = true;
+    this.#sequenceNumber = event.sequenceNumber;
+  }
+
+  id(): string {
+    return this.#id;
+  }
+
+  sequenceNumber(): number {
+    return this.#sequenceNumber;
   }
 
   isBilledTo(customer: string): boolean {
@@ -127,16 +140,16 @@ Do not write accessors (`get` / `set`), `extends`, `implements`, decorators, `de
 
 ## Companion representation
 
-A `type` literal and a `const` object share the name of the domain type in one file. The type literal holds the brand and the method signatures only. In this example `open` is the primary constructor: it validates the opening inputs, copies them into complete closure state, holds collections as `readonly` arrays and writes the typed instance literal implementing every method. `restore` is an auxiliary path: it validates the opening event through `Invoice.open`, then applies subsequent events with the declared replay methods. It throws on corrupt history. Adapters call `restore` to return a replayed invoice. The same aggregate module in the companion representation:
+A `type` literal and a `const` object share the name of the domain type in one file. The type literal holds the brand and the method signatures only. In this example `create` is the primary constructor: it takes the whole state, validates it, copies the collection into complete closure state, holds collections as `readonly` arrays and writes the typed instance literal implementing every method. `open` validates the opening inputs and goes through `create` with sequence number 1; `copy()` goes through `create` with the state the closure holds, so a snapshot can be continued without being changed. `replay(events, snapshot)` applies the events that follow the snapshot, in order, to `snapshot.copy()` with the declared replay methods; it throws on a broken continuation. Adapters call `replay` to return a replayed invoice. The same aggregate module in the companion representation:
 
 ```ts
 import type { Result } from "@acme/language-extensions";
 import type { InvoiceLine } from "./invoice/line.ts";
 import { Money } from "./money.ts";
 
-export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
-export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
-export type Issued = { readonly kind: "issued" };
+export type Opened = { readonly kind: "opened"; readonly invoiceId: string; readonly sequenceNumber: number; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly invoiceId: string; readonly sequenceNumber: number; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued"; readonly invoiceId: string; readonly sequenceNumber: number };
 export type InvoiceEvent = Opened | LineAdded | Issued;
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
@@ -155,53 +168,61 @@ export type Invoice = {
   issue(): Result<Issued, IssueInvoiceError>;
   applyLineAdded(event: LineAdded): void;
   applyIssued(event: Issued): void;
+  copy(): Invoice;
+  id(): string;
+  sequenceNumber(): number;
   isBilledTo(customer: string): boolean;
   total(): Money;
   lines(): readonly InvoiceLine[];
 };
 
 export const Invoice = {
-  restore(history: readonly InvoiceEvent[]): Invoice {
-    const first: InvoiceEvent | undefined = history[0];
-    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
-    const opened = Invoice.open(first.customer, first.lines);
-    if (!opened.ok) throw new Error("corrupt invoice history");
-    const invoice: Invoice = opened.value;
-    for (const event of history.slice(1)) {
-      if (event.kind === "line-added") invoice.applyLineAdded(event);
-      else if (event.kind === "issued") invoice.applyIssued(event);
-      else throw new Error("corrupt invoice history");
-    }
-    return invoice;
-  },
-  open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
+  open(invoiceId: string, customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
+    return { ok: true, value: Invoice.create(invoiceId, 1, customer, lines, false) };
+  },
+  create(id: string, sequenceNumber: number, customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
+    if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber < 1) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || sumOf(lines).isNegative() || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
-    const state = { customer, lines: kept, issued: false };
+    const state = { id, sequenceNumber, customer, lines: kept, issued };
     const instance: Invoice = {
       [brand]: true,
       addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (line.addTo(sumOf(state.lines)).isNegative()) return { ok: false, error: "negative-total" };
-        const event: LineAdded = { kind: "line-added", line };
+        const event: LineAdded = { kind: "line-added", invoiceId: state.id, sequenceNumber: state.sequenceNumber + 1, line };
         instance.applyLineAdded(event);
         return { ok: true, value: event };
       },
       issue(): Result<Issued, IssueInvoiceError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (state.lines.length === 0) return { ok: false, error: "empty-lines" };
-        const event: Issued = { kind: "issued" };
+        const event: Issued = { kind: "issued", invoiceId: state.id, sequenceNumber: state.sequenceNumber + 1 };
         instance.applyIssued(event);
         return { ok: true, value: event };
       },
       applyLineAdded(event: LineAdded): void {
+        if (event.invoiceId !== state.id || event.sequenceNumber !== state.sequenceNumber + 1) throw new Error("corrupt invoice history");
         if (state.issued || event.line.addTo(sumOf(state.lines)).isNegative()) throw new Error("corrupt invoice history");
         state.lines = [...state.lines, event.line];
+        state.sequenceNumber = event.sequenceNumber;
       },
-      applyIssued(_event: Issued): void {
+      applyIssued(event: Issued): void {
+        if (event.invoiceId !== state.id || event.sequenceNumber !== state.sequenceNumber + 1) throw new Error("corrupt invoice history");
         if (state.issued || state.lines.length === 0) throw new Error("corrupt invoice history");
         state.issued = true;
+        state.sequenceNumber = event.sequenceNumber;
+      },
+      copy(): Invoice {
+        return Invoice.create(state.id, state.sequenceNumber, state.customer, state.lines, state.issued);
+      },
+      id(): string {
+        return state.id;
+      },
+      sequenceNumber(): number {
+        return state.sequenceNumber;
       },
       isBilledTo(customer: string): boolean {
         return state.customer === customer;
@@ -213,7 +234,16 @@ export const Invoice = {
         return [...state.lines];
       },
     };
-    return { ok: true, value: instance };
+    return instance;
+  },
+  replay(events: readonly InvoiceEvent[], snapshot: Invoice): Invoice {
+    const invoice: Invoice = snapshot.copy();
+    for (const event of events) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
   },
 };
 ```
@@ -295,7 +325,7 @@ export type Result<T, E> =
   | { readonly ok: false; readonly error: E };
 ```
 
-Each factory and command the aggregate mapping binds in `operations` states its own error type as its return type. The type is named by `code.error_type` of the operation in the aggregate mapping and is the union of the string literals of its `code.case` values: `IssueInvoiceError` holds `"already-issued"` and `"empty-lines"`, and nothing of `open` or `addLine`. Do not share one error type between operations or widen it with `string`, `any` or `unknown`. Return an expected business failure as `{ ok: false, error: "<case>" }`; unexpected runtime failures are not business errors. A factory the mapping binds to no operation, such as `restore` above, `Money.of` or `InvoiceLine.of`, has no error type and returns the value itself; when a factory has business failures, declare it upstream as a factory rule of the canonical model instead of inventing its errors in code.
+Each factory and command the aggregate mapping binds in `operations` states its own error type as its return type. The type is named by `code.error_type` of the operation in the aggregate mapping and is the union of the string literals of its `code.case` values: `IssueInvoiceError` holds `"already-issued"` and `"empty-lines"`, and nothing of `open` or `addLine`. Do not share one error type between operations or widen it with `string`, `any` or `unknown`. Return an expected business failure as `{ ok: false, error: "<case>" }`; unexpected runtime failures are not business errors. A factory the mapping binds to no operation, such as `replay` above, `Money.of` or `InvoiceLine.of`, has no error type and returns the value itself; when a factory has business failures, declare it upstream as a factory rule of the canonical model instead of inventing its errors in code.
 
 ## Ownership
 
@@ -330,9 +360,9 @@ When a module file moves between the layouts, update every specifier that names 
 
 ## Use-case and Interface Adapter layers
 
-The use-case package `@acme/billing-use-case` (`packages/command/billing-use-case`) and the interface-adapter package `@acme/billing-interface-adapter` (`packages/command/billing-interface-adapter`) follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md). Both list the domain and language-extensions packages in `dependencies`, and the adapter also lists the use-case package. Their sources are the same in both code representations and both module layouts: they call only `restore`, `of` and the command `issue`, which both representations spell alike, and they hold leaf modules only.
+The use-case package `@acme/billing-use-case` (`packages/command/billing-use-case`) and the interface-adapter package `@acme/billing-interface-adapter` (`packages/command/billing-interface-adapter`) follow the [layer boundaries](../aidlc-shared/ddd-layer-boundaries.md). Both list the domain and language-extensions packages in `dependencies`, and the adapter also lists the use-case package. Their sources are the same in both code representations and both module layouts: they call only `of`, the command `issue` and the accessors `id` and `sequenceNumber`, and `replay`, which both representations spell alike, and they hold leaf modules only.
 
-The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Loading and storing reach outside the process and can fail, so every method returns `Result` and reports a failure as `RepositoryError`, an infrastructure failure declared beside the port rather than a business error; the per-operation error-type rules do not apply to it. The lookup does not treat a missing invoice as a failure and returns `undefined`, and the store returns `Result<void, RepositoryError>`:
+The repository port is an `interface` named `<Aggregate>Repository`, declared here in the use-case package and never in a domain package: ports belong to the use-case layer. Loading and storing reach outside the process and can fail, so every method returns `Result` and reports a failure as `RepositoryError`, an infrastructure failure declared beside the port rather than a business error; the per-operation error-type rules do not apply to it. The lookup does not treat a missing invoice as a failure and returns `undefined`, and the store returns `Result<void, RepositoryError>`. In Event Sourcing the port stores one event together with the aggregate right after it, `store(event, snapshot)`: the event carries the aggregate ID, so no ID is passed apart from it, and the snapshot is the aggregate itself in the state the event produced:
 
 ```ts
 import type { Invoice, InvoiceEvent } from "@acme/billing-domain";
@@ -342,7 +372,7 @@ export type RepositoryError = { readonly kind: "repository-error"; readonly mess
 
 export interface InvoiceRepository {
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
-  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError>;
+  store(event: InvoiceEvent, snapshot: Invoice): Result<void, RepositoryError>;
 }
 ```
 
@@ -370,14 +400,14 @@ export class IssueInvoiceUseCase {
     const invoice: Invoice = found.value;
     const issued: Result<Issued, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, issued.value);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(issued.value, invoice);
     if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
 }
 ```
 
-The adapter implements the port and may prefix its name with the storage medium. The standard example uses Event Sourcing: it stores event streams in a map, returns an aggregate replayed from its history, and appends the event returned by the command. It introduces no aggregate-state record or snapshot. Lookup returns `undefined` for a missing stream and reports corrupt history through the common `RepositoryError`. The use case never loads or replays raw history. Query-side sources import no domain type and no repository port.
+The adapter implements the port and may prefix its name with the storage medium. The standard example uses Event Sourcing: it keeps one map of event streams and one map of snapshots, whose values are the aggregate itself (never a state record wrapped in another type such as `StoredInvoice`). The constructor takes the snapshot interval as a required argument and rejects an unusable one. `findById` reads the latest snapshot and replays only the events numbered after it, returning `undefined` when there is no snapshot, and reports a broken continuation through the common `RepositoryError`. `store` first checks that the snapshot is the aggregate right after the event (same ID, same number) and that the event follows the stored events (the next number), then appends a copy of the event and replaces the snapshot at number 1 and at every multiple of the interval. Nothing but the port methods and the constructor is public: no accessor of the stored events and no public field, and tests check the adapter through `findById`. The use case never loads or replays raw history. Query-side sources import no domain type and no repository port.
 
 ```ts
 import { Invoice } from "@acme/billing-domain";
@@ -386,32 +416,46 @@ import type { InvoiceRepository, RepositoryError } from "@acme/billing-use-case"
 import type { Result } from "@acme/language-extensions";
 
 export class InMemoryInvoiceRepository implements InvoiceRepository {
-  readonly #events: Map<string, readonly InvoiceEvent[]>;
+  readonly #events: Map<string, readonly InvoiceEvent[]> = new Map();
+  readonly #snapshots: Map<string, Invoice> = new Map();
+  readonly #snapshotInterval: number;
 
-  constructor(streams: ReadonlyMap<string, readonly InvoiceEvent[]>) {
-    this.#events = new Map();
-    for (const [id, events] of streams) this.#events.set(id, events.map((event: InvoiceEvent) => InMemoryInvoiceRepository.copyEvent(event)));
+  constructor(snapshotInterval: number) {
+    if (!Number.isSafeInteger(snapshotInterval) || snapshotInterval < 1) throw new RangeError("the snapshot interval must be a positive integer");
+    this.#snapshotInterval = snapshotInterval;
   }
 
   private static copyEvent(event: InvoiceEvent): InvoiceEvent {
-    if (event.kind === "opened") return Object.freeze({ kind: "opened", customer: event.customer, lines: Object.freeze([...event.lines]) });
-    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", line: event.line });
-    return Object.freeze({ kind: "issued" });
+    if (event.kind === "opened") return Object.freeze({ kind: "opened", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber, customer: event.customer, lines: Object.freeze([...event.lines]) });
+    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber, line: event.line });
+    return Object.freeze({ kind: "issued", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber });
   }
 
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
-    const events: readonly InvoiceEvent[] | undefined = this.#events.get(invoiceId);
-    if (events === undefined) return { ok: true, value: undefined };
+    const snapshot: Invoice | undefined = this.#snapshots.get(invoiceId);
+    if (snapshot === undefined) return { ok: true, value: undefined };
+    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
+    const following: readonly InvoiceEvent[] = history.filter((event: InvoiceEvent) => event.sequenceNumber > snapshot.sequenceNumber());
     try {
-      return { ok: true, value: Invoice.restore(events) };
+      return { ok: true, value: Invoice.replay(following, snapshot) };
     } catch (error) {
       return { ok: false, error: { kind: "repository-error", message: String(error) } };
     }
   }
 
-  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError> {
-    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
-    this.#events.set(invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
+  store(event: InvoiceEvent, snapshot: Invoice): Result<void, RepositoryError> {
+    if (snapshot.id() !== event.invoiceId || snapshot.sequenceNumber() !== event.sequenceNumber) {
+      return { ok: false, error: { kind: "repository-error", message: "the snapshot is not the aggregate right after the event" } };
+    }
+    const history: readonly InvoiceEvent[] = this.#events.get(event.invoiceId) ?? [];
+    const last: InvoiceEvent | undefined = history[history.length - 1];
+    if (event.sequenceNumber !== (last === undefined ? 1 : last.sequenceNumber + 1)) {
+      return { ok: false, error: { kind: "repository-error", message: "the event does not follow the stored events" } };
+    }
+    this.#events.set(event.invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
+    if (event.sequenceNumber === 1 || event.sequenceNumber % this.#snapshotInterval === 0) {
+      this.#snapshots.set(event.invoiceId, Invoice.replay([], snapshot));
+    }
     return { ok: true, value: undefined };
   }
 }

@@ -72,7 +72,7 @@ test("Rust rejects multiple raw primary constructors", () => {
   if (!file || !entry.workspace) throw new Error("missing Invoice fixture");
   entry.workspace[file] = entry.workspace[file].replace(
     "impl Invoice {",
-    "impl Invoice {\n    fn alternate(customer: String, lines: Vec<InvoiceLine>, issued: bool) -> Self { Self { customer, lines, issued } }\n",
+    "impl Invoice {\n    fn alternate(id: String, sequence_number: u64, customer: String, lines: Vec<InvoiceLine>, issued: bool) -> Self { Self { id, sequence_number, customer, lines, issued } }\n",
   );
   entry.expect = { pass: false, rules: ["primary-constructor"], files: { "primary-constructor": file } };
   const result = runGoldenCase(join(import.meta.dir, "../tools"), entry);
