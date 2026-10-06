@@ -123,20 +123,42 @@ pub enum IssueInvoiceError {
 }
 
 #[derive(Clone)]
-pub struct LineAdded { line: InvoiceLine }
+pub struct LineAdded { invoice_id: String, sequence_number: u64, line: InvoiceLine }
 impl LineAdded {
-    fn new(line: InvoiceLine) -> Self { Self { line } }
-    pub fn create(line: InvoiceLine) -> Self { Self::new(line) }
+    fn new(invoice_id: String, sequence_number: u64, line: InvoiceLine) -> Self { Self { invoice_id, sequence_number, line } }
+    pub fn create(invoice_id: &str, sequence_number: u64, line: InvoiceLine) -> Self { Self::new(invoice_id.to_string(), sequence_number, line) }
 }
 
-#[derive(Clone, Copy)]
-pub struct Issued;
+#[derive(Clone)]
+pub struct Issued { invoice_id: String, sequence_number: u64 }
+impl Issued {
+    fn new(invoice_id: String, sequence_number: u64) -> Self { Self { invoice_id, sequence_number } }
+    pub fn create(invoice_id: &str, sequence_number: u64) -> Self { Self::new(invoice_id.to_string(), sequence_number) }
+}
 
 #[derive(Clone)]
 pub enum InvoiceEvent {
-    Opened { customer: String, lines: Vec<InvoiceLine> },
+    Opened { invoice_id: String, sequence_number: u64, customer: String, lines: Vec<InvoiceLine> },
     LineAdded(LineAdded),
     Issued(Issued),
+}
+
+impl InvoiceEvent {
+    pub fn invoice_id(&self) -> &str {
+        match self {
+            InvoiceEvent::Opened { invoice_id, .. } => invoice_id,
+            InvoiceEvent::LineAdded(event) => &event.invoice_id,
+            InvoiceEvent::Issued(event) => &event.invoice_id,
+        }
+    }
+
+    pub fn sequence_number(&self) -> u64 {
+        match self {
+            InvoiceEvent::Opened { sequence_number, .. } => *sequence_number,
+            InvoiceEvent::LineAdded(event) => event.sequence_number,
+            InvoiceEvent::Issued(event) => event.sequence_number,
+        }
+    }
 }
 
 /// The invoice total: the invariant forbids a negative one.
@@ -146,34 +168,35 @@ fn sum_of(lines: &[InvoiceLine]) -> Money {
 
 #[derive(Clone)]
 pub struct Invoice {
+    id: String,
+    sequence_number: u64,
     customer: String,
     lines: Vec<InvoiceLine>,
     issued: bool,
 }
 
 impl Invoice {
-    fn new(customer: String, lines: Vec<InvoiceLine>, issued: bool) -> Self {
-        Self { customer, lines, issued }
+    fn new(id: String, sequence_number: u64, customer: String, lines: Vec<InvoiceLine>, issued: bool) -> Self {
+        Self { id, sequence_number, customer, lines, issued }
     }
 
-    pub fn open(customer: &str, lines: Vec<InvoiceLine>) -> Result<Self, OpenInvoiceError> {
+    pub fn open(id: &str, customer: &str, lines: Vec<InvoiceLine>) -> Result<Self, OpenInvoiceError> {
         if customer.is_empty() {
             return Err(OpenInvoiceError::MissingCustomer);
         }
         if sum_of(&lines).is_negative() {
             return Err(OpenInvoiceError::NegativeTotal);
         }
-        Ok(Self::new(customer.to_string(), lines, false))
+        Ok(Self::new(id.to_string(), 1, customer.to_string(), lines, false))
     }
 
-    /// Replays persisted facts and rejects corrupt history.
-    pub fn restore(history: &[InvoiceEvent]) -> Self {
-        let Some(InvoiceEvent::Opened { customer, lines }) = history.first() else { panic!("corrupt invoice history"); };
-        let mut invoice = Self::open(customer, lines.clone()).expect("corrupt invoice history");
-        for event in history.iter().skip(1) {
+    /// Applies the events that follow the snapshot and rejects a corrupt continuation.
+    pub fn replay(events: &[InvoiceEvent], snapshot: Invoice) -> Self {
+        let mut invoice = snapshot;
+        for event in events {
             match event {
                 InvoiceEvent::LineAdded(event) => invoice.apply_line_added(event.clone()),
-                InvoiceEvent::Issued(event) => invoice.apply_issued(*event),
+                InvoiceEvent::Issued(event) => invoice.apply_issued(event.clone()),
                 InvoiceEvent::Opened { .. } => panic!("corrupt invoice history"),
             }
         }
@@ -187,7 +210,7 @@ impl Invoice {
         if line.add_to(sum_of(&self.lines)).is_negative() {
             return Err(AddInvoiceLineError::NegativeTotal);
         }
-        let event = LineAdded::create(line);
+        let event = LineAdded::create(&self.id, self.sequence_number + 1, line);
         self.apply_line_added(event.clone());
         Ok(event)
     }
@@ -199,19 +222,31 @@ impl Invoice {
         if self.lines.is_empty() {
             return Err(IssueInvoiceError::EmptyLines);
         }
-        let event = Issued;
-        self.apply_issued(event);
+        let event = Issued::create(&self.id, self.sequence_number + 1);
+        self.apply_issued(event.clone());
         Ok(event)
     }
 
     pub fn apply_line_added(&mut self, event: LineAdded) {
+        if event.invoice_id != self.id || event.sequence_number != self.sequence_number + 1 { panic!("corrupt invoice history"); }
         if self.issued || event.line.add_to(sum_of(&self.lines)).is_negative() { panic!("corrupt invoice history"); }
         self.lines.push(event.line);
+        self.sequence_number = event.sequence_number;
     }
 
-    pub fn apply_issued(&mut self, _event: Issued) {
+    pub fn apply_issued(&mut self, event: Issued) {
+        if event.invoice_id != self.id || event.sequence_number != self.sequence_number + 1 { panic!("corrupt invoice history"); }
         if self.issued || self.lines.is_empty() { panic!("corrupt invoice history"); }
         self.issued = true;
+        self.sequence_number = event.sequence_number;
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn sequence_number(&self) -> u64 {
+        self.sequence_number
     }
 
     pub fn is_billed_to(&self, customer: &str) -> bool {
@@ -242,7 +277,7 @@ pub struct RepositoryError {
 
 pub trait InvoiceRepository {
     fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError>;
-    fn store(&mut self, invoice_id: &str, event: InvoiceEvent) -> Result<(), RepositoryError>;
+    fn store(&mut self, event: InvoiceEvent, snapshot: Invoice) -> Result<(), RepositoryError>;
 }
 `;
 
@@ -274,7 +309,7 @@ impl<'a, R: InvoiceRepository> IssueInvoiceUseCase<'a, R> {
             return Err(IssueInvoiceFailure::NotFound(InvoiceNotFound));
         };
         let event = invoice.issue().map_err(IssueInvoiceFailure::Rejected)?;
-        self.invoice_repository.store(invoice_id, InvoiceEvent::Issued(event)).map_err(IssueInvoiceFailure::Repository)?;
+        self.invoice_repository.store(InvoiceEvent::Issued(event), invoice).map_err(IssueInvoiceFailure::Repository)?;
         Ok(())
     }
 }
@@ -291,23 +326,44 @@ use billing_use_case::invoice_repository::{InvoiceRepository, RepositoryError};
 
 pub struct InMemoryInvoiceRepository {
     events: HashMap<String, Vec<InvoiceEvent>>,
+    snapshots: HashMap<String, Invoice>,
+    snapshot_interval: u64,
 }
 
 impl InMemoryInvoiceRepository {
-    pub fn new(events: HashMap<String, Vec<InvoiceEvent>>) -> Self {
-        Self { events }
+    pub fn new(snapshot_interval: u64) -> Self {
+        assert!(snapshot_interval > 0, "the snapshot interval must be positive");
+        Self { events: HashMap::new(), snapshots: HashMap::new(), snapshot_interval }
     }
 }
 
 impl InvoiceRepository for InMemoryInvoiceRepository {
     fn find_by_id(&self, invoice_id: &str) -> Result<Option<Invoice>, RepositoryError> {
-        let Some(events) = self.events.get(invoice_id) else { return Ok(None); };
-        catch_unwind(|| Invoice::restore(events)).map(Some)
+        let Some(snapshot) = self.snapshots.get(invoice_id) else { return Ok(None); };
+        let following: Vec<InvoiceEvent> = self.events.get(invoice_id).into_iter().flatten()
+            .filter(|event| event.sequence_number() > snapshot.sequence_number())
+            .cloned()
+            .collect();
+        let snapshot = snapshot.clone();
+        catch_unwind(move || Invoice::replay(&following, snapshot)).map(Some)
             .map_err(|_| RepositoryError { message: "corrupt invoice history".to_string() })
     }
 
-    fn store(&mut self, invoice_id: &str, event: InvoiceEvent) -> Result<(), RepositoryError> {
-        self.events.entry(invoice_id.to_string()).or_default().push(event);
+    fn store(&mut self, event: InvoiceEvent, snapshot: Invoice) -> Result<(), RepositoryError> {
+        if snapshot.id() != event.invoice_id() || snapshot.sequence_number() != event.sequence_number() {
+            return Err(RepositoryError { message: "the snapshot is not the aggregate right after the event".to_string() });
+        }
+        let invoice_id = event.invoice_id().to_string();
+        let history = self.events.entry(invoice_id.clone()).or_default();
+        let expected = history.last().map_or(1, |last| last.sequence_number() + 1);
+        if event.sequence_number() != expected {
+            return Err(RepositoryError { message: "the event does not follow the stored events".to_string() });
+        }
+        let sequence_number = event.sequence_number();
+        history.push(event);
+        if sequence_number == 1 || sequence_number % self.snapshot_interval == 0 {
+            self.snapshots.insert(invoice_id, snapshot);
+        }
         Ok(())
     }
 }

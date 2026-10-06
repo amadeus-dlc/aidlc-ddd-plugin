@@ -4,7 +4,7 @@ kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/ddd-sensor-rust-use-case.ts
 default_severity: blocking
 fire_on: gate
-description: The code-generation gate for the use-case layer — forbidden dependencies (g), execute arguments (h), use-case chaining (i), getter calls (d), use case type names (use-case-name), repository ports that do not return Result (repository-result) and repository writes that do not take &mut self (repository-mut-self).
+description: The code-generation gate for the use-case layer — forbidden dependencies (g), execute arguments (h), use-case chaining (i), getter calls (d), use case type names (use-case-name), repository ports that do not return Result (repository-result) and repository writes that do not take &mut self (repository-mut-self) and an Event Sourcing port whose store does not take the event and the aggregate after it (event-sourcing-store).
 category: code-shape
 matches: "**/code-summary.md"
 timeout_seconds: 10
@@ -17,6 +17,7 @@ checks:
   - { rule_id: use-case-name, requirement: DEC-2026-10-01, inputs: [impls], outcome: finding }
   - { rule_id: repository-result, requirement: DEC-2026-10-03, inputs: [traits], outcome: finding }
   - { rule_id: repository-mut-self, requirement: DEC-2026-10-03, inputs: [traits], outcome: finding }
+  - { rule_id: event-sourcing-store, requirement: DEC-2026-10-04, inputs: [traits, ddd-aggregate-mapping], outcome: finding }
 input_schema:
   output_path: string
   stage_slug: string
@@ -34,4 +35,4 @@ and external I/O (g), aggregate arguments to `execute` (h), use-case chaining
 (repository-result), and a `store…` or `delete…` method of a repository port that does not take
 `&mut self` unless the port declares `Sync` (repository-mut-self). Rule d permits unchanged getter-result forwarding to resolved repository port methods, directly or through immutable local bindings used only for repository arguments. Business branching and calculation remain forbidden; naming a variable `repo` is not an exemption.
 
-See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`.
+See the [shared construction and repository contracts](../knowledge/aidlc-shared/ddd-construction-contracts.md). This gate also reports `repository-result-contract`, `event-sourcing-store`.

@@ -195,9 +195,9 @@ export const InvoiceLine = {
 };
 `;
 
-const ERROR_TYPES = `export type Opened = { readonly kind: "opened"; readonly customer: string; readonly lines: readonly InvoiceLine[] };
-export type LineAdded = { readonly kind: "line-added"; readonly line: InvoiceLine };
-export type Issued = { readonly kind: "issued" };
+const ERROR_TYPES = `export type Opened = { readonly kind: "opened"; readonly invoiceId: string; readonly sequenceNumber: number; readonly customer: string; readonly lines: readonly InvoiceLine[] };
+export type LineAdded = { readonly kind: "line-added"; readonly invoiceId: string; readonly sequenceNumber: number; readonly line: InvoiceLine };
+export type Issued = { readonly kind: "issued"; readonly invoiceId: string; readonly sequenceNumber: number };
 export type InvoiceEvent = Opened | LineAdded | Issued;
 
 export type OpenInvoiceError = "missing-customer" | "negative-total";
@@ -223,29 +223,29 @@ function classInvoice(lineSpecifier: string, moneySpecifier: string): string {
 ${ERROR_TYPES}
 ${SUM_OF}
 export class Invoice {
+  #id: string;
+  #sequenceNumber: number;
   #customer: string;
   #lines: readonly InvoiceLine[];
   #issued: boolean;
 
-  private constructor(customer: string, lines: readonly InvoiceLine[], issued: boolean) {
+  private constructor(id: string, sequenceNumber: number, customer: string, lines: readonly InvoiceLine[], issued: boolean) {
+    this.#id = id;
+    this.#sequenceNumber = sequenceNumber;
     this.#customer = customer;
     this.#lines = [...lines];
     this.#issued = issued;
   }
 
-  static open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
+  static open(invoiceId: string, customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
-    return { ok: true, value: new Invoice(customer, lines, false) };
+    return { ok: true, value: new Invoice(invoiceId, 1, customer, lines, false) };
   }
 
-  static restore(history: readonly InvoiceEvent[]): Invoice {
-    const first: InvoiceEvent | undefined = history[0];
-    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
-    const opened = Invoice.open(first.customer, first.lines);
-    if (!opened.ok) throw new Error("corrupt invoice history");
-    const invoice: Invoice = opened.value;
-    for (const event of history.slice(1)) {
+  static replay(events: readonly InvoiceEvent[], snapshot: Invoice): Invoice {
+    const invoice = new Invoice(snapshot.#id, snapshot.#sequenceNumber, snapshot.#customer, snapshot.#lines, snapshot.#issued);
+    for (const event of events) {
       if (event.kind === "line-added") invoice.applyLineAdded(event);
       else if (event.kind === "issued") invoice.applyIssued(event);
       else throw new Error("corrupt invoice history");
@@ -256,7 +256,7 @@ export class Invoice {
   addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (line.addTo(sumOf(this.#lines)).isNegative()) return { ok: false, error: "negative-total" };
-    const event: LineAdded = { kind: "line-added", line };
+    const event: LineAdded = { kind: "line-added", invoiceId: this.#id, sequenceNumber: this.#sequenceNumber + 1, line };
     this.applyLineAdded(event);
     return { ok: true, value: event };
   }
@@ -264,19 +264,31 @@ export class Invoice {
   issue(): Result<Issued, IssueInvoiceError> {
     if (this.#issued) return { ok: false, error: "already-issued" };
     if (this.#lines.length === 0) return { ok: false, error: "empty-lines" };
-    const event: Issued = { kind: "issued" };
+    const event: Issued = { kind: "issued", invoiceId: this.#id, sequenceNumber: this.#sequenceNumber + 1 };
     this.applyIssued(event);
     return { ok: true, value: event };
   }
 
   applyLineAdded(event: LineAdded): void {
+    if (event.invoiceId !== this.#id || event.sequenceNumber !== this.#sequenceNumber + 1) throw new Error("corrupt invoice history");
     if (this.#issued || event.line.addTo(sumOf(this.#lines)).isNegative()) throw new Error("corrupt invoice history");
     this.#lines = [...this.#lines, event.line];
+    this.#sequenceNumber = event.sequenceNumber;
   }
 
-  applyIssued(_event: Issued): void {
+  applyIssued(event: Issued): void {
+    if (event.invoiceId !== this.#id || event.sequenceNumber !== this.#sequenceNumber + 1) throw new Error("corrupt invoice history");
     if (this.#issued || this.#lines.length === 0) throw new Error("corrupt invoice history");
     this.#issued = true;
+    this.#sequenceNumber = event.sequenceNumber;
+  }
+
+  id(): string {
+    return this.#id;
+  }
+
+  sequenceNumber(): number {
+    return this.#sequenceNumber;
   }
 
   isBilledTo(customer: string): boolean {
@@ -306,53 +318,61 @@ export type Invoice = {
   issue(): Result<Issued, IssueInvoiceError>;
   applyLineAdded(event: LineAdded): void;
   applyIssued(event: Issued): void;
+  copy(): Invoice;
+  id(): string;
+  sequenceNumber(): number;
   isBilledTo(customer: string): boolean;
   total(): Money;
   lines(): readonly InvoiceLine[];
 };
 
 export const Invoice = {
-  restore(history: readonly InvoiceEvent[]): Invoice {
-    const first: InvoiceEvent | undefined = history[0];
-    if (first === undefined || first.kind !== "opened") throw new Error("corrupt invoice history");
-    const opened = Invoice.open(first.customer, first.lines);
-    if (!opened.ok) throw new Error("corrupt invoice history");
-    const invoice: Invoice = opened.value;
-    for (const event of history.slice(1)) {
-      if (event.kind === "line-added") invoice.applyLineAdded(event);
-      else if (event.kind === "issued") invoice.applyIssued(event);
-      else throw new Error("corrupt invoice history");
-    }
-    return invoice;
-  },
-  open(customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
+  open(invoiceId: string, customer: string, lines: readonly InvoiceLine[]): Result<Invoice, OpenInvoiceError> {
     if (customer.length === 0) return { ok: false, error: "missing-customer" };
     if (sumOf(lines).isNegative()) return { ok: false, error: "negative-total" };
+    return { ok: true, value: Invoice.create(invoiceId, 1, customer, lines, false) };
+  },
+  create(id: string, sequenceNumber: number, customer: string, lines: readonly InvoiceLine[], issued: boolean): Invoice {
+    if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber < 1) throw new Error("corrupt invoice state");
+    if (customer.length === 0 || sumOf(lines).isNegative() || (issued && lines.length === 0)) throw new Error("corrupt invoice state");
     const kept: readonly InvoiceLine[] = [...lines];
-    const state = { customer, lines: kept, issued: false };
+    const state = { id, sequenceNumber, customer, lines: kept, issued };
     const instance: Invoice = {
       [brand]: true,
       addLine(line: InvoiceLine): Result<LineAdded, AddInvoiceLineError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (line.addTo(sumOf(state.lines)).isNegative()) return { ok: false, error: "negative-total" };
-        const event: LineAdded = { kind: "line-added", line };
+        const event: LineAdded = { kind: "line-added", invoiceId: state.id, sequenceNumber: state.sequenceNumber + 1, line };
         instance.applyLineAdded(event);
         return { ok: true, value: event };
       },
       issue(): Result<Issued, IssueInvoiceError> {
         if (state.issued) return { ok: false, error: "already-issued" };
         if (state.lines.length === 0) return { ok: false, error: "empty-lines" };
-        const event: Issued = { kind: "issued" };
+        const event: Issued = { kind: "issued", invoiceId: state.id, sequenceNumber: state.sequenceNumber + 1 };
         instance.applyIssued(event);
         return { ok: true, value: event };
       },
       applyLineAdded(event: LineAdded): void {
+        if (event.invoiceId !== state.id || event.sequenceNumber !== state.sequenceNumber + 1) throw new Error("corrupt invoice history");
         if (state.issued || event.line.addTo(sumOf(state.lines)).isNegative()) throw new Error("corrupt invoice history");
         state.lines = [...state.lines, event.line];
+        state.sequenceNumber = event.sequenceNumber;
       },
-      applyIssued(_event: Issued): void {
+      applyIssued(event: Issued): void {
+        if (event.invoiceId !== state.id || event.sequenceNumber !== state.sequenceNumber + 1) throw new Error("corrupt invoice history");
         if (state.issued || state.lines.length === 0) throw new Error("corrupt invoice history");
         state.issued = true;
+        state.sequenceNumber = event.sequenceNumber;
+      },
+      copy(): Invoice {
+        return Invoice.create(state.id, state.sequenceNumber, state.customer, state.lines, state.issued);
+      },
+      id(): string {
+        return state.id;
+      },
+      sequenceNumber(): number {
+        return state.sequenceNumber;
       },
       isBilledTo(customer: string): boolean {
         return state.customer === customer;
@@ -364,7 +384,16 @@ export const Invoice = {
         return [...state.lines];
       },
     };
-    return { ok: true, value: instance };
+    return instance;
+  },
+  replay(events: readonly InvoiceEvent[], snapshot: Invoice): Invoice {
+    const invoice: Invoice = snapshot.copy();
+    for (const event of events) {
+      if (event.kind === "line-added") invoice.applyLineAdded(event);
+      else if (event.kind === "issued") invoice.applyIssued(event);
+      else throw new Error("corrupt invoice history");
+    }
+    return invoice;
   },
 };
 `;
@@ -385,7 +414,7 @@ export type RepositoryError = { readonly kind: "repository-error"; readonly mess
 
 export interface InvoiceRepository {
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError>;
-  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError>;
+  store(event: InvoiceEvent, snapshot: Invoice): Result<void, RepositoryError>;
 }
 `;
 
@@ -410,7 +439,7 @@ export class IssueInvoiceUseCase {
     const invoice: Invoice = found.value;
     const issued: Result<Issued, IssueInvoiceError> = invoice.issue();
     if (!issued.ok) return issued;
-    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(invoiceId, issued.value);
+    const stored: Result<void, RepositoryError> = this.#invoiceRepository.store(issued.value, invoice);
     if (!stored.ok) return stored;
     return { ok: true, value: undefined };
   }
@@ -428,32 +457,46 @@ import type { InvoiceRepository, RepositoryError } from "${USE_CASE_NAME}";
 import type { Result } from "${RESULT_NAME}";
 
 export class InMemoryInvoiceRepository implements InvoiceRepository {
-  readonly #events: Map<string, readonly InvoiceEvent[]>;
+  readonly #events: Map<string, readonly InvoiceEvent[]> = new Map();
+  readonly #snapshots: Map<string, Invoice> = new Map();
+  readonly #snapshotInterval: number;
 
-  constructor(streams: ReadonlyMap<string, readonly InvoiceEvent[]>) {
-    this.#events = new Map();
-    for (const [id, events] of streams) this.#events.set(id, events.map((event: InvoiceEvent) => InMemoryInvoiceRepository.copyEvent(event)));
+  constructor(snapshotInterval: number) {
+    if (!Number.isSafeInteger(snapshotInterval) || snapshotInterval < 1) throw new RangeError("the snapshot interval must be a positive integer");
+    this.#snapshotInterval = snapshotInterval;
   }
 
   private static copyEvent(event: InvoiceEvent): InvoiceEvent {
-    if (event.kind === "opened") return Object.freeze({ kind: "opened", customer: event.customer, lines: Object.freeze([...event.lines]) });
-    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", line: event.line });
-    return Object.freeze({ kind: "issued" });
+    if (event.kind === "opened") return Object.freeze({ kind: "opened", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber, customer: event.customer, lines: Object.freeze([...event.lines]) });
+    if (event.kind === "line-added") return Object.freeze({ kind: "line-added", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber, line: event.line });
+    return Object.freeze({ kind: "issued", invoiceId: event.invoiceId, sequenceNumber: event.sequenceNumber });
   }
 
   findById(invoiceId: string): Result<Invoice | undefined, RepositoryError> {
-    const events: readonly InvoiceEvent[] | undefined = this.#events.get(invoiceId);
-    if (events === undefined) return { ok: true, value: undefined };
+    const snapshot: Invoice | undefined = this.#snapshots.get(invoiceId);
+    if (snapshot === undefined) return { ok: true, value: undefined };
+    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
+    const following: readonly InvoiceEvent[] = history.filter((event: InvoiceEvent) => event.sequenceNumber > snapshot.sequenceNumber());
     try {
-      return { ok: true, value: Invoice.restore(events) };
+      return { ok: true, value: Invoice.replay(following, snapshot) };
     } catch (error) {
       return { ok: false, error: { kind: "repository-error", message: String(error) } };
     }
   }
 
-  store(invoiceId: string, event: InvoiceEvent): Result<void, RepositoryError> {
-    const history: readonly InvoiceEvent[] = this.#events.get(invoiceId) ?? [];
-    this.#events.set(invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
+  store(event: InvoiceEvent, snapshot: Invoice): Result<void, RepositoryError> {
+    if (snapshot.id() !== event.invoiceId || snapshot.sequenceNumber() !== event.sequenceNumber) {
+      return { ok: false, error: { kind: "repository-error", message: "the snapshot is not the aggregate right after the event" } };
+    }
+    const history: readonly InvoiceEvent[] = this.#events.get(event.invoiceId) ?? [];
+    const last: InvoiceEvent | undefined = history[history.length - 1];
+    if (event.sequenceNumber !== (last === undefined ? 1 : last.sequenceNumber + 1)) {
+      return { ok: false, error: { kind: "repository-error", message: "the event does not follow the stored events" } };
+    }
+    this.#events.set(event.invoiceId, [...history, InMemoryInvoiceRepository.copyEvent(event)]);
+    if (event.sequenceNumber === 1 || event.sequenceNumber % this.#snapshotInterval === 0) {
+      this.#snapshots.set(event.invoiceId, Invoice.replay([], snapshot));
+    }
     return { ok: true, value: undefined };
   }
 }

@@ -20,7 +20,7 @@ import type {
 } from "../../typescript/domain-facts/index.ts";
 import type { Layer } from "../../workspace/resolver.ts";
 import { type ProjectPackages, packageContaining, resolveSpecifier } from "./edges.ts";
-import { modulePathOf, type TsPackage } from "./packages.ts";
+import { modulePathOf, posixRelative, type TsPackage } from "./packages.ts";
 import type { TsDeclared, TsDomainType, TsMethod, TsSymbolTable } from "./types.ts";
 
 /** Whether `inner` lies within `outer`. */
@@ -185,6 +185,18 @@ export function buildDeclarationTable(
   );
 }
 
+/** Every alias of a type that is no type literal, which the read sources declare at their top. */
+export function buildTypeAliasTable(
+  packages: ProjectPackages,
+  files: ReadonlyMap<string, TypeScriptFileFacts>,
+): TsDeclared[] {
+  return filesByPackage(packages, files).flatMap(({ file, pkg, facts }) =>
+    facts.declarations
+      .filter((declaration) => declaration.kind === "type-alias" && !declaration.type_literal)
+      .map((declaration) => ({ file, pkg, declaration })),
+  );
+}
+
 /** A name resolved in one file against one table: an entry of it, no entry of it, or not decidable. */
 type Resolution<T> =
   | { readonly kind: "found"; readonly entry: T }
@@ -195,11 +207,18 @@ type Resolution<T> =
 interface NameTable<T> {
   /** How a reason names an entry: `domain type`, `declaration`. */
   readonly what: string;
-  /** The layers whose packages hold the entries; a package of any other layer holds none. */
-  readonly layers: readonly Layer[];
+  /** The layers whose packages hold the entries; a package of any other layer holds none. Any layer, when absent. */
+  readonly layers?: readonly Layer[];
   readonly local: (file: string, name: string) => T | undefined;
   /** The entries of `pkg` an import of `name` names; `default` names the default export. */
   readonly exported: (pkg: TsPackage, name: string) => readonly T[];
+  /**
+   * What the source `file` declares as `name`, for the packages whose sources were not all read: the
+   * entry of this table, or whether it declares `name` as anything else. Absent when `file` was not
+   * read. A table that has it is read in such a package through the file an import names, since the
+   * other sources of the package say nothing of what that file declares.
+   */
+  readonly inFile?: (file: string, name: string) => { readonly entry?: T; readonly declared: boolean } | undefined;
 }
 
 /** The domain types, as a table a type name is resolved against. */
@@ -230,6 +249,33 @@ function declaredTypes(declarations: readonly TsDeclared[]): NameTable<TsDeclare
   };
 }
 
+/** The aliases of a type, as a table a type name is resolved against. */
+function aliasedTypes(
+  aliases: readonly TsDeclared[],
+  declarations: readonly TsDeclared[],
+  files: ReadonlyMap<string, TypeScriptFileFacts>,
+): NameTable<TsDeclared> {
+  const named = (entry: TsDeclared, file: string, name: string) =>
+    entry.file === file && (name === "default" ? entry.declaration.default_export : entry.declaration.name === name);
+  return {
+    what: "type alias",
+    local: (file, name) => aliases.find((entry) => entry.file === file && entry.declaration.name === name),
+    exported: (pkg, name) =>
+      aliases.filter(
+        (entry) =>
+          entry.pkg.root === pkg.root &&
+          (name === "default" ? entry.declaration.default_export : entry.declaration.name === name),
+      ),
+    inFile: (file, name) =>
+      files.has(file)
+        ? {
+            entry: aliases.find((entry) => named(entry, file, name)),
+            declared: declarations.some((entry) => named(entry, file, name)),
+          }
+        : undefined,
+  };
+}
+
 const SIMPLE_REFERENCE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?$/;
 
 /** Whether `text` is a type reference spelled by one name, or by a namespace and a name. */
@@ -252,12 +298,26 @@ function importedEntry<T>(
   if (target.kind === "unresolved") return { kind: "undecided", reason: target.reason };
   if (target.kind !== "package") return { kind: "other" };
   const { assignment } = target.pkg;
-  if (assignment.is_composition_root || !table.layers.includes(assignment.layer)) return { kind: "other" };
-  if (!packages.described.has(target.pkg.root))
-    return {
-      kind: "undecided",
-      reason: `${target.pkg.name} is a ${assignment.layer} package whose sources were not read, since the root tsconfig.json does not reference it`,
-    };
+  if (assignment.is_composition_root || (table.layers && !table.layers.includes(assignment.layer)))
+    return { kind: "other" };
+  if (!packages.described.has(target.pkg.root)) {
+    if (!table.inFile)
+      return {
+        kind: "undecided",
+        reason: `${target.pkg.name} is a ${assignment.layer} package whose sources were not read, since the root tsconfig.json does not reference it`,
+      };
+    // Only the file the import names says what it declares; the rest of the package was not read.
+    if (target.path === undefined)
+      return {
+        kind: "undecided",
+        reason: `${specifier} names ${target.pkg.name}, whose sources were not all read, so the file that declares ${name} is not known`,
+      };
+    const source = posixRelative(packages.workspaceRoot, target.path);
+    const declared = table.inFile(source, name);
+    if (!declared) return { kind: "undecided", reason: `${source} was not read` };
+    if (declared.entry) return { kind: "found", entry: declared.entry };
+    return declared.declared ? { kind: "other" } : { kind: "undecided", reason: `${source} does not declare ${name}` };
+  }
   const candidates = table.exported(target.pkg, name);
   if (candidates.length > 1)
     return { kind: "undecided", reason: `${name} names more than one ${table.what} of ${target.pkg.name}` };
@@ -323,6 +383,43 @@ export function resolveDeclaredType(
   text: string,
 ): Resolution<TsDeclared> {
   return resolveName(packages, declaredTypes(declarations), file, facts, text);
+}
+
+/**
+ * What the type `text`, written in `file`, names among the classes and ports of the domain and
+ * use-case layers, following an alias of one named type to what it names. An alias that is generic,
+ * names anything but one type, or leads back to itself cannot be followed and is not decidable.
+ */
+export function resolvePortDeclaration(
+  packages: ProjectPackages,
+  declarations: readonly TsDeclared[],
+  aliases: readonly TsDeclared[],
+  files: ReadonlyMap<string, TypeScriptFileFacts>,
+  file: string,
+  text: string,
+  seen: ReadonlySet<string> = new Set(),
+): Resolution<TsDeclared> {
+  const facts = files.get(file);
+  if (!facts) return { kind: "undecided", reason: `${file} was not read` };
+  const declared = resolveName(packages, declaredTypes(declarations), file, facts, text);
+  if (declared.kind !== "other") return declared;
+  const alias = resolveName(packages, aliasedTypes(aliases, declarations, files), file, facts, text);
+  if (alias.kind !== "found") return alias;
+  const { declaration } = alias.entry;
+  const key = `${alias.entry.file}#${declaration.name}`;
+  const target = declaration.type_text?.trim();
+  if (seen.has(key)) return { kind: "undecided", reason: `the alias ${declaration.name} leads back to itself` };
+  if (declaration.generic || target === undefined || !isNamedType(target))
+    return { kind: "undecided", reason: `the alias ${declaration.name} is not one named type` };
+  return resolvePortDeclaration(
+    packages,
+    declarations,
+    aliases,
+    files,
+    alias.entry.file,
+    target,
+    new Set(seen).add(key),
+  );
 }
 
 /** The imported binding `name` stands for among the domain types of the package `specifier` leads to. */

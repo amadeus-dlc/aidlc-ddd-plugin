@@ -54,8 +54,8 @@ function answered(answer: string, sources: readonly RustSourceFile[] = REQUEST) 
 }
 
 /** This protocol, and the one it replaced: an installation left on the latter must be refused. */
-const PROTOCOL_VERSION = 12;
-const REPLACED_PROTOCOL_VERSION = 11;
+const PROTOCOL_VERSION = 13;
+const REPLACED_PROTOCOL_VERSION = 12;
 
 /** One record, shaped as the protocol defines it, with the parts a case wants replaced. */
 function record(overrides: Record<string, unknown> = {}, protocolVersion = PROTOCOL_VERSION): string {
@@ -126,7 +126,7 @@ test(
         name: "Shown",
         module: [],
         methods: ["shown"],
-        signatures: [{ name: "shown", receiver: "ref-self", return_type_text: "u64", line: 2 }],
+        signatures: [{ name: "shown", receiver: "ref-self", params: [], return_type_text: "u64", line: 2 }],
         supertraits: [],
         line: 2,
       },
@@ -343,6 +343,23 @@ const REFUSED: [string, string][] = [
   ],
   ["a trait carries no method list", record({ traits: [{ name: "Shown", module: [], line: 2 }] })],
   ["a trait carries no line", record({ traits: [{ name: "Shown", module: [], methods: [] }] })],
+  // An absent parameter list reads as a port method that takes nothing, which a rule reading the
+  // parameters of a port's `store` must never be given in place of the ones it could not be told.
+  [
+    "a trait method signature carries no parameter list",
+    record({
+      traits: [
+        {
+          name: "Shown",
+          module: [],
+          methods: ["shown"],
+          signatures: [{ name: "shown", receiver: "ref-self", return_type_text: "u64", line: 2 }],
+          supertraits: [],
+          line: 2,
+        },
+      ],
+    }),
+  ],
   ["the answer carries no function list", record({ functions: undefined })],
   ["a function carries no line", record({ functions: [{ ...FUNCTION, line: undefined }] })],
   // An absent parameter list reads as a function that takes nothing, which is the answer a rule

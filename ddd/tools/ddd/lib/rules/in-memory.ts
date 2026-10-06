@@ -17,6 +17,20 @@ export function isAggregateStateElement(model: ModelAvailability, aggregateRef: 
   );
 }
 
+/** What Event Sourcing keeps in memory: one map of event streams and one map of snapshots, each an aggregate itself. */
+export const EVENT_SOURCING_STORAGE =
+  "Event Sourcing keeps event streams in one map and snapshots, each the aggregate itself, in another";
+
+/** What a repository's maps lack or repeat of the two Event Sourcing keeps, one phrase for each. */
+export function eventSourcingStorageGaps(streams: number, snapshots: number): string[] {
+  return [
+    ...(streams === 0 ? ["keeps no map of event streams"] : []),
+    ...(streams > 1 ? ["keeps more than one map of event streams; keep one"] : []),
+    ...(snapshots === 0 ? ["keeps no map of snapshots, the aggregate itself by its id"] : []),
+    ...(snapshots > 1 ? ["keeps more than one map of snapshots; keep one"] : []),
+  ];
+}
+
 /** A stored event stream explicitly states its element type. */
 export function eventStreamElement(text: string, language: "rust" | "typescript"): string | undefined {
   if (language === "rust") return /^(?:::)?(?:\w+::)*Vec<(.+)>$/.exec(text)?.[1];

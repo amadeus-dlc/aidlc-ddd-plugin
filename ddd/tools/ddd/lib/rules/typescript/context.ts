@@ -41,7 +41,7 @@ import {
   type TsPackage,
   workspacePackages,
 } from "./packages.ts";
-import { buildDeclarationTable, buildSymbolTable } from "./symbols.ts";
+import { buildDeclarationTable, buildSymbolTable, buildTypeAliasTable } from "./symbols.ts";
 import { type TsGate, type TsInspection, type TsTarget, Undecided } from "./types.ts";
 
 const NO_TYPESCRIPT_CLAIM = "no typescript sources claimed";
@@ -193,6 +193,7 @@ export function assembleTypeScriptInspection(run: SensorRunContext, gate: TsGate
       facts,
       symbols: buildSymbolTable(projectPackages, facts.files),
       declarations: buildDeclarationTable(projectPackages, facts.files),
+      aliases: buildTypeAliasTable(projectPackages, facts.files),
       model: availability.model,
       mapping,
       notes,

@@ -2,8 +2,8 @@ use super::*;
 
 fn check(source: &str) -> Value {
     let answer =
-        run(json!({"protocol_version":12,"files":[{"path":"lib.rs","source":source}]})).unwrap();
-    assert_eq!(answer["protocol_version"], 12);
+        run(json!({"protocol_version":13,"files":[{"path":"lib.rs","source":source}]})).unwrap();
+    assert_eq!(answer["protocol_version"], 13);
     answer["files"][0].clone()
 }
 
@@ -419,6 +419,12 @@ fn domain_facts_reports_what_each_trait_method_returns() {
     assert_eq!(signatures[1]["line"], 3);
     assert_eq!(signatures[1]["name"], "store");
     assert_eq!(signatures[0]["receiver"], "ref-self");
+    // The parameters after the receiver are reported with their types as the source spells them.
+    assert_eq!(signatures[0]["params"][0]["name"], "id");
+    assert_eq!(signatures[0]["params"][0]["type_text"], "&str");
+    assert_eq!(signatures[1]["params"][0]["name"], "invoice");
+    assert_eq!(signatures[1]["params"][0]["type_text"], "&Invoice");
+    assert!(list(&signatures[2], "params").is_empty());
     assert!(signatures[1]["return_type_text"].is_null());
     assert_eq!(signatures[1]["receiver"], "mut-self");
     assert_eq!(
@@ -950,7 +956,7 @@ fn domain_facts_marks_an_unparsed_file_instead_of_reporting_it_as_declaring_noth
 
 #[test]
 fn domain_facts_answers_one_record_per_requested_file_in_order() {
-    let answer = run(json!({"protocol_version":12,"files":[
+    let answer = run(json!({"protocol_version":13,"files":[
         {"path":"b.rs","source":"pub struct B(pub u64);"},
         {"path":"a.rs","source":"pub struct A(pub u64);"}]}))
     .unwrap();
@@ -964,9 +970,9 @@ fn domain_facts_answers_one_record_per_requested_file_in_order() {
 fn domain_facts_refuses_a_request_that_is_not_this_protocol() {
     for request in [
         json!({"protocol_version":6,"files":[{"path":"lib.rs","source":""}]}),
-        json!({"protocol_version":12,"files":[]}),
-        json!({"protocol_version":12,"files":[{"path":"lib.rs"}]}),
-        json!({"protocol_version":12,"files":[{"path":"lib.rs","source":"","extra":true}]}),
+        json!({"protocol_version":13,"files":[]}),
+        json!({"protocol_version":13,"files":[{"path":"lib.rs"}]}),
+        json!({"protocol_version":13,"files":[{"path":"lib.rs","source":"","extra":true}]}),
     ] {
         assert!(run(request).is_err());
     }

@@ -1,6 +1,6 @@
 # Rust domain conventions
 
-Updated: 2026-09-13. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-06. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -19,7 +19,7 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-domain-conventions.7 | Do not hide undeclared business mutations behind interior mutability. | Review, including the distinction from caches. |
 | K.rust-domain-conventions.8 | Do not infer valid replay from names such as apply. | b checks replay_methods correspondence. Review the method body. |
 | K.rust-domain-conventions.9 | Define value-object equality by value meaning and Entity equality with identity in mind. | Review. |
-| K.rust-domain-conventions.10 | Make business errors explicit and leave no partial mutation on error. | Review and behavior tests. Distinguish aborting restoration of corrupt history. |
+| K.rust-domain-conventions.10 | Make business errors explicit and leave no partial mutation on error. | Review and behavior tests. Distinguish aborting the replay of a broken continuation: `Aggregate::replay(events, snapshot)` takes the snapshot by value and panics on another aggregate ID, a missing sequence number, a second creation event or a transition the state forbids, and the adapter turns the panic into `RepositoryError` with `catch_unwind`. Because it takes `Self` by value, it is not an auxiliary constructor. |
 | K.rust-domain-conventions.11 | Use dedicated collection types when collections have invariants. | Design convention. |
 | K.rust-domain-conventions.12 | Expose only needed operations and hide module internals. | Review. a does not check module visibility. |
 

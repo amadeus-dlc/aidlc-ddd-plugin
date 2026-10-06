@@ -23,7 +23,7 @@ process.exit(
           includes_query_side: true,
           domain_facts: extractor,
         },
-        ["k", "l", "m", "n", "in-memory-restoration", "event-sourcing-storage", "g"],
+        ["k", "l", "m", "n", "in-memory-restoration", "event-sourcing-storage", "repository-adapter-surface", "g"],
         api,
       ),
   }),

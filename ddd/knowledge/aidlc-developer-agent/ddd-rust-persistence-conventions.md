@@ -1,6 +1,6 @@
 # Rust persistence conventions
 
-Updated: 2026-10-03. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
+Updated: 2026-10-06. Design conventions and automated coverage are documented separately. Existing rule IDs remain stable.
 
 ## Purpose
 
@@ -15,12 +15,13 @@ Conventions for DDD design and code generation. A check name does not imply that
 | K.rust-persistence-conventions.3 | Design repeated store or append operations so the same command is not applied twice. | Review and tests. Storage declaration advisories cover only part of this. |
 | K.rust-persistence-conventions.4 | Use port traits and inject concrete implementations through wiring. | Design convention. |
 | K.rust-persistence-conventions.5 | Separate decide and apply; make no new business decisions during replay. | Review and behavior tests. c does not verify this separation. |
-| K.rust-persistence-conventions.6 | Consider apply, apply_event, replay, and on_event as event-application method names. | Declare the event ID under `event_ref` and the method under `code.method` in replay_methods; check persistence mode and type correspondence. |
+| K.rust-persistence-conventions.6 | Consider apply, apply_event, and on_event as event-application method names; `replay` is taken by the aggregate function `replay(events, snapshot)` that applies the events following a snapshot, so do not name an event-application method `replay`. | Declare the event ID under `event_ref` and the method under `code.method` in replay_methods; check persistence mode and type correspondence. |
 | K.rust-persistence-conventions.7 | Declare ports in the use-case layer and never in the domain layer; Interface Adapter implementation names may identify the medium. | port-placement reports a repository port declared in a domain crate; m covers part of naming. Review the other ports. |
 | K.rust-persistence-conventions.8 | Safely re-persist state; append to immutable history for event persistence. | Review. Current upsert advisories do not adequately distinguish persistence modes. |
 | K.rust-persistence-conventions.9 | Distinguish first success, duplicate success, and rejection. | Design convention. Concrete return types remain T-03 work. |
 | K.rust-persistence-conventions.10 | Validate invariants when restoring from DTOs and distinguish restoration from replay. | n checks construction-call shapes. Review and test all invariants. |
 | K.rust-persistence-conventions.11 | Take `&mut self` in a repository port method that changes what is stored (`store`, `delete_by_id`) and keep `&self` for the lookup; do not hide the change behind a `RefCell`. Only a port shared across threads that needs a lock declares `Send + Sync`, takes `&self`, and guards its storage with a `Mutex` or an `RwLock`. A use case holds the port as `&'a mut R` and its `execute` takes `&mut self`. | repository-mut-self reports a `store…` or `delete…` method of a `…Repository` trait that does not take `&mut self` unless the trait declares `Sync`. |
+| K.rust-persistence-conventions.12 | For an Event Sourcing aggregate, declare the port's store as `fn store(&mut self, event: Event, snapshot: Aggregate) -> Result<(), RepositoryError>` (a reference to either is accepted): the domain event first and the aggregate right after it, nothing else, because the event carries the aggregate ID. Each is one named type or a reference to it, never a `Vec` or an `Option`; the event is the aggregate's `<Aggregate>Event` or an event the model declares for it, never a business error type. Give the aggregate and each event a sequence number (creation event 1, plus 1 for each event produced). In the in-memory adapter keep exactly one `HashMap<Id, Vec<Event>>` and one `HashMap<Id, Aggregate>` of snapshots, the snapshot interval as a required constructor argument, `find_by_id` replaying only the events after the latest snapshot through `Aggregate::replay(events, snapshot)`, and `store` checking the snapshot's ID and number against the event and the event's number against the stored events. Expose nothing but the port methods and the constructor. | event-sourcing-store (use-case gate) reports a port whose `store` is not (domain event, aggregate). event-sourcing-storage and repository-adapter-surface (interface-adapter gate) report the maps and the public members. Review the checks of `store`. |
 
 ## Rationale
 

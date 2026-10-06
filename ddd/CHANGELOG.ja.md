@@ -4,6 +4,14 @@
 
 dddプラグインの主な変更を記録します。形式は[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)に従います。
 
+## 未リリース — Event Sourcing のリポジトリは、イベントとスナップショットを一緒に保存する
+
+- **Event Sourcing のリポジトリポートは `store(event, snapshot)` にする。** 従来のポートはイベントの隣に集約 ID を取っていたので、ID がイベントと食い違いえたうえ、読み込みのたびに全履歴を再生していた。イベントが集約 ID を持ち、スナップショットはそのイベントの直後の集約にする。集約と各イベントはシーケンス番号を持つ（生成イベントが 1、集約がイベントを生むたびに 1 増える）。`restore(history)` は廃止し、`replay(events, snapshot)` にする。`replay` は集約 ID の一致と番号の連続を確かめ、宣言済みの replay メソッドを適用する。壊れた続きは業務エラーではなく、TypeScript は throw、Rust は panic で拒否する。
+- **インメモリの Event Sourcing リポジトリは、イベント列の Map とスナップショットの Map を 1 つずつ持つ。** スナップショットは集約そのもので、`StoredInvoice` のようなラッパーにはしない。スナップショットの間隔はコンストラクタの必須引数にする。`findById` は最新のスナップショットより後のイベントだけを再生し、`store` はスナップショットの ID と番号、およびイベントが保存済みの列に続くことを確かめる。公開するのはポートのメソッドとコンストラクタだけなので、テストは `findById` を通して確かめる。
+- **`store` が（イベント, 集約）でない Event Sourcing のポートと、ポート以外を公開するリポジトリを報告する。** `event-sourcing-store`（ユースケース層のゲート）と `repository-adapter-surface`（インターフェイスアダプタ層のゲート）を、TypeScript・Rust の両方に加えた。`event-sourcing-storage` は、イベント列の Map とスナップショットの Map をちょうど 1 つずつ持つことを求める。`replay` のように自分の型のインスタンスを引数に取る関数は、`primary-constructor` の補助コンストラクタとして扱わない（Rust は `Self` の値渡しだけが対象）。TypeScript のインターフェイスアダプタのゲートは、ポートを解決するためにユースケースのパッケージも読む。
+- **trait のメソッドの引数を報告する。** ネイティブ抽出器の `domain-facts/1` protocol を版 13 にした。trait のメソッドシグネチャは、レシーバの後ろの引数を報告する。darwin-arm64 のバイナリと manifest を作り直した。
+- ナレッジ・コード生成の手順・生成見本・振る舞いテストのフィクスチャ・ゴールデンケース・センサー契約・カバレッジの報告もこれに合わせた。
+
 ## 未リリース — 失敗を返すリポジトリポートと、Rust の `&mut self` の書き込み
 
 - **`Result` を返さないリポジトリポートのメソッドを報告する。** 例の `store` は何も返さず、検索は見つからないことをエラーとして返していたので、生成されたコードは読み込みや保存の失敗をユースケースに伝えられなかった。リポジトリポートのメソッドは、どれも `Result<…, RepositoryError>` を返す。検索は `Result<Invoice | undefined, RepositoryError>`（Rust は `Result<Option<Invoice>, RepositoryError>`）を返し、ユースケースは「ない」を自分の `InvoiceNotFound` にし、保存の失敗を返す。`ddd-rust-use-case` と `ddd-typescript-use-case` は、`…Repository` ポートのメソッドが `Result` を返さなければ `repository-result` として報告する。

@@ -65,6 +65,8 @@ type SpecifierTarget =
       readonly via: "path" | "imports" | "alias" | "name";
       /** For a package reached by name, the subpath below it: `.` for the package itself. */
       readonly subpath?: string;
+      /** For a specifier that names a path, the absolute path it names: the file, as the specifier spells it. */
+      readonly path?: string;
     }
   | { readonly kind: "builtin" }
   | { readonly kind: "external"; readonly name: string }
@@ -105,7 +107,9 @@ function packageNamed(packages: ProjectPackages, name: string): NamedPackage {
 
 function reached(packages: ProjectPackages, path: string, via: "path" | "imports", what: string): SpecifierTarget {
   const pkg = packageContaining(packages, path);
-  return pkg ? { kind: "package", pkg, via } : { kind: "unresolved", reason: `${what} leads out of every package` };
+  return pkg
+    ? { kind: "package", pkg, via, path }
+    : { kind: "unresolved", reason: `${what} leads out of every package` };
 }
 
 /** The `paths` entry a specifier matches: an exact pattern first, else the longest prefix before `*`. */

@@ -25,11 +25,25 @@ import { buildEdges, ruleG, ruleK } from "./edges.ts";
 import { ruleB, ruleC, ruleD, ruleDomainPackaging, rulePortPlacement } from "./evaluators.ts";
 import { ruleFactoryNaming } from "./factories.ts";
 import { factsOf } from "./file-facts.ts";
-import { ruleEventSourcingStorage, ruleInMemoryRestoration, ruleL, ruleM, ruleN } from "./interface-adapter.ts";
+import {
+  ruleEventSourcingStorage,
+  ruleInMemoryRestoration,
+  ruleL,
+  ruleM,
+  ruleN,
+  ruleRepositoryAdapterSurface,
+} from "./interface-adapter.ts";
 import { rulePrimitiveInitialization } from "./primitives.ts";
 import { ruleA } from "./state-hiding.ts";
 import type { TsGate, TsInspection, TsTarget } from "./types.ts";
-import { ruleH, ruleI, ruleRepositoryContract, ruleRepositoryResult, ruleUseCaseName } from "./use-case.ts";
+import {
+  ruleEventSourcingStore,
+  ruleH,
+  ruleI,
+  ruleRepositoryContract,
+  ruleRepositoryResult,
+  ruleUseCaseName,
+} from "./use-case.ts";
 
 const DOMAIN: TsGate = {
   label: "domain",
@@ -48,11 +62,13 @@ const USE_CASE: TsGate = {
   reports_layer_diagnostics: false,
 };
 
+// The repository port an adapter implements is declared in a use-case source, and `repository-adapter-surface`
+// resolves it there.
 const INTERFACE_ADAPTER: TsGate = {
   label: "interface-adapter",
   target_layers: ["interface-adapter", "rmu"],
   includes_query_side: true,
-  described_layers: ["domain"],
+  described_layers: ["domain", "use-case"],
   reports_layer_diagnostics: false,
 };
 
@@ -117,6 +133,7 @@ export function evaluateTypeScriptUseCase(run: SensorRunContext, api: SensorApi)
       ...ruleUseCaseName(inspection, target),
       ...ruleRepositoryResult(inspection, target),
       ...ruleRepositoryContract(inspection, target),
+      ...ruleEventSourcingStore(inspection, target),
     ],
     whole: (inspection) => ruleG(buildEdges(inspection)),
   });
@@ -130,6 +147,7 @@ export function evaluateTypeScriptInterfaceAdapter(run: SensorRunContext, api: S
       ...ruleN(inspection, target),
       ...ruleInMemoryRestoration(inspection, target),
       ...ruleEventSourcingStorage(inspection, target),
+      ...ruleRepositoryAdapterSurface(inspection, target),
     ],
     whole: (inspection) => {
       const edges = buildEdges(inspection);

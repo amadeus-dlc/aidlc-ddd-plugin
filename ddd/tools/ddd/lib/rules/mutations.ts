@@ -83,7 +83,27 @@ export function declaredReplayEventNames<M extends ReplayDeclaringMapping>(
   if (methods.length !== 1) return undefined;
   const event = model.index.resolve(methods[0].event_ref, "event");
   if (!event.ok || event.element.owner !== aggregate) return undefined;
-  return [event.element.name, toPascal(event.element.id.segments.join("-"))];
+  return eventTypeNames(event.element);
+}
+
+/** The type names an event may be spelled with in code: its model name and its PascalCase id. */
+function eventTypeNames(element: { readonly name: string; readonly id: { readonly segments: readonly string[] } }) {
+  return [element.name, toPascal(element.id.segments.join("-"))];
+}
+
+/**
+ * The type names a repository port's `store` may take as the domain event of `aggregate`: the
+ * `<Aggregate>Event` type that gathers its events, and each event the model declares for it.
+ */
+export function domainEventTypeNames(
+  model: ModelAvailability,
+  aggregateRef: string,
+  aggregateType: string,
+): ReadonlySet<string> {
+  const declared = (model.index?.elements() ?? [])
+    .filter((element) => element.kind === "event" && element.owner === aggregateRef)
+    .flatMap((element) => eventTypeNames(element));
+  return new Set([`${aggregateType}Event`, ...declared]);
 }
 
 /** A mutating method as it is written: its name and where it is declared. */
